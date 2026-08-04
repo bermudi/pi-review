@@ -1,0 +1,979 @@
+import { createReviewTarget } from "./git.js";
+import {
+	createPlanToolkit,
+	createVetoToolkit,
+	type PlanToolkit,
+	type VetoToolkit,
+} from "./phase-tools.js";
+import {
+	buildFileReviewPrompt,
+	buildRiskPlanPrompt,
+	buildVetoFilterPrompt,
+} from "./prompts.js";
+import {
+	PiTaskRunner,
+	type PiTask,
+	type PiTaskRunnerOptions,
+	type RunTaskOptions,
+	type TaskEvent,
+	type TaskOutcome,
+} from "./pi-runner.js";
+import { resolveFinding } from "./resolver.js";
+import { changedLineCount, selectFiles } from "./selection.js";
+import {
+	DEFAULT_MAX_TOOL_CALLS,
+	MAX_DIFF_OUTPUT_BYTES,
+	createReviewToolkit,
+	type ReviewToolkit,
+} from "./tools.js";
+import {
+	EMPTY_USAGE,
+	type ChangedFile,
+	type Finding,
+	type ReviewEvent,
+	type ReviewInput,
+	type ReviewOptions,
+	type ReviewResult,
+	type ReviewStatus,
+	type ReviewTarget,
+	type ReviewUsage,
+	type FailedFile,
+	type SkippedFile,
+} from "./types.js";
+
+/** The default upper bound keeps an accidental giant diff out of a model prompt. */
+export const DEFAULT_MAX_CHANGED_LINES = 2_000;
+/** The target diff is also the prompt input, so keep it within the evidence cap. */
+export const MAX_REVIEW_DIFF_BYTES = MAX_DIFF_OUTPUT_BYTES;
+export const DEFAULT_CONCURRENCY = 4;
+export const DEFAULT_PLAN_CHANGED_LINE_THRESHOLD = 50;
+
+export type ReviewTargetFactory = (input: ReviewInput) => Promise<ReviewTarget> | ReviewTarget;
+
+/**
+ * The small executor seam used by Reviewer. PiTaskRunner satisfies this
+ * structurally; tests can provide an executor that invokes the supplied
+ * structured tools without loading Pi or a model provider.
+ */
+export interface TaskExecutor {
+	run(task: PiTask, options?: RunTaskOptions): Promise<TaskOutcome>;
+	abortAll(): Promise<void>;
+}
+
+export type ReviewTaskExecutor = TaskExecutor;
+
+export type TaskExecutorFactory = (
+	options: PiTaskRunnerOptions,
+) => TaskExecutor | Promise<TaskExecutor>;
+
+/** Dependencies at the orchestration seam. Every member is optional in order
+ * to preserve a useful production default while making each external side
+ * effect replaceable in tests. */
+export interface ReviewerDependencies {
+	readonly targetFactory?: ReviewTargetFactory;
+	readonly taskExecutor?: TaskExecutor;
+	readonly taskExecutorFactory?: TaskExecutorFactory;
+}
+
+interface NormalizedReviewOptions {
+	readonly model: string;
+	readonly modelSpec: string;
+	readonly thinking: ReviewOptions["thinking"];
+	readonly concurrency: number;
+	readonly include: readonly string[];
+	readonly exclude: readonly string[];
+	readonly maxToolRounds: number | undefined;
+	readonly planChangedLineThreshold: number;
+	readonly agentDir: string | undefined;
+	readonly onEvent: ((event: ReviewEvent) => void) | undefined;
+	readonly signal: AbortSignal | undefined;
+}
+
+interface SelectedReviewFile {
+	readonly file: ChangedFile;
+	readonly path: string;
+	readonly target: ReviewTarget;
+}
+
+interface ReviewContext {
+	readonly background?: string;
+	readonly rules?: string;
+}
+
+interface WorkflowResult {
+	readonly success: boolean;
+	readonly findings: Finding[];
+	readonly usage: ReviewUsage;
+	readonly reason?: string;
+}
+
+interface IndexedWorkflowResult {
+	readonly kind: "completed" | "failed" | "skipped";
+	readonly path: string;
+	readonly findings: Finding[];
+	readonly usage: ReviewUsage;
+	readonly reason?: string;
+}
+
+interface CoverageState {
+	readonly selected: string[];
+	readonly completed: string[];
+	readonly failed: FailedFile[];
+	readonly skipped: SkippedFile[];
+}
+
+const THINKING_LEVELS = new Set<NonNullable<ReviewOptions["thinking"]>>([
+	"off",
+	"minimal",
+	"low",
+	"medium",
+	"high",
+	"xhigh",
+	"max",
+]);
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+	return typeof value === "object" && value !== null;
+}
+
+function errorMessage(error: unknown, fallback: string): string {
+	if (error instanceof Error && error.message.length > 0) return error.message;
+	if (typeof error === "string" && error.length > 0) return error;
+	return fallback;
+}
+
+function zeroUsage(): ReviewUsage {
+	return { ...EMPTY_USAGE };
+}
+
+function finiteCounter(value: unknown): number {
+	return typeof value === "number" && Number.isFinite(value) && value >= 0 ? value : 0;
+}
+
+function addUsage(left: ReviewUsage, right: unknown): ReviewUsage {
+	if (!isRecord(right)) return left;
+	return {
+		inputTokens: left.inputTokens + finiteCounter(right.inputTokens),
+		outputTokens: left.outputTokens + finiteCounter(right.outputTokens),
+		cacheReadTokens: left.cacheReadTokens + finiteCounter(right.cacheReadTokens),
+		cacheWriteTokens: left.cacheWriteTokens + finiteCounter(right.cacheWriteTokens),
+		totalTokens: left.totalTokens + finiteCounter(right.totalTokens),
+	};
+}
+
+function modelSpecWithThinking(model: string, thinking: NormalizedReviewOptions["thinking"]): string {
+	if (thinking === undefined) return model;
+
+	const slash = model.indexOf("/");
+	const colon = model.lastIndexOf(":");
+	const suffix = colon > slash ? model.slice(colon + 1) : undefined;
+	const base = suffix !== undefined && THINKING_LEVELS.has(suffix as NonNullable<ReviewOptions["thinking"]>)
+		? model.slice(0, colon)
+		: model;
+	return `${base}:${thinking}`;
+}
+
+function requirePositiveInteger(value: unknown, field: string): number {
+	if (!Number.isSafeInteger(value) || (value as number) < 1) {
+		throw new TypeError(`${field} must be a positive safe integer`);
+	}
+	return value as number;
+}
+
+function requireNonNegativeInteger(value: unknown, field: string): number {
+	if (!Number.isSafeInteger(value) || (value as number) < 0) {
+		throw new TypeError(`${field} must be a non-negative safe integer`);
+	}
+	return value as number;
+}
+
+function stringArray(value: unknown, field: string): readonly string[] {
+	if (value === undefined) return [];
+	if (!Array.isArray(value) || value.some((entry) => typeof entry !== "string")) {
+		throw new TypeError(`${field} must contain only strings`);
+	}
+	return value.map((entry) => entry as string);
+}
+
+function normalizeReviewOptions(options: ReviewOptions): NormalizedReviewOptions {
+	if (!isRecord(options)) throw new TypeError("Review options must be an object");
+	const model = options.model;
+	if (typeof model !== "string" || model.trim().length === 0) {
+		throw new TypeError("Review options.model must be a non-empty string");
+	}
+	if (options.thinking !== undefined && !THINKING_LEVELS.has(options.thinking)) {
+		throw new TypeError(`Unsupported thinking level: ${String(options.thinking)}`);
+	}
+	if (options.onEvent !== undefined && typeof options.onEvent !== "function") {
+		throw new TypeError("Review options.onEvent must be a function");
+	}
+	if (options.agentDir !== undefined && typeof options.agentDir !== "string") {
+		throw new TypeError("Review options.agentDir must be a string");
+	}
+	if (options.signal !== undefined && (options.signal === null || typeof options.signal !== "object")) {
+		throw new TypeError("Review options.signal must be an AbortSignal");
+	}
+
+	const concurrency = options.concurrency === undefined
+		? DEFAULT_CONCURRENCY
+		: requirePositiveInteger(options.concurrency, "concurrency");
+	const maxToolRounds = options.maxToolRounds === undefined
+		? undefined
+		: requirePositiveInteger(options.maxToolRounds, "maxToolRounds");
+	const planChangedLineThreshold = options.planChangedLineThreshold === undefined
+		? DEFAULT_PLAN_CHANGED_LINE_THRESHOLD
+		: requireNonNegativeInteger(options.planChangedLineThreshold, "planChangedLineThreshold");
+
+	return {
+		model: model.trim(),
+		modelSpec: modelSpecWithThinking(model.trim(), options.thinking),
+		thinking: options.thinking,
+		concurrency,
+		include: stringArray(options.include, "include"),
+		exclude: stringArray(options.exclude, "exclude"),
+		maxToolRounds,
+		planChangedLineThreshold,
+		agentDir: options.agentDir,
+		onEvent: options.onEvent,
+		signal: options.signal,
+	};
+}
+
+function pathForFile(file: Pick<ChangedFile, "oldPath" | "newPath">): string {
+	const raw = file.newPath !== "" && file.newPath !== "/dev/null" ? file.newPath : file.oldPath;
+	return raw.replace(/\\/g, "/").replace(/^\.\//u, "");
+}
+
+function compareText(left: string, right: string): number {
+	if (left < right) return -1;
+	if (left > right) return 1;
+	return 0;
+}
+
+function compareFiles(left: ChangedFile, right: ChangedFile): number {
+	const pathOrder = compareText(pathForFile(left), pathForFile(right));
+	if (pathOrder !== 0) return pathOrder;
+	return compareText(left.oldPath, right.oldPath);
+}
+
+function compareSkipped(left: SkippedFile, right: SkippedFile): number {
+	const pathOrder = compareText(left.path, right.path);
+	return pathOrder !== 0 ? pathOrder : compareText(left.reason, right.reason);
+}
+
+function compareFailed(left: FailedFile, right: FailedFile): number {
+	const pathOrder = compareText(left.path, right.path);
+	return pathOrder !== 0 ? pathOrder : compareText(left.reason, right.reason);
+}
+
+const severityRank: Record<Finding["severity"], number> = {
+	critical: 0,
+	high: 1,
+	medium: 2,
+	low: 3,
+};
+
+function compareFindings(left: Finding, right: Finding): number {
+	const pathOrder = compareText(left.path, right.path);
+	if (pathOrder !== 0) return pathOrder;
+	if (left.startLine !== right.startLine) return left.startLine - right.startLine;
+	if (left.endLine !== right.endLine) return left.endLine - right.endLine;
+	const severityOrder = severityRank[left.severity] - severityRank[right.severity];
+	if (severityOrder !== 0) return severityOrder;
+	const categoryOrder = compareText(left.category, right.category);
+	if (categoryOrder !== 0) return categoryOrder;
+	const contentOrder = compareText(left.content, right.content);
+	if (contentOrder !== 0) return contentOrder;
+	const existingCodeOrder = compareText(left.existingCode, right.existingCode);
+	if (existingCodeOrder !== 0) return existingCodeOrder;
+	return compareText(left.suggestionCode ?? "", right.suggestionCode ?? "");
+}
+
+function taskReason(outcome: TaskOutcome, fallback: string): string {
+	if (typeof outcome.error === "string" && outcome.error.length > 0) return outcome.error;
+	if (outcome.stopReason !== undefined) return `${fallback} (stop reason: ${outcome.stopReason})`;
+	return fallback;
+}
+
+function endedWithSuccessfulTool(outcome: TaskOutcome, toolName: string): boolean {
+	const last = outcome.toolResults.at(-1);
+	return last?.toolName === toolName && last.isError === false;
+}
+
+function toolNames(tools: readonly { readonly name: string }[]): string[] {
+	return tools.map((tool) => tool.name);
+}
+
+function abortedTaskOutcome(signal: AbortSignal): TaskOutcome {
+	const reason = signal.reason;
+	return {
+		status: "aborted",
+		stopReason: "aborted",
+		text: "",
+		error: reason instanceof Error ? reason.message : typeof reason === "string" ? reason : "Task aborted",
+		usage: zeroUsage(),
+		toolResults: [],
+	};
+}
+
+function invokeTask(
+	executor: TaskExecutor,
+	task: PiTask,
+	signal: AbortSignal | undefined,
+	maxToolRounds: number | undefined,
+	onEvent: (event: TaskEvent) => void,
+): Promise<TaskOutcome> {
+	const runOptions: RunTaskOptions = {
+		signal,
+		maxToolStarts: maxToolRounds,
+		onEvent,
+	};
+	if (signal === undefined) return executor.run(task, runOptions);
+	if (signal.aborted) return Promise.resolve(abortedTaskOutcome(signal));
+
+	return new Promise<TaskOutcome>((resolve, reject) => {
+		let settled = false;
+		const finish = (callback: () => void): void => {
+			if (settled) return;
+			settled = true;
+			signal.removeEventListener("abort", onAbort);
+			callback();
+		};
+		const onAbort = (): void => finish(() => resolve(abortedTaskOutcome(signal)));
+		signal.addEventListener("abort", onAbort, { once: true });
+		let taskPromise: Promise<TaskOutcome>;
+		try {
+			taskPromise = executor.run(task, runOptions);
+		} catch (error) {
+			finish(() => reject(error));
+			return;
+		}
+		taskPromise.then(
+			(value) => finish(() => resolve(value)),
+			(error: unknown) => finish(() => reject(error)),
+		);
+	});
+}
+
+function gateReason(file: ChangedFile): string | undefined {
+	if (typeof file.rawDiff !== "string" || file.rawDiff.trim().length === 0) return "empty_diff";
+	if (new TextEncoder().encode(file.rawDiff).byteLength > MAX_REVIEW_DIFF_BYTES) {
+		return "diff_size_limit";
+	}
+	if (changedLineCount(file) <= 0) return "no_changed_lines";
+	return undefined;
+}
+
+function makeCoverage(
+	selected: readonly string[],
+	skipped: readonly SkippedFile[] = [],
+): CoverageState {
+	return {
+		selected: [...selected],
+		completed: [],
+		failed: [],
+		skipped: [...skipped],
+	};
+}
+
+function statusForCoverage(coverage: CoverageState, aborted: boolean): ReviewStatus {
+	const selected = coverage.selected.length;
+	if (selected === 0) return "skipped";
+	if (coverage.completed.length === selected && coverage.failed.length === 0) return "complete";
+	if (coverage.completed.length > 0) return "partial";
+	if (coverage.failed.length > 0 || aborted) return "failed";
+	return "skipped";
+}
+
+function messageForResult(
+	status: ReviewStatus,
+	coverage: CoverageState,
+	findings: readonly Finding[],
+): string {
+	switch (status) {
+		case "complete": {
+			const skipped = coverage.skipped.length > 0 ? ` ${coverage.skipped.length} file(s) skipped.` : "";
+			return findings.length === 0
+				? `Review complete: no findings across ${coverage.completed.length} file(s).${skipped}`
+				: `Review complete: ${findings.length} finding(s) across ${coverage.completed.length} file(s).${skipped}`;
+		}
+		case "partial":
+			return `Review partial: ${coverage.completed.length} of ${coverage.selected.length} selected file(s) completed; ${coverage.failed.length} failed and ${coverage.skipped.length} skipped. Findings are incomplete.`;
+		case "failed":
+			return `Review failed: ${coverage.completed.length} of ${coverage.selected.length} selected file(s) completed; ${coverage.failed.length} failed and ${coverage.skipped.length} skipped.`;
+		case "skipped":
+			return "Review skipped: no reviewable files were selected.";
+	}
+}
+
+function buildResult(
+	startedAt: number,
+	model: string,
+	coverage: CoverageState,
+	findings: readonly Finding[],
+	warnings: readonly string[],
+	usage: ReviewUsage,
+	aborted: boolean,
+): ReviewResult {
+	const sortedCoverage: CoverageState = {
+		selected: [...coverage.selected].sort(compareText),
+		completed: [...coverage.completed].sort(compareText),
+		failed: [...coverage.failed].sort(compareFailed),
+		skipped: [...coverage.skipped].sort(compareSkipped),
+	};
+	const sortedFindings = [...findings].sort(compareFindings);
+	const status = statusForCoverage(sortedCoverage, aborted);
+	return {
+		status,
+		message: messageForResult(status, sortedCoverage, sortedFindings),
+		model,
+		findings: sortedFindings,
+		coverage: sortedCoverage,
+		warnings: [...warnings],
+		usage: { ...usage },
+		elapsedMs: Math.max(0, Date.now() - startedAt),
+	};
+}
+
+function makeEarlyFailure(
+	startedAt: number,
+	model: string,
+	message: string,
+	warnings: readonly string[],
+	onEvent: ((event: ReviewEvent) => void) | undefined,
+): ReviewResult {
+	const warningList = [...warnings, message];
+	onEvent?.({ type: "warning", message });
+	return {
+		status: "failed",
+		message,
+		model,
+		findings: [],
+		coverage: { selected: [], completed: [], failed: [], skipped: [] },
+		warnings: warningList,
+		usage: zeroUsage(),
+		elapsedMs: Math.max(0, Date.now() - startedAt),
+	};
+}
+
+function isTaskOutcome(value: unknown): value is TaskOutcome {
+	if (!isRecord(value)) return false;
+	return value.status === "complete" || value.status === "failed" || value.status === "aborted";
+}
+
+function signalIsAborted(signal: AbortSignal | undefined): boolean {
+	return signal?.aborted === true;
+}
+
+/**
+ * Domain-level review orchestration. Pi objects, target acquisition, and task
+ * execution live behind this small seam; the result contains only review
+ * domain contracts from src/types.ts.
+ */
+export class Reviewer {
+	private readonly dependencies: ReviewerDependencies;
+
+	constructor();
+	constructor(dependencies: ReviewerDependencies);
+	constructor(targetFactory: ReviewTargetFactory, taskExecutor?: TaskExecutor | TaskExecutorFactory);
+	constructor(
+		dependenciesOrTargetFactory: ReviewerDependencies | ReviewTargetFactory = {},
+		positionalTaskExecutor?: TaskExecutor | TaskExecutorFactory,
+	) {
+		if (typeof dependenciesOrTargetFactory === "function") {
+			this.dependencies = {
+				targetFactory: dependenciesOrTargetFactory,
+				...(typeof positionalTaskExecutor === "function"
+					? { taskExecutorFactory: positionalTaskExecutor }
+					: { taskExecutor: positionalTaskExecutor }),
+			};
+		} else {
+			this.dependencies = dependenciesOrTargetFactory;
+		}
+	}
+
+	async review(input: ReviewInput, options: ReviewOptions): Promise<ReviewResult> {
+		const startedAt = Date.now();
+		const eventHandler = isRecord(options) && typeof options.onEvent === "function"
+			? options.onEvent
+			: undefined;
+		let normalized: NormalizedReviewOptions;
+		try {
+			normalized = normalizeReviewOptions(options);
+		} catch (error) {
+			return makeEarlyFailure(
+				startedAt,
+				typeof options?.model === "string" ? options.model : "",
+				errorMessage(error, "Invalid review options"),
+				[],
+				eventHandler,
+			);
+		}
+
+		const warnings: string[] = [];
+		const emit = (event: ReviewEvent): void => {
+			normalized.onEvent?.(event);
+		};
+		const warn = (message: string): void => {
+			warnings.push(message);
+			emit({ type: "warning", message });
+		};
+
+		let target: ReviewTarget;
+		try {
+			const targetFactory = this.dependencies.targetFactory ?? createReviewTarget;
+			target = await targetFactory(input);
+			if (!isRecord(target) || !Array.isArray(target.files)) {
+				throw new Error("Review target did not provide a changed-file list");
+			}
+		} catch (error) {
+			const message = `Unable to acquire review target: ${errorMessage(error, "target acquisition failed")}`;
+			return makeEarlyFailure(startedAt, normalized.model, message, warnings, normalized.onEvent);
+		}
+
+		let selection: ReturnType<typeof selectFiles>;
+		try {
+			const orderedFiles = [...target.files].sort(compareFiles);
+			selection = selectFiles(orderedFiles, {
+				include: normalized.include,
+				exclude: normalized.exclude,
+				maxChangedLines: DEFAULT_MAX_CHANGED_LINES,
+			});
+		} catch (error) {
+			const message = `Unable to select review files: ${errorMessage(error, "file selection failed")}`;
+			return makeEarlyFailure(startedAt, normalized.model, message, warnings, normalized.onEvent);
+		}
+
+		const selected: SelectedReviewFile[] = [];
+		const gatedSkipped: SkippedFile[] = [];
+		try {
+			for (const file of selection.selected) {
+				const path = pathForFile(file);
+				const reason = gateReason(file);
+				if (reason !== undefined) {
+					gatedSkipped.push({ path, reason });
+					continue;
+				}
+				selected.push({ file, path, target });
+			}
+		} catch (error) {
+			const message = `Unable to validate selected review files: ${errorMessage(error, "review file validation failed")}`;
+			return makeEarlyFailure(startedAt, normalized.model, message, warnings, normalized.onEvent);
+		}
+
+		const selectionSkipped: SkippedFile[] = [
+			...selection.skipped,
+			...gatedSkipped,
+		];
+		const coverage = makeCoverage(
+			selected.map((entry) => entry.path),
+			selectionSkipped,
+		);
+		const findings: Finding[] = [];
+		let usage = zeroUsage();
+		let aborted = normalized.signal?.aborted === true;
+
+		// This is intentionally before any executor call. A caller observing the
+		// first event can rely on coverage.selected already being fixed for the run.
+		emit({ type: "review_started", files: selected.length });
+
+		if (selected.length === 0) {
+			return buildResult(startedAt, normalized.model, coverage, findings, warnings, usage, aborted);
+		}
+
+		if (normalized.signal?.aborted === true) {
+			for (const entry of selected) coverage.skipped.push({ path: entry.path, reason: "aborted" });
+			aborted = true;
+			return buildResult(startedAt, normalized.model, coverage, findings, warnings, usage, aborted);
+		}
+
+		let executor: TaskExecutor;
+		try {
+			executor = await this.makeExecutor(normalized, target.repositoryRoot);
+		} catch (error) {
+			const reason = `Unable to create task executor: ${errorMessage(error, "executor initialization failed")}`;
+			warn(reason);
+			for (const entry of selected) coverage.failed.push({ path: entry.path, reason });
+			return buildResult(startedAt, normalized.model, coverage, findings, warnings, usage, aborted);
+		}
+
+		let abortAllPromise: Promise<void> | undefined;
+		const requestAbortAll = (): void => {
+			if (abortAllPromise !== undefined) return;
+			abortAllPromise = Promise.resolve()
+				.then(() => executor.abortAll())
+				.catch((error: unknown) => {
+					warn(`Unable to abort active review tasks: ${errorMessage(error, "abortAll failed")}`);
+				});
+		};
+		const signal = normalized.signal;
+		const abortListener = (): void => {
+			aborted = true;
+			requestAbortAll();
+		};
+		if (signal !== undefined) {
+			signal.addEventListener("abort", abortListener, { once: true });
+			if (signal.aborted) abortListener();
+		}
+
+		const results: Array<IndexedWorkflowResult | undefined> = Array.from({ length: selected.length });
+		let nextIndex = 0;
+		const worker = async (): Promise<void> => {
+			while (true) {
+				const index = nextIndex;
+				nextIndex += 1;
+				const entry = selected[index];
+				if (entry === undefined) return;
+
+				if (signal?.aborted === true) {
+					aborted = true;
+					results[index] = {
+						kind: "skipped",
+						path: entry.path,
+						findings: [],
+						usage: zeroUsage(),
+						reason: "aborted",
+					};
+					continue;
+				}
+
+				emit({ type: "file_started", path: entry.path });
+				let workflow: WorkflowResult;
+				try {
+					workflow = await this.reviewFile(
+						entry,
+						selected,
+						{ background: input.background, rules: input.rules },
+						normalized,
+						executor,
+						warn,
+						(event) => emit(event),
+					);
+				} catch (error) {
+					const reason = `Review task failed for ${entry.path}: ${errorMessage(error, "unexpected file failure")}`;
+					warn(reason);
+					workflow = { success: false, findings: [], usage: zeroUsage(), reason };
+				}
+
+				usage = addUsage(usage, workflow.usage);
+				if (workflow.success) {
+					results[index] = {
+						kind: "completed",
+						path: entry.path,
+						findings: workflow.findings,
+						usage: workflow.usage,
+					};
+					findings.push(...workflow.findings);
+					emit({ type: "file_completed", path: entry.path, findings: workflow.findings.length });
+				} else {
+					const reason = workflow.reason ?? `Review task failed for ${entry.path}`;
+					results[index] = {
+						kind: "failed",
+						path: entry.path,
+						findings: workflow.findings,
+						usage: workflow.usage,
+						reason,
+					};
+					emit({ type: "file_failed", path: entry.path, reason });
+				}
+			}
+		};
+
+		const workerCount = Math.min(normalized.concurrency, selected.length);
+		try {
+			await Promise.all(Array.from({ length: workerCount }, () => worker()));
+		} finally {
+			if (abortAllPromise !== undefined) await abortAllPromise;
+			if (signal !== undefined) signal.removeEventListener("abort", abortListener);
+		}
+
+		for (let index = 0; index < selected.length; index += 1) {
+			const entry = selected[index];
+			if (entry === undefined || results[index] !== undefined) continue;
+			coverage.skipped.push({ path: entry.path, reason: "not_dispatched" });
+		}
+		for (const result of results) {
+			if (result === undefined) continue;
+			if (result.kind === "completed") {
+				coverage.completed.push(result.path);
+			} else if (result.kind === "failed") {
+				coverage.failed.push({ path: result.path, reason: result.reason ?? "file review failed" });
+			} else {
+				coverage.skipped.push({ path: result.path, reason: result.reason ?? "skipped" });
+			}
+		}
+
+		return buildResult(startedAt, normalized.model, coverage, findings, warnings, usage, aborted);
+	}
+
+	private async makeExecutor(options: NormalizedReviewOptions, repositoryRoot: string): Promise<TaskExecutor> {
+		const injected = this.dependencies.taskExecutor;
+		if (injected !== undefined) return injected;
+
+		const factory = this.dependencies.taskExecutorFactory;
+		const runnerOptions: PiTaskRunnerOptions = {
+			model: options.modelSpec,
+			cwd: repositoryRoot,
+			agentDir: options.agentDir,
+		};
+		if (factory !== undefined) return factory(runnerOptions);
+		return new PiTaskRunner(runnerOptions);
+	}
+
+	private async reviewFile(
+		entry: SelectedReviewFile,
+		selected: readonly SelectedReviewFile[],
+		context: ReviewContext,
+		options: NormalizedReviewOptions,
+		executor: TaskExecutor,
+		warn: (message: string) => void,
+		emit: (event: ReviewEvent) => void,
+	): Promise<WorkflowResult> {
+		let usage = zeroUsage();
+		let riskPlan: string | undefined;
+		const otherChangedFiles = selected
+			.map((candidate) => candidate.path)
+			.filter((path) => path !== entry.path);
+		const taskEvent = (path: string) => (event: TaskEvent): void => {
+			if (event.type === "tool_started") {
+				emit({ type: "tool_started", path, tool: event.toolName });
+			} else {
+				warn(`${path}: ${event.message}`);
+			}
+		};
+
+		if (changedLineCount(entry.file) >= options.planChangedLineThreshold) {
+			const toolkit: PlanToolkit = createPlanToolkit();
+			const prompt = buildRiskPlanPrompt({
+				currentFilePath: entry.path,
+				currentFileDiff: entry.file.rawDiff,
+				otherChangedFiles,
+				background: context.background,
+				rules: context.rules,
+			});
+			let outcome: TaskOutcome | undefined;
+			try {
+				outcome = await invokeTask(
+					executor,
+					this.makeTask(prompt, toolkit.tools, options, taskEvent(entry.path)),
+					options.signal,
+					options.maxToolRounds,
+					taskEvent(entry.path),
+				);
+				if (!isTaskOutcome(outcome)) throw new Error("Task executor returned an invalid outcome");
+			} catch (error) {
+				warn(`Risk planner failed for ${entry.path}: ${errorMessage(error, "planner task failed")}`);
+				if (signalIsAborted(options.signal)) {
+					return {
+						success: false,
+						findings: [],
+						usage,
+						reason: `Review aborted during risk planning for ${entry.path}`,
+					};
+				}
+			}
+
+			if (outcome !== undefined) {
+				usage = addUsage(usage, outcome.usage);
+				if (
+					outcome.status === "complete" &&
+					endedWithSuccessfulTool(outcome, "submit_plan") &&
+					toolkit.value !== undefined
+				) {
+					riskPlan = JSON.stringify(toolkit.value);
+				} else {
+					warn(`Risk planner failed or returned no usable plan for ${entry.path}: ${taskReason(outcome, "planner did not submit a plan")}`);
+				}
+			}
+		}
+
+		if (signalIsAborted(options.signal)) {
+			return {
+				success: false,
+				findings: [],
+				usage,
+				reason: `Review aborted before main review for ${entry.path}`,
+			};
+		}
+
+		let toolkit: ReviewToolkit;
+		try {
+			toolkit = createReviewToolkit(entry.target, entry.path, {
+				maxToolCalls: options.maxToolRounds ?? DEFAULT_MAX_TOOL_CALLS,
+			});
+		} catch (error) {
+			const reason = `Unable to create review tools for ${entry.path}: ${errorMessage(error, "review toolkit initialization failed")}`;
+			warn(reason);
+			return { success: false, findings: [], usage, reason };
+		}
+		const prompt = buildFileReviewPrompt({
+			currentFilePath: entry.path,
+			currentFileDiff: entry.file.rawDiff,
+			otherChangedFiles,
+			background: context.background,
+			rules: context.rules,
+			riskPlan,
+		});
+		let outcome: TaskOutcome;
+		try {
+			outcome = await invokeTask(
+				executor,
+				this.makeTask(prompt, toolkit.tools, options, taskEvent(entry.path)),
+				options.signal,
+				options.maxToolRounds,
+				taskEvent(entry.path),
+			);
+			if (!isTaskOutcome(outcome)) throw new Error("Task executor returned an invalid outcome");
+		} catch (error) {
+			const reason = `Review task failed for ${entry.path}: ${errorMessage(error, "main review task failed")}`;
+			warn(reason);
+			return { success: false, findings: [], usage, reason };
+		}
+		usage = addUsage(usage, outcome.usage);
+
+		if (outcome.status !== "complete") {
+			const reason = `Review task failed for ${entry.path}: ${taskReason(outcome, "main review did not complete")}`;
+			warn(reason);
+			return { success: false, findings: [], usage, reason };
+		}
+		if (!endedWithSuccessfulTool(outcome, "submit_review") || toolkit.completion !== "DONE") {
+			const reason = `Review task failed for ${entry.path}: submit_review DONE was not the final successful tool result (state: ${toolkit.completion})`;
+			warn(reason);
+			return { success: false, findings: [], usage, reason };
+		}
+		if (signalIsAborted(options.signal)) {
+			return {
+				success: false,
+				findings: [],
+				usage,
+				reason: `Review aborted after main review for ${entry.path}`,
+			};
+		}
+
+		const resolved: Finding[] = [];
+		for (const [index, candidate] of toolkit.candidates.entries()) {
+			let finding: Finding | undefined;
+			try {
+				finding = resolveFinding(entry.file, candidate);
+			} catch (error) {
+				warn(`Discarded unanchored finding for ${entry.path} (candidate ${index + 1}): ${errorMessage(error, "invalid anchor")}`);
+				continue;
+			}
+			if (finding === undefined) {
+				warn(`Discarded unanchored finding for ${entry.path} (candidate ${index + 1}).`);
+				continue;
+			}
+			resolved.push(finding);
+		}
+
+		if (resolved.length === 0) return { success: true, findings: [], usage };
+
+		const candidateIds = resolved.map((_finding, index) => `c-${index}`);
+		const vetoToolkit: VetoToolkit = createVetoToolkit(candidateIds);
+		const vetoPrompt = buildVetoFilterPrompt({
+			currentFilePath: entry.path,
+			currentFileDiff: entry.file.rawDiff,
+			comments: resolved.map((finding, index) => ({
+				id: candidateIds[index],
+				content: finding.content,
+				existingCode: finding.existingCode,
+			})),
+		});
+		let vetoOutcome: TaskOutcome | undefined;
+		try {
+			vetoOutcome = await invokeTask(
+				executor,
+				this.makeTask(vetoPrompt, vetoToolkit.tools, options, taskEvent(entry.path)),
+				options.signal,
+				options.maxToolRounds,
+				taskEvent(entry.path),
+			);
+			if (!isTaskOutcome(vetoOutcome)) throw new Error("Task executor returned an invalid outcome");
+		} catch (error) {
+			warn(`Veto filter failed for ${entry.path}; keeping all findings: ${errorMessage(error, "filter task failed")}`);
+			if (signalIsAborted(options.signal)) {
+				return {
+					success: false,
+					findings: resolved,
+					usage,
+					reason: `Review aborted during veto filtering for ${entry.path}`,
+				};
+			}
+			return { success: true, findings: resolved, usage };
+		}
+		usage = addUsage(usage, vetoOutcome.usage);
+
+		if (
+			vetoOutcome.status === "complete" &&
+			endedWithSuccessfulTool(vetoOutcome, "submit_veto") &&
+			vetoToolkit.vetoedIds !== undefined
+		) {
+			const vetoed = new Set(vetoToolkit.vetoedIds);
+			return {
+				success: !signalIsAborted(options.signal),
+				findings: resolved.filter((_finding, index) => !vetoed.has(candidateIds[index] ?? "")),
+				usage,
+				reason: signalIsAborted(options.signal)
+					? `Review aborted after veto filtering for ${entry.path}`
+					: undefined,
+			};
+		}
+
+		warn(`Veto filter returned no usable result for ${entry.path}; keeping all findings (${taskReason(vetoOutcome, "filter did not submit a result")}).`);
+		if (signalIsAborted(options.signal)) {
+			return {
+				success: false,
+				findings: resolved,
+				usage,
+				reason: `Review aborted during veto filtering for ${entry.path}`,
+			};
+		}
+		return { success: true, findings: resolved, usage };
+	}
+
+	private makeTask(
+		prompt: { readonly system: string; readonly user: string },
+		tools: readonly { readonly name: string }[],
+		options: NormalizedReviewOptions,
+		onEvent: (event: TaskEvent) => void,
+	): PiTask {
+		return {
+			prompt,
+			customTools: tools,
+			allowedTools: toolNames(tools),
+			maxToolStarts: options.maxToolRounds ?? DEFAULT_MAX_TOOL_CALLS,
+			signal: options.signal,
+			onEvent,
+		};
+	}
+}
+
+/** Run one review with production defaults, without requiring a Reviewer object. */
+export function review(
+	input: ReviewInput,
+	options: ReviewOptions,
+	dependencies?: ReviewerDependencies,
+): Promise<ReviewResult>;
+export function review(
+	input: ReviewInput,
+	options: ReviewOptions,
+	targetFactory?: ReviewTargetFactory,
+	taskExecutor?: TaskExecutor | TaskExecutorFactory,
+): Promise<ReviewResult>;
+export function review(
+	input: ReviewInput,
+	options: ReviewOptions,
+	dependenciesOrTargetFactory: ReviewerDependencies | ReviewTargetFactory = {},
+	taskExecutor?: TaskExecutor | TaskExecutorFactory,
+): Promise<ReviewResult> {
+	const reviewer = typeof dependenciesOrTargetFactory === "function"
+		? new Reviewer(dependenciesOrTargetFactory, taskExecutor)
+		: new Reviewer(dependenciesOrTargetFactory);
+	return reviewer.review(input, options);
+}
+
+/** Explicit factory for hosts that want to retain a configured seam. */
+export function createReviewer(dependencies?: ReviewerDependencies): Reviewer {
+	return new Reviewer(dependencies ?? {});
+}
+
