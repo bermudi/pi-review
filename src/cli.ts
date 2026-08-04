@@ -144,7 +144,7 @@ Options:
   -m, --model PROVIDER/MODEL  Model reference, optionally with :thinking;
                               required unless PI_REVIEW_MODEL is set
   --thinking LEVEL            off, minimal, low, medium, high, xhigh, or max
-  --base REF --head REF      Review the range from REF to REF
+  --base REF [--head REF]    Review the range from REF to REF (head defaults to HEAD)
   --commit REF               Review one commit
   --include PATTERN          Include a path pattern (repeatable)
   --exclude PATTERN          Exclude a path pattern (repeatable)
@@ -335,14 +335,14 @@ function validateModel(model: string): void {
 
 function validateMode(values: RawCliValues): ReviewMode {
 	const hasRange = values.base !== undefined || values.head !== undefined;
-	if (hasRange && (values.base === undefined || values.head === undefined)) {
-		optionSyntaxError("--base and --head must be supplied together.");
+	if (hasRange && values.base === undefined) {
+		optionSyntaxError("--base is required when --head is supplied.");
 	}
 	if (values.commit !== undefined && hasRange) {
 		optionSyntaxError("--commit cannot be combined with --base or --head.");
 	}
 	if (values.commit !== undefined) return { kind: "commit", ref: values.commit };
-	if (hasRange) return { kind: "range", base: values.base as string, head: values.head as string };
+	if (hasRange) return { kind: "range", base: values.base as string, head: values.head ?? "HEAD" };
 	return { kind: "workspace" };
 }
 

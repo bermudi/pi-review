@@ -140,7 +140,12 @@ describe("CLI argument parsing", () => {
 			kind: "commit",
 			ref: "HEAD~1",
 		});
-		expect(() => parseArgs(["--base", "main", "--model", "p/m"])).toThrow("--base and --head");
+		expect(parseArgs(["--model", "p/m", "--base", "main"]).mode).toEqual({
+			kind: "range",
+			base: "main",
+			head: "HEAD",
+		});
+		expect(() => parseArgs(["--model", "p/m", "--head", "topic"])).toThrow("--base is required");
 		expect(() => parseArgs(["--model", "p/m", "--commit", "HEAD", "--base", "main", "--head", "topic"])).toThrow("--commit");
 		expect(() => parseArgs(["--model", "p/m", "--background", "one", "--background-file", "two"])).toThrow("mutually exclusive");
 	});

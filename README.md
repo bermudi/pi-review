@@ -59,14 +59,14 @@ pi-review --repo /path/to/repository --commit HEAD --model provider/model
 pi-review --repo . --model provider/model --json
 ```
 
-The same commands can be run from source by replacing `pi-review` with `bun run src/cli.ts`. `--base` and `--head` must be supplied together. `--commit` cannot be combined with either range option. There is no separate mode flag: the selected flags determine the mode.
+The same commands can be run from source by replacing `pi-review` with `bun run src/cli.ts`. `--base` implies `--head HEAD` when `--head` is omitted; `--head` requires `--base`. `--commit` cannot be combined with either range option. There is no separate mode flag: the selected flags determine the mode.
 
 Available options are:
 
 - `--repo PATH` — repository to review; defaults to the current directory.
 - `-m, --model PROVIDER/MODEL[:thinking]` — Pi model reference; required unless `PI_REVIEW_MODEL` is set. Accepts bare and partial names resolved through `~/.pi/agent/models.json`, like `pi --model`.
 - `--thinking LEVEL` — `off`, `minimal`, `low`, `medium`, `high`, `xhigh`, or `max`.
-- `--base REF --head REF` — review the range from the merge-base of the refs to `head`.
+- `--base REF [--head REF]` — review the range from the merge-base of the refs to `head`; `--head` defaults to `HEAD`.
 - `--commit REF` — review one commit.
 - `--include PATTERN` and `--exclude PATTERN` — repeatable path filters.
 - `--background TEXT`, `--background-file PATH`, and `--rules-file PATH` — review context; the two background forms are mutually exclusive.
