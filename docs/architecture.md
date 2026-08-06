@@ -33,7 +33,7 @@ The system uses three structured termination protocols:
 
 Each phase is a separate task/session. The main worker must call `submit_review` exactly once as its final action. `Reviewer` treats a task outcome without a `DONE` submission as a file failure, even if the Pi session otherwise stopped successfully. A `FAILED` submission cannot contain findings. This keeps phase state explicit and makes failed or incomplete output visible in coverage.
 
-The Pi runner (`pi-runner.ts`) creates in-memory sessions with a minimal resource loader. It resolves the configured provider/model and checks authentication before creating a task session. It forwards only a narrow task outcome/event vocabulary, enforces abort and tool-start limits, sanitizes tool details, and disposes every session. Each task receives an explicit custom-tool allowlist; no default shell, edit, write, or unrelated Pi tool is exposed.
+The Pi runner (`pi-runner.ts`) creates in-memory sessions with a minimal resource loader by default; when a session directory is configured it uses Pi's file-backed session manager instead, persisting each task's transcript as `.jsonl`. It resolves the configured provider/model and checks authentication before creating a task session. It forwards only a narrow task outcome/event vocabulary, enforces abort and tool-start limits, sanitizes tool details, and disposes every session. Each task receives an explicit custom-tool allowlist; no default shell, edit, write, or unrelated Pi tool is exposed.
 
 All repository material is placed in delimited user data. Diffs, code, background, rules, paths, plans, and tool results are evidence, not instructions. The resource loader does not discover repository `AGENTS.md` files, skills, extensions, prompts, or settings.
 
@@ -47,7 +47,7 @@ All repository material is placed in delimited user data. Diffs, code, backgroun
 - `file_read_diff`: the capped diff for a known changed file, at most `100,000` bytes;
 - `submit_review`: the atomic final submission, with at most `20` candidates.
 
-The default toolkit budget is `32` tool starts per task, including the terminating call. Tool parameters are validated at the boundary. Evidence operations are bounded in their returned model-visible output, but their host-side target reads still run with the caller's filesystem permissions.
+The default toolkit budget is `32` tool calls per task, including the terminating call. The runner's hard tool-start cap is `33` by default: one start of slack over the toolkit budget, because a tool call that trips the toolkit's reserve-slot guard still consumes a runner start, so the follow-up `submit_review` must be able to land one start later. A second overshoot still exceeds the cap and aborts. Tool parameters are validated at the boundary. Evidence operations are bounded in their returned model-visible output, but their host-side target reads still run with the caller's filesystem permissions.
 
 ## Atomic output improvement
 

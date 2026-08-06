@@ -71,9 +71,10 @@ Available options are:
 - `--include PATTERN` and `--exclude PATTERN` — repeatable path filters.
 - `--background TEXT`, `--background-file PATH`, and `--rules-file PATH` — review context; the two background forms are mutually exclusive.
 - `--concurrency N` — positive maximum number of concurrent file tasks; default `4`.
-- `--max-tool-rounds N` — positive per-task tool-start limit; default `32`.
+- `--max-tool-rounds N` — positive per-task tool-call budget; default `32` (the runner's hard cap allows one extra start so a single overshoot can still submit).
 - `--plan-threshold N` — non-negative changed-line threshold for risk planning; default `50`.
 - `--agent-dir PATH` — Pi agent directory override.
+- `--session-dir PATH` — persist each per-task Pi session transcript (`.jsonl`) under PATH for debugging; off by default.
 - `--json` — output the exact `ReviewResult` object instead of the human-readable rendering.
 - `--help` — print usage.
 
@@ -107,7 +108,7 @@ Set `PI_REVIEW_MODEL` to make `--model` optional in the CLI, for example `export
 
 Model references follow the same rules as `pi --model`: `provider/model[:thinking]`, a bare name, or a partial name, all resolved through `~/.pi/agent/models.json` by the Pi model runtime. Names that do not resolve produce a failed task/review with the resolver's error rather than an interactive prompt.
 
-Pi sessions use an in-memory session/settings manager and a minimal resource loader. Repository `AGENTS.md` files, skills, extensions, prompts, and settings are not loaded into review sessions. Repository material is evidence, not authority. Review evidence and context are sent to the configured model provider, so use the tool where that disclosure is acceptable.
+Pi sessions use an in-memory session/settings manager and a minimal resource loader by default. With `--session-dir PATH` (or `ReviewOptions.sessionDir`), each per-task session transcript is persisted as a `.jsonl` file under that directory — useful for debugging failed or aborted reviews; failed files carry the transcript path in the result. Repository `AGENTS.md` files, skills, extensions, prompts, and settings are not loaded into review sessions. Repository material is evidence, not authority. Review evidence and context are sent to the configured model provider, so use the tool where that disclosure is acceptable.
 
 ## Library usage
 
@@ -171,7 +172,7 @@ The useful behavior is the set of hard boundaries around the model:
 
 The main worker's model-visible tools are `file_read`, `code_search`, `file_find`, `file_read_diff`, and `submit_review`. Reads/searches/diffs have output and result limits, and each task has a tool-call budget. There is no model-visible shell, edit, or write tool. Prompt data is fenced as untrusted evidence so repository text cannot change system policy or authorize tools.
 
-The evidence bounds are intentionally explicit: file reads return at most `500` numbered lines and `100,000` bytes; searches return at most `100` results and `50,000` bytes; finds return at most `100` paths and `50,000` bytes; changed-file diffs return at most `100,000` bytes. Search skips files over `1,000,000` bytes and binary files. The default task budget is `32` tool starts.
+The evidence bounds are intentionally explicit: file reads return at most `500` numbered lines and `100,000` bytes; searches return at most `100` results and `50,000` bytes; finds return at most `100` paths and `50,000` bytes; changed-file diffs return at most `100,000` bytes. Search skips files over `1,000,000` bytes and binary files. The default per-task budget is `32` tool calls, including `submit_review`; the runner's hard tool-start cap is one start higher so a model that overshoots exploration by a single call can still submit instead of being killed.
 
 ## Security and read-only guarantees
 

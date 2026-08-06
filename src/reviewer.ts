@@ -85,6 +85,7 @@ interface NormalizedReviewOptions {
 	readonly maxToolRounds: number | undefined;
 	readonly planChangedLineThreshold: number;
 	readonly agentDir: string | undefined;
+	readonly sessionDir: string | undefined;
 	readonly onEvent: ((event: ReviewEvent) => void) | undefined;
 	readonly signal: AbortSignal | undefined;
 }
@@ -105,6 +106,7 @@ interface WorkflowResult {
 	readonly findings: Finding[];
 	readonly usage: ReviewUsage;
 	readonly reason?: string;
+	readonly sessionFile?: string;
 }
 
 interface IndexedWorkflowResult {
@@ -113,6 +115,7 @@ interface IndexedWorkflowResult {
 	readonly findings: Finding[];
 	readonly usage: ReviewUsage;
 	readonly reason?: string;
+	readonly sessionFile?: string;
 }
 
 interface CoverageState {
@@ -210,6 +213,9 @@ function normalizeReviewOptions(options: ReviewOptions): NormalizedReviewOptions
 	if (options.agentDir !== undefined && typeof options.agentDir !== "string") {
 		throw new TypeError("Review options.agentDir must be a string");
 	}
+	if (options.sessionDir !== undefined && typeof options.sessionDir !== "string") {
+		throw new TypeError("Review options.sessionDir must be a string");
+	}
 	if (options.signal !== undefined && (options.signal === null || typeof options.signal !== "object")) {
 		throw new TypeError("Review options.signal must be an AbortSignal");
 	}
@@ -234,6 +240,7 @@ function normalizeReviewOptions(options: ReviewOptions): NormalizedReviewOptions
 		maxToolRounds,
 		planChangedLineThreshold,
 		agentDir: options.agentDir,
+		sessionDir: options.sessionDir,
 		onEvent: options.onEvent,
 		signal: options.signal,
 	};
@@ -302,6 +309,12 @@ function endedWithSuccessfulTool(outcome: TaskOutcome, toolName: string): boolea
 
 function toolNames(tools: readonly { readonly name: string }[]): string[] {
 	return tools.map((tool) => tool.name);
+}
+
+/** Stable per-task session id used to name persisted transcripts for debugging. */
+function taskSessionId(path: string, phase: "plan" | "review" | "veto"): string {
+	const safe = path.replace(/[^A-Za-z0-9._-]+/gu, "-").replace(/^-+|-+$/gu, "");
+	return `review-${safe === "" ? "file" : safe}-${phase}`;
 }
 
 function abortedTaskOutcome(signal: AbortSignal): TaskOutcome {
@@ -673,8 +686,9 @@ export class Reviewer {
 						findings: workflow.findings,
 						usage: workflow.usage,
 						reason,
+						sessionFile: workflow.sessionFile,
 					};
-					emit({ type: "file_failed", path: entry.path, reason });
+					emit({ type: "file_failed", path: entry.path, reason, sessionFile: workflow.sessionFile });
 				}
 			}
 		};
@@ -697,7 +711,11 @@ export class Reviewer {
 			if (result.kind === "completed") {
 				coverage.completed.push(result.path);
 			} else if (result.kind === "failed") {
-				coverage.failed.push({ path: result.path, reason: result.reason ?? "file review failed" });
+				coverage.failed.push({
+					path: result.path,
+					reason: result.reason ?? "file review failed",
+					...(result.sessionFile === undefined ? {} : { sessionFile: result.sessionFile }),
+				});
 			} else {
 				coverage.skipped.push({ path: result.path, reason: result.reason ?? "skipped" });
 			}
@@ -715,6 +733,7 @@ export class Reviewer {
 			model: options.modelSpec,
 			cwd: repositoryRoot,
 			agentDir: options.agentDir,
+			sessionDir: options.sessionDir,
 		};
 		if (factory !== undefined) return factory(runnerOptions);
 		return new PiTaskRunner(runnerOptions);
@@ -755,7 +774,7 @@ export class Reviewer {
 			try {
 				outcome = await invokeTask(
 					executor,
-					this.makeTask(prompt, toolkit.tools, options, taskEvent(entry.path)),
+					this.makeTask(prompt, toolkit.tools, options, taskEvent(entry.path), taskSessionId(entry.path, "plan")),
 					options.signal,
 					options.maxToolRounds,
 					taskEvent(entry.path),
@@ -818,7 +837,7 @@ export class Reviewer {
 		try {
 			outcome = await invokeTask(
 				executor,
-				this.makeTask(prompt, toolkit.tools, options, taskEvent(entry.path)),
+				this.makeTask(prompt, toolkit.tools, options, taskEvent(entry.path), taskSessionId(entry.path, "review")),
 				options.signal,
 				options.maxToolRounds,
 				taskEvent(entry.path),
@@ -834,12 +853,12 @@ export class Reviewer {
 		if (outcome.status !== "complete") {
 			const reason = `Review task failed for ${entry.path}: ${taskReason(outcome, "main review did not complete")}`;
 			warn(reason);
-			return { success: false, findings: [], usage, reason };
+			return { success: false, findings: [], usage, reason, sessionFile: outcome.sessionFile };
 		}
 		if (!endedWithSuccessfulTool(outcome, "submit_review") || toolkit.completion !== "DONE") {
 			const reason = `Review task failed for ${entry.path}: submit_review DONE was not the final successful tool result (state: ${toolkit.completion})`;
 			warn(reason);
-			return { success: false, findings: [], usage, reason };
+			return { success: false, findings: [], usage, reason, sessionFile: outcome.sessionFile };
 		}
 		if (signalIsAborted(options.signal)) {
 			return {
@@ -847,6 +866,7 @@ export class Reviewer {
 				findings: [],
 				usage,
 				reason: `Review aborted after main review for ${entry.path}`,
+				sessionFile: outcome.sessionFile,
 			};
 		}
 
@@ -883,7 +903,7 @@ export class Reviewer {
 		try {
 			vetoOutcome = await invokeTask(
 				executor,
-				this.makeTask(vetoPrompt, vetoToolkit.tools, options, taskEvent(entry.path)),
+				this.makeTask(vetoPrompt, vetoToolkit.tools, options, taskEvent(entry.path), taskSessionId(entry.path, "veto")),
 				options.signal,
 				options.maxToolRounds,
 				taskEvent(entry.path),
@@ -936,12 +956,19 @@ export class Reviewer {
 		tools: readonly { readonly name: string }[],
 		options: NormalizedReviewOptions,
 		onEvent: (event: TaskEvent) => void,
+		sessionId?: string,
 	): PiTask {
 		return {
 			prompt,
 			customTools: tools,
 			allowedTools: toolNames(tools),
-			maxToolStarts: options.maxToolRounds ?? DEFAULT_MAX_TOOL_CALLS,
+			// The runner's hard tool-start cap needs one start of slack over the
+			// review toolkit's dispatcher budget: a tool call that trips the
+			// dispatcher's reserve-slot guard still consumes a runner start, so
+			// submit_review must be able to land one start later. True runaway
+			// (a second overshoot) still exceeds the cap and aborts.
+			maxToolStarts: (options.maxToolRounds ?? DEFAULT_MAX_TOOL_CALLS) + 1,
+			sessionId,
 			signal: options.signal,
 			onEvent,
 		};

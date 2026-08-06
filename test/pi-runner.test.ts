@@ -52,10 +52,15 @@ class FakeSession implements TaskSession {
 	disposeCalls = 0;
 	promptError: Error | undefined;
 	readonly messages: readonly unknown[] = [];
+	readonly sessionFile: string | undefined;
 	private readonly promptImplementation: (session: FakeSession) => Promise<void>;
 
-	constructor(promptImplementation: (session: FakeSession) => Promise<void>) {
+	constructor(
+		promptImplementation: (session: FakeSession) => Promise<void>,
+		sessionFile?: string,
+	) {
 		this.promptImplementation = promptImplementation;
+		this.sessionFile = sessionFile;
 	}
 
 	subscribe(listener: (event: unknown) => void): () => void {
@@ -252,6 +257,39 @@ describe("PiTaskRunner", () => {
 		expect(outcome.usage.inputTokens).toBe(9);
 		expect(outcome.usage.totalTokens).toBe(21);
 		expect(sessions[0]?.disposeCalls).toBe(1);
+	});
+
+	test("surfaces the session transcript path when the session provides one", async () => {
+		const { runner } = harness(
+			() =>
+				new FakeSession(
+					async (session) => {
+						session.emit({ type: "agent_end", messages: [assistant("stop", "done")] });
+					},
+					"/tmp/sessions/rev.jsonl",
+				),
+		);
+
+		const outcome = await runner.run({
+			prompt: { system: "system", user: "work" },
+			sessionId: "review-src-x-rs-review",
+		});
+
+		expect(outcome.status).toBe("complete");
+		expect(outcome.sessionFile).toBe("/tmp/sessions/rev.jsonl");
+	});
+
+	test("omits the session transcript path when none was persisted", async () => {
+		const { runner } = harness(() =>
+			new FakeSession(async (session) => {
+				session.emit({ type: "agent_end", messages: [assistant("stop", "done")] });
+			}),
+		);
+
+		const outcome = await runner.run({ prompt: { system: "system", user: "work" } });
+
+		expect(outcome.status).toBe("complete");
+		expect(outcome.sessionFile).toBeUndefined();
 	});
 
 	test("abortAll aborts every active session", async () => {

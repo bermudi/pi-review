@@ -26,6 +26,8 @@ export interface TaskOutcome {
 	readonly error?: string;
 	readonly usage: ReviewUsage;
 	readonly toolResults: readonly TaskToolResult[];
+	/** Path of the persisted session transcript (.jsonl), when sessions are persisted. */
+	readonly sessionFile?: string;
 }
 
 /** A deliberately small event vocabulary for callers that want progress. */
@@ -47,6 +49,8 @@ export interface TaskSession {
 	abort(): Promise<void>;
 	dispose(): void;
 	readonly messages?: readonly unknown[];
+	/** Path of the persisted session transcript, when the session manager writes one. */
+	readonly sessionFile?: string;
 }
 
 export interface TaskSessionFactoryOptions {
@@ -56,6 +60,10 @@ export interface TaskSessionFactoryOptions {
 	readonly thinkingLevel?: TaskThinkingLevel;
 	readonly cwd: string;
 	readonly agentDir: string;
+	/** When set, persist the session transcript (.jsonl) under this directory. */
+	readonly sessionDir?: string;
+	/** Optional caller-chosen session id, used to name the persisted transcript. */
+	readonly sessionId?: string;
 	readonly systemPrompt: string;
 	/** Explicit names only. An empty list means no tools. */
 	readonly tools: readonly string[];
@@ -101,6 +109,8 @@ export interface PiTaskRunnerOptions {
 	readonly modelSpec?: string;
 	readonly cwd?: string;
 	readonly agentDir?: string;
+	/** When set, persist each task's Pi session transcript (.jsonl) under this directory. */
+	readonly sessionDir?: string;
 	readonly maxToolStarts?: number;
 	readonly signal?: AbortSignal;
 	readonly onEvent?: TaskEventListener;
@@ -139,6 +149,8 @@ export interface PiTask {
 	readonly allowedTools?: readonly string[];
 	readonly toolAllowlist?: readonly string[];
 	readonly maxToolStarts?: number;
+	/** Optional caller-chosen session id, used to name a persisted session transcript. */
+	readonly sessionId?: string;
 	readonly signal?: AbortSignal;
 	readonly onEvent?: TaskEventListener;
 	readonly onToolStart?: TaskToolStartListener;
@@ -165,7 +177,8 @@ interface PiCodingAgentModule {
 	readonly createAgentSession?: (options: Record<string, unknown>) => Promise<{ readonly session: unknown }>;
 	readonly createExtensionRuntime?: () => unknown;
 	readonly SessionManager?: {
-		readonly inMemory: (cwd?: string) => unknown;
+		readonly inMemory: (cwd?: string, options?: { readonly id?: string }) => unknown;
+		readonly create: (cwd: string, sessionDir?: string, options?: { readonly id?: string }) => unknown;
 	};
 	readonly SettingsManager?: {
 		readonly inMemory: (settings?: unknown) => unknown;
@@ -201,6 +214,7 @@ interface NormalizedTask {
 	readonly customTools: readonly unknown[];
 	readonly allowedTools: readonly string[];
 	readonly maxToolStarts?: number;
+	readonly sessionId?: string;
 	readonly signal?: AbortSignal;
 	readonly onEvent?: TaskEventListener;
 	readonly onToolStart?: TaskToolStartListener;
@@ -509,45 +523,48 @@ function taskOutcomeFromFinal(
 	requestedAbort: boolean,
 	abortReason: string | undefined,
 	runError: string | undefined,
+	sessionFile: string | undefined,
 ): TaskOutcome {
 	const usage = aggregateUsage(allMessages);
+	const withSessionFile = (outcome: TaskOutcome): TaskOutcome =>
+		sessionFile === undefined ? outcome : { ...outcome, sessionFile };
 	if (requestedAbort) {
-		return {
+		return withSessionFile({
 			status: "aborted",
 			text: final ? assistantText(final) : "",
 			stopReason: "aborted",
 			error: abortReason ?? "Task aborted",
 			usage,
 			toolResults: [...toolResults],
-		};
+		});
 	}
-	if (!final) return failedOutcome(runError ?? "Pi task completed without a final assistant message.", toolResults);
+	if (!final) return withSessionFile(failedOutcome(runError ?? "Pi task completed without a final assistant message.", toolResults));
 	const stopReason = assistantStopReason(final);
-	if (!stopReason) return failedOutcome(runError ?? "Final Pi assistant message had no stop reason.", toolResults);
+	if (!stopReason) return withSessionFile(failedOutcome(runError ?? "Final Pi assistant message had no stop reason.", toolResults));
 	const text = assistantText(final);
 	// A terminating structured-output tool ends Pi's loop on the assistant's
 	// tool-use turn, so `toolUse` is a successful final state as well as `stop`.
 	if ((stopReason === "stop" || stopReason === "toolUse") && !runError) {
-		return { status: "complete", text, stopReason, usage, toolResults: [...toolResults] };
+		return withSessionFile({ status: "complete", text, stopReason, usage, toolResults: [...toolResults] });
 	}
 	if (stopReason === "aborted" && !runError) {
-		return {
+		return withSessionFile({
 			status: "aborted",
 			text,
 			stopReason,
 			error: stringValue(final.errorMessage) ?? "Task aborted",
 			usage,
 			toolResults: [...toolResults],
-		};
+		});
 	}
-	return {
+	return withSessionFile({
 		status: "failed",
 		text,
 		stopReason,
 		error: runError ?? stringValue(final.errorMessage) ?? `Pi task stopped with reason "${stopReason}".`,
 		usage,
 		toolResults: [...toolResults],
-	};
+	});
 }
 
 async function loadPiCodingAgent(): Promise<PiCodingAgentModule> {
@@ -632,6 +649,15 @@ async function defaultSessionFactory(input: TaskSessionFactoryOptions): Promise<
 	}
 	const extensionRuntime = pi.createExtensionRuntime?.();
 	const resourceLoader = createMinimalResourceLoader(input.systemPrompt, extensionRuntime);
+	// Persist the session transcript when a session dir is configured; otherwise
+	// keep sessions in memory so review runs do not litter disk by default.
+	const sessionManager = input.sessionDir === undefined
+		? pi.SessionManager.inMemory(input.cwd)
+		: pi.SessionManager.create(
+				input.cwd,
+				input.sessionDir,
+				input.sessionId === undefined ? undefined : { id: input.sessionId },
+			);
 	const options: Record<string, unknown> = {
 		cwd: input.cwd,
 		agentDir: input.agentDir,
@@ -642,7 +668,7 @@ async function defaultSessionFactory(input: TaskSessionFactoryOptions): Promise<
 		resourceLoader,
 		tools: [...input.tools],
 		customTools: [...input.customTools],
-		sessionManager: pi.SessionManager.inMemory(input.cwd),
+		sessionManager,
 		settingsManager: pi.SettingsManager.inMemory({
 			compaction: { enabled: true },
 			retry: { enabled: true, maxRetries: 2 },
@@ -704,6 +730,7 @@ function normalizeTask(task: PiTask): NormalizedTask {
 		customTools: [...customTools],
 		allowedTools,
 		maxToolStarts: validateLimit(task.maxToolStarts, "maxToolStarts"),
+		sessionId: task.sessionId,
 		signal: task.signal,
 		onEvent: task.onEvent,
 		onToolStart: task.onToolStart,
@@ -838,6 +865,8 @@ export class PiTaskRunner {
 				thinkingLevel: resolved.thinkingLevel,
 				cwd: this.options.cwd ?? process.cwd(),
 				agentDir: normalizeAgentDir(this.options.agentDir),
+				sessionDir: this.options.sessionDir,
+				sessionId: normalized.sessionId,
 				systemPrompt: normalized.systemPrompt,
 				tools: normalized.allowedTools,
 				allowedTools: normalized.allowedTools,
@@ -944,6 +973,7 @@ export class PiTaskRunner {
 			.map((message) => assistantMessage(message))
 			.filter((message): message is UnknownRecord => message !== undefined);
 		const usageMessages = finalAssistantMessages.length > 0 ? finalAssistantMessages : assistantMessages;
+		const sessionFile = session?.sessionFile;
 		return taskOutcomeFromFinal(
 			final,
 			usageMessages,
@@ -951,6 +981,7 @@ export class PiTaskRunner {
 			activeRun?.abortRequested ?? signal?.aborted ?? false,
 			activeRun?.abortReason,
 			runError,
+			sessionFile,
 		);
 	}
 

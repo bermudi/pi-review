@@ -90,7 +90,7 @@ async function invoke(task: PiTask, name: string, params: unknown): Promise<unkn
 	return tool(task, name).execute("fake-call", params, task.signal, undefined, undefined);
 }
 
-function complete(phaseUsage: ReviewUsage, terminalTool?: string): TaskOutcome {
+function complete(phaseUsage: ReviewUsage, terminalTool?: string, sessionFile?: string): TaskOutcome {
 	return {
 		status: "complete",
 		stopReason: terminalTool === undefined ? "stop" : "toolUse",
@@ -99,10 +99,11 @@ function complete(phaseUsage: ReviewUsage, terminalTool?: string): TaskOutcome {
 		toolResults: terminalTool === undefined
 			? []
 			: [{ toolName: terminalTool, details: {}, isError: false }],
+		...(sessionFile === undefined ? {} : { sessionFile }),
 	};
 }
 
-function failed(message: string, phaseUsage: ReviewUsage = emptyUsage): TaskOutcome {
+function failed(message: string, phaseUsage: ReviewUsage = emptyUsage, sessionFile?: string): TaskOutcome {
 	return {
 		status: "failed",
 		stopReason: "error",
@@ -110,6 +111,7 @@ function failed(message: string, phaseUsage: ReviewUsage = emptyUsage): TaskOutc
 		text: "",
 		usage: phaseUsage,
 		toolResults: [],
+		...(sessionFile === undefined ? {} : { sessionFile }),
 	};
 }
 
@@ -139,6 +141,7 @@ class PhaseExecutor implements TaskExecutor {
 	readonly noFindings: boolean;
 	readonly unanchored: boolean;
 	readonly missingDone: boolean;
+	readonly sessionFile: string | undefined;
 
 	constructor(options: {
 		vetoed?: readonly string[];
@@ -147,6 +150,7 @@ class PhaseExecutor implements TaskExecutor {
 		noFindings?: boolean;
 		unanchored?: boolean;
 		missingDone?: boolean;
+		sessionFile?: string;
 	} = {}) {
 		this.vetoed = options.vetoed;
 		this.failPlan = options.failPlan === true;
@@ -154,6 +158,7 @@ class PhaseExecutor implements TaskExecutor {
 		this.noFindings = options.noFindings === true;
 		this.unanchored = options.unanchored === true;
 		this.missingDone = options.missingDone === true;
+		this.sessionFile = options.sessionFile;
 	}
 
 	async run(task: PiTask): Promise<TaskOutcome> {
@@ -175,7 +180,7 @@ class PhaseExecutor implements TaskExecutor {
 			return complete(usage(10), "submit_plan");
 		}
 		if (name === "submit_review") {
-			if (this.missingDone) return complete(usage(20));
+			if (this.missingDone) return complete(usage(20), undefined, this.sessionFile);
 			const comments = this.noFindings
 				? []
 				: [
@@ -274,7 +279,7 @@ describe("Reviewer", () => {
 			["file_read", "code_search", "file_find", "file_read_diff", "submit_review"],
 			["submit_veto"],
 		]);
-		expect(executor.tasks.every((task) => task.maxToolStarts === 8)).toBe(true);
+		expect(executor.tasks.every((task) => task.maxToolStarts === 9)).toBe(true);
 		expect((executor.tasks[1]?.prompt as { user: string }).user).toContain("The value must be validated.");
 		expect((executor.tasks[1]?.prompt as { user: string }).user).toContain("Adds a large changed block.");
 		expect((executor.tasks[2]?.prompt as { user: string }).user).toContain('"id": "c-0"');
@@ -286,6 +291,53 @@ describe("Reviewer", () => {
 			"tool_started",
 			"file_completed",
 		]);
+	});
+
+	test("threads sessionDir and per-phase session ids through to tasks", async () => {
+		const file = changedFile("src/large.ts", 50);
+		const executor = new PhaseExecutor({ vetoed: ["c-1"] });
+		let runnerSessionDir: string | undefined;
+		const result = await new Reviewer({
+			targetFactory: async () => target([file]),
+			taskExecutorFactory: (runnerOptions) => {
+				runnerSessionDir = runnerOptions.sessionDir;
+				return executor;
+			},
+		}).review(
+			{ repository: "/fake", mode: { kind: "workspace" } },
+			options({ planChangedLineThreshold: 50, sessionDir: "/tmp/sessions" }),
+		);
+
+		expect(result.status).toBe("complete");
+		expect(runnerSessionDir).toBe("/tmp/sessions");
+		expect(executor.tasks.map((task) => task.sessionId)).toEqual([
+			"review-src-large.ts-plan",
+			"review-src-large.ts-review",
+			"review-src-large.ts-veto",
+		]);
+	});
+
+	test("surfaces the persisted session file on failed files", async () => {
+		const executor = new PhaseExecutor({ missingDone: true, sessionFile: "/tmp/sessions/rev.jsonl" });
+		const events: Array<{ type: string; sessionFile?: string }> = [];
+		const result = await new Reviewer({
+			targetFactory: async () => target([changedFile("src/current.ts")]),
+			taskExecutor: executor,
+		}).review(
+			{ repository: "/fake", mode: { kind: "workspace" } },
+			options({
+				onEvent: (event) => {
+					events.push(event as { type: string; sessionFile?: string });
+				},
+			}),
+		);
+
+		expect(result.status).toBe("failed");
+		expect(result.coverage.failed).toHaveLength(1);
+		expect(result.coverage.failed[0]?.sessionFile).toBe("/tmp/sessions/rev.jsonl");
+		expect(result.coverage.failed[0]?.reason).toContain("submit_review DONE");
+		const failedEvent = events.find((event) => event.type === "file_failed");
+		expect(failedEvent?.sessionFile).toBe("/tmp/sessions/rev.jsonl");
 	});
 
 	test("fails soft when planning fails and still completes the main review", async () => {

@@ -38,6 +38,7 @@ type RawCliValues = {
 	maxToolRounds?: string;
 	planThreshold?: string;
 	agentDir?: string;
+	sessionDir?: string;
 	json: boolean;
 	help: boolean;
 };
@@ -63,6 +64,7 @@ const rawCliValuesSchema = z.object({
 	maxToolRounds: optionValue.optional(),
 	planThreshold: optionValue.optional(),
 	agentDir: optionValue.optional(),
+	sessionDir: optionValue.optional(),
 	json: z.boolean(),
 	help: z.boolean(),
 }).strict();
@@ -83,6 +85,7 @@ export interface CliOptions {
 	readonly maxToolRounds: number | undefined;
 	readonly planThreshold: number | undefined;
 	readonly agentDir: string | undefined;
+	readonly sessionDir: string | undefined;
 	readonly json: boolean;
 }
 
@@ -155,6 +158,7 @@ Options:
   --max-tool-rounds N        Maximum tool rounds per task
   --plan-threshold N         Changed-line threshold for risk planning
   --agent-dir PATH           Pi agent directory
+  --session-dir PATH         Write per-task session transcripts (.jsonl) under PATH
   --json                     Emit the exact ReviewResult as JSON
   --help                     Show this help
 
@@ -177,6 +181,7 @@ const knownValueOptions = new Set([
 	"max-tool-rounds",
 	"plan-threshold",
 	"agent-dir",
+	"session-dir",
 ]);
 
 function isThinkingLevel(value: string): value is ThinkingLevel {
@@ -246,6 +251,10 @@ function setValue(raw: RawCliValues, name: string, value: string): void {
 		case "agent-dir":
 			if (raw.agentDir !== undefined) optionSyntaxError("Duplicate --agent-dir option.");
 			raw.agentDir = value;
+			return;
+		case "session-dir":
+			if (raw.sessionDir !== undefined) optionSyntaxError("Duplicate --session-dir option.");
+			raw.sessionDir = value;
 			return;
 		default:
 			optionSyntaxError("Unknown command-line option.");
@@ -383,6 +392,7 @@ export function parseArgs(
 			maxToolRounds: undefined,
 			planThreshold: undefined,
 			agentDir: values.agentDir,
+			sessionDir: values.sessionDir,
 			json: values.json,
 		};
 	}
@@ -418,6 +428,7 @@ export function parseArgs(
 		maxToolRounds: parseInteger(values.maxToolRounds, "max-tool-rounds", 1),
 		planThreshold: parseInteger(values.planThreshold, "plan-threshold", 0),
 		agentDir: values.agentDir,
+		sessionDir: values.sessionDir,
 		json: values.json,
 	};
 }
@@ -472,7 +483,8 @@ export function formatProgress(event: ReviewEvent): string {
 		case "file_completed":
 			return `Completed ${oneLine(event.path)}: ${event.findings} finding(s).\n`;
 		case "file_failed":
-			return `Failed ${oneLine(event.path)}: ${oneLine(event.reason)}.\n`;
+			return `Failed ${oneLine(event.path)}: ${oneLine(event.reason)}.\n`
+				+ (event.sessionFile === undefined ? "" : `Session: ${oneLine(event.sessionFile)}\n`);
 		case "warning":
 			return `Warning: ${oneLine(event.message)}\n`;
 	}
@@ -646,6 +658,7 @@ export async function runCli(
 			...(parsed.maxToolRounds === undefined ? {} : { maxToolRounds: parsed.maxToolRounds }),
 			...(parsed.planThreshold === undefined ? {} : { planChangedLineThreshold: parsed.planThreshold }),
 			...(parsed.agentDir === undefined ? {} : { agentDir: parsed.agentDir }),
+			...(parsed.sessionDir === undefined ? {} : { sessionDir: parsed.sessionDir }),
 		};
 
 		let reviewer: CliReviewer;

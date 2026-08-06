@@ -108,6 +108,8 @@ describe("CLI argument parsing", () => {
 			"50",
 			"--agent-dir",
 			".agents",
+			"--session-dir",
+			"/tmp/sessions",
 			"--json",
 		], "/default");
 
@@ -126,6 +128,7 @@ describe("CLI argument parsing", () => {
 			maxToolRounds: 8,
 			planThreshold: 50,
 			agentDir: ".agents",
+			sessionDir: "/tmp/sessions",
 			json: true,
 		});
 	});
@@ -353,5 +356,8 @@ describe("CLI execution seams", () => {
 test("formats every progress event as stderr-safe text", () => {
 	expect(formatProgress({ type: "review_started", files: 2 })).toBe("Review started: 2 file(s).\n");
 	expect(formatProgress({ type: "file_failed", path: "a.ts", reason: "nope" })).toBe("Failed a.ts: nope.\n");
+	expect(formatProgress({ type: "file_failed", path: "a.ts", reason: "nope", sessionFile: "/tmp/s/rev.jsonl" })).toBe(
+		"Failed a.ts: nope.\nSession: /tmp/s/rev.jsonl\n",
+	);
 	expect(formatProgress({ type: "warning", message: "multi\nline" })).toBe("Warning: multi line\n");
 });

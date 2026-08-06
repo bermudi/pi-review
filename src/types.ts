@@ -21,6 +21,8 @@ export interface ReviewOptions {
 	maxToolRounds?: number;
 	planChangedLineThreshold?: number;
 	agentDir?: string;
+	/** When set, persist each per-task Pi session transcript (.jsonl) under this directory. */
+	sessionDir?: string;
 	onEvent?: (event: ReviewEvent) => void;
 	signal?: AbortSignal;
 }
@@ -58,6 +60,8 @@ export interface SkippedFile {
 export interface FailedFile {
 	path: string;
 	reason: string;
+	/** Path of the Pi session transcript (.jsonl) for the failed task, when sessions are persisted. */
+	sessionFile?: string;
 }
 
 export interface ReviewCoverage {
@@ -93,7 +97,7 @@ export type ReviewEvent =
 	| { type: "file_started"; path: string }
 	| { type: "tool_started"; path: string; tool: string }
 	| { type: "file_completed"; path: string; findings: number }
-	| { type: "file_failed"; path: string; reason: string }
+	| { type: "file_failed"; path: string; reason: string; sessionFile?: string }
 	| { type: "warning"; message: string };
 
 export interface DiffLine {
