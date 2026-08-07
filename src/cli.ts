@@ -155,7 +155,7 @@ Options:
   --background-file PATH     Read review background as UTF-8
   --rules-file PATH          Read review rules as UTF-8
   --concurrency N            Maximum concurrent file reviews
-  --max-tool-rounds N        Maximum tool rounds per task
+  --max-tool-rounds N        Maximum tool calls per file review task
   --plan-threshold N         Changed-line threshold for risk planning
   --agent-dir PATH           Pi agent directory
   --session-dir PATH         Write per-task session transcripts (.jsonl) under PATH

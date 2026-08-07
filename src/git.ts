@@ -15,6 +15,8 @@ const GIT_PREFIX = ["-c", "core.quotePath=true", "--no-pager"] as const;
 export const MAX_GIT_STDOUT_BYTES = 64 * 1024 * 1024;
 export const MAX_GIT_STDERR_BYTES = 2 * 1024 * 1024;
 export const MAX_TARGET_FILE_BYTES = 16 * 1024 * 1024;
+const SNAPSHOT_BLOB_CACHE_MAX_COUNT = 64;
+const SNAPSHOT_BLOB_CACHE_MAX_BYTES = 4 * 1024 * 1024;
 
 const PATCH_OPTIONS = [
 	"--no-ext-diff",
@@ -512,6 +514,10 @@ async function snapshotEntries(repositoryRoot: string, commit: string): Promise<
 	return parseTreeEntries(result.stdout);
 }
 
+function isTreeRegular(entry: TreeEntry): boolean {
+	return entry.mode !== "120000" && entry.type === "blob" && (entry.mode === "100644" || entry.mode === "100755");
+}
+
 function assertTreeRegular(entry: TreeEntry | undefined, path: string, role: string): TreeEntry {
 	if (entry === undefined) {
 		throw new GitReviewError(`${role} snapshot does not contain ${path}`, []);
@@ -519,27 +525,91 @@ function assertTreeRegular(entry: TreeEntry | undefined, path: string, role: str
 	if (entry.mode === "120000") {
 		throw new GitReviewError(`Git symlink rejected in ${role} snapshot: ${path}`, []);
 	}
-	if (entry.type !== "blob" || (entry.mode !== "100644" && entry.mode !== "100755")) {
+	if (!isTreeRegular(entry)) {
 		throw new GitReviewError(`Unsupported Git entry in ${role} snapshot: ${path}`, []);
 	}
 	return entry;
 }
 
-async function readSnapshotBytes(
+class SnapshotBlobCache {
+	private entries = new Map<string, { bytes: Uint8Array; size: number; lastUsed: number }>();
+	private bytes = 0;
+	private nextLru = 0;
+
+	constructor(
+		private readonly maxCount: number,
+		private readonly maxBytes: number,
+	) {}
+
+	get(key: string): Uint8Array | undefined {
+		const entry = this.entries.get(key);
+		if (entry !== undefined) {
+			entry.lastUsed = this.nextLru++;
+			return entry.bytes;
+		}
+		return undefined;
+	}
+
+	set(key: string, bytes: Uint8Array, size: number): void {
+		if (size > this.maxBytes) return;
+		while (
+			(this.entries.size >= this.maxCount || this.bytes + size > this.maxBytes) &&
+			this.entries.size > 0
+		) {
+			let lruKey: string | undefined;
+			let lruValue = Number.POSITIVE_INFINITY;
+			for (const [k, e] of this.entries) {
+				if (e.lastUsed < lruValue) {
+					lruValue = e.lastUsed;
+					lruKey = k;
+				}
+			}
+			if (lruKey === undefined) break;
+			const removed = this.entries.get(lruKey);
+			if (removed === undefined) break;
+			this.entries.delete(lruKey);
+			this.bytes -= removed.size;
+		}
+		if (this.entries.size >= this.maxCount || this.bytes + size > this.maxBytes) return;
+		this.entries.set(key, { bytes, size, lastUsed: this.nextLru++ });
+		this.bytes += size;
+	}
+}
+
+interface SnapshotContext {
+	readonly commit: string;
+	readonly entryMap: ReadonlyMap<string, TreeEntry>;
+	readonly blobCache: SnapshotBlobCache;
+}
+
+async function buildSnapshotContext(
 	repositoryRoot: string,
 	commit: string,
+	blobCache: SnapshotBlobCache,
+): Promise<SnapshotContext> {
+	const entries = await snapshotEntries(repositoryRoot, commit);
+	const entryMap = new Map<string, TreeEntry>();
+	for (const entry of entries) entryMap.set(entry.path, entry);
+	return { commit, entryMap, blobCache };
+}
+
+async function readSnapshotBytesWithContext(
+	repositoryRoot: string,
+	context: SnapshotContext,
 	relativePath: string,
 	role = "target",
 ): Promise<Uint8Array> {
 	const safePath = assertSafeDiffPath(relativePath);
-	assertTreeRegular(await treeEntry(repositoryRoot, commit, safePath), safePath, role);
-	const object = `${commit}:${safePath}`;
+	assertTreeRegular(context.entryMap.get(safePath), safePath, role);
+	const key = `${context.commit}:${safePath}`;
+	const cached = context.blobCache.get(key);
+	if (cached !== undefined) return cached;
 	const sizeResult = await runGit(repositoryRoot, [
 		...GIT_PREFIX,
 		"cat-file",
 		"-s",
 		"--end-of-options",
-		object,
+		key,
 	]);
 	const size = Number(decodeDiffText(sizeResult.stdout).trim());
 	if (!Number.isSafeInteger(size) || size < 0) {
@@ -553,8 +623,9 @@ async function readSnapshotBytes(
 		"cat-file",
 		"blob",
 		"--end-of-options",
-		object,
+		key,
 	]);
+	context.blobCache.set(key, result.stdout, size);
 	return result.stdout;
 }
 
@@ -580,11 +651,13 @@ async function enrichGitFiles(
 	files: ChangedFile[],
 	targetCommit: string,
 	sourceCommit: string | undefined,
+	targetContext: SnapshotContext,
+	sourceContext: SnapshotContext | undefined = undefined,
 ): Promise<ChangedFile[]> {
 	const enriched: ChangedFile[] = [];
 	for (const file of files) {
 		if (!file.isNew && sourceCommit !== undefined) {
-			assertTreeRegular(await treeEntry(repositoryRoot, sourceCommit, file.oldPath), file.oldPath, "source");
+			assertTreeRegular(sourceContext?.entryMap.get(file.oldPath), file.oldPath, "source");
 		}
 		if (file.isDeleted) {
 			if (sourceCommit === undefined) {
@@ -594,16 +667,12 @@ async function enrichGitFiles(
 			continue;
 		}
 
-		assertTreeRegular(
-			await treeEntry(repositoryRoot, targetCommit, file.newPath),
-			file.newPath,
-			"target",
-		);
+		assertTreeRegular(targetContext.entryMap.get(file.newPath), file.newPath, "target");
 		if (file.isBinary) {
 			enriched.push({ ...file, newContent: undefined });
 			continue;
 		}
-		const bytes = await readSnapshotBytes(repositoryRoot, targetCommit, file.newPath);
+		const bytes = await readSnapshotBytesWithContext(repositoryRoot, targetContext, file.newPath);
 		if (containsBinaryByte(bytes)) {
 			enriched.push({ ...file, isBinary: true, newContent: undefined });
 		} else {
@@ -694,8 +763,21 @@ async function buildSnapshotTarget(
 	patch: string,
 ): Promise<ReviewTarget> {
 	const parsed = parseUnifiedDiff(patch).sort(compareChangedFiles);
-	const files = await enrichGitFiles(repositoryRoot, parsed, targetCommit, sourceCommit);
-	return makeTarget(repositoryRoot, mode, files, targetCommit);
+	const blobCache = new SnapshotBlobCache(SNAPSHOT_BLOB_CACHE_MAX_COUNT, SNAPSHOT_BLOB_CACHE_MAX_BYTES);
+	const targetContext = await buildSnapshotContext(repositoryRoot, targetCommit, blobCache);
+	const sourceContext =
+		sourceCommit !== undefined
+			? await buildSnapshotContext(repositoryRoot, sourceCommit, blobCache)
+			: undefined;
+	const files = await enrichGitFiles(
+		repositoryRoot,
+		parsed,
+		targetCommit,
+		sourceCommit,
+		targetContext,
+		sourceContext,
+	);
+	return makeTarget(repositoryRoot, mode, files, targetCommit, targetContext);
 }
 
 function makeTarget(
@@ -703,7 +785,9 @@ function makeTarget(
 	mode: ReviewMode,
 	files: ChangedFile[],
 	targetCommit: string | undefined,
+	snapshotContext: SnapshotContext | undefined = undefined,
 ): ReviewTarget {
+	let listFilesPromise: Promise<string[]> | undefined;
 	const target: ReviewTarget = {
 		repositoryRoot,
 		mode,
@@ -713,29 +797,34 @@ function makeTarget(
 			if (mode.kind === "workspace") {
 				return decodeDiffText(await readWorkspaceBytes(repositoryRoot, safePath));
 			}
-			if (targetCommit === undefined) {
+			if (snapshotContext === undefined || targetCommit === undefined) {
 				throw new GitReviewError("Target snapshot is missing its commit", []);
 			}
-			return decodeDiffText(await readSnapshotBytes(repositoryRoot, targetCommit, safePath));
+			return decodeDiffText(await readSnapshotBytesWithContext(repositoryRoot, snapshotContext, safePath));
 		},
 		listFiles: async (): Promise<string[]> => {
-			if (mode.kind === "workspace") {
-				const candidates = await workspaceCandidates(repositoryRoot, true);
-				const safeFiles: string[] = [];
-				for (const path of [...new Set(candidates)].sort()) {
-					const info = await inspectWorkspacePath(repositoryRoot, path);
-					if (info.exists && info.kind === "file") safeFiles.push(path);
+			if (listFilesPromise !== undefined) return listFilesPromise;
+			listFilesPromise = (async (): Promise<string[]> => {
+				if (mode.kind === "workspace") {
+					const candidates = await workspaceCandidates(repositoryRoot, true);
+					const safeFiles: string[] = [];
+					for (const path of [...new Set(candidates)].sort()) {
+						const info = await inspectWorkspacePath(repositoryRoot, path);
+						if (info.exists && info.kind === "file") safeFiles.push(path);
+					}
+					return safeFiles;
 				}
-				return safeFiles;
-			}
-			if (targetCommit === undefined) throw new GitReviewError("Target snapshot is missing its commit", []);
-			const entries = await snapshotEntries(repositoryRoot, targetCommit);
-			const paths: string[] = [];
-			for (const entry of entries) {
-				assertTreeRegular(entry, entry.path, "target");
-				paths.push(entry.path);
-			}
-			return [...new Set(paths)].sort();
+				if (snapshotContext === undefined || targetCommit === undefined) {
+					throw new GitReviewError("Target snapshot is missing its commit", []);
+				}
+				const paths: string[] = [];
+				for (const entry of snapshotContext.entryMap.values()) {
+					assertTreeRegular(entry, entry.path, "target");
+					paths.push(entry.path);
+				}
+				return [...new Set(paths)].sort();
+			})();
+			return listFilesPromise;
 		},
 	};
 	if (targetCommit !== undefined) target.targetRef = targetCommit;

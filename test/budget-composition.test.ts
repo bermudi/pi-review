@@ -8,10 +8,17 @@ import { describe, expect, test } from "bun:test";
 
 import {
 	PiTaskRunner,
-	type PiTaskRunnerOptions,
 	type TaskSession,
 	type TaskSessionFactoryOptions,
 } from "../src/pi-runner.ts";
+import {
+	buildTask,
+	MAX_PLAN_VETO_TOOL_STARTS,
+} from "../src/reviewer.ts";
+import {
+	createPlanToolkit,
+	createVetoToolkit,
+} from "../src/phase-tools.ts";
 import {
 	DEFAULT_MAX_TOOL_CALLS,
 	createReviewToolkit,
@@ -182,24 +189,68 @@ function makeToolkit(): { toolkit: ReviewToolkit; data: FakeTargetData } {
 const FILE_READ = (path = "src/current.ts"): ScriptedCall => ({ tool: "file_read", params: { path } });
 const SUBMIT_DONE: ScriptedCall = { tool: "submit_review", params: { state: "DONE", comments: [] } };
 
+function makeReviewTask(toolkit: ReviewToolkit, maxToolRounds: number | undefined = undefined) {
+	return buildTask(
+		"review",
+		{ system: "system", user: "work" },
+		toolkit.tools,
+		{ maxToolRounds, signal: undefined },
+		() => {},
+	);
+}
+
 describe("budget composition (dispatcher x runner)", () => {
-	// Production wiring: makeTask sets the runner cap to the dispatcher budget
-	// plus one start of slack, so the runner never kills the submit_review that
-	// the dispatcher's reserve-slot guard asks the model to make.
-	const RUNNER_CAP = DEFAULT_MAX_TOOL_CALLS + 1;
+	test("buildTask derives the runner cap from the phase and configured budget", () => {
+		const reviewToolkit = makeToolkit().toolkit;
+		const planToolkit = createPlanToolkit();
+		const vetoToolkit = createVetoToolkit(["c-0"]);
+
+		const reviewTask = buildTask(
+			"review",
+			{ system: "system", user: "work" },
+			reviewToolkit.tools,
+			{ maxToolRounds: 8, signal: undefined },
+			() => {},
+		);
+		const defaultReviewTask = buildTask(
+			"review",
+			{ system: "system", user: "work" },
+			reviewToolkit.tools,
+			{ maxToolRounds: undefined, signal: undefined },
+			() => {},
+		);
+
+		expect(reviewTask.maxToolStarts).toBe(9);
+		expect(defaultReviewTask.maxToolStarts).toBe(DEFAULT_MAX_TOOL_CALLS + 1);
+		expect(
+			buildTask(
+				"plan",
+				{ system: "system", user: "work" },
+				planToolkit.tools,
+				{ maxToolRounds: undefined, signal: undefined },
+				() => {},
+			).maxToolStarts,
+		).toBe(MAX_PLAN_VETO_TOOL_STARTS);
+		expect(
+			buildTask(
+				"veto",
+				{ system: "system", user: "work" },
+				vetoToolkit.tools,
+				{ maxToolRounds: undefined, signal: undefined },
+				() => {},
+			).maxToolStarts,
+		).toBe(MAX_PLAN_VETO_TOOL_STARTS);
+	});
 
 	test("compliant model: 31 exploration + submit_review completes", async () => {
 		const { toolkit } = makeToolkit();
 		const explorations = Array.from({ length: DEFAULT_MAX_TOOL_CALLS - 1 }, () => FILE_READ());
 		const { runner } = scriptedHarness([...explorations, SUBMIT_DONE], toolkit);
+		const task = makeReviewTask(toolkit);
 
-		const outcome = await runner.run({
-			prompt: { system: "system", user: "work" },
-			customTools: toolkit.tools,
-			allowedTools: toolkit.tools.map((tool) => tool.name),
-			maxToolStarts: RUNNER_CAP,
-		});
+		const outcome = await runner.run(task);
 
+		expect(task.maxToolStarts).toBe(DEFAULT_MAX_TOOL_CALLS + 1);
 		expect(outcome.status).toBe("complete");
 		expect(toolkit.completion).toBe("DONE");
 		expect(toolkit.toolCallCount).toBe(DEFAULT_MAX_TOOL_CALLS);
@@ -209,17 +260,13 @@ describe("budget composition (dispatcher x runner)", () => {
 		const { toolkit } = makeToolkit();
 		const explorations = Array.from({ length: DEFAULT_MAX_TOOL_CALLS }, () => FILE_READ());
 		const { runner } = scriptedHarness([...explorations, SUBMIT_DONE], toolkit);
+		const task = makeReviewTask(toolkit);
 
-		const outcome = await runner.run({
-			prompt: { system: "system", user: "work" },
-			customTools: toolkit.tools,
-			allowedTools: toolkit.tools.map((tool) => tool.name),
-			maxToolStarts: RUNNER_CAP,
-		});
+		const outcome = await runner.run(task);
 
 		// The 32nd exploration trips the dispatcher's reserve-slot guard (the
-		// model sees "Maximum review tool calls reached"), but the runner's cap
-		// has one start of slack, so the model can still submit and complete.
+		// model sees "Exploration budget exhausted"), but the runner's cap has
+		// one start of slack, so the model can still submit and complete.
 		expect(outcome.status).toBe("complete");
 		expect(toolkit.completion).toBe("DONE");
 		expect(toolkit.toolCallCount).toBe(DEFAULT_MAX_TOOL_CALLS);
@@ -229,18 +276,14 @@ describe("budget composition (dispatcher x runner)", () => {
 		const { toolkit } = makeToolkit();
 		const explorations = Array.from({ length: DEFAULT_MAX_TOOL_CALLS + 1 }, () => FILE_READ());
 		const { runner } = scriptedHarness([...explorations, SUBMIT_DONE], toolkit);
+		const task = makeReviewTask(toolkit);
 
-		const outcome = await runner.run({
-			prompt: { system: "system", user: "work" },
-			customTools: toolkit.tools,
-			allowedTools: toolkit.tools.map((tool) => tool.name),
-			maxToolStarts: RUNNER_CAP,
-		});
+		const outcome = await runner.run(task);
 
 		// A model that ignores the reserve-slot error twice and still tries to
 		// explore is runaway: its submit lands beyond the cap and is aborted.
 		expect(outcome.status).toBe("aborted");
-		expect(outcome.error).toBe(`Maximum tool starts exceeded (${RUNNER_CAP}).`);
+		expect(outcome.error).toBe(`Maximum tool starts exceeded (${task.maxToolStarts}).`);
 		expect(toolkit.completion).toBe("pending");
 		expect(toolkit.toolCallCount).toBe(DEFAULT_MAX_TOOL_CALLS - 1);
 	});

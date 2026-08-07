@@ -12,12 +12,17 @@ export interface ReviewInput {
 
 export type ThinkingLevel = "off" | "minimal" | "low" | "medium" | "high" | "xhigh" | "max";
 
+/**
+ * Review configuration. The model, concurrency, filters, and thresholds are
+ * tunable. Fixed guardrails (`DEFAULT_MAX_CHANGED_LINES`, `MAX_REVIEW_DIFF_BYTES`)
+ * are policy in `reviewer.ts` and are not exposed as tuning knobs.
+ */
 export interface ReviewOptions {
 	model: string;
 	thinking?: ThinkingLevel;
 	concurrency?: number;
-	include?: string[];
-	exclude?: string[];
+	include?: readonly string[];
+	exclude?: readonly string[];
 	maxToolRounds?: number;
 	planChangedLineThreshold?: number;
 	agentDir?: string;
@@ -65,10 +70,10 @@ export interface FailedFile {
 }
 
 export interface ReviewCoverage {
-	selected: string[];
-	completed: string[];
-	failed: FailedFile[];
-	skipped: SkippedFile[];
+	selected: readonly string[];
+	completed: readonly string[];
+	failed: readonly FailedFile[];
+	skipped: readonly SkippedFile[];
 }
 
 export type ReviewStatus = "complete" | "partial" | "failed" | "skipped";
@@ -85,9 +90,9 @@ export interface ReviewResult {
 	status: ReviewStatus;
 	message: string;
 	model: string;
-	findings: Finding[];
+	findings: readonly Finding[];
 	coverage: ReviewCoverage;
-	warnings: string[];
+	warnings: readonly string[];
 	usage: ReviewUsage;
 	elapsedMs: number;
 }
@@ -112,7 +117,7 @@ export interface DiffHunk {
 	oldCount: number;
 	newStart: number;
 	newCount: number;
-	lines: DiffLine[];
+	lines: readonly DiffLine[];
 }
 
 export interface ChangedFile {
@@ -126,22 +131,16 @@ export interface ChangedFile {
 	isRenamed: boolean;
 	insertions: number;
 	deletions: number;
-	hunks: DiffHunk[];
+	hunks: readonly DiffHunk[];
 }
 
 export interface ReviewTarget {
 	repositoryRoot: string;
 	mode: ReviewMode;
 	targetRef?: string;
-	files: ChangedFile[];
+	files: readonly ChangedFile[];
 	readFile(path: string): Promise<string>;
-	listFiles(): Promise<string[]>;
-}
-
-export interface FileReviewResult {
-	findings: Finding[];
-	warnings: string[];
-	usage: ReviewUsage;
+	listFiles(): Promise<readonly string[]>;
 }
 
 export const EMPTY_USAGE: ReviewUsage = {

@@ -23,6 +23,8 @@ export const MAX_PATH_LENGTH = 4096;
 export const MAX_SEARCH_FILE_BYTES = 1_000_000;
 export const MAX_SEARCH_LINE_BYTES = 4_000;
 export const MAX_SEARCH_OUTPUT_BYTES = 50_000;
+export const MAX_SCAN_FILES = 500;
+export const MAX_SCAN_BYTES = 2_000_000;
 export const MAX_READ_OUTPUT_BYTES = 100_000;
 export const MAX_DIFF_OUTPUT_BYTES = 100_000;
 export const DEFAULT_MAX_TOOL_CALLS = 32;
@@ -137,15 +139,12 @@ export type CompletionState = "pending" | "DONE" | "FAILED";
 export interface ReviewToolkitOptions {
 	/** Maximum number of accepted evidence calls plus the final submit_review call. */
 	readonly maxToolCalls?: number;
-	/** Short alias for maxToolCalls. Supplying both values must agree. */
-	readonly maxCalls?: number;
 }
 
 export interface ReviewToolkit {
 	readonly tools: ToolDefinition[];
 	readonly candidates: readonly CandidateFinding[];
 	readonly completion: CompletionState;
-	readonly completionState: CompletionState;
 	readonly completed: boolean;
 	readonly toolCallCount: number;
 	readonly maxToolCalls: number;
@@ -167,6 +166,7 @@ export interface CodeSearchDetails {
 	readonly skippedBinaryFiles: number;
 	readonly truncatedLines: boolean;
 	readonly truncatedOutput: boolean;
+	readonly scanCapped: boolean;
 }
 
 export interface FileFindDetails {
@@ -351,7 +351,7 @@ function filesInScope(files: readonly string[], scope: string | undefined): stri
 	if (scope === undefined) return [...files];
 	const prefix = `${scope}/`;
 	const scoped = files.filter((path) => path === scope || path.startsWith(prefix));
-	if (scoped.length === 0) throw new Error(`Path is not present in the target snapshot: ${scope}`);
+	if (scoped.length === 0) throw new Error(`Path is not present in the target tree: ${scope}`);
 	return scoped;
 }
 
@@ -442,13 +442,8 @@ function parseSubmittedReview(value: unknown): {
 	return { state: value.state, comments: value.comments.map(validateCandidate) };
 }
 
-function validateMaxCalls(options: ReviewToolkitOptions | undefined): number {
-	const configured = options?.maxToolCalls;
-	const alias = options?.maxCalls;
-	if (configured !== undefined && alias !== undefined && configured !== alias) {
-		throw new Error("maxToolCalls and maxCalls must agree when both are provided");
-	}
-	const value = configured ?? alias ?? DEFAULT_MAX_TOOL_CALLS;
+function validateMaxToolCalls(options: ReviewToolkitOptions | undefined): number {
+	const value = options?.maxToolCalls ?? DEFAULT_MAX_TOOL_CALLS;
 	if (!Number.isSafeInteger(value) || value < 1) {
 		throw new Error("maxToolCalls must be a positive safe integer");
 	}
@@ -468,7 +463,9 @@ function beginCall(
 	// configured maxToolCalls is the total budget; exploration may use at most
 	// maxToolCalls - 1 so that the runner's maxToolStarts cap is not exceeded.
 	if (!terminating && state.calls >= state.maxToolCalls - 1) {
-		throw new Error(`Maximum review tool calls reached (${state.maxToolCalls})`);
+		throw new Error(
+			`Exploration budget exhausted (${state.calls} of ${state.maxToolCalls} used); only submit_review remains.`,
+		);
 	}
 	state.calls += 1;
 }
@@ -517,7 +514,7 @@ function makeFileReadTool(target: ReviewTarget, state: MutableToolkitState): Too
 	return defineTool({
 		name: "file_read",
 		label: "file_read",
-		description: `Read up to ${MAX_FILE_READ_LINES} numbered lines from a repository-relative target snapshot file.`,
+		description: `Read up to ${MAX_FILE_READ_LINES} numbered lines from a repository-relative target tree (live in workspace mode).`,
 		promptSnippet: `Read bounded target file lines (maximum ${MAX_FILE_READ_LINES})`,
 		parameters: fileReadParameters,
 		executionMode: "sequential",
@@ -572,7 +569,7 @@ function makeCodeSearchTool(target: ReviewTarget, state: MutableToolkitState): T
 	return defineTool({
 		name: "code_search",
 		label: "code_search",
-		description: `Search target snapshot text literally, returning at most ${MAX_SEARCH_RESULTS} bounded results. Oversized and binary files are skipped.`,
+		description: `Search target tree text literally (live in workspace mode), returning at most ${MAX_SEARCH_RESULTS} bounded results. Oversized and binary files are skipped.`,
 		promptSnippet: `Search target files for literal text (maximum ${MAX_SEARCH_RESULTS} results)`,
 		parameters: codeSearchParameters,
 		executionMode: "sequential",
@@ -582,8 +579,8 @@ function makeCodeSearchTool(target: ReviewTarget, state: MutableToolkitState): T
 				if (typeof params.pattern !== "string" || params.pattern.length === 0) {
 					throw new Error("code_search.pattern must be non-empty");
 				}
-				if (params.pattern.length > MAX_SEARCH_PATTERN_LENGTH) {
-					throw new Error(`code_search.pattern exceeds ${MAX_SEARCH_PATTERN_LENGTH} characters`);
+				if (params.pattern.length > MAX_SEARCH_PATTERN_LENGTH || params.pattern.includes("\0")) {
+					throw new Error(`code_search.pattern is invalid or exceeds ${MAX_SEARCH_PATTERN_LENGTH} characters`);
 				}
 				const scope = normalizeScopePath(params.path);
 				const files = filesInScope(await listTargetFiles(target, signal), scope);
@@ -594,16 +591,34 @@ function makeCodeSearchTool(target: ReviewTarget, state: MutableToolkitState): T
 				let skippedBinaryFiles = 0;
 				let truncatedLines = false;
 				let truncatedOutput = false;
+				let scanCapped = false;
+				let scannedFiles = 0;
+				let scannedBytes = 0;
 
 				outer: for (const path of files) {
 					throwIfAborted(signal);
+					if (scannedFiles >= MAX_SCAN_FILES || scannedBytes >= MAX_SCAN_BYTES) {
+						scanCapped = true;
+						break;
+					}
 					const content = await readTargetFile(target, path, signal);
-					if (byteLength(content) > MAX_SEARCH_FILE_BYTES) {
+					const contentBytes = byteLength(content);
+					scannedFiles += 1;
+					scannedBytes += contentBytes;
+					if (contentBytes > MAX_SEARCH_FILE_BYTES) {
 						skippedLargeFiles += 1;
+						if (scannedFiles >= MAX_SCAN_FILES || scannedBytes >= MAX_SCAN_BYTES) {
+							scanCapped = true;
+							break;
+						}
 						continue;
 					}
 					if (content.includes("\0")) {
 						skippedBinaryFiles += 1;
+						if (scannedFiles >= MAX_SCAN_FILES || scannedBytes >= MAX_SCAN_BYTES) {
+							scanCapped = true;
+							break;
+						}
 						continue;
 					}
 					const lines = splitLines(content);
@@ -635,6 +650,10 @@ function makeCodeSearchTool(target: ReviewTarget, state: MutableToolkitState): T
 							break outer;
 						}
 					}
+					if (scannedFiles >= MAX_SCAN_FILES || scannedBytes >= MAX_SCAN_BYTES) {
+						scanCapped = true;
+						break;
+					}
 				}
 
 				const notices: string[] = [];
@@ -643,6 +662,7 @@ function makeCodeSearchTool(target: ReviewTarget, state: MutableToolkitState): T
 				if (skippedBinaryFiles > 0) notices.push(`${skippedBinaryFiles} binary file(s) skipped`);
 				if (truncatedLines) notices.push(`long matching lines capped at ${MAX_SEARCH_LINE_BYTES} bytes`);
 				if (truncatedOutput) notices.push(`output capped at ${MAX_SEARCH_OUTPUT_BYTES} bytes`);
+				if (scanCapped) notices.push(`scan capped: ${scannedFiles} files / ${scannedBytes} bytes`);
 				const base = outputLines.length > 0 ? outputLines.join("\n") : "No literal matches found.";
 				const text = appendNotices(base, notices, MAX_SEARCH_OUTPUT_BYTES);
 				return {
@@ -655,6 +675,7 @@ function makeCodeSearchTool(target: ReviewTarget, state: MutableToolkitState): T
 						skippedBinaryFiles,
 						truncatedLines,
 						truncatedOutput,
+						scanCapped,
 					} satisfies CodeSearchDetails,
 				};
 			});
@@ -666,7 +687,7 @@ function makeFileFindTool(target: ReviewTarget, state: MutableToolkitState): Too
 	return defineTool({
 		name: "file_find",
 		label: "file_find",
-		description: `Find target snapshot paths by glob, returning at most ${MAX_FIND_RESULTS} safe repository-relative results.`,
+		description: `Find target tree paths by glob (live in workspace mode), returning at most ${MAX_FIND_RESULTS} safe repository-relative results.`,
 		promptSnippet: `Find target files by glob (maximum ${MAX_FIND_RESULTS} results)`,
 		parameters: fileFindParameters,
 		executionMode: "sequential",
@@ -787,7 +808,7 @@ export function createReviewToolkit(
 	currentPath: string,
 	options?: ReviewToolkitOptions,
 ): ReviewToolkit {
-	const maxToolCalls = validateMaxCalls(options);
+	const maxToolCalls = validateMaxToolCalls(options);
 	const changedFiles = knownChangedFiles(target);
 	const safeCurrentPath = normalizeRequestedPath(currentPath, "current file path");
 	if (!changedFiles.some((candidate) => candidate.paths.has(safeCurrentPath))) {
@@ -816,9 +837,6 @@ export function createReviewToolkit(
 		get completion() {
 			return state.completion;
 		},
-		get completionState() {
-			return state.completion;
-		},
 		get completed() {
 			return state.completion !== "pending";
 		},
@@ -828,6 +846,3 @@ export function createReviewToolkit(
 		maxToolCalls,
 	};
 }
-
-/** Short alias used by orchestration code that treats the toolkit as a tool list. */
-export const createReviewTools = createReviewToolkit;

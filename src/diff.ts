@@ -20,6 +20,9 @@ interface ParsedToken {
 	end: number;
 }
 
+/** Mutable builder for a `DiffHunk`; the public type keeps `lines` readonly. */
+type DiffHunkBuilder = Omit<DiffHunk, "lines"> & { lines: DiffLine[] };
+
 function splitRecords(input: string): DiffRecord[] {
 	const records: DiffRecord[] = [];
 	let start = 0;
@@ -259,7 +262,7 @@ function parseDiffHeaderPaths(line: string): [string, string] | undefined {
 	return undefined;
 }
 
-function parseHunkHeader(line: string): DiffHunk | undefined {
+function parseHunkHeader(line: string): DiffHunkBuilder | undefined {
 	const match = line.match(/^@@ -(\d+)(?:,(\d+))? \+(\d+)(?:,(\d+))? @@(?:.*)$/);
 	if (!match) return undefined;
 
@@ -287,8 +290,8 @@ function parseSection(input: string, records: DiffRecord[]): ChangedFile {
 	let sawNewFileMode = false;
 	let sawDeletedFileMode = false;
 	let isBinary = false;
-	const hunks: DiffHunk[] = [];
-	let currentHunk: DiffHunk | undefined;
+	const hunks: DiffHunkBuilder[] = [];
+	let currentHunk: DiffHunkBuilder | undefined;
 	let oldCursor = 0;
 	let newCursor = 0;
 	let sawHunk = false;

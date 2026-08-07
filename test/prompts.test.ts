@@ -1,12 +1,12 @@
 import { describe, expect, test } from "bun:test";
 
 import {
-	FILE_REVIEW_SYSTEM_PROMPT,
 	RISK_PLAN_SYSTEM_PROMPT,
 	VETO_FILTER_SYSTEM_PROMPT,
 	buildFileReviewPrompt,
 	buildRiskPlanPrompt,
 	buildVetoFilterPrompt,
+	fileReviewSystemPrompt,
 } from "../src/prompts.ts";
 import { DEFAULT_MAX_TOOL_CALLS } from "../src/tools.ts";
 
@@ -24,6 +24,7 @@ const commonInput = {
 	otherChangedFiles: ["README.md", "src/service.test.ts"],
 	background: "The endpoint must preserve the caller's authorization.",
 	rules: "Check security boundaries and error handling; ignore cosmetic concerns.",
+	maxToolCalls: DEFAULT_MAX_TOOL_CALLS,
 };
 
 describe("prompt builders", () => {
@@ -69,7 +70,7 @@ describe("prompt builders", () => {
 			riskPlan: '{"issues":[{"severity":"high","description":"check the new call"}]}',
 		});
 
-		expect(prompt.system).toBe(FILE_REVIEW_SYSTEM_PROMPT);
+		expect(prompt.system).toBe(fileReviewSystemPrompt(DEFAULT_MAX_TOOL_CALLS));
 		expect(prompt.system).toContain("exactly one changed file");
 		expect(prompt.system).toContain("Use context tools only");
 		expect(prompt.system).toContain("compiler, formatter, linter");
@@ -119,6 +120,15 @@ describe("prompt builders", () => {
 		expect(prompt.system).toContain("reserve");
 		expect(prompt.user).toContain("tool-call budget");
 		expect(prompt.user).toContain("submit_review");
+	});
+
+	test("uses the configured max tool calls in the review system prompt", () => {
+		const configured = 7;
+		const prompt = buildFileReviewPrompt({ ...commonInput, maxToolCalls: configured });
+
+		expect(prompt.system).toBe(fileReviewSystemPrompt(configured));
+		expect(prompt.system).toContain(String(configured));
+		expect(prompt.system).not.toContain(String(DEFAULT_MAX_TOOL_CALLS));
 	});
 
 	test("serializes veto comments and preserves the conservative pass rule", () => {

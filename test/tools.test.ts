@@ -5,6 +5,8 @@ import {
 	MAX_FILE_READ_LINES,
 	MAX_DIFF_OUTPUT_BYTES,
 	MAX_FIND_RESULTS,
+	MAX_SCAN_BYTES,
+	MAX_SCAN_FILES,
 	MAX_SEARCH_FILE_BYTES,
 	MAX_SEARCH_RESULTS,
 	createReviewToolkit,
@@ -14,6 +16,7 @@ interface FakeTargetData {
 	readonly files: Record<string, string>;
 	readonly changed: ChangedFile[];
 	readonly readPaths: string[];
+	listCount?: number;
 }
 
 function changedFile(path: string, rawDiff = `diff for ${path}\n`): ChangedFile {
@@ -44,7 +47,10 @@ function fakeTarget(data: FakeTargetData): ReviewTarget {
 			if (content === undefined) throw new Error(`unknown fake path: ${path}`);
 			return content;
 		},
-		listFiles: async () => Object.keys(data.files).sort(),
+		listFiles: async () => {
+			data.listCount = (data.listCount ?? 0) + 1;
+			return Object.keys(data.files).sort();
+		},
 	};
 }
 
@@ -228,7 +234,7 @@ describe("review tool kit", () => {
 		};
 		const toolkit = createReviewToolkit(fakeTarget(data), "src/current.ts", { maxToolCalls: 2 });
 		await execute(toolkit, "file_find", { pattern: "*.ts" });
-		await expect(execute(toolkit, "file_find", { pattern: "*.ts" })).rejects.toThrow(/Maximum review tool calls/);
+		await expect(execute(toolkit, "file_find", { pattern: "*.ts" })).rejects.toThrow(/Exploration budget exhausted/);
 		expect(toolkit.toolCallCount).toBe(1);
 
 		const cancelled = createReviewToolkit(fakeTarget(data), "src/current.ts");
@@ -251,7 +257,7 @@ describe("review tool kit", () => {
 		await execute(toolkit, "file_find", { pattern: "*.ts" });
 		await execute(toolkit, "file_find", { pattern: "*.ts" });
 		expect(toolkit.toolCallCount).toBe(2);
-		await expect(execute(toolkit, "file_find", { pattern: "*.ts" })).rejects.toThrow(/Maximum review tool calls/);
+		await expect(execute(toolkit, "file_find", { pattern: "*.ts" })).rejects.toThrow(/Exploration budget exhausted/);
 		expect(toolkit.toolCallCount).toBe(2);
 
 		const done = await execute(toolkit, "submit_review", { state: "DONE", comments: [] });
@@ -262,9 +268,73 @@ describe("review tool kit", () => {
 		await expect(execute(toolkit, "file_find", { pattern: "*.ts" })).rejects.toThrow(/already terminated/);
 
 		const onlySubmit = createReviewToolkit(fakeTarget(data), "src/current.ts", { maxToolCalls: 1 });
-		await expect(execute(onlySubmit, "file_find", { pattern: "*.ts" })).rejects.toThrow(/Maximum review tool calls/);
+		await expect(execute(onlySubmit, "file_find", { pattern: "*.ts" })).rejects.toThrow(/Exploration budget exhausted/);
 		const submit = await execute(onlySubmit, "submit_review", { state: "DONE", comments: [] });
 		expect(submit).toMatchObject({ terminate: true, details: { state: "DONE", recorded: 0 } });
 		expect(onlySubmit.toolCallCount).toBe(1);
+	});
+
+	test("resolves the file list once per search and respects scan ceilings", async () => {
+		const files: Record<string, string> = {};
+		for (let index = 0; index < MAX_SCAN_FILES + 5; index += 1) {
+			files[`src/file-${index}.ts`] = index < 50 ? `code search marker file ${index}\n` : `other content ${index}\n`;
+		}
+		const data: FakeTargetData = {
+			files,
+			changed: [changedFile("src/file-0.ts")],
+			readPaths: [],
+			listCount: 0,
+		};
+		const toolkit = createReviewToolkit(fakeTarget(data), "src/file-0.ts");
+
+		const result = await execute(toolkit, "code_search", { pattern: "marker" });
+		expect(data.listCount).toBe(1);
+		expect(data.readPaths.length).toBe(MAX_SCAN_FILES);
+		expect(result.details).toMatchObject({
+			matchCount: 50,
+			resultLimitReached: false,
+			scanCapped: true,
+		});
+		expect(text(result)).toContain("[scan capped:");
+		expect(text(result)).toMatch(/\d+ files \/ \d+ bytes/);
+
+		const second = await execute(toolkit, "code_search", { pattern: "marker" });
+		expect(data.listCount).toBe(2);
+		expect(second.details).toMatchObject({ scanCapped: true });
+	});
+
+	test("caps code_search by total bytes read", async () => {
+		const files: Record<string, string> = {};
+		for (let index = 0; index < 30; index += 1) {
+			files[`src/file-${index}.ts`] = `code search marker file ${index}\n${"x".repeat(80_000)}\n`;
+		}
+		const data: FakeTargetData = {
+			files,
+			changed: [changedFile("src/file-0.ts")],
+			readPaths: [],
+			listCount: 0,
+		};
+		const toolkit = createReviewToolkit(fakeTarget(data), "src/file-0.ts");
+
+		const result = await execute(toolkit, "code_search", { pattern: "marker" });
+		expect(data.listCount).toBe(1);
+		expect(data.readPaths.length).toBeLessThan(30);
+		expect(result.details).toMatchObject({ scanCapped: true });
+		expect(text(result)).toContain("[scan capped:");
+		expect(text(result)).toMatch(/\d+ files \/ \d+ bytes/);
+	});
+
+	test("rejects a code_search pattern containing a null byte", async () => {
+		const data: FakeTargetData = {
+			files: { "src/current.ts": "current\n" },
+			changed: [changedFile("src/current.ts")],
+			readPaths: [],
+		};
+		const toolkit = createReviewToolkit(fakeTarget(data), "src/current.ts");
+
+		await expect(execute(toolkit, "code_search", { pattern: "foo\u0000bar" })).rejects.toThrow(
+			/invalid/,
+		);
+		expect(data.readPaths).toEqual([]);
 	});
 });

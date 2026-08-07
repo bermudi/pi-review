@@ -335,8 +335,4 @@ export function createVetoToolkit(candidateIds: readonly string[]): VetoToolkit 
 	};
 }
 
-/** Short aliases keep phase tool lists easy to pass into the task runner. */
-export const createPlanTools = createPlanToolkit;
-export const createVetoTools = createVetoToolkit;
-export const createRiskPlanToolkit = createPlanToolkit;
-export const createVetoFilterToolkit = createVetoToolkit;
+

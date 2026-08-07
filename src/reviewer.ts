@@ -9,6 +9,7 @@ import {
 	buildFileReviewPrompt,
 	buildRiskPlanPrompt,
 	buildVetoFilterPrompt,
+	type BuiltPrompt,
 } from "./prompts.js";
 import {
 	PiTaskRunner,
@@ -311,6 +312,36 @@ function toolNames(tools: readonly { readonly name: string }[]): string[] {
 	return tools.map((tool) => tool.name);
 }
 
+export const MAX_PLAN_VETO_TOOL_STARTS = 3;
+
+interface TaskBudgetOptions {
+	readonly maxToolRounds: number | undefined;
+	readonly signal: AbortSignal | undefined;
+}
+
+export function buildTask(
+	phase: "plan" | "review" | "veto",
+	prompt: { readonly system: string; readonly user: string },
+	tools: readonly { readonly name: string }[],
+	options: TaskBudgetOptions,
+	onEvent: (event: TaskEvent) => void,
+	sessionId?: string,
+): PiTask {
+	const maxToolStarts =
+		phase === "review"
+			? (options.maxToolRounds ?? DEFAULT_MAX_TOOL_CALLS) + 1
+			: MAX_PLAN_VETO_TOOL_STARTS;
+	return {
+		prompt,
+		customTools: tools,
+		allowedTools: toolNames(tools),
+		maxToolStarts,
+		sessionId,
+		signal: options.signal,
+		onEvent,
+	};
+}
+
 /** Stable per-task session id used to name persisted transcripts for debugging. */
 function taskSessionId(path: string, phase: "plan" | "review" | "veto"): string {
 	const safe = path.replace(/[^A-Za-z0-9._-]+/gu, "-").replace(/^-+|-+$/gu, "");
@@ -333,12 +364,10 @@ function invokeTask(
 	executor: TaskExecutor,
 	task: PiTask,
 	signal: AbortSignal | undefined,
-	maxToolRounds: number | undefined,
 	onEvent: (event: TaskEvent) => void,
 ): Promise<TaskOutcome> {
 	const runOptions: RunTaskOptions = {
 		signal,
-		maxToolStarts: maxToolRounds,
 		onEvent,
 	};
 	if (signal === undefined) return executor.run(task, runOptions);
@@ -389,13 +418,20 @@ function makeCoverage(
 	};
 }
 
-function statusForCoverage(coverage: CoverageState, aborted: boolean): ReviewStatus {
+function statusForCoverage(coverage: CoverageState, aborted: boolean): { status: ReviewStatus; warning?: string } {
 	const selected = coverage.selected.length;
-	if (selected === 0) return "skipped";
-	if (coverage.completed.length === selected && coverage.failed.length === 0) return "complete";
-	if (coverage.completed.length > 0) return "partial";
-	if (coverage.failed.length > 0 || aborted) return "failed";
-	return "skipped";
+	if (selected === 0) return { status: "skipped" };
+	if (coverage.completed.length === selected && coverage.failed.length === 0) {
+		return {
+			status: "complete",
+			warning: aborted
+				? "Review completed for all selected files, but an abort signal was also received; the result is informational."
+				: undefined,
+		};
+	}
+	if (coverage.completed.length > 0) return { status: "partial" };
+	if (coverage.failed.length > 0 || aborted) return { status: "failed" };
+	return { status: "skipped" };
 }
 
 function messageForResult(
@@ -427,6 +463,7 @@ function buildResult(
 	warnings: readonly string[],
 	usage: ReviewUsage,
 	aborted: boolean,
+	emit?: (event: ReviewEvent) => void,
 ): ReviewResult {
 	const sortedCoverage: CoverageState = {
 		selected: [...coverage.selected].sort(compareText),
@@ -435,14 +472,16 @@ function buildResult(
 		skipped: [...coverage.skipped].sort(compareSkipped),
 	};
 	const sortedFindings = [...findings].sort(compareFindings);
-	const status = statusForCoverage(sortedCoverage, aborted);
+	const { status, warning } = statusForCoverage(sortedCoverage, aborted);
+	const resultWarnings = warning === undefined ? [...warnings] : [...warnings, warning];
+	if (warning !== undefined) emit?.({ type: "warning", message: warning });
 	return {
 		status,
 		message: messageForResult(status, sortedCoverage, sortedFindings),
 		model,
 		findings: sortedFindings,
 		coverage: sortedCoverage,
-		warnings: [...warnings],
+		warnings: resultWarnings,
 		usage: { ...usage },
 		elapsedMs: Math.max(0, Date.now() - startedAt),
 	};
@@ -476,6 +515,55 @@ function isTaskOutcome(value: unknown): value is TaskOutcome {
 
 function signalIsAborted(signal: AbortSignal | undefined): boolean {
 	return signal?.aborted === true;
+}
+
+interface RunPhaseResult<T = unknown> {
+	readonly value?: T;
+	readonly outcome: TaskOutcome;
+	readonly usage: ReviewUsage;
+}
+
+class RunPhaseError extends Error {
+	readonly outcome: TaskOutcome | undefined;
+	readonly usage: ReviewUsage;
+	constructor(message: string, outcome: TaskOutcome | undefined, usage: ReviewUsage) {
+		super(message);
+		this.outcome = outcome;
+		this.usage = usage;
+	}
+}
+
+function phaseForTerminalTool(terminalTool: string): "plan" | "review" | "veto" {
+	if (terminalTool === "submit_plan") return "plan";
+	if (terminalTool === "submit_review") return "review";
+	if (terminalTool === "submit_veto") return "veto";
+	throw new Error(`Unknown terminal tool: ${terminalTool}`);
+}
+
+function phaseFailedMessage(terminalTool: string): string {
+	switch (terminalTool) {
+		case "submit_plan":
+			return "planner task failed";
+		case "submit_review":
+			return "main review task failed";
+		case "submit_veto":
+			return "filter task failed";
+		default:
+			return `${terminalTool} task failed`;
+	}
+}
+
+function phaseDidNotCompleteMessage(terminalTool: string): string {
+	switch (terminalTool) {
+		case "submit_plan":
+			return "planner did not submit a plan";
+		case "submit_review":
+			return "main review did not complete";
+		case "submit_veto":
+			return "filter did not submit a result";
+		default:
+			return `${terminalTool} did not complete successfully`;
+	}
 }
 
 /**
@@ -591,13 +679,13 @@ export class Reviewer {
 		emit({ type: "review_started", files: selected.length });
 
 		if (selected.length === 0) {
-			return buildResult(startedAt, normalized.model, coverage, findings, warnings, usage, aborted);
+			return buildResult(startedAt, normalized.model, coverage, findings, warnings, usage, aborted, emit);
 		}
 
 		if (normalized.signal?.aborted === true) {
 			for (const entry of selected) coverage.skipped.push({ path: entry.path, reason: "aborted" });
 			aborted = true;
-			return buildResult(startedAt, normalized.model, coverage, findings, warnings, usage, aborted);
+			return buildResult(startedAt, normalized.model, coverage, findings, warnings, usage, aborted, emit);
 		}
 
 		let executor: TaskExecutor;
@@ -607,7 +695,7 @@ export class Reviewer {
 			const reason = `Unable to create task executor: ${errorMessage(error, "executor initialization failed")}`;
 			warn(reason);
 			for (const entry of selected) coverage.failed.push({ path: entry.path, reason });
-			return buildResult(startedAt, normalized.model, coverage, findings, warnings, usage, aborted);
+			return buildResult(startedAt, normalized.model, coverage, findings, warnings, usage, aborted, emit);
 		}
 
 		let abortAllPromise: Promise<void> | undefined;
@@ -721,7 +809,7 @@ export class Reviewer {
 			}
 		}
 
-		return buildResult(startedAt, normalized.model, coverage, findings, warnings, usage, aborted);
+		return buildResult(startedAt, normalized.model, coverage, findings, warnings, usage, aborted, emit);
 	}
 
 	private async makeExecutor(options: NormalizedReviewOptions, repositoryRoot: string): Promise<TaskExecutor> {
@@ -737,6 +825,79 @@ export class Reviewer {
 		};
 		if (factory !== undefined) return factory(runnerOptions);
 		return new PiTaskRunner(runnerOptions);
+	}
+
+	private async runPhase<T = unknown>(
+		prompt: BuiltPrompt,
+		tools: readonly { readonly name: string }[],
+		terminalTool: string,
+		{ failOpen }: { failOpen: boolean },
+		executor: TaskExecutor,
+		options: NormalizedReviewOptions,
+		onEvent: (event: TaskEvent) => void,
+		sessionId: string,
+		extractValue?: (outcome: TaskOutcome) => T,
+	): Promise<RunPhaseResult<T>> {
+		const task = this.makeTask(
+			phaseForTerminalTool(terminalTool),
+			prompt,
+			tools,
+			options,
+			onEvent,
+			sessionId,
+		);
+		let raw: unknown;
+		try {
+			raw = await invokeTask(executor, task, options.signal, onEvent);
+		} catch (error) {
+			const observed = zeroUsage();
+			if (failOpen) {
+				return {
+					value: undefined,
+					outcome: {
+						status: "failed",
+						stopReason: "error",
+						error: errorMessage(error, phaseFailedMessage(terminalTool)),
+						text: "",
+						usage: observed,
+						toolResults: [],
+					},
+					usage: observed,
+				};
+			}
+			throw new RunPhaseError(errorMessage(error, phaseFailedMessage(terminalTool)), undefined, observed);
+		}
+		if (!isTaskOutcome(raw)) {
+			const observed = addUsage(
+				zeroUsage(),
+				isRecord(raw) && Object.hasOwn(raw, "usage") ? (raw as { usage: unknown }).usage : undefined,
+			);
+			if (failOpen) {
+				return {
+					value: undefined,
+					outcome: {
+						status: "failed",
+						stopReason: "error",
+						error: "Task executor returned an invalid outcome",
+						text: "",
+						usage: observed,
+						toolResults: [],
+					},
+					usage: observed,
+				};
+			}
+			throw new RunPhaseError("Task executor returned an invalid outcome", undefined, observed);
+		}
+		const outcome = raw;
+		const usage = addUsage(zeroUsage(), outcome.usage);
+		if (outcome.status === "complete" && endedWithSuccessfulTool(outcome, terminalTool)) {
+			const value = extractValue === undefined ? undefined : extractValue(outcome);
+			return { value, outcome, usage };
+		}
+		if (failOpen) {
+			return { value: undefined, outcome, usage };
+		}
+		throw new RunPhaseError(phaseDidNotCompleteMessage(terminalTool), outcome, usage);
 	}
 
 	private async reviewFile(
@@ -762,7 +923,7 @@ export class Reviewer {
 		};
 
 		if (changedLineCount(entry.file) >= options.planChangedLineThreshold) {
-			const toolkit: PlanToolkit = createPlanToolkit();
+			const planToolkit: PlanToolkit = createPlanToolkit();
 			const prompt = buildRiskPlanPrompt({
 				currentFilePath: entry.path,
 				currentFileDiff: entry.file.rawDiff,
@@ -770,39 +931,22 @@ export class Reviewer {
 				background: context.background,
 				rules: context.rules,
 			});
-			let outcome: TaskOutcome | undefined;
-			try {
-				outcome = await invokeTask(
-					executor,
-					this.makeTask(prompt, toolkit.tools, options, taskEvent(entry.path), taskSessionId(entry.path, "plan")),
-					options.signal,
-					options.maxToolRounds,
-					taskEvent(entry.path),
-				);
-				if (!isTaskOutcome(outcome)) throw new Error("Task executor returned an invalid outcome");
-			} catch (error) {
-				warn(`Risk planner failed for ${entry.path}: ${errorMessage(error, "planner task failed")}`);
-				if (signalIsAborted(options.signal)) {
-					return {
-						success: false,
-						findings: [],
-						usage,
-						reason: `Review aborted during risk planning for ${entry.path}`,
-					};
-				}
-			}
-
-			if (outcome !== undefined) {
-				usage = addUsage(usage, outcome.usage);
-				if (
-					outcome.status === "complete" &&
-					endedWithSuccessfulTool(outcome, "submit_plan") &&
-					toolkit.value !== undefined
-				) {
-					riskPlan = JSON.stringify(toolkit.value);
-				} else {
-					warn(`Risk planner failed or returned no usable plan for ${entry.path}: ${taskReason(outcome, "planner did not submit a plan")}`);
-				}
+			const plan = await this.runPhase(
+				prompt,
+				planToolkit.tools,
+				"submit_plan",
+				{ failOpen: true },
+				executor,
+				options,
+				taskEvent(entry.path),
+				taskSessionId(entry.path, "plan"),
+				() => planToolkit.value,
+			);
+			usage = addUsage(usage, plan.usage);
+			if (plan.value !== undefined) {
+				riskPlan = JSON.stringify(plan.value);
+			} else {
+				warn(`Risk planner failed or returned no usable plan for ${entry.path}: ${taskReason(plan.outcome, "planner did not submit a plan")}`);
 			}
 		}
 
@@ -815,10 +959,11 @@ export class Reviewer {
 			};
 		}
 
+		const reviewMaxToolCalls = options.maxToolRounds ?? DEFAULT_MAX_TOOL_CALLS;
 		let toolkit: ReviewToolkit;
 		try {
 			toolkit = createReviewToolkit(entry.target, entry.path, {
-				maxToolCalls: options.maxToolRounds ?? DEFAULT_MAX_TOOL_CALLS,
+				maxToolCalls: reviewMaxToolCalls,
 			});
 		} catch (error) {
 			const reason = `Unable to create review tools for ${entry.path}: ${errorMessage(error, "review toolkit initialization failed")}`;
@@ -832,33 +977,41 @@ export class Reviewer {
 			background: context.background,
 			rules: context.rules,
 			riskPlan,
+			maxToolCalls: reviewMaxToolCalls,
 		});
-		let outcome: TaskOutcome;
+		let review: RunPhaseResult;
 		try {
-			outcome = await invokeTask(
+			review = await this.runPhase(
+				prompt,
+				toolkit.tools,
+				"submit_review",
+				{ failOpen: false },
 				executor,
-				this.makeTask(prompt, toolkit.tools, options, taskEvent(entry.path), taskSessionId(entry.path, "review")),
-				options.signal,
-				options.maxToolRounds,
+				options,
 				taskEvent(entry.path),
+				taskSessionId(entry.path, "review"),
 			);
-			if (!isTaskOutcome(outcome)) throw new Error("Task executor returned an invalid outcome");
 		} catch (error) {
-			const reason = `Review task failed for ${entry.path}: ${errorMessage(error, "main review task failed")}`;
-			warn(reason);
-			return { success: false, findings: [], usage, reason };
+			if (error instanceof RunPhaseError) {
+				let reason: string;
+				if (error.outcome?.status === "complete" && !endedWithSuccessfulTool(error.outcome, "submit_review")) {
+					reason = `Review task failed for ${entry.path}: submit_review DONE was not the final successful tool result (state: ${toolkit.completion})`;
+				} else if (error.outcome !== undefined) {
+					reason = `Review task failed for ${entry.path}: ${taskReason(error.outcome, error.message)}`;
+				} else {
+					reason = `Review task failed for ${entry.path}: ${error.message}`;
+				}
+				warn(reason);
+				return { success: false, findings: [], usage: addUsage(usage, error.usage), reason, sessionFile: error.outcome?.sessionFile };
+			}
+			throw error;
 		}
-		usage = addUsage(usage, outcome.usage);
+		usage = addUsage(usage, review.usage);
 
-		if (outcome.status !== "complete") {
-			const reason = `Review task failed for ${entry.path}: ${taskReason(outcome, "main review did not complete")}`;
-			warn(reason);
-			return { success: false, findings: [], usage, reason, sessionFile: outcome.sessionFile };
-		}
-		if (!endedWithSuccessfulTool(outcome, "submit_review") || toolkit.completion !== "DONE") {
+		if (toolkit.completion !== "DONE") {
 			const reason = `Review task failed for ${entry.path}: submit_review DONE was not the final successful tool result (state: ${toolkit.completion})`;
 			warn(reason);
-			return { success: false, findings: [], usage, reason, sessionFile: outcome.sessionFile };
+			return { success: false, findings: [], usage, reason, sessionFile: review.outcome.sessionFile };
 		}
 		if (signalIsAborted(options.signal)) {
 			return {
@@ -866,7 +1019,7 @@ export class Reviewer {
 				findings: [],
 				usage,
 				reason: `Review aborted after main review for ${entry.path}`,
-				sessionFile: outcome.sessionFile,
+				sessionFile: review.outcome.sessionFile,
 			};
 		}
 
@@ -899,36 +1052,21 @@ export class Reviewer {
 				existingCode: finding.existingCode,
 			})),
 		});
-		let vetoOutcome: TaskOutcome | undefined;
-		try {
-			vetoOutcome = await invokeTask(
-				executor,
-				this.makeTask(vetoPrompt, vetoToolkit.tools, options, taskEvent(entry.path), taskSessionId(entry.path, "veto")),
-				options.signal,
-				options.maxToolRounds,
-				taskEvent(entry.path),
-			);
-			if (!isTaskOutcome(vetoOutcome)) throw new Error("Task executor returned an invalid outcome");
-		} catch (error) {
-			warn(`Veto filter failed for ${entry.path}; keeping all findings: ${errorMessage(error, "filter task failed")}`);
-			if (signalIsAborted(options.signal)) {
-				return {
-					success: false,
-					findings: resolved,
-					usage,
-					reason: `Review aborted during veto filtering for ${entry.path}`,
-				};
-			}
-			return { success: true, findings: resolved, usage };
-		}
-		usage = addUsage(usage, vetoOutcome.usage);
+		const veto = await this.runPhase(
+			vetoPrompt,
+			vetoToolkit.tools,
+			"submit_veto",
+			{ failOpen: true },
+			executor,
+			options,
+			taskEvent(entry.path),
+			taskSessionId(entry.path, "veto"),
+			() => vetoToolkit.vetoedIds,
+		);
+		usage = addUsage(usage, veto.usage);
 
-		if (
-			vetoOutcome.status === "complete" &&
-			endedWithSuccessfulTool(vetoOutcome, "submit_veto") &&
-			vetoToolkit.vetoedIds !== undefined
-		) {
-			const vetoed = new Set(vetoToolkit.vetoedIds);
+		if (veto.value !== undefined) {
+			const vetoed = new Set(veto.value);
 			return {
 				success: !signalIsAborted(options.signal),
 				findings: resolved.filter((_finding, index) => !vetoed.has(candidateIds[index] ?? "")),
@@ -939,7 +1077,7 @@ export class Reviewer {
 			};
 		}
 
-		warn(`Veto filter returned no usable result for ${entry.path}; keeping all findings (${taskReason(vetoOutcome, "filter did not submit a result")}).`);
+		warn(`Veto filter returned no usable result for ${entry.path}; keeping all findings (${taskReason(veto.outcome, "filter did not submit a result")}).`);
 		if (signalIsAborted(options.signal)) {
 			return {
 				success: false,
@@ -952,26 +1090,14 @@ export class Reviewer {
 	}
 
 	private makeTask(
+		phase: "plan" | "review" | "veto",
 		prompt: { readonly system: string; readonly user: string },
 		tools: readonly { readonly name: string }[],
 		options: NormalizedReviewOptions,
 		onEvent: (event: TaskEvent) => void,
 		sessionId?: string,
 	): PiTask {
-		return {
-			prompt,
-			customTools: tools,
-			allowedTools: toolNames(tools),
-			// The runner's hard tool-start cap needs one start of slack over the
-			// review toolkit's dispatcher budget: a tool call that trips the
-			// dispatcher's reserve-slot guard still consumes a runner start, so
-			// submit_review must be able to land one start later. True runaway
-			// (a second overshoot) still exceeds the cap and aborts.
-			maxToolStarts: (options.maxToolRounds ?? DEFAULT_MAX_TOOL_CALLS) + 1,
-			sessionId,
-			signal: options.signal,
-			onEvent,
-		};
+		return buildTask(phase, prompt, tools, options, onEvent, sessionId);
 	}
 }
 

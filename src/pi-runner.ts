@@ -127,9 +127,6 @@ export interface PiTaskRunnerOptions {
 	}) => Promise<boolean> | boolean;
 }
 
-export type TaskRunnerOptions = PiTaskRunnerOptions;
-export type PiRunnerOptions = PiTaskRunnerOptions;
-
 /**
  * One independent prompt. `prompt` accepts the BuiltPrompt shape used by
  * src/prompts.ts; the explicit fields are convenient for generic callers and
@@ -143,11 +140,8 @@ export interface PiTask {
 	readonly user?: string;
 	/** Custom Pi tool definitions. */
 	readonly customTools?: readonly unknown[];
-	/** Alias for customTools, or a string allowlist when all entries are strings. */
-	readonly tools?: readonly unknown[];
 	/** Names exposed to the model. There is no implicit default tool set. */
 	readonly allowedTools?: readonly string[];
-	readonly toolAllowlist?: readonly string[];
 	readonly maxToolStarts?: number;
 	/** Optional caller-chosen session id, used to name a persisted session transcript. */
 	readonly sessionId?: string;
@@ -155,8 +149,6 @@ export interface PiTask {
 	readonly onEvent?: TaskEventListener;
 	readonly onToolStart?: TaskToolStartListener;
 }
-
-export type TaskInput = PiTask;
 
 export interface RunTaskOptions {
 	readonly signal?: AbortSignal;
@@ -687,29 +679,14 @@ function normalizeTask(task: PiTask): NormalizedTask {
 	if (typeof systemPrompt !== "string") throw new TypeError("Task system prompt must be a string.");
 	if (typeof userPrompt !== "string") throw new TypeError("Task user prompt must be a string.");
 
-	if (task.tools !== undefined && !Array.isArray(task.tools)) {
-		throw new TypeError("Task tools must be an array.");
-	}
 	if (task.customTools !== undefined && !Array.isArray(task.customTools)) {
 		throw new TypeError("Task customTools must be an array.");
 	}
 	if (task.allowedTools !== undefined && !Array.isArray(task.allowedTools)) {
 		throw new TypeError("Task allowedTools must be an array.");
 	}
-	if (task.toolAllowlist !== undefined && !Array.isArray(task.toolAllowlist)) {
-		throw new TypeError("Task toolAllowlist must be an array.");
-	}
-	const taskToolArray = task.tools ?? [];
-	const stringToolNames = taskToolArray.every((entry) => typeof entry === "string");
-	const customTools = task.customTools ?? (stringToolNames ? [] : taskToolArray);
-	const explicitAllowlist = task.toolAllowlist ?? task.allowedTools;
-	const inferredAllowlist = stringToolNames ? taskToolArray.filter((entry): entry is string => typeof entry === "string") : undefined;
-	if (task.toolAllowlist && task.allowedTools) {
-		if (task.toolAllowlist.join("\0") !== task.allowedTools.join("\0")) {
-			throw new TypeError("Task toolAllowlist and allowedTools disagree.");
-		}
-	}
-	const rawAllowlist = explicitAllowlist ?? inferredAllowlist ?? [];
+	const customTools = task.customTools ?? [];
+	const rawAllowlist = task.allowedTools ?? [];
 	if (!Array.isArray(rawAllowlist) || rawAllowlist.some((name) => typeof name !== "string" || name.length === 0)) {
 		throw new TypeError("Task tool allowlist must contain non-empty strings.");
 	}
@@ -985,10 +962,6 @@ export class PiTaskRunner {
 		);
 	}
 
-	async runTask(task: PiTask, options?: RunTaskOptions): Promise<TaskOutcome> {
-		return this.run(task, options);
-	}
-
 	async abortAll(): Promise<void> {
 		const runs = [...this.activeRuns];
 		const failures: unknown[] = [];
@@ -1058,14 +1031,4 @@ export class PiTaskRunner {
 	}
 }
 
-export function createPiTaskRunner(options: PiTaskRunnerOptions): PiTaskRunner {
-	return new PiTaskRunner(options);
-}
 
-export const createTaskRunner = createPiTaskRunner;
-
-export async function runPiTask(task: PiTask, options: PiTaskRunnerOptions, runOptions?: RunTaskOptions): Promise<TaskOutcome> {
-	return new PiTaskRunner(options).run(task, runOptions);
-}
-
-export { PiTaskRunner as TaskRunner };

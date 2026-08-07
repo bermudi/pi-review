@@ -141,6 +141,7 @@ class PhaseExecutor implements TaskExecutor {
 	readonly noFindings: boolean;
 	readonly unanchored: boolean;
 	readonly missingDone: boolean;
+	readonly invalidPlan: boolean;
 	readonly sessionFile: string | undefined;
 
 	constructor(options: {
@@ -150,6 +151,7 @@ class PhaseExecutor implements TaskExecutor {
 		noFindings?: boolean;
 		unanchored?: boolean;
 		missingDone?: boolean;
+		invalidPlan?: boolean;
 		sessionFile?: string;
 	} = {}) {
 		this.vetoed = options.vetoed;
@@ -158,6 +160,7 @@ class PhaseExecutor implements TaskExecutor {
 		this.noFindings = options.noFindings === true;
 		this.unanchored = options.unanchored === true;
 		this.missingDone = options.missingDone === true;
+		this.invalidPlan = options.invalidPlan === true;
 		this.sessionFile = options.sessionFile;
 	}
 
@@ -175,6 +178,9 @@ class PhaseExecutor implements TaskExecutor {
 		task.onEvent?.({ type: "tool_started", toolName: name });
 
 		if (name === "submit_plan") {
+			if (this.invalidPlan) {
+				return { status: "invalid", stopReason: "error", error: "corrupt outcome", text: "", usage: usage(10), toolResults: [] } as unknown as TaskOutcome;
+			}
 			if (this.failPlan) return failed("planner unavailable", usage(10));
 			await invoke(task, name, validPlan);
 			return complete(usage(10), "submit_plan");
@@ -279,7 +285,7 @@ describe("Reviewer", () => {
 			["file_read", "code_search", "file_find", "file_read_diff", "submit_review"],
 			["submit_veto"],
 		]);
-		expect(executor.tasks.every((task) => task.maxToolStarts === 9)).toBe(true);
+		expect(executor.tasks.map((task) => task.maxToolStarts)).toEqual([3, 9, 3]);
 		expect((executor.tasks[1]?.prompt as { user: string }).user).toContain("The value must be validated.");
 		expect((executor.tasks[1]?.prompt as { user: string }).user).toContain("Adds a large changed block.");
 		expect((executor.tasks[2]?.prompt as { user: string }).user).toContain('"id": "c-0"');
@@ -352,6 +358,42 @@ describe("Reviewer", () => {
 		expect(result.findings).toEqual([]);
 		expect(result.warnings.some((warning) => warning.includes("planner"))).toBe(true);
 		expect(executor.tasks).toHaveLength(2);
+	});
+
+	test("counts planner usage when the plan phase returns a non-complete outcome", async () => {
+		const file = changedFile("src/large.ts", 50);
+		const executor = new PhaseExecutor({ failPlan: true, noFindings: true });
+		const result = await new Reviewer({
+			targetFactory: async () => target([file]),
+			taskExecutor: executor,
+		}).review({ repository: "/fake", mode: { kind: "workspace" } }, options());
+
+		expect(result.usage).toEqual({
+			inputTokens: 30,
+			outputTokens: 32,
+			cacheReadTokens: 34,
+			cacheWriteTokens: 36,
+			totalTokens: 42,
+		});
+	});
+
+	test("counts planner usage when the plan phase returns an invalid outcome", async () => {
+		const file = changedFile("src/large.ts", 50);
+		const executor = new PhaseExecutor({ invalidPlan: true, noFindings: true });
+		const result = await new Reviewer({
+			targetFactory: async () => target([file]),
+			taskExecutor: executor,
+		}).review({ repository: "/fake", mode: { kind: "workspace" } }, options());
+
+		expect(result.status).toBe("complete");
+		expect(result.warnings.some((warning) => warning.includes("planner"))).toBe(true);
+		expect(result.usage).toEqual({
+			inputTokens: 30,
+			outputTokens: 32,
+			cacheReadTokens: 34,
+			cacheWriteTokens: 36,
+			totalTokens: 42,
+		});
 	});
 
 	test("applies include/exclude selection and skips empty diffs before dispatch", async () => {
@@ -516,5 +558,29 @@ describe("Reviewer", () => {
 		expect(executor.abortAllCalls).toBe(1);
 		expect(result.status).toBe("failed");
 		expect(result.coverage.failed[0]?.path).toBe("src/pending.ts");
+	});
+
+	test("warns when all selected files complete after an abort", async () => {
+		const file = changedFile("src/complete.ts");
+		const executor = new PhaseExecutor({ noFindings: true });
+		const controller = new AbortController();
+		const events: string[] = [];
+		const result = await new Reviewer({
+			targetFactory: async () => target([file]),
+			taskExecutor: executor,
+		}).review(
+			{ repository: "/fake", mode: { kind: "workspace" } },
+			options({
+				signal: controller.signal,
+				onEvent: (event) => {
+					events.push(event.type);
+					if (event.type === "file_completed") controller.abort(new Error("post-completion abort"));
+				},
+			}),
+		);
+
+		expect(result.status).toBe("complete");
+		expect(result.warnings.some((warning) => warning.includes("abort"))).toBe(true);
+		expect(events).toContain("warning");
 	});
 });

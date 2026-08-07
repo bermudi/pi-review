@@ -165,4 +165,41 @@ describe("createReviewTarget", () => {
 		await expect(target.readFile(".git/config")).rejects.toThrow();
 		await expect(readFile(join(repository, ".git", "config"), "utf8")).resolves.toContain("[core]");
 	});
+
+	it("memoizes listFiles across calls in snapshot mode", async () => {
+		const repository = await createRepository();
+		await writeFile(join(repository, "a.ts"), "a\n");
+		await writeFile(join(repository, "b.ts"), "b\n");
+		const head = await commitAll(repository, "initial");
+		const target = await createReviewTarget({ repository, mode: { kind: "commit", ref: head } });
+
+		// Concurrent calls should share one underlying resolution.
+		const [first, second, third] = await Promise.all([
+			target.listFiles(),
+			target.listFiles(),
+			target.listFiles(),
+		]);
+		expect(first).toEqual(second);
+		expect(second).toEqual(third);
+		expect(first).toEqual(["a.ts", "b.ts"]);
+
+		// Subsequent sequential calls return the memoized result.
+		expect(await target.listFiles()).toBe(first);
+	});
+
+	it("serves repeated snapshot reads consistently from the blob cache", async () => {
+		const repository = await createRepository();
+		await writeFile(join(repository, "cached.ts"), "cached content\n");
+		const head = await commitAll(repository, "initial");
+		const target = await createReviewTarget({ repository, mode: { kind: "commit", ref: head } });
+
+		const reads = await Promise.all([
+			target.readFile("cached.ts"),
+			target.readFile("cached.ts"),
+			target.readFile("cached.ts"),
+		]);
+		expect(reads).toEqual(["cached content\n", "cached content\n", "cached content\n"]);
+		// A later read still returns the same pinned content.
+		expect(await target.readFile("cached.ts")).toBe("cached content\n");
+	});
 });
