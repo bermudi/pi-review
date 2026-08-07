@@ -1,0 +1,20 @@
+{
+  "release-type": "node",
+  "packages": {
+    ".": {
+      "package-name": "pi-reviewer",
+      "changelog-path": "CHANGELOG.md",
+      "include-component-in-tag": false
+    }
+  },
+  "changelog-types": [
+    { "type": "feat", "section": "Features" },
+    { "type": "fix", "section": "Bug Fixes" },
+    { "type": "perf", "section": "Performance" },
+    { "type": "refactor", "section": "Refactoring" },
+    { "type": "docs", "section": "Documentation" },
+    { "type": "build", "section": "Build System" },
+    { "type": "ci", "section": "CI" },
+    { "type": "chore", "section": "Miscellaneous", "hidden": false }
+  ]
+}
