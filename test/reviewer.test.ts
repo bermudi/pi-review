@@ -299,6 +299,23 @@ describe("Reviewer", () => {
 		]);
 	});
 
+	test("passes host evidence from ReviewInput into the review prompt", async () => {
+		const executor = new PhaseExecutor({ noFindings: true });
+		const evidence = "error TS2345: Argument of type 'string' is not assignable to parameter of type 'number'.";
+		await new Reviewer({
+			targetFactory: async () => target([changedFile("src/current.ts")]),
+			taskExecutor: executor,
+		}).review(
+			{ repository: "/fake", mode: { kind: "workspace" }, hostEvidence: evidence },
+			options(),
+		);
+
+		expect(executor.tasks).toHaveLength(1);
+		const prompt = executor.tasks[0]?.prompt as { user: string } | undefined;
+		expect(prompt?.user).toContain('<untrusted-data name="host-evidence">');
+		expect(prompt?.user).toContain(evidence);
+	});
+
 	test("threads sessionDir and per-phase session ids through to tasks", async () => {
 		const file = changedFile("src/large.ts", 50);
 		const executor = new PhaseExecutor({ vetoed: ["c-1"] });

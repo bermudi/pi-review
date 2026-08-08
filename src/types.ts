@@ -8,6 +8,7 @@ export interface ReviewInput {
 	mode: ReviewMode;
 	background?: string;
 	rules?: string;
+	readonly hostEvidence?: string;
 }
 
 export type ThinkingLevel = "off" | "minimal" | "low" | "medium" | "high" | "xhigh" | "max";

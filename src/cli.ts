@@ -33,6 +33,8 @@ type RawCliValues = {
 	exclude: string[];
 	background?: string;
 	backgroundFile?: string;
+	hostEvidence?: string;
+	hostEvidenceFile?: string;
 	rulesFile?: string;
 	concurrency?: string;
 	maxToolRounds?: string;
@@ -59,6 +61,8 @@ const rawCliValuesSchema = z.object({
 	exclude: z.array(optionValue),
 	background: optionValue.optional(),
 	backgroundFile: optionValue.optional(),
+	hostEvidence: optionValue.optional(),
+	hostEvidenceFile: optionValue.optional(),
 	rulesFile: optionValue.optional(),
 	concurrency: optionValue.optional(),
 	maxToolRounds: optionValue.optional(),
@@ -80,6 +84,8 @@ export interface CliOptions {
 	readonly exclude: readonly string[];
 	readonly background: string | undefined;
 	readonly backgroundFile: string | undefined;
+	readonly hostEvidence: string | undefined;
+	readonly hostEvidenceFile: string | undefined;
 	readonly rulesFile: string | undefined;
 	readonly concurrency: number | undefined;
 	readonly maxToolRounds: number | undefined;
@@ -154,6 +160,8 @@ Options:
   --background TEXT          Extra review background
   --background-file PATH     Read review background as UTF-8
   --rules-file PATH          Read review rules as UTF-8
+  --host-evidence TEXT       Host evidence (e.g. typecheck/test output) for review
+  --host-evidence-file PATH  Read host evidence as UTF-8
   --concurrency N            Maximum concurrent file reviews
   --max-tool-rounds N        Maximum tool calls per file review task
   --plan-threshold N         Changed-line threshold for risk planning
@@ -176,6 +184,8 @@ const knownValueOptions = new Set([
 	"exclude",
 	"background",
 	"background-file",
+	"host-evidence",
+	"host-evidence-file",
 	"rules-file",
 	"concurrency",
 	"max-tool-rounds",
@@ -231,6 +241,14 @@ function setValue(raw: RawCliValues, name: string, value: string): void {
 		case "background-file":
 			if (raw.backgroundFile !== undefined) optionSyntaxError("Duplicate --background-file option.");
 			raw.backgroundFile = value;
+			return;
+		case "host-evidence":
+			if (raw.hostEvidence !== undefined) optionSyntaxError("Duplicate --host-evidence option.");
+			raw.hostEvidence = value;
+			return;
+		case "host-evidence-file":
+			if (raw.hostEvidenceFile !== undefined) optionSyntaxError("Duplicate --host-evidence-file option.");
+			raw.hostEvidenceFile = value;
 			return;
 		case "rules-file":
 			if (raw.rulesFile !== undefined) optionSyntaxError("Duplicate --rules-file option.");
@@ -387,6 +405,8 @@ export function parseArgs(
 			exclude: [...values.exclude],
 			background: values.background,
 			backgroundFile: values.backgroundFile,
+			hostEvidence: values.hostEvidence,
+			hostEvidenceFile: values.hostEvidenceFile,
 			rulesFile: values.rulesFile,
 			concurrency: undefined,
 			maxToolRounds: undefined,
@@ -412,6 +432,9 @@ export function parseArgs(
 	if (values.background !== undefined && values.backgroundFile !== undefined) {
 		optionSyntaxError("--background and --background-file are mutually exclusive.");
 	}
+	if (values.hostEvidence !== undefined && values.hostEvidenceFile !== undefined) {
+		optionSyntaxError("--host-evidence and --host-evidence-file are mutually exclusive.");
+	}
 
 	return {
 		help: false,
@@ -423,6 +446,8 @@ export function parseArgs(
 		exclude: [...values.exclude],
 		background: values.background,
 		backgroundFile: values.backgroundFile,
+		hostEvidence: values.hostEvidence,
+		hostEvidenceFile: values.hostEvidenceFile,
 		rulesFile: values.rulesFile,
 		concurrency: parseInteger(values.concurrency, "concurrency", 1),
 		maxToolRounds: parseInteger(values.maxToolRounds, "max-tool-rounds", 1),
@@ -640,12 +665,22 @@ export async function runCli(
 				return 1;
 			}
 		}
+		let hostEvidence = parsed.hostEvidence;
+		if (parsed.hostEvidenceFile !== undefined) {
+			try {
+				hostEvidence = await readOptionFile(reader, parsed.hostEvidenceFile);
+			} catch {
+				io.stderr("Error: Unable to read --host-evidence-file as UTF-8.\n");
+				return 1;
+			}
+		}
 
 		const input: ReviewInput = {
 			repository: parsed.repo,
 			mode: parsed.mode,
 			...(background === undefined ? {} : { background }),
 			...(rules === undefined ? {} : { rules }),
+			...(hostEvidence === undefined ? {} : { hostEvidence }),
 		};
 		const options: ReviewOptions = {
 			model: parsed.model as string,

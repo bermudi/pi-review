@@ -123,6 +123,8 @@ describe("CLI argument parsing", () => {
 			exclude: ["vendor/**"],
 			background: "Review API boundaries",
 			backgroundFile: undefined,
+			hostEvidence: undefined,
+			hostEvidenceFile: undefined,
 			rulesFile: undefined,
 			concurrency: 3,
 			maxToolRounds: 8,
@@ -350,6 +352,60 @@ describe("CLI execution seams", () => {
 		expect(exitCode).toBe(0);
 		expect(receivedOptions?.model).toBe("env/provider/model");
 		expect(captured.stdout()).toContain("Status: complete");
+	});
+
+	test("passes --host-evidence through to ReviewInput", async () => {
+		const captured = captureIo();
+		let receivedInput: ReviewInput | undefined;
+		const exitCode = await runCli(["--model", "provider/model", "--host-evidence", "tsc output"], {
+			io: captured.io,
+			reviewer: {
+				review: async (input) => {
+					receivedInput = input;
+					return result("complete");
+				},
+			},
+		});
+
+		expect(exitCode).toBe(0);
+		expect(receivedInput?.hostEvidence).toBe("tsc output");
+	});
+
+	test("reads --host-evidence-file and passes it to ReviewInput", async () => {
+		const captured = captureIo();
+		let receivedInput: ReviewInput | undefined;
+		const exitCode = await runCli(["--model", "provider/model", "--host-evidence-file", "evidence.txt"], {
+			io: captured.io,
+			readFile: async (path) => {
+				if (path !== "evidence.txt") throw new Error("unexpected file");
+				return "build output";
+			},
+			reviewer: {
+				review: async (input) => {
+					receivedInput = input;
+					return result("complete");
+				},
+			},
+		});
+
+		expect(exitCode).toBe(0);
+		expect(receivedInput?.hostEvidence).toBe("build output");
+	});
+
+	test("returns exit 1 when --host-evidence-file cannot be read", async () => {
+		const captured = captureIo();
+		const exitCode = await runCli(["--model", "provider/model", "--host-evidence-file", "missing.txt"], {
+			io: captured.io,
+			readFile: async () => {
+				throw new Error("ENOENT");
+			},
+			reviewer: {
+				review: async () => result("complete"),
+			},
+		});
+
+		expect(exitCode).toBe(1);
+		expect(captured.stderr()).toContain("Unable to read --host-evidence-file");
 	});
 });
 

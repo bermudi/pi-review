@@ -100,6 +100,7 @@ interface SelectedReviewFile {
 interface ReviewContext {
 	readonly background?: string;
 	readonly rules?: string;
+	readonly hostEvidence?: string;
 }
 
 interface WorkflowResult {
@@ -312,6 +313,8 @@ function toolNames(tools: readonly { readonly name: string }[]): string[] {
 	return tools.map((tool) => tool.name);
 }
 
+/** Plan/veto phases have only their terminal tool (submit_plan/submit_veto),
+ *  so every start is a submission attempt. 3 = one bad + one recovered + buffer. */
 export const MAX_PLAN_VETO_TOOL_STARTS = 3;
 
 interface TaskBudgetOptions {
@@ -327,6 +330,7 @@ export function buildTask(
 	onEvent: (event: TaskEvent) => void,
 	sessionId?: string,
 ): PiTask {
+	// Review gets budget + 1 start of slack for submit_review; plan/veto get the fixed constant above.
 	const maxToolStarts =
 		phase === "review"
 			? (options.maxToolRounds ?? DEFAULT_MAX_TOOL_CALLS) + 1
@@ -744,7 +748,7 @@ export class Reviewer {
 					workflow = await this.reviewFile(
 						entry,
 						selected,
-						{ background: input.background, rules: input.rules },
+						{ background: input.background, rules: input.rules, hostEvidence: input.hostEvidence },
 						normalized,
 						executor,
 						warn,
@@ -930,6 +934,7 @@ export class Reviewer {
 				otherChangedFiles,
 				background: context.background,
 				rules: context.rules,
+				hostEvidence: context.hostEvidence,
 			});
 			const plan = await this.runPhase(
 				prompt,
@@ -976,6 +981,7 @@ export class Reviewer {
 			otherChangedFiles,
 			background: context.background,
 			rules: context.rules,
+			hostEvidence: context.hostEvidence,
 			riskPlan,
 			maxToolCalls: reviewMaxToolCalls,
 		});

@@ -23,10 +23,12 @@ export const MAX_PATH_LENGTH = 4096;
 export const MAX_SEARCH_FILE_BYTES = 1_000_000;
 export const MAX_SEARCH_LINE_BYTES = 4_000;
 export const MAX_SEARCH_OUTPUT_BYTES = 50_000;
+/** Host-side scan ceiling for code_search: bounds total files and bytes scanned across the target tree, not just output. */
 export const MAX_SCAN_FILES = 500;
 export const MAX_SCAN_BYTES = 2_000_000;
 export const MAX_READ_OUTPUT_BYTES = 100_000;
 export const MAX_DIFF_OUTPUT_BYTES = 100_000;
+/** The default per-file evidence budget. The model sees this number in its system prompt and must reserve one call for submit_review. */
 export const DEFAULT_MAX_TOOL_CALLS = 32;
 
 const MAX_COMMENT_CONTENT_LENGTH = 10_000;
