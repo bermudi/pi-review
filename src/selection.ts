@@ -333,6 +333,16 @@ function matchesAny(path: string, patterns: readonly string[]): boolean {
 	});
 }
 
+/**
+ * Whether a repository-relative path matches any of the caller's explicit
+ * exclude patterns. Used by other deterministic policy modules (the change
+ * map) to honor the caller's exclusion boundary independently of the reason
+ * selection assigned to a file.
+ */
+export function matchesUserExclude(path: string, patterns: readonly string[]): boolean {
+	return matchesAny(path, patterns);
+}
+
 function hasSupportedExtension(
 	path: string,
 	extensions: readonly string[],

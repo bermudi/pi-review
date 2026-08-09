@@ -11,9 +11,9 @@ Pi sessions, model resolution, prompts, and model-visible tools do not cross tha
 ## End-to-end pipeline
 
 1. **Acquire a review target — `git.ts` and `diff.ts`.** Validate the repository, mode, refs, paths, and symlink boundaries. For a workspace, compare the working tree with `HEAD` when available and synthesize diffs for non-ignored untracked files. For a range, diff `head` against the merge-base of `base` and `head`. For a commit, diff against its first parent or the root tree. Parse the unified diff into `ChangedFile` records and enrich text files with target-side content. Range/commit reads use Git blobs pinned to the target commit; workspace reads use the live working tree.
-2. **Select files — `selection.ts` and `reviewer.ts`.** Sort changed files deterministically, then apply unsafe-path, binary, deletion, user-exclude, default extension/path, and changed-line policies. The orchestration default is `2,000` changed lines per file. A selected file is gated before task dispatch if its raw diff is empty, exceeds `100,000` bytes, or has no changed lines. Selection decisions become skipped coverage rather than disappearing.
-3. **Plan material risk when needed — `phase-tools.ts` and `prompts.ts`.** At the default threshold of `50` changed lines, the file receives a separate planning task. That task has one terminating `submit_plan` tool and returns a schema-checked `change_summary` plus prioritized issues with bounded evidence guidance. It describes evidence calls; it does not perform them. Planner failure fails open for the main review, with a warning.
-4. **Review one selected file — `reviewer.ts`, `prompts.ts`, and `tools.ts`.** Each file gets an independent Pi task with a fixed system policy, a delimited current-file diff, other changed paths for orientation, optional background/rules, and the optional risk plan. Its custom tool allowlist is exactly the bounded evidence tools plus `submit_review`.
+2. **Select files — `selection.ts` and `reviewer.ts`.** Sort changed files deterministically, then apply unsafe-path, binary, deletion, user-exclude, default extension/path, and changed-line policies. The orchestration default is `2,000` changed lines per file. A selected file is gated before task dispatch if its raw diff is empty, exceeds `100,000` bytes, or has no changed lines. Selection decisions become skipped coverage rather than disappearing, and they are the sole input to the cross-file change map's eligibility policy.
+3. **Plan material risk when needed — `phase-tools.ts` and `prompts.ts`.** At the default threshold of `50` changed lines, the file receives a separate planning task. That task has one terminating `submit_plan` tool and returns a schema-checked `change_summary` plus prioritized issues with bounded evidence guidance. It describes evidence calls; it does not perform them. Planner failure fails open for the main review, with a warning. The planner receives the current file's change-map slice (see below) alongside the diff.
+4. **Review one selected file — `reviewer.ts`, `prompts.ts`, and `tools.ts`.** Each file gets an independent Pi task with a fixed system policy, a delimited current-file diff, other changed paths for orientation, the current file's change-map slice, optional background/rules, and the optional risk plan. Its custom tool allowlist is exactly the bounded evidence tools plus `submit_review`.
 5. **Resolve placement — `resolver.ts`.** Convert submitted candidates into findings by matching `existingCode` against target-side content. A candidate is accepted only if its matched range intersects an added target-side line. Unanchored candidates are rejected with a warning; there is no fallback location.
 6. **Veto conservatively — `phase-tools.ts`, `prompts.ts`, and `reviewer.ts`.** Resolved findings are sent to a separate veto task using `submit_veto`. The veto stage can remove a candidate only when the current diff directly disproves its central claim. Uncertainty keeps the candidate. A non-aborted veto failure fails open for findings and emits a warning.
 7. **Assemble coverage — `reviewer.ts`.** File tasks may run concurrently, with a default concurrency of `4`. Findings, coverage, warnings, and token usage are aggregated and sorted deterministically. The result distinguishes `complete`, `partial`, `failed`, and `skipped`; incomplete selected work cannot be presented as complete.
@@ -36,6 +36,21 @@ Each phase is a separate task/session. The main worker must call `submit_review`
 The Pi runner (`pi-runner.ts`) creates in-memory sessions with a minimal resource loader by default; when a session directory is configured it uses Pi's file-backed session manager instead, persisting each task's transcript as `.jsonl`. It resolves the configured provider/model and checks authentication before creating a task session. It forwards only a narrow task outcome/event vocabulary, enforces abort and tool-start limits, sanitizes tool details, and disposes every session. Each task receives an explicit custom-tool allowlist; no default shell, edit, write, or unrelated Pi tool is exposed.
 
 All repository material is placed in delimited user data. Diffs, code, background, rules, paths, plans, and tool results are evidence, not instructions. The resource loader does not discover repository `AGENTS.md` files, skills, extensions, prompts, or settings.
+
+## Cross-file change map
+
+`change-map.ts` is a deterministic, host-side artifact that gives each per-file task bounded orientation about the rest of the change: renames, new/deleted files, and conservative lexical declaration changes. It is built once from the selection decisions — never from raw target files — so the same policy that decides what is reviewable also decides what is eligible as orientation.
+
+Eligibility follows the selection reason:
+
+- `selected` files contribute file facts plus added/removed declarations.
+- `deleted` files (never reviewable) contribute their deletion fact and diff-derived removed declarations, which is the strongest cross-file breakage signal.
+- Default-policy skips (unsupported extension, default path, size/line limits) contribute rename/new/deleted metadata only — never content-derived declarations.
+- Unsafe paths, binary files, explicit user excludes, and size-unknown files are invisible. A deleted file that also matches the caller's `exclude` patterns stays invisible, because its declarations are still excluded-file content.
+
+Declaration extraction is a small, extension-scoped pattern table (TypeScript/JavaScript exports, Python module-level `def`/`class`, Go `func`/`type`, Rust `fn`/`struct`/`enum`/`trait`), anchored and conservative, returning identifiers only. Everything else renders as `LEXICAL` approximation; rename/new/deleted facts render as `FACT` metadata. The artifact is capped at `200` facts total and `20` declarations per file, with exact dropped counts; each rendered per-file slice has its own `4,000`-byte UTF-8 ceiling with an explicit `(truncated: N facts omitted)` notice. Rendering groups the current file's facts under `This file (...)` first, then deletions, renames, other declarations, and new files, in truncation-priority order.
+
+The map is passive, per-file orientation only. It never creates findings, never extends review scope, never changes anchoring or coverage, and is not persisted. It cannot overcome added-line anchoring: a stale caller whose file is unchanged still cannot receive a finding here. If a future Option B (a global model brief) is ever built, it should consume these bounded deterministic facts rather than inventing a second lossy digest pipeline.
 
 ## Bounded evidence tools
 
@@ -61,6 +76,7 @@ The same shape applies to planning and veto: one validated structured value is r
 - `src/git.ts` — Git process seam and workspace/range/commit `ReviewTarget` acquisition.
 - `src/diff.ts` — unified-diff parsing, safe diff paths, and diff metadata.
 - `src/selection.ts` — pure deterministic file-selection policy.
+- `src/change-map.ts` — pure deterministic cross-file change map and per-file slice renderer.
 - `src/resolver.ts` — pure deterministic added-line finding placement.
 - `src/prompts.ts` — fixed precision-first system prompts and delimited user data.
 - `src/tools.ts` — bounded target-snapshot evidence tools and atomic finding collector.
@@ -98,6 +114,7 @@ By default, the runner uses `~/.pi/agent` and its `auth.json`/`models.json`. `PI
 - **Schema rejection.** Plan, comment, veto, and termination values are validated and rejected when malformed rather than loosely coerced.
 - **Conservative veto.** The veto pass removes comments only on direct counter-evidence in the current diff; uncertainty preserves them.
 - **Deterministic ordering.** Git files, selection coverage, findings, and final result lists do not depend on task completion timing.
+- **Bounded cross-file orientation.** The change map is deterministic, capped at construction and render time, and injected per file as delimited evidence; it never relaxes added-line anchoring, coverage accounting, or per-file model isolation.
 - **Read-only isolation.** Model tasks have no shell/edit/write tools, and repository instruction discovery is disabled. Git and file operations remain host-permission operations, not a sandbox.
 
 These choices favor precision and auditable failure states over maximum recall or feature parity with open-code-review's Go/provider/UI stack. The implementation has no resume workflow, no full-repository scan mode, and no mechanical compile/test/formatter/linter phase. Workspace evidence can change during a long review because workspace reads are live after target acquisition; range and commit evidence are pinned. Target acquisition is bounded but whole-buffered as described above.

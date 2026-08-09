@@ -7,6 +7,7 @@
  * importing Pi.
  */
 export { DiffParseError, parseUnifiedDiff } from "./diff.js";
+export { buildChangeMap, renderChangeMapSlice } from "./change-map.js";
 export { createReviewTarget } from "./git.js";
 export { resolveFinding } from "./resolver.js";
 export { selectFiles } from "./selection.js";
@@ -40,3 +41,11 @@ export type {
 	SelectionReason,
 	SelectionResult,
 } from "./selection.js";
+
+export type {
+	ChangeFact,
+	ChangeMap,
+	ChangeMapOptions,
+	ChangeMapRenderOptions,
+	DeclarationCategory,
+} from "./change-map.js";

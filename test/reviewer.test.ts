@@ -58,6 +58,78 @@ function changedFile(path: string, lineCount = 1): ChangedFile {
 	};
 }
 
+/** A file whose added lines carry exported declarations, so the change map has facts. */
+function exportedFile(path: string, lineCount = 1): ChangedFile {
+	const lines = Array.from(
+		{ length: lineCount },
+		(_, index) => `export function fn${index + 1}() { return ${index + 1}; }`,
+	);
+	return {
+		oldPath: path,
+		newPath: path,
+		rawDiff: [
+			`diff --git a/${path} b/${path}`,
+			`--- a/${path}`,
+			`+++ b/${path}`,
+			`@@ -0,0 +1,${lines.length} @@`,
+			...lines.map((line) => `+${line}`),
+		].join("\n"),
+		newContent: `${lines.join("\n")}\n`,
+		isBinary: false,
+		isDeleted: false,
+		isNew: true,
+		isRenamed: false,
+		insertions: lines.length,
+		deletions: 0,
+		hunks: [
+			{
+				oldStart: 0,
+				oldCount: 0,
+				newStart: 1,
+				newCount: lines.length,
+				lines: lines.map((text, index) => ({ kind: "addition" as const, text, newLine: index + 1 })),
+			},
+		],
+	};
+}
+
+/** A file whose rawDiff exceeds the review byte limit but has few changed lines. */
+function oversizedFile(path: string): ChangedFile {
+	const padding = "x".repeat(100_000);
+	const declarations = [
+		"export function hugeFn1() { return 1; }",
+		"export function hugeFn2() { return 2; }",
+	];
+	return {
+		oldPath: path,
+		newPath: path,
+		rawDiff: [
+			`diff --git a/${path} b/${path}`,
+			`--- a/${path}`,
+			`+++ b/${path}`,
+			`@@ -0,0 +1,2 @@`,
+			...declarations.map((line) => `+${line}`),
+			` ${padding}`,
+		].join("\n"),
+		newContent: `${declarations.join("\n")}\n`,
+		isBinary: false,
+		isDeleted: false,
+		isNew: true,
+		isRenamed: false,
+		insertions: declarations.length,
+		deletions: 0,
+		hunks: [
+			{
+				oldStart: 0,
+				oldCount: 0,
+				newStart: 1,
+				newCount: declarations.length,
+				lines: declarations.map((text, index) => ({ kind: "addition" as const, text, newLine: index + 1 })),
+			},
+		],
+	};
+}
+
 function target(files: readonly ChangedFile[]): ReviewTarget {
 	const mode: ReviewMode = { kind: "workspace" };
 	const contents = new Map(files.map((file) => [file.newPath, file.newContent ?? ""]));
@@ -599,5 +671,150 @@ describe("Reviewer", () => {
 		expect(result.status).toBe("complete");
 		expect(result.warnings.some((warning) => warning.includes("abort"))).toBe(true);
 		expect(events).toContain("warning");
+	});
+
+	test("injects the per-file change-map slice into both plan and review prompts", async () => {
+		const executor = new PhaseExecutor({ noFindings: true });
+		const result = await new Reviewer({
+			targetFactory: async () => target([exportedFile("src/a.ts", 60), exportedFile("src/b.ts", 60)]),
+			taskExecutor: executor,
+		}).review(
+			{ repository: "/fake", mode: { kind: "workspace" } },
+			options({ concurrency: 1, planChangedLineThreshold: 50 }),
+		);
+
+		expect(result.status).toBe("complete");
+		expect(executor.tasks.map((task) => {
+			const tools = task.allowedTools ?? [];
+			if (tools.includes("submit_plan")) return "plan";
+			if (tools.includes("submit_review")) return "review";
+			return "other";
+		})).toEqual(["plan", "review", "plan", "review"]);
+
+		const planA = executor.tasks[0]?.prompt as { user: string } | undefined;
+		const reviewA = executor.tasks[1]?.prompt as { user: string } | undefined;
+		const planB = executor.tasks[2]?.prompt as { user: string } | undefined;
+		const reviewB = executor.tasks[3]?.prompt as { user: string } | undefined;
+
+		for (const prompt of [planA, reviewA]) {
+			expect(prompt?.user).toContain('<untrusted-data name="cross-file-change-map">');
+			expect(prompt?.user).toContain("This file (src/a.ts):");
+			expect(prompt?.user).toContain("src/a.ts: function fn1 added (line 1)");
+			expect(prompt?.user).toContain("Other changed declarations:");
+			expect(prompt?.user).toContain("src/b.ts: function fn1 added (line 1)");
+			expect(prompt?.user).not.toContain("This file (src/b.ts):");
+		}
+		for (const prompt of [planB, reviewB]) {
+			expect(prompt?.user).toContain("This file (src/b.ts):");
+			expect(prompt?.user).toContain("src/b.ts: function fn1 added (line 1)");
+			expect(prompt?.user).not.toContain("This file (src/a.ts):");
+		}
+	});
+
+	test("injects the change-map slice into the review prompt even when planning is skipped", async () => {
+		const executor = new PhaseExecutor({ noFindings: true });
+		const result = await new Reviewer({
+			targetFactory: async () => target([exportedFile("src/small.ts", 1)]),
+			taskExecutor: executor,
+		}).review(
+			{ repository: "/fake", mode: { kind: "workspace" } },
+			options({ planChangedLineThreshold: 50 }),
+		);
+
+		expect(result.status).toBe("complete");
+		expect(executor.tasks).toHaveLength(1);
+		const prompt = executor.tasks[0]?.prompt as { user: string } | undefined;
+		expect(prompt?.user).toContain('<untrusted-data name="cross-file-change-map">');
+		expect(prompt?.user).toContain("This file (src/small.ts):");
+		expect(prompt?.user).toContain("src/small.ts: function fn1 added (line 1)");
+	});
+
+	test("keeps explicitly excluded file content out of the change map and prompts", async () => {
+		const secret = {
+			...exportedFile("src/secret.ts", 1),
+			hunks: [
+				{
+					oldStart: 0,
+					oldCount: 0,
+					newStart: 1,
+					newCount: 1,
+					lines: [
+						{
+							kind: "addition" as const,
+							text: "export function secretHelper() { return 'do not leak'; }",
+							newLine: 1,
+						},
+					],
+				},
+			],
+		};
+		const executor = new PhaseExecutor({ noFindings: true });
+		const result = await new Reviewer({
+			targetFactory: async () => target([exportedFile("src/ok.ts", 60), secret]),
+			taskExecutor: executor,
+		}).review(
+			{ repository: "/fake", mode: { kind: "workspace" } },
+			options({ exclude: ["src/secret.ts"], concurrency: 1, planChangedLineThreshold: 50 }),
+		);
+
+		expect(result.status).toBe("complete");
+		expect(result.coverage.selected).toEqual(["src/ok.ts"]);
+		expect(result.coverage.skipped).toEqual([{ path: "src/secret.ts", reason: "user_exclude" }]);
+		for (const task of executor.tasks) {
+			const prompt = task.prompt as { user: string };
+			expect(prompt.user).not.toContain("secretHelper");
+			expect(prompt.user).toContain("src/ok.ts: function fn1 added (line 1)");
+		}
+	});
+
+	test("treats diff_size_limit-gated files as metadata-only in the change map", async () => {
+		const ok = exportedFile("src/ok.ts", 1);
+		const huge = oversizedFile("src/huge.ts");
+		const executor = new PhaseExecutor({ noFindings: true });
+		const result = await new Reviewer({
+			targetFactory: async () => target([ok, huge]),
+			taskExecutor: executor,
+		}).review(
+			{ repository: "/fake", mode: { kind: "workspace" } },
+			options(),
+		);
+
+		expect(result.status).toBe("complete");
+		expect(result.coverage.selected).toEqual(["src/ok.ts"]);
+		expect(result.coverage.skipped).toContainEqual({ path: "src/huge.ts", reason: "diff_size_limit" });
+		expect(executor.tasks).toHaveLength(1);
+		const prompt = executor.tasks[0]?.prompt as { user: string } | undefined;
+		expect(prompt?.user).toContain('<untrusted-data name="cross-file-change-map">');
+		expect(prompt?.user).toContain("New files:");
+		expect(prompt?.user).toContain("src/huge.ts");
+		expect(prompt?.user).not.toContain("hugeFn1");
+		expect(prompt?.user).not.toContain("hugeFn2");
+	});
+
+	test("warns and continues without the map when building the cross-file change map throws", async () => {
+		const file = exportedFile("src/a.ts", 1);
+		Object.defineProperty(file, "hunks", {
+			get: () => {
+				throw new Error("change map build boom");
+			},
+		});
+
+		const executor = new PhaseExecutor({ noFindings: true });
+		const result = await new Reviewer({
+			targetFactory: async () => target([file]),
+			taskExecutor: executor,
+		}).review(
+			{ repository: "/fake", mode: { kind: "workspace" } },
+			options(),
+		);
+
+		expect(result.status).toBe("complete");
+		expect(result.warnings.some((warning) => warning.includes("Unable to build or render cross-file change map"))).toBe(true);
+		expect(result.warnings.some((warning) => warning.includes("change map build boom"))).toBe(true);
+		expect(executor.tasks).toHaveLength(1);
+		const prompt = executor.tasks[0]?.prompt as { user: string } | undefined;
+		expect(prompt?.user).toContain('<untrusted-data name="cross-file-change-map">');
+		expect(prompt?.user).not.toContain("This file (src/a.ts):");
+		expect(prompt?.user).not.toContain("LEXICAL  src/a.ts: function fn1 added (line 1)");
 	});
 });

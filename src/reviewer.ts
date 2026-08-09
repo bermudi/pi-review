@@ -1,4 +1,5 @@
 import { createReviewTarget } from "./git.js";
+import { buildChangeMap, renderChangeMapSlice, type ChangeMap } from "./change-map.js";
 import {
 	createPlanToolkit,
 	createVetoToolkit,
@@ -20,7 +21,7 @@ import {
 	type TaskOutcome,
 } from "./pi-runner.js";
 import { resolveFinding } from "./resolver.js";
-import { changedLineCount, selectFiles } from "./selection.js";
+import { changedLineCount, selectFiles, SELECTION_REASON, type SelectionDecision } from "./selection.js";
 import {
 	DEFAULT_MAX_TOOL_CALLS,
 	MAX_DIFF_OUTPUT_BYTES,
@@ -101,6 +102,7 @@ interface ReviewContext {
 	readonly background?: string;
 	readonly rules?: string;
 	readonly hostEvidence?: string;
+	readonly changeMap?: string;
 }
 
 interface WorkflowResult {
@@ -674,6 +676,34 @@ export class Reviewer {
 			selected.map((entry) => entry.path),
 			selectionSkipped,
 		);
+
+		// Build the cross-file change map once, after deterministic selection
+		// decisions exist and before any worker is dispatched. It is passive
+		// orientation evidence: a failure here warns and continues without the
+		// map rather than failing the review.
+		const sizeLimitedPaths = new Set(
+			gatedSkipped
+				.filter((skipped) => skipped.reason === "diff_size_limit")
+				.map((skipped) => skipped.path),
+		);
+		const changeMapDecisions: SelectionDecision[] = selection.decisions.map((decision) =>
+			sizeLimitedPaths.has(decision.path)
+				? { ...decision, selected: false, reason: SELECTION_REASON.sizeLimit }
+				: decision,
+		);
+
+		let changeMap: ChangeMap | undefined;
+		const changeMapSlices = new Map<string, string>();
+		try {
+			changeMap = buildChangeMap(changeMapDecisions, { exclude: normalized.exclude });
+			if (changeMap !== undefined) {
+				for (const entry of selected) {
+					changeMapSlices.set(entry.path, renderChangeMapSlice(changeMap, entry.path));
+				}
+			}
+		} catch (error) {
+			warn(`Unable to build or render cross-file change map: ${errorMessage(error, "change map construction or rendering failed")}`);
+		}
 		const findings: Finding[] = [];
 		let usage = zeroUsage();
 		let aborted = normalized.signal?.aborted === true;
@@ -748,7 +778,12 @@ export class Reviewer {
 					workflow = await this.reviewFile(
 						entry,
 						selected,
-						{ background: input.background, rules: input.rules, hostEvidence: input.hostEvidence },
+						{
+							background: input.background,
+							rules: input.rules,
+							hostEvidence: input.hostEvidence,
+							changeMap: changeMapSlices.get(entry.path),
+						},
 						normalized,
 						executor,
 						warn,
@@ -932,6 +967,7 @@ export class Reviewer {
 				currentFilePath: entry.path,
 				currentFileDiff: entry.file.rawDiff,
 				otherChangedFiles,
+				changeMap: context.changeMap,
 				background: context.background,
 				rules: context.rules,
 				hostEvidence: context.hostEvidence,
@@ -979,6 +1015,7 @@ export class Reviewer {
 			currentFilePath: entry.path,
 			currentFileDiff: entry.file.rawDiff,
 			otherChangedFiles,
+			changeMap: context.changeMap,
 			background: context.background,
 			rules: context.rules,
 			hostEvidence: context.hostEvidence,
