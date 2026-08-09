@@ -3,6 +3,7 @@ import { describe, expect, test } from "bun:test";
 import {
 	buildChangeMap,
 	renderChangeMapSlice,
+	type ChangeEdge,
 	type ChangeFact,
 	type ChangeMap,
 } from "../src/change-map.ts";
@@ -399,146 +400,6 @@ describe("buildChangeMap", () => {
 	});
 });
 
-describe("renderChangeMapSlice", () => {
-	const map = buildChangeMap([
-		decision("src/a.ts", "selected", {
-			hunks: [hunk([line("addition", "export function alpha() {}", { newLine: 5 })])],
-		}),
-		decision("src/b.ts", "selected", {
-			hunks: [hunk([line("addition", "export function beta() {}", { newLine: 7 })])],
-		}),
-		decision("src/gone.ts", "deleted", {
-			isDeleted: true,
-			hunks: [hunk([line("deletion", "export function omega() {}", { oldLine: 2 })])],
-		}),
-		decision("src/c.ts", "selected", { isNew: true }),
-		decision("src/d.ts", "selected", { isRenamed: true, oldPath: "src/d-old.ts", newPath: "src/d.ts" }),
-	]);
-
-	test("renders a current-file slice with its own facts grouped first", () => {
-		const slice = renderChangeMapSlice(map, "src/a.ts");
-
-		expect(slice).toContain("This file (src/a.ts):");
-		expect(slice).toContain("LEXICAL  src/a.ts: function alpha added (line 5)");
-		expect(slice).toContain("Deleted files:");
-		expect(slice).toContain("FACT  deleted: src/gone.ts");
-		expect(slice).toContain("Renamed files:");
-		expect(slice).toContain("FACT  renamed: src/d-old.ts -> src/d.ts");
-		expect(slice).toContain("New files:");
-		expect(slice).toContain("FACT  new file: src/c.ts");
-		expect(slice).toContain("Other changed declarations:");
-		expect(slice).toContain("LEXICAL  src/b.ts: function beta added (line 7)");
-		expect(slice).toContain("FACT");
-		expect(slice).toContain("LEXICAL");
-	});
-
-	test("per-file slices differ and never duplicate another file's own section", () => {
-		const sliceA = renderChangeMapSlice(map, "src/a.ts");
-		const sliceB = renderChangeMapSlice(map, "src/b.ts");
-
-		expect(sliceA).toContain("This file (src/a.ts):");
-		expect(sliceA).not.toContain("This file (src/b.ts):");
-		expect(sliceB).toContain("This file (src/b.ts):");
-		expect(sliceB).not.toContain("This file (src/a.ts):");
-		expect(sliceB).toContain("LEXICAL  src/a.ts: function alpha added (line 5)");
-	});
-
-	test("renders deleted-file declarations inside the Deleted files section", () => {
-		const slice = renderChangeMapSlice(map, "src/a.ts");
-
-		const deletedSection = slice.slice(slice.indexOf("Deleted files:"), slice.indexOf("Renamed files:"));
-		expect(deletedSection).toContain("FACT  deleted: src/gone.ts");
-		expect(deletedSection).toContain("LEXICAL  src/gone.ts: function omega removed (line 2)");
-	});
-
-	test("renders an empty slice for an empty map", () => {
-		const empty: ChangeMap = { facts: [], droppedFacts: 0, truncated: false };
-		expect(renderChangeMapSlice(empty, "src/a.ts")).toBe("");
-	});
-
-	test("renders nothing extra for a current file without facts", () => {
-		const slice = renderChangeMapSlice(map, "src/unknown.ts");
-		expect(slice).not.toContain("This file (src/unknown.ts):");
-		expect(slice).toContain("Deleted files:");
-	});
-
-	test("keeps the current-file section when the byte budget forces truncation", () => {
-		const busy = buildChangeMap([
-			decision("src/current.ts", "selected", {
-				hunks: [hunk([line("addition", "export function own() {}", { newLine: 1 })])],
-			}),
-			...Array.from({ length: 40 }, (_, index) =>
-				decision(`src/other${index}.ts`, "selected", {
-					hunks: [hunk([line("addition", "export function helper() {}", { newLine: 1 })])],
-				}),
-			),
-		]);
-		const slice = renderChangeMapSlice(busy, "src/current.ts", { maxBytes: 300 });
-
-		expect(slice).toContain("This file (src/current.ts):");
-		expect(slice).toContain("own added");
-		expect(slice).not.toContain("Other changed declarations:");
-		expect(slice).toMatch(/\(truncated: \d+ facts? omitted\)/);
-		expect(new TextEncoder().encode(slice).byteLength).toBeLessThanOrEqual(300);
-	});
-
-	test("emits a truncation notice when construction caps dropped facts", () => {
-		const many = Array.from({ length: 10 }, (_, index) =>
-			line("addition", `export function fn${index + 1}() {}`, { newLine: index + 1 }),
-		);
-		const capped = buildChangeMap([decision("src/many.ts", "selected", { hunks: [hunk(many)] })], {
-			maxFactsPerFile: 4,
-		});
-		const slice = renderChangeMapSlice(capped, "src/many.ts", { maxBytes: 4_000 });
-
-		expect(slice).toContain("(truncated: 6 facts omitted)");
-		expect(new TextEncoder().encode(slice).byteLength).toBeLessThanOrEqual(4_000);
-	});
-
-	test("never exceeds the byte budget even with long Unicode content", () => {
-		const unicodePath = `src/${"😀".repeat(300)}.ts`;
-		const unicodeMap = buildChangeMap([
-			decision(unicodePath, "selected", { isNew: true }),
-			decision("src/other.ts", "selected", { isRenamed: true, oldPath: "src/old.ts", newPath: "src/other.ts" }),
-		]);
-		const slice = renderChangeMapSlice(unicodeMap, unicodePath, { maxBytes: 200 });
-
-		expect(new TextEncoder().encode(slice).byteLength).toBeLessThanOrEqual(200);
-		// The truncation must never split a surrogate pair.
-		const last = slice.charCodeAt(slice.length - 1);
-		expect(last < 0xd800 || last > 0xdbff).toBe(true);
-		expect(slice).toMatch(/\(truncated: \d+ facts? omitted\)/);
-	});
-
-	test("keeps hostile map text raw inside the delimited block when framed by prompts", async () => {
-		const hostile = buildChangeMap([
-			decision("src/evil.ts", "selected", {
-				hunks: [hunk([line("addition", "export function pwn() {}", { newLine: 1 })])],
-			}),
-		]);
-		const slice = renderChangeMapSlice(hostile, "src/evil.ts");
-		expect(slice).toContain("pwn");
-		expect(slice).not.toContain("<untrusted-data>");
-	});
-
-	test("is total over malformed facts and does not throw", () => {
-		const wellFormed = buildChangeMap([
-			decision("src/ok.ts", "selected", {
-				hunks: [hunk([line("addition", "export function ok() {}", { newLine: 1 })])],
-			}),
-		]);
-		const malformed: ChangeMap = {
-			...wellFormed,
-			facts: [
-				...wellFormed.facts,
-				{ kind: "bogus", path: "src/weird.ts" } as unknown as ChangeFact,
-				{ kind: "declaration", path: "src/weird.ts", name: undefined, category: "function", line: Number.NaN, change: "added" } as unknown as ChangeFact,
-			],
-		};
-		expect(() => renderChangeMapSlice(malformed, "src/ok.ts")).not.toThrow();
-	});
-});
-
 function factPathOf(fact: ChangeFact): string {
 	switch (fact.kind) {
 		case "rename":
@@ -549,3 +410,535 @@ function factPathOf(fact: ChangeFact): string {
 			return fact.path;
 	}
 }
+
+function edgeNames(edges: readonly ChangeEdge[]): string[] {
+	return edges.map((edge) => {
+		switch (edge.kind) {
+			case "moved_declaration":
+				return `moved:${edge.name}`;
+			case "stale_reference":
+				return `stale:${edge.name}`;
+			case "renamed_path_reference":
+				return `path:${edge.from}`;
+		}
+	});
+}
+
+describe("buildChangeMap edges", () => {
+	test("joins a removed declaration with a reference in another file's context", () => {
+		const map = buildChangeMap([
+			decision("src/old.ts", "selected", {
+				hunks: [hunk([line("deletion", "export function validateToken() {}", { oldLine: 10 })])],
+			}),
+			decision("src/caller.ts", "selected", {
+				hunks: [
+					hunk([
+						line("context", "  const result = validateToken(input);", { oldLine: 5, newLine: 5 }),
+						line("addition", "  return result;", { newLine: 6 }),
+					]),
+				],
+			}),
+		]);
+
+		expect(map.edges).toEqual([
+			{
+				kind: "stale_reference",
+				name: "validateToken",
+				removedIn: "src/old.ts",
+				removedLine: 10,
+				referencedIn: "src/caller.ts",
+				referenceLine: 5,
+				referenceSide: "existing",
+			},
+		]);
+	});
+
+	test("joins a removed declaration with a reference on an added line", () => {
+		const map = buildChangeMap([
+			decision("src/old.ts", "selected", {
+				hunks: [hunk([line("deletion", "export class TokenValidator {}", { oldLine: 8 })])],
+			}),
+			decision("src/caller.ts", "selected", {
+				hunks: [
+					hunk([line("addition", "  const v = new TokenValidator();", { newLine: 12 })]),
+				],
+			}),
+		]);
+
+		expect(map.edges).toEqual([
+			{
+				kind: "stale_reference",
+				name: "TokenValidator",
+				removedIn: "src/old.ts",
+				removedLine: 8,
+				referencedIn: "src/caller.ts",
+				referenceLine: 12,
+				referenceSide: "added",
+			},
+		]);
+	});
+
+	test("joins a removed declaration with a re-declaration in another file as moved", () => {
+		const map = buildChangeMap([
+			decision("src/old.ts", "selected", {
+				hunks: [hunk([line("deletion", "export function parseConfig() {}", { oldLine: 3 })])],
+			}),
+			decision("src/new.ts", "selected", {
+				hunks: [hunk([line("addition", "export function parseConfig() {}", { newLine: 7 })])],
+			}),
+		]);
+
+		expect(map.edges).toEqual([
+			{
+				kind: "moved_declaration",
+				name: "parseConfig",
+				from: "src/old.ts",
+				fromLine: 3,
+				to: "src/new.ts",
+				toLine: 7,
+			},
+		]);
+	});
+
+	test("joins a renamed file with a stale path reference in another file", () => {
+		const map = buildChangeMap([
+			decision("src/auth-module.ts", "selected", {
+				isRenamed: true,
+				oldPath: "src/auth.ts",
+				newPath: "src/auth-module.ts",
+			}),
+			decision("src/app.ts", "selected", {
+				hunks: [
+					hunk([
+						line("context", 'import { login } from "./auth";', { oldLine: 1, newLine: 1 }),
+					]),
+				],
+			}),
+		]);
+
+		expect(map.edges).toEqual([
+			{
+				kind: "renamed_path_reference",
+				from: "src/auth.ts",
+				to: "src/auth-module.ts",
+				referencedIn: "src/app.ts",
+				referenceLine: 1,
+				referenceSide: "existing",
+			},
+		]);
+	});
+
+	test("does not produce an edge when the same file removes and re-adds a name", () => {
+		const map = buildChangeMap([
+			decision("src/edit.ts", "selected", {
+				hunks: [
+					hunk([
+						line("deletion", "export function parseConfig() {}", { oldLine: 3 }),
+						line("addition", "export function parseConfig(opts: Opts) {}", { newLine: 3 }),
+					]),
+				],
+			}),
+		]);
+
+		expect(map.edges).toEqual([]);
+	});
+
+	test("does not produce a stale_reference edge when both files remove the name", () => {
+		const map = buildChangeMap([
+			decision("src/a.ts", "selected", {
+				hunks: [hunk([line("deletion", "export function parseConfig() {}", { oldLine: 3 })])],
+			}),
+			decision("src/b.ts", "selected", {
+				hunks: [
+					hunk([
+						line("deletion", "export function parseConfig() {}", { oldLine: 8 }),
+						line("context", "  parseConfig();", { oldLine: 9, newLine: 9 }),
+					]),
+				],
+			}),
+		]);
+
+		// b also removes the declaration, so its context-line mention is not a
+		// stale reference — b is retiring the symbol too.
+		expect(map.edges).toEqual([]);
+	});
+
+	test("does not produce edges for non-distinctive short names", () => {
+		const map = buildChangeMap([
+			decision("src/old.ts", "selected", {
+				hunks: [hunk([line("deletion", "export function load() {}", { oldLine: 1 })])],
+			}),
+			decision("src/caller.ts", "selected", {
+				hunks: [
+					hunk([line("context", "  load(data);", { oldLine: 2, newLine: 2 })]),
+				],
+			}),
+		]);
+
+		expect(map.edges).toEqual([]);
+	});
+
+	test("does not treat deleted lines as references", () => {
+		const map = buildChangeMap([
+			decision("src/old.ts", "selected", {
+				hunks: [hunk([line("deletion", "export function validateToken() {}", { oldLine: 1 })])],
+			}),
+			decision("src/caller.ts", "selected", {
+				hunks: [
+					hunk([
+						line("deletion", "  validateToken();", { oldLine: 2 }),
+						line("addition", "  validateTokenSafe();", { newLine: 2 }),
+					]),
+				],
+			}),
+		]);
+
+		// The deleted line in caller.ts is not a reference — the change is
+		// removing it. Only context or added lines can be stale references.
+		expect(map.edges).toEqual([]);
+	});
+
+	test("does not index references from deleted or metadata-only files", () => {
+		const map = buildChangeMap([
+			decision("src/old.ts", "selected", {
+				hunks: [hunk([line("deletion", "export function validateToken() {}", { oldLine: 1 })])],
+			}),
+			decision("src/gone.ts", "deleted", {
+				isDeleted: true,
+				hunks: [
+					hunk([line("deletion", "  validateToken();", { oldLine: 5 })]),
+				],
+			}),
+		]);
+
+		expect(map.edges).toEqual([]);
+	});
+
+	test("does not match a renamed file against its own remaining old-path mentions", () => {
+		const map = buildChangeMap([
+			decision("src/auth-module.ts", "selected", {
+				isRenamed: true,
+				oldPath: "src/auth.ts",
+				newPath: "src/auth-module.ts",
+				hunks: [
+					hunk([
+						line("context", '// was in auth.ts', { oldLine: 1, newLine: 1 }),
+					]),
+				],
+			}),
+		]);
+
+		expect(map.edges).toEqual([]);
+	});
+
+	test("skips ambient path stems like index", () => {
+		const map = buildChangeMap([
+			decision("src/index-v2.ts", "selected", {
+				isRenamed: true,
+				oldPath: "src/index.ts",
+				newPath: "src/index-v2.ts",
+			}),
+			decision("src/app.ts", "selected", {
+				hunks: [
+					hunk([
+						line("context", 'import { x } from "./index";', { oldLine: 1, newLine: 1 }),
+					]),
+				],
+			}),
+		]);
+
+		expect(map.edges).toEqual([]);
+	});
+
+	test("does not match a rename stem that is a substring of a longer identifier", () => {
+		const map = buildChangeMap([
+			decision("src/auth-module.ts", "selected", {
+				isRenamed: true,
+				oldPath: "src/auth.ts",
+				newPath: "src/auth-module.ts",
+			}),
+			decision("src/app.ts", "selected", {
+				hunks: [
+					hunk([
+						// "auth" appears inside "authenticate" — this is NOT a
+						// stale path reference.
+						line("context", "  authenticate(user);", { oldLine: 1, newLine: 1 }),
+					]),
+				],
+			}),
+		]);
+
+		expect(map.edges).toEqual([]);
+	});
+
+	test("does match a rename stem followed by a path delimiter or extension", () => {
+		const map = buildChangeMap([
+			decision("src/auth-module.ts", "selected", {
+				isRenamed: true,
+				oldPath: "src/auth.ts",
+				newPath: "src/auth-module.ts",
+			}),
+			decision("src/app.ts", "selected", {
+				hunks: [
+					hunk([
+						line("context", 'import { login } from "./auth";', { oldLine: 1, newLine: 1 }),
+						line("context", 'import type { User } from "../auth.ts";', { oldLine: 2, newLine: 2 }),
+					]),
+				],
+			}),
+		]);
+
+		// Both lines reference the old stem as a path component, not as a
+		// substring of a longer word. The earliest line wins.
+		expect(map.edges).toEqual([
+			{
+				kind: "renamed_path_reference",
+				from: "src/auth.ts",
+				to: "src/auth-module.ts",
+				referencedIn: "src/app.ts",
+				referenceLine: 1,
+				referenceSide: "existing",
+			},
+		]);
+	});
+
+	test("does not produce a moved_declaration edge when the target also removes the name", () => {
+		const map = buildChangeMap([
+			decision("src/a.ts", "selected", {
+				hunks: [hunk([line("deletion", "export function parseConfig() {}", { oldLine: 3 })])],
+			}),
+			// b.ts is editing parseConfig in place: it removes and re-adds it.
+			// That is not a move from a.ts.
+			decision("src/b.ts", "selected", {
+				hunks: [
+					hunk([
+						line("deletion", "export function parseConfig() {}", { oldLine: 8 }),
+						line("addition", "export function parseConfig(opts: Opts) {}", { newLine: 8 }),
+					]),
+				],
+			}),
+		]);
+
+		expect(map.edges).toEqual([]);
+	});
+
+	test("produces deterministic edge ordering regardless of decision order", () => {
+		const decisions = [
+			decision("src/a.ts", "selected", {
+				hunks: [hunk([line("deletion", "export function validateToken() {}", { oldLine: 3 })])],
+			}),
+			decision("src/b.ts", "selected", {
+				hunks: [hunk([line("context", "  validateToken();", { oldLine: 1, newLine: 1 })])],
+			}),
+			decision("src/c.ts", "selected", {
+				hunks: [hunk([line("deletion", "export class TokenValidator {}", { oldLine: 5 })])],
+			}),
+			decision("src/d.ts", "selected", {
+				hunks: [hunk([line("addition", "  new TokenValidator();", { newLine: 2 })])],
+			}),
+		];
+		const first = buildChangeMap(decisions);
+		const second = buildChangeMap([...decisions].reverse());
+
+		expect(first.edges).toEqual(second.edges);
+		// stale_reference edges sort before moved_declaration edges.
+		expect(edgeNames(first.edges)).toEqual(["stale:TokenValidator", "stale:validateToken"]);
+	});
+
+	test("caps total edges and counts exact drops", () => {
+		const decisions = Array.from({ length: 5 }, (_, index) => [
+			decision(`src/old${index}.ts`, "selected", {
+				hunks: [hunk([line("deletion", `export function validateToken${index}() {}`, { oldLine: 1 })])],
+			}),
+			decision(`src/caller${index}.ts`, "selected", {
+				hunks: [hunk([line("context", `  validateToken${index}();`, { oldLine: 1, newLine: 1 })])],
+			}),
+		]).flat();
+		const map = buildChangeMap(decisions, { maxEdges: 3 });
+
+		expect(map.edges.length).toBe(3);
+		expect(map.droppedEdges).toBe(2);
+		expect(map.truncated).toBe(true);
+	});
+});
+
+describe("renderChangeMapSlice", () => {
+	function staleRefMap(): ChangeMap {
+		return buildChangeMap([
+			decision("src/old.ts", "selected", {
+				hunks: [hunk([line("deletion", "export function validateToken() {}", { oldLine: 10 })])],
+			}),
+			decision("src/caller.ts", "selected", {
+				hunks: [
+					hunk([
+						line("context", "  const r = validateToken(input);", { oldLine: 5, newLine: 5 }),
+					]),
+				],
+			}),
+		]);
+	}
+
+	test("renders an empty string for a map with no edges", () => {
+		const noEdges = buildChangeMap([
+			decision("src/a.ts", "selected", {
+				hunks: [hunk([line("addition", "export function alpha() {}", { newLine: 5 })])],
+			}),
+			decision("src/b.ts", "selected", { isNew: true }),
+		]);
+		expect(renderChangeMapSlice(noEdges, "src/a.ts")).toBe("");
+	});
+
+	test("renders an empty string for an empty map", () => {
+		const empty: ChangeMap = { facts: [], edges: [], droppedFacts: 0, droppedEdges: 0, truncated: false };
+		expect(renderChangeMapSlice(empty, "src/a.ts")).toBe("");
+	});
+
+	test("renders an empty string for a file not involved in any edge", () => {
+		expect(renderChangeMapSlice(staleRefMap(), "src/unrelated.ts")).toBe("");
+	});
+
+	test("renders the referencer side of a stale_reference edge", () => {
+		const slice = renderChangeMapSlice(staleRefMap(), "src/caller.ts");
+
+		expect(slice).toContain("Symbols this file references that another changed file removed:");
+		expect(slice).toContain("LEXICAL  validateToken: removed in src/old.ts (line 10); referenced here on existing line 5");
+		expect(slice).toContain("LEXICAL");
+	});
+
+	test("renders the remover side of a stale_reference edge", () => {
+		const slice = renderChangeMapSlice(staleRefMap(), "src/old.ts");
+
+		expect(slice).toContain("Declarations this file removed that another changed file still references:");
+		expect(slice).toContain("LEXICAL  validateToken: removed here (line 10); referenced in src/caller.ts on existing line 5");
+	});
+
+	test("renders a renamed_path_reference edge for the referencing file only", () => {
+		const map = buildChangeMap([
+			decision("src/auth-module.ts", "selected", {
+				isRenamed: true,
+				oldPath: "src/auth.ts",
+				newPath: "src/auth-module.ts",
+			}),
+			decision("src/app.ts", "selected", {
+				hunks: [
+					hunk([line("context", 'import { login } from "./auth";', { oldLine: 1, newLine: 1 })]),
+				],
+			}),
+		]);
+
+		const appSlice = renderChangeMapSlice(map, "src/app.ts");
+		expect(appSlice).toContain("Renamed files whose old name still appears in this file:");
+		expect(appSlice).toContain("LEXICAL  src/auth.ts was renamed to src/auth-module.ts; the old name still appears here on existing line 1");
+
+		// The renamed file itself gets no slice — its own diff shows the rename.
+		expect(renderChangeMapSlice(map, "src/auth-module.ts")).toBe("");
+	});
+
+	test("renders a moved_declaration edge from both sides", () => {
+		const map = buildChangeMap([
+			decision("src/old.ts", "selected", {
+				hunks: [hunk([line("deletion", "export function parseConfig() {}", { oldLine: 3 })])],
+			}),
+			decision("src/new.ts", "selected", {
+				hunks: [hunk([line("addition", "export function parseConfig() {}", { newLine: 7 })])],
+			}),
+		]);
+
+		const oldSlice = renderChangeMapSlice(map, "src/old.ts");
+		expect(oldSlice).toContain("Declarations that may have moved between changed files:");
+		expect(oldSlice).toContain("LEXICAL  parseConfig: removed here (line 3), added in src/new.ts (line 7)");
+
+		const newSlice = renderChangeMapSlice(map, "src/new.ts");
+		expect(newSlice).toContain("LEXICAL  parseConfig: added here (line 7), removed in src/old.ts (line 3)");
+	});
+
+	test("keeps the highest-priority section when the byte budget forces truncation", () => {
+		const removedDecls = [
+			line("deletion", "export function validateToken() {}", { oldLine: 10 }),
+			line("deletion", "export class TokenValidator {}", { oldLine: 20 }),
+			line("deletion", "export function parseConfig() {}", { oldLine: 30 }),
+			line("deletion", "export class ConfigBuilder {}", { oldLine: 40 }),
+		];
+		const refs = [
+			line("context", "  validateToken();", { oldLine: 1, newLine: 1 }),
+			line("context", "  TokenValidator.check();", { oldLine: 2, newLine: 2 }),
+			line("context", "  parseConfig();", { oldLine: 3, newLine: 3 }),
+			line("context", "  new ConfigBuilder();", { oldLine: 4, newLine: 4 }),
+		];
+		const map = buildChangeMap([
+			decision("src/current.ts", "selected", { hunks: [hunk(refs)] }),
+			decision("src/removed.ts", "selected", { hunks: [hunk(removedDecls)] }),
+		]);
+		const slice = renderChangeMapSlice(map, "src/current.ts", { maxBytes: 500 });
+
+		expect(slice).toContain("Symbols this file references that another changed file removed:");
+		expect(new TextEncoder().encode(slice).byteLength).toBeLessThanOrEqual(500);
+		expect(slice).toMatch(/\(truncated: \d+ edges? omitted\)/);
+	});
+
+	test("emits a truncation notice when construction caps dropped edges", () => {
+		const decisions = Array.from({ length: 10 }, (_, index) => [
+			decision(`src/old${index}.ts`, "selected", {
+				hunks: [hunk([line("deletion", `export function validateToken${index}() {}`, { oldLine: 1 })])],
+			}),
+			decision(`src/caller${index}.ts`, "selected", {
+				hunks: [hunk([line("context", `  validateToken${index}();`, { oldLine: 1, newLine: 1 })])],
+			}),
+		]).flat();
+		const capped = buildChangeMap(decisions, { maxEdges: 4 });
+		const slice = renderChangeMapSlice(capped, "src/caller0.ts", { maxBytes: 4_000 });
+
+		expect(slice).toContain("(truncated: 6 edges omitted)");
+		expect(new TextEncoder().encode(slice).byteLength).toBeLessThanOrEqual(4_000);
+	});
+
+	test("never exceeds the byte budget even with long Unicode content", () => {
+		const unicodePath = `src/${"😀".repeat(300)}.ts`;
+		const unicodeMap = buildChangeMap([
+			decision(unicodePath, "selected", {
+				hunks: [hunk([line("deletion", "export function validateToken() {}", { oldLine: 1 })])],
+			}),
+			decision("src/caller.ts", "selected", {
+				hunks: [hunk([line("context", "  validateToken();", { oldLine: 1, newLine: 1 })])],
+			}),
+		]);
+		const slice = renderChangeMapSlice(unicodeMap, "src/caller.ts", { maxBytes: 200 });
+
+		expect(new TextEncoder().encode(slice).byteLength).toBeLessThanOrEqual(200);
+		const last = slice.charCodeAt(slice.length - 1);
+		expect(last < 0xd800 || last > 0xdbff).toBe(true);
+	});
+
+	test("keeps hostile map text raw without synthesizing untrusted-data tags", () => {
+		const hostile = buildChangeMap([
+			decision("src/evil.ts", "selected", {
+				hunks: [hunk([line("deletion", "export function pwnAttack() {}", { oldLine: 1 })])],
+			}),
+			decision("src/caller.ts", "selected", {
+				hunks: [hunk([line("context", "  pwnAttack();", { oldLine: 1, newLine: 1 })])],
+			}),
+		]);
+		const slice = renderChangeMapSlice(hostile, "src/caller.ts");
+		expect(slice).toContain("pwnAttack");
+		expect(slice).not.toContain("<untrusted-data>");
+	});
+
+	test("is total over malformed edges and does not throw", () => {
+		const wellFormed = buildChangeMap([
+			decision("src/old.ts", "selected", {
+				hunks: [hunk([line("deletion", "export function validateToken() {}", { oldLine: 1 })])],
+			}),
+			decision("src/caller.ts", "selected", {
+				hunks: [hunk([line("context", "  validateToken();", { oldLine: 1, newLine: 1 })])],
+			}),
+		]);
+		const malformed: ChangeMap = {
+			...wellFormed,
+			edges: [
+				...wellFormed.edges,
+				{ kind: "bogus" } as unknown as ChangeEdge,
+			],
+		};
+		expect(() => renderChangeMapSlice(malformed, "src/caller.ts")).not.toThrow();
+	});
+});

@@ -93,6 +93,68 @@ function exportedFile(path: string, lineCount = 1): ChangedFile {
 	};
 }
 
+/**
+ * Two files that produce a cross-file stale_reference edge: `removerPath`
+ * deletes an exported `validateToken`, and `referencerPath` has a context line
+ * that references it. Both are padded with additions to hit the plan threshold.
+ */
+function crossEdgeFiles(removerPath: string, referencerPath: string, pad = 60): readonly ChangedFile[] {
+	const padLines = Array.from(
+		{ length: pad },
+		(_, index) => `export function pad${index + 1}() { return ${index + 1}; }`,
+	);
+	return [
+		{
+			oldPath: removerPath,
+			newPath: removerPath,
+			rawDiff: `diff --git a/${removerPath} b/${removerPath}\n--- a/${removerPath}\n+++ b/${removerPath}\n@@ -1,1 +1,${pad} @@\n-export function validateToken() {}\n${padLines.map((l) => `+${l}`).join("\n")}`,
+			newContent: `${padLines.join("\n")}\n`,
+			isBinary: false,
+			isDeleted: false,
+			isNew: false,
+			isRenamed: false,
+			insertions: pad,
+			deletions: 1,
+			hunks: [
+				{
+					oldStart: 1,
+					oldCount: 1,
+					newStart: 1,
+					newCount: pad,
+					lines: [
+						{ kind: "deletion" as const, text: "export function validateToken() {}", oldLine: 1 },
+						...padLines.map((text, index) => ({ kind: "addition" as const, text, newLine: index + 1 })),
+					],
+				},
+			],
+		},
+		{
+			oldPath: referencerPath,
+			newPath: referencerPath,
+			rawDiff: `diff --git a/${referencerPath} b/${referencerPath}\n--- a/${referencerPath}\n+++ b/${referencerPath}\n@@ -1,1 +1,${pad + 1} @@\n  validateToken();\n${padLines.map((l) => `+${l}`).join("\n")}`,
+			newContent: `  validateToken();\n${padLines.join("\n")}\n`,
+			isBinary: false,
+			isDeleted: false,
+			isNew: false,
+			isRenamed: false,
+			insertions: pad,
+			deletions: 0,
+			hunks: [
+				{
+					oldStart: 1,
+					oldCount: 1,
+					newStart: 1,
+					newCount: pad + 1,
+					lines: [
+						{ kind: "context" as const, text: "  validateToken();", oldLine: 1, newLine: 1 },
+						...padLines.map((text, index) => ({ kind: "addition" as const, text, newLine: index + 2 })),
+					],
+				},
+			],
+		},
+	];
+}
+
 /** A file whose rawDiff exceeds the review byte limit but has few changed lines. */
 function oversizedFile(path: string): ChangedFile {
 	const padding = "x".repeat(100_000);
@@ -675,8 +737,9 @@ describe("Reviewer", () => {
 
 	test("injects the per-file change-map slice into both plan and review prompts", async () => {
 		const executor = new PhaseExecutor({ noFindings: true });
+		const files = crossEdgeFiles("src/a.ts", "src/b.ts");
 		const result = await new Reviewer({
-			targetFactory: async () => target([exportedFile("src/a.ts", 60), exportedFile("src/b.ts", 60)]),
+			targetFactory: async () => target(files),
 			taskExecutor: executor,
 		}).review(
 			{ repository: "/fake", mode: { kind: "workspace" } },
@@ -696,18 +759,22 @@ describe("Reviewer", () => {
 		const planB = executor.tasks[2]?.prompt as { user: string } | undefined;
 		const reviewB = executor.tasks[3]?.prompt as { user: string } | undefined;
 
+		// src/a.ts removed validateToken; its slice names the removal and the
+		// file that still references it.
 		for (const prompt of [planA, reviewA]) {
 			expect(prompt?.user).toContain('<untrusted-data name="cross-file-change-map">');
-			expect(prompt?.user).toContain("This file (src/a.ts):");
-			expect(prompt?.user).toContain("src/a.ts: function fn1 added (line 1)");
-			expect(prompt?.user).toContain("Other changed declarations:");
-			expect(prompt?.user).toContain("src/b.ts: function fn1 added (line 1)");
-			expect(prompt?.user).not.toContain("This file (src/b.ts):");
+			expect(prompt?.user).toContain("Declarations this file removed that another changed file still references:");
+			expect(prompt?.user).toContain("validateToken");
+			expect(prompt?.user).toContain("src/b.ts");
+			expect(prompt?.user).not.toContain("Symbols this file references");
 		}
+		// src/b.ts references validateToken; its slice names the symbol and the
+		// file that removed it.
 		for (const prompt of [planB, reviewB]) {
-			expect(prompt?.user).toContain("This file (src/b.ts):");
-			expect(prompt?.user).toContain("src/b.ts: function fn1 added (line 1)");
-			expect(prompt?.user).not.toContain("This file (src/a.ts):");
+			expect(prompt?.user).toContain("Symbols this file references that another changed file removed:");
+			expect(prompt?.user).toContain("validateToken");
+			expect(prompt?.user).toContain("src/a.ts");
+			expect(prompt?.user).not.toContain("Declarations this file removed");
 		}
 	});
 
@@ -724,9 +791,9 @@ describe("Reviewer", () => {
 		expect(result.status).toBe("complete");
 		expect(executor.tasks).toHaveLength(1);
 		const prompt = executor.tasks[0]?.prompt as { user: string } | undefined;
+		// No cross-file edges with a single new file, so the slice is empty.
 		expect(prompt?.user).toContain('<untrusted-data name="cross-file-change-map">');
-		expect(prompt?.user).toContain("This file (src/small.ts):");
-		expect(prompt?.user).toContain("src/small.ts: function fn1 added (line 1)");
+		expect(prompt?.user).toContain("(none supplied)");
 	});
 
 	test("keeps explicitly excluded file content out of the change map and prompts", async () => {
@@ -763,7 +830,9 @@ describe("Reviewer", () => {
 		for (const task of executor.tasks) {
 			const prompt = task.prompt as { user: string };
 			expect(prompt.user).not.toContain("secretHelper");
-			expect(prompt.user).toContain("src/ok.ts: function fn1 added (line 1)");
+			// No cross-file edges (both files only add), so the slice is empty.
+			expect(prompt.user).toContain('<untrusted-data name="cross-file-change-map">');
+			expect(prompt.user).toContain("(none supplied)");
 		}
 	});
 
@@ -784,9 +853,10 @@ describe("Reviewer", () => {
 		expect(result.coverage.skipped).toContainEqual({ path: "src/huge.ts", reason: "diff_size_limit" });
 		expect(executor.tasks).toHaveLength(1);
 		const prompt = executor.tasks[0]?.prompt as { user: string } | undefined;
+		// No cross-file edges (ok.ts only adds, huge.ts is metadata-only), so
+		// the slice is empty. The oversized file's declarations must not leak.
 		expect(prompt?.user).toContain('<untrusted-data name="cross-file-change-map">');
-		expect(prompt?.user).toContain("New files:");
-		expect(prompt?.user).toContain("src/huge.ts");
+		expect(prompt?.user).toContain("(none supplied)");
 		expect(prompt?.user).not.toContain("hugeFn1");
 		expect(prompt?.user).not.toContain("hugeFn2");
 	});
@@ -814,7 +884,6 @@ describe("Reviewer", () => {
 		expect(executor.tasks).toHaveLength(1);
 		const prompt = executor.tasks[0]?.prompt as { user: string } | undefined;
 		expect(prompt?.user).toContain('<untrusted-data name="cross-file-change-map">');
-		expect(prompt?.user).not.toContain("This file (src/a.ts):");
-		expect(prompt?.user).not.toContain("LEXICAL  src/a.ts: function fn1 added (line 1)");
+		expect(prompt?.user).toContain("(none supplied)");
 	});
 });

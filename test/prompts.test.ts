@@ -163,11 +163,11 @@ describe("prompt builders", () => {
 		const plan = buildRiskPlanPrompt(commonInput);
 		const review = buildFileReviewPrompt(commonInput);
 
-		expect(plan.system).toContain("Change-map facts");
-		expect(plan.system).toContain("lexical orientation");
-		expect(plan.system).toContain("never verified facts");
-		expect(review.system).toContain("Cross-file change-map facts");
-		expect(review.system).toContain("never extend review scope");
+		expect(plan.system).toContain("The change map");
+		expect(plan.system).toContain("lexical links");
+		expect(plan.system).toContain("candidate risk");
+		expect(review.system).toContain("The cross-file change map");
+		expect(review.system).toContain("never extends review scope");
 	});
 
 	test("injects the change map into both plan and review user prompts when supplied", () => {

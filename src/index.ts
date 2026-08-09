@@ -43,9 +43,11 @@ export type {
 } from "./selection.js";
 
 export type {
+	ChangeEdge,
 	ChangeFact,
 	ChangeMap,
 	ChangeMapOptions,
 	ChangeMapRenderOptions,
 	DeclarationCategory,
+	ReferenceSide,
 } from "./change-map.js";
