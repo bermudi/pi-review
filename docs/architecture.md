@@ -118,3 +118,8 @@ By default, the runner uses `~/.pi/agent` and its `auth.json`/`models.json`. `PI
 - **Read-only isolation.** Model tasks have no shell/edit/write tools, and repository instruction discovery is disabled. Git and file operations remain host-permission operations, not a sandbox.
 
 These choices favor precision and auditable failure states over maximum recall or feature parity with open-code-review's Go/provider/UI stack. The implementation has no resume workflow, no full-repository scan mode, and no mechanical compile/test/formatter/linter phase. Workspace evidence can change during a long review because workspace reads are live after target acquisition; range and commit evidence are pinned. Target acquisition is bounded but whole-buffered as described above.
+
+## Deferred and preserved decisions
+
+- **Rejected tool calls consume budget.** A schema-invalid `submit_review` still counts against the per-task tool-call budget. Counting all calls (success or failure) is a defensible bound on total model-driven work, and the runner's hard tool-start cap is the real floor regardless. Exempting failures would widen the loop a model can drive. Revisit if the budget edge bites in practice; the cheaper fix then is reserving two submit slots rather than exempting failures.
+- **Public `maxToolRounds` rename deferred.** The vocabulary split (`maxToolRounds` / `DEFAULT_MAX_TOOL_CALLS` / `maxToolCalls` / `maxToolStarts`) is real, but renaming the public `ReviewOptions.maxToolRounds` field and the `--max-tool-rounds` CLI flag is a breaking change. The non-breaking parts (CLI help text, internal name alignment) are done; the public rename is deferred to a major version with a deprecated alias.
