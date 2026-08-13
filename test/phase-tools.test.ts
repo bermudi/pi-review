@@ -1,6 +1,8 @@
 import { describe, expect, test } from "bun:test";
 
 import {
+	MAX_PLAN_ISSUES,
+	MAX_PLAN_TOOL_GUIDANCE,
 	MAX_TOOL_GUIDANCE_PER_ISSUE,
 	createPlanToolkit,
 	createVetoToolkit,
@@ -78,6 +80,16 @@ describe("phase toolkits", () => {
 		}),
 		).rejects.toThrow(/invalid/);
 		expect(toolkit.value).toBeUndefined();
+	});
+
+	test("submit_plan rejects more than four total evidence suggestions", async () => {
+		const toolkit = createPlanToolkit();
+		const issues = Array.from({ length: MAX_PLAN_ISSUES + 1 }, (_value, index) => ({
+			...validPlan.issues[0]!,
+			description: `Risk ${index + 1}`,
+		}));
+		await expect(execute(toolkit, "submit_plan", { ...validPlan, issues })).rejects.toThrow(/invalid|at most/);
+		expect(MAX_PLAN_TOOL_GUIDANCE).toBe(MAX_PLAN_ISSUES);
 	});
 
 	test("submit_plan honors cancellation before capture", async () => {

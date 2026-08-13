@@ -18,6 +18,7 @@ export type {
 	ChangedFile,
 	DiffHunk,
 	DiffLine,
+	ExcludedFile,
 	FailedFile,
 	Finding,
 	FindingCategory,

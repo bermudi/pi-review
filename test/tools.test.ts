@@ -233,9 +233,11 @@ describe("review tool kit", () => {
 			readPaths: [],
 		};
 		const toolkit = createReviewToolkit(fakeTarget(data), "src/current.ts", { maxToolCalls: 2 });
-		await execute(toolkit, "file_find", { pattern: "*.ts" });
-		await expect(execute(toolkit, "file_find", { pattern: "*.ts" })).rejects.toThrow(/Exploration budget exhausted/);
+		await expect(execute(toolkit, "file_find", { pattern: "*.ts" })).rejects.toThrow(/Evidence budget exhausted/);
 		expect(toolkit.toolCallCount).toBe(1);
+		const submit = await execute(toolkit, "submit_review", { state: "DONE", comments: [] });
+		expect(submit).toMatchObject({ terminate: true });
+		expect(toolkit.toolCallCount).toBe(2);
 
 		const cancelled = createReviewToolkit(fakeTarget(data), "src/current.ts");
 		const controller = new AbortController();
@@ -255,23 +257,23 @@ describe("review tool kit", () => {
 		const toolkit = createReviewToolkit(fakeTarget(data), "src/current.ts", { maxToolCalls: 3 });
 
 		await execute(toolkit, "file_find", { pattern: "*.ts" });
-		await execute(toolkit, "file_find", { pattern: "*.ts" });
-		expect(toolkit.toolCallCount).toBe(2);
-		await expect(execute(toolkit, "file_find", { pattern: "*.ts" })).rejects.toThrow(/Exploration budget exhausted/);
-		expect(toolkit.toolCallCount).toBe(2);
+		expect(toolkit.toolCallCount).toBe(1);
+		await expect(execute(toolkit, "file_find", { pattern: "*.ts" })).rejects.toThrow(/Evidence budget exhausted/);
+		await expect(execute(toolkit, "file_find", { pattern: "*.ts" })).rejects.toThrow(/Evidence budget exhausted/);
+		expect(toolkit.toolCallCount).toBe(3);
 
 		const done = await execute(toolkit, "submit_review", { state: "DONE", comments: [] });
 		expect(done).toMatchObject({ terminate: true, details: { state: "DONE", recorded: 0 } });
-		expect(toolkit.toolCallCount).toBe(3);
+		expect(toolkit.toolCallCount).toBe(4);
 		expect(toolkit.completed).toBe(true);
 
 		await expect(execute(toolkit, "file_find", { pattern: "*.ts" })).rejects.toThrow(/already terminated/);
 
 		const onlySubmit = createReviewToolkit(fakeTarget(data), "src/current.ts", { maxToolCalls: 1 });
-		await expect(execute(onlySubmit, "file_find", { pattern: "*.ts" })).rejects.toThrow(/Exploration budget exhausted/);
+		await expect(execute(onlySubmit, "file_find", { pattern: "*.ts" })).rejects.toThrow(/Evidence budget exhausted/);
 		const submit = await execute(onlySubmit, "submit_review", { state: "DONE", comments: [] });
 		expect(submit).toMatchObject({ terminate: true, details: { state: "DONE", recorded: 0 } });
-		expect(onlySubmit.toolCallCount).toBe(1);
+		expect(onlySubmit.toolCallCount).toBe(2);
 	});
 
 	test("resolves the file list once per search and respects scan ceilings", async () => {

@@ -118,7 +118,7 @@ export const DEFAULT_PATH_EXCLUDES = [
 
 export const DEFAULT_FILENAMES = ["Makefile"] as const;
 
-/** Stable reason values used in decisions and skipped-file coverage. */
+/** Stable reason values used in selection decisions and pre-dispatch exclusion coverage. */
 export const SELECTION_REASON = {
 	selected: "selected",
 	unsafePath: "unsafe_path",

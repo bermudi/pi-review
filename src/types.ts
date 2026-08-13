@@ -63,6 +63,11 @@ export interface SkippedFile {
 	reason: string;
 }
 
+export interface ExcludedFile {
+	path: string;
+	reason: string;
+}
+
 export interface FailedFile {
 	path: string;
 	reason: string;
@@ -71,10 +76,14 @@ export interface FailedFile {
 }
 
 export interface ReviewCoverage {
+	/** Files eligible for per-file review dispatch. */
 	selected: readonly string[];
 	completed: readonly string[];
 	failed: readonly FailedFile[];
+	/** Selected files that never ran or were cancelled. */
 	skipped: readonly SkippedFile[];
+	/** Files rejected before review dispatch. */
+	excluded: readonly ExcludedFile[];
 }
 
 export type ReviewStatus = "complete" | "partial" | "failed" | "skipped";

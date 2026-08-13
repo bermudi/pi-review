@@ -222,6 +222,7 @@ describe("budget composition (dispatcher x runner)", () => {
 
 		expect(reviewTask.maxToolStarts).toBe(9);
 		expect(defaultReviewTask.maxToolStarts).toBe(DEFAULT_MAX_TOOL_CALLS + 1);
+		expect(makeReviewTask(reviewToolkit, Number.MAX_SAFE_INTEGER - 1).maxToolStarts).toBe(Number.MAX_SAFE_INTEGER);
 		expect(
 			buildTask(
 				"plan",
@@ -242,49 +243,68 @@ describe("budget composition (dispatcher x runner)", () => {
 		).toBe(MAX_PLAN_VETO_TOOL_STARTS);
 	});
 
-	test("compliant model: 31 exploration + submit_review completes", async () => {
+	test("30 evidence calls plus submission completes", async () => {
 		const { toolkit } = makeToolkit();
-		const explorations = Array.from({ length: DEFAULT_MAX_TOOL_CALLS - 1 }, () => FILE_READ());
+		const explorations = Array.from({ length: 30 }, () => FILE_READ());
 		const { runner } = scriptedHarness([...explorations, SUBMIT_DONE], toolkit);
 		const task = makeReviewTask(toolkit);
 
 		const outcome = await runner.run(task);
 
-		expect(task.maxToolStarts).toBe(DEFAULT_MAX_TOOL_CALLS + 1);
+		expect(task.maxToolStarts).toBe(33);
 		expect(outcome.status).toBe("complete");
 		expect(toolkit.completion).toBe("DONE");
-		expect(toolkit.toolCallCount).toBe(DEFAULT_MAX_TOOL_CALLS);
+		expect(toolkit.toolCallCount).toBe(31);
 	});
 
-	test("overshoot by ONE exploration still completes: the reserve slot survives", async () => {
+	test("one or two rejected evidence attempts still leave a submit path", async () => {
+		for (const excess of [1, 2]) {
+			const { toolkit } = makeToolkit();
+			const explorations = Array.from({ length: 30 + excess }, () => FILE_READ());
+			const { runner } = scriptedHarness([...explorations, SUBMIT_DONE], toolkit);
+			const outcome = await runner.run(makeReviewTask(toolkit));
+
+			expect(outcome.status).toBe("complete");
+			expect(toolkit.completion).toBe("DONE");
+			expect(toolkit.toolCallCount).toBe(31 + excess);
+		}
+	});
+
+	test("a third rejected evidence attempt pushes submission past the hard cap", async () => {
 		const { toolkit } = makeToolkit();
-		const explorations = Array.from({ length: DEFAULT_MAX_TOOL_CALLS }, () => FILE_READ());
+		const explorations = Array.from({ length: 33 }, () => FILE_READ());
 		const { runner } = scriptedHarness([...explorations, SUBMIT_DONE], toolkit);
 		const task = makeReviewTask(toolkit);
 
 		const outcome = await runner.run(task);
 
-		// The 32nd exploration trips the dispatcher's reserve-slot guard (the
-		// model sees "Exploration budget exhausted"), but the runner's cap has
-		// one start of slack, so the model can still submit and complete.
-		expect(outcome.status).toBe("complete");
-		expect(toolkit.completion).toBe("DONE");
-		expect(toolkit.toolCallCount).toBe(DEFAULT_MAX_TOOL_CALLS);
-	});
-
-	test("overshoot by TWO explorations still aborts: runaway protection holds", async () => {
-		const { toolkit } = makeToolkit();
-		const explorations = Array.from({ length: DEFAULT_MAX_TOOL_CALLS + 1 }, () => FILE_READ());
-		const { runner } = scriptedHarness([...explorations, SUBMIT_DONE], toolkit);
-		const task = makeReviewTask(toolkit);
-
-		const outcome = await runner.run(task);
-
-		// A model that ignores the reserve-slot error twice and still tries to
-		// explore is runaway: its submit lands beyond the cap and is aborted.
 		expect(outcome.status).toBe("aborted");
 		expect(outcome.error).toBe(`Maximum tool starts exceeded (${task.maxToolStarts}).`);
 		expect(toolkit.completion).toBe("pending");
-		expect(toolkit.toolCallCount).toBe(DEFAULT_MAX_TOOL_CALLS - 1);
+		expect(toolkit.toolCallCount).toBe(33);
+	});
+
+	test("a malformed final submission can be corrected", async () => {
+		const { toolkit } = makeToolkit();
+		const invalid: ScriptedCall = { tool: "submit_review", params: { state: "DONE", comments: [{ bad: true }] } };
+		const { runner } = scriptedHarness([invalid, SUBMIT_DONE], toolkit);
+
+		const outcome = await runner.run(makeReviewTask(toolkit));
+
+		expect(outcome.status).toBe("complete");
+		expect(toolkit.completion).toBe("DONE");
+		expect(toolkit.toolCallCount).toBe(2);
+	});
+
+	test("tiny configured budgets preserve a submit-only path", async () => {
+		const { toolkit } = makeToolkit();
+		const { runner } = scriptedHarness([SUBMIT_DONE], toolkit);
+		const task = makeReviewTask(toolkit, 1);
+
+		const outcome = await runner.run(task);
+
+		expect(task.maxToolStarts).toBe(2);
+		expect(outcome.status).toBe("complete");
+		expect(toolkit.completion).toBe("DONE");
 	});
 });

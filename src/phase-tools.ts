@@ -10,9 +10,10 @@ export type PlanSeverity = "high" | "medium" | "low";
 
 /** Conservative limits keep a planner's result useful as a compact prompt input. */
 export const MAX_PLAN_SUMMARY_LENGTH = 500;
-export const MAX_PLAN_ISSUES = 8;
+export const MAX_PLAN_ISSUES = 4;
 export const MAX_PLAN_DESCRIPTION_LENGTH = 1_500;
-export const MAX_TOOL_GUIDANCE_PER_ISSUE = 4;
+export const MAX_TOOL_GUIDANCE_PER_ISSUE = 1;
+export const MAX_PLAN_TOOL_GUIDANCE = 4;
 export const MAX_TOOL_GUIDANCE_REASON_LENGTH = 500;
 export const MAX_TOOL_GUIDANCE_ARGUMENTS_LENGTH = 1_000;
 
@@ -56,7 +57,7 @@ const planIssueSchema = Type.Object(
 		}),
 		tool_guidance: Type.Array(toolGuidanceSchema, {
 			maxItems: MAX_TOOL_GUIDANCE_PER_ISSUE,
-			description: `At most ${MAX_TOOL_GUIDANCE_PER_ISSUE} bounded evidence calls`,
+			description: `At most ${MAX_TOOL_GUIDANCE_PER_ISSUE} bounded evidence suggestion per risk`,
 		}),
 	},
 	{ additionalProperties: false },
@@ -72,7 +73,7 @@ export const riskPlanParameters = Type.Object(
 		}),
 		issues: Type.Array(planIssueSchema, {
 			maxItems: MAX_PLAN_ISSUES,
-			description: `Zero to ${MAX_PLAN_ISSUES} prioritized risks`,
+			description: `Zero to ${MAX_PLAN_ISSUES} prioritized risks, with at most ${MAX_PLAN_TOOL_GUIDANCE} total evidence suggestions`,
 		}),
 	},
 	{ additionalProperties: false },
@@ -132,7 +133,15 @@ function validatePlan(value: unknown): RiskPlan {
 	if (!isNonBlank(plan.change_summary)) {
 		throw new Error("submit_plan.change_summary must not be blank");
 	}
+	let guidanceCount = 0;
 	for (const [issueIndex, issue] of plan.issues.entries()) {
+		guidanceCount += issue.tool_guidance.length;
+		if (issue.tool_guidance.length > MAX_TOOL_GUIDANCE_PER_ISSUE) {
+			throw new Error(`submit_plan allows at most ${MAX_TOOL_GUIDANCE_PER_ISSUE} evidence suggestion per risk`);
+		}
+		if (guidanceCount > MAX_PLAN_TOOL_GUIDANCE) {
+			throw new Error(`submit_plan allows at most ${MAX_PLAN_TOOL_GUIDANCE} total evidence suggestions`);
+		}
 		if (!isNonBlank(issue.description)) {
 			throw new Error(`submit_plan.issues[${issueIndex}].description must not be blank`);
 		}
@@ -192,6 +201,7 @@ function makePlanTool(state: PlanState): ToolDefinition {
 		promptSnippet: "Submit the validated compact risk plan and terminate",
 		promptGuidelines: [
 			"Call submit_plan exactly once after planning the current changed file.",
+			`Return at most ${MAX_PLAN_ISSUES} prioritized risks, with no more than one evidence suggestion per risk and ${MAX_PLAN_TOOL_GUIDANCE} suggestions total.`,
 			"Use only the four bounded evidence tool names in the tool_guidance entries.",
 		],
 		parameters: riskPlanParameters,

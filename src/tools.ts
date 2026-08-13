@@ -28,8 +28,10 @@ export const MAX_SCAN_FILES = 500;
 export const MAX_SCAN_BYTES = 2_000_000;
 export const MAX_READ_OUTPUT_BYTES = 100_000;
 export const MAX_DIFF_OUTPUT_BYTES = 100_000;
-/** The default per-file evidence budget. The model sees this number in its system prompt and must reserve one call for submit_review. */
+/** The nominal per-file tool budget, including the final submit_review call. */
 export const DEFAULT_MAX_TOOL_CALLS = 32;
+/** Two starts remain available for rejected/recovery attempts before submission. */
+export const REVIEW_RECOVERY_STARTS = 2;
 
 const MAX_COMMENT_CONTENT_LENGTH = 10_000;
 const MAX_COMMENT_CODE_LENGTH = 5_000;
@@ -139,7 +141,7 @@ type SubmitReviewParameters = Static<typeof submitReviewParameters>;
 export type CompletionState = "pending" | "DONE" | "FAILED";
 
 export interface ReviewToolkitOptions {
-	/** Maximum number of accepted evidence calls plus the final submit_review call. */
+	/** Nominal per-file tool budget, including submit_review; recovery capacity is reserved internally. */
 	readonly maxToolCalls?: number;
 }
 
@@ -190,6 +192,7 @@ export interface SubmitReviewDetails {
 
 interface MutableToolkitState {
 	calls: number;
+	evidenceCalls: number;
 	completion: CompletionState;
 	candidates: CandidateFinding[];
 	maxToolCalls: number;
@@ -461,15 +464,17 @@ function beginCall(
 	if (state.completion !== "pending") {
 		throw new Error(`Review task already terminated with ${state.completion}`);
 	}
-	// Reserve the final slot for the terminating submit_review call. The
-	// configured maxToolCalls is the total budget; exploration may use at most
-	// maxToolCalls - 1 so that the runner's maxToolStarts cap is not exceeded.
-	if (!terminating && state.calls >= state.maxToolCalls - 1) {
-		throw new Error(
-			`Exploration budget exhausted (${state.calls} of ${state.maxToolCalls} used); only submit_review remains.`,
-		);
-	}
+	// Count every started call, including rejected/recovery attempts. The
+	// runner's per-task hard cap is maxToolCalls + 1; the default is therefore
+	// 33 starts, leaving two rejected evidence starts after 30 normal calls.
 	state.calls += 1;
+	if (!terminating) {
+		const evidenceAllowance = Math.max(0, state.maxToolCalls - REVIEW_RECOVERY_STARTS);
+		if (state.evidenceCalls >= evidenceAllowance) {
+			throw new Error("Evidence budget exhausted. Call submit_review now; do not make another evidence call.");
+		}
+		state.evidenceCalls += 1;
+	}
 }
 
 async function withCallBudget<T>(
@@ -780,7 +785,7 @@ function makeSubmitReviewTool(state: MutableToolkitState): ToolDefinition {
 			"Atomically submit all confirmed findings for the current file and terminate. The current path is fixed and must not be supplied.",
 		promptSnippet: "Submit the final structured review and terminate",
 		promptGuidelines: [
-			"Call submit_review exactly once as the final action.",
+			"Finish with one successful submit_review as the final action; a rejected submission may be corrected within recovery capacity.",
 			"Use DONE with all confirmed findings, including an empty comments array when clean.",
 			"Use FAILED with an empty comments array only when the file could not be reviewed.",
 		],
@@ -819,6 +824,7 @@ export function createReviewToolkit(
 
 	const state: MutableToolkitState = {
 		calls: 0,
+		evidenceCalls: 0,
 		completion: "pending",
 		candidates: [],
 		maxToolCalls,

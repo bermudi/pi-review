@@ -31,6 +31,7 @@ import {
 import {
 	EMPTY_USAGE,
 	type ChangedFile,
+	type ExcludedFile,
 	type Finding,
 	type ReviewEvent,
 	type ReviewInput,
@@ -127,6 +128,7 @@ interface CoverageState {
 	readonly completed: string[];
 	readonly failed: FailedFile[];
 	readonly skipped: SkippedFile[];
+	readonly excluded: ExcludedFile[];
 }
 
 const THINKING_LEVELS = new Set<NonNullable<ReviewOptions["thinking"]>>([
@@ -180,9 +182,9 @@ function modelSpecWithThinking(model: string, thinking: NormalizedReviewOptions[
 	return `${base}:${thinking}`;
 }
 
-function requirePositiveInteger(value: unknown, field: string): number {
-	if (!Number.isSafeInteger(value) || (value as number) < 1) {
-		throw new TypeError(`${field} must be a positive safe integer`);
+function requirePositiveInteger(value: unknown, field: string, maximum = Number.MAX_SAFE_INTEGER): number {
+	if (!Number.isSafeInteger(value) || (value as number) < 1 || (value as number) > maximum) {
+		throw new TypeError(`${field} must be a positive safe integer no greater than ${maximum}`);
 	}
 	return value as number;
 }
@@ -229,7 +231,7 @@ function normalizeReviewOptions(options: ReviewOptions): NormalizedReviewOptions
 		: requirePositiveInteger(options.concurrency, "concurrency");
 	const maxToolRounds = options.maxToolRounds === undefined
 		? undefined
-		: requirePositiveInteger(options.maxToolRounds, "maxToolRounds");
+		: requirePositiveInteger(options.maxToolRounds, "maxToolRounds", Number.MAX_SAFE_INTEGER - 1);
 	const planChangedLineThreshold = options.planChangedLineThreshold === undefined
 		? DEFAULT_PLAN_CHANGED_LINE_THRESHOLD
 		: requireNonNegativeInteger(options.planChangedLineThreshold, "planChangedLineThreshold");
@@ -414,20 +416,21 @@ function gateReason(file: ChangedFile): string | undefined {
 
 function makeCoverage(
 	selected: readonly string[],
-	skipped: readonly SkippedFile[] = [],
+	excluded: readonly ExcludedFile[] = [],
 ): CoverageState {
 	return {
 		selected: [...selected],
 		completed: [],
 		failed: [],
-		skipped: [...skipped],
+		skipped: [],
+		excluded: [...excluded],
 	};
 }
 
 function statusForCoverage(coverage: CoverageState, aborted: boolean): { status: ReviewStatus; warning?: string } {
 	const selected = coverage.selected.length;
 	if (selected === 0) return { status: "skipped" };
-	if (coverage.completed.length === selected && coverage.failed.length === 0) {
+	if (coverage.completed.length === selected && coverage.failed.length === 0 && coverage.skipped.length === 0) {
 		return {
 			status: "complete",
 			warning: aborted
@@ -436,8 +439,7 @@ function statusForCoverage(coverage: CoverageState, aborted: boolean): { status:
 		};
 	}
 	if (coverage.completed.length > 0) return { status: "partial" };
-	if (coverage.failed.length > 0 || aborted) return { status: "failed" };
-	return { status: "skipped" };
+	return { status: "failed" };
 }
 
 function messageForResult(
@@ -447,17 +449,41 @@ function messageForResult(
 ): string {
 	switch (status) {
 		case "complete": {
-			const skipped = coverage.skipped.length > 0 ? ` ${coverage.skipped.length} file(s) skipped.` : "";
+			const excluded = coverage.excluded.length > 0 ? ` ${coverage.excluded.length} file(s) were excluded before review.` : "";
 			return findings.length === 0
-				? `Review complete: no findings across ${coverage.completed.length} file(s).${skipped}`
-				: `Review complete: ${findings.length} finding(s) across ${coverage.completed.length} file(s).${skipped}`;
+				? `Review complete: no findings across ${coverage.completed.length} file(s).${excluded}`
+				: `Review complete: ${findings.length} finding(s) across ${coverage.completed.length} file(s).${excluded}`;
 		}
-		case "partial":
-			return `Review partial: ${coverage.completed.length} of ${coverage.selected.length} selected file(s) completed; ${coverage.failed.length} failed and ${coverage.skipped.length} skipped. Findings are incomplete.`;
-		case "failed":
-			return `Review failed: ${coverage.completed.length} of ${coverage.selected.length} selected file(s) completed; ${coverage.failed.length} failed and ${coverage.skipped.length} skipped.`;
-		case "skipped":
-			return "Review skipped: no reviewable files were selected.";
+		case "partial": {
+			const selectedLabel = (count: number): string => count === 1 ? "selected file" : "selected files";
+			const failed = coverage.failed.length === 0
+				? ""
+				: ` ${coverage.failed.length} ${selectedLabel(coverage.failed.length)} failed.`;
+			const skipped = coverage.skipped.length === 0
+				? ""
+				: ` ${coverage.skipped.length} ${selectedLabel(coverage.skipped.length)} ${coverage.skipped.length === 1 ? "was" : "were"} skipped after cancellation.`;
+			const excluded = coverage.excluded.length === 0
+				? ""
+				: ` ${coverage.excluded.length} file${coverage.excluded.length === 1 ? "" : "s"} ${coverage.excluded.length === 1 ? "was" : "were"} excluded before review.`;
+			return `Review partial: ${coverage.completed.length} of ${coverage.selected.length} ${selectedLabel(coverage.selected.length)} completed;${failed}${skipped}${excluded} Findings are incomplete.`;
+		}
+		case "failed": {
+			const selectedLabel = (count: number): string => count === 1 ? "selected file" : "selected files";
+			const failed = coverage.failed.length === 0
+				? ""
+				: ` ${coverage.failed.length} ${selectedLabel(coverage.failed.length)} failed.`;
+			const skipped = coverage.skipped.length === 0
+				? ""
+				: ` ${coverage.skipped.length} ${selectedLabel(coverage.skipped.length)} ${coverage.skipped.length === 1 ? "was" : "were"} skipped after cancellation.`;
+			const excluded = coverage.excluded.length === 0
+				? ""
+				: ` ${coverage.excluded.length} file${coverage.excluded.length === 1 ? "" : "s"} ${coverage.excluded.length === 1 ? "was" : "were"} excluded before review.`;
+			return `Review failed: ${coverage.completed.length} of ${coverage.selected.length} ${selectedLabel(coverage.selected.length)} completed;${failed}${skipped}${excluded}`;
+		}
+		case "skipped": {
+			const excluded = coverage.excluded.length;
+			return `Review skipped: no reviewable files were selected.${excluded > 0 ? ` ${excluded} file${excluded === 1 ? " was" : "s were"} excluded before review.` : ""}`;
+		}
 	}
 }
 
@@ -476,10 +502,11 @@ function buildResult(
 		completed: [...coverage.completed].sort(compareText),
 		failed: [...coverage.failed].sort(compareFailed),
 		skipped: [...coverage.skipped].sort(compareSkipped),
+		excluded: [...coverage.excluded].sort(compareSkipped),
 	};
 	const sortedFindings = [...findings].sort(compareFindings);
 	const { status, warning } = statusForCoverage(sortedCoverage, aborted);
-	const resultWarnings = warning === undefined ? [...warnings] : [...warnings, warning];
+	const resultWarnings = (warning === undefined ? [...warnings] : [...warnings, warning]).sort(compareText);
 	if (warning !== undefined) emit?.({ type: "warning", message: warning });
 	return {
 		status,
@@ -507,7 +534,7 @@ function makeEarlyFailure(
 		message,
 		model,
 		findings: [],
-		coverage: { selected: [], completed: [], failed: [], skipped: [] },
+		coverage: { selected: [], completed: [], failed: [], skipped: [], excluded: [] },
 		warnings: warningList,
 		usage: zeroUsage(),
 		elapsedMs: Math.max(0, Date.now() - startedAt),
@@ -668,13 +695,13 @@ export class Reviewer {
 			return makeEarlyFailure(startedAt, normalized.model, message, warnings, normalized.onEvent);
 		}
 
-		const selectionSkipped: SkippedFile[] = [
+		const excluded: ExcludedFile[] = [
 			...selection.skipped,
 			...gatedSkipped,
 		];
 		const coverage = makeCoverage(
 			selected.map((entry) => entry.path),
-			selectionSkipped,
+			excluded,
 		);
 
 		// Build the cross-file change map once, after deterministic selection
@@ -807,6 +834,17 @@ export class Reviewer {
 					emit({ type: "file_completed", path: entry.path, findings: workflow.findings.length });
 				} else {
 					const reason = workflow.reason ?? `Review task failed for ${entry.path}`;
+					if (signalIsAborted(signal)) {
+						aborted = true;
+						results[index] = {
+							kind: "skipped",
+							path: entry.path,
+							findings: workflow.findings,
+							usage: workflow.usage,
+							reason: "aborted",
+						};
+						continue;
+					}
 					results[index] = {
 						kind: "failed",
 						path: entry.path,

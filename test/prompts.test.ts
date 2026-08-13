@@ -37,6 +37,7 @@ describe("prompt builders", () => {
 		expect(first.system).toContain("added or modified target-side code");
 		expect(first.system).toContain("file_read|code_search|file_read_diff|file_find");
 		expect(first.system).toContain("submit_plan");
+		expect(first.system).toContain("at most four prioritized risks");
 		expect(first.user).toContain('<untrusted-data name="current-file-diff">');
 		expect(first.user).toContain(diff);
 		expect(first.user).toContain("README.md\nsrc/service.test.ts");
@@ -116,10 +117,11 @@ describe("prompt builders", () => {
 
 		expect(prompt.system).toContain("tool-call budget");
 		expect(prompt.system).toContain(String(DEFAULT_MAX_TOOL_CALLS));
-		expect(prompt.system).toContain("submit_review must be the final call");
+		expect(prompt.system).toContain("submit_review must be the final successful call");
 		expect(prompt.system).toContain("reserve");
 		expect(prompt.user).toContain("tool-call budget");
 		expect(prompt.user).toContain("submit_review");
+		expect(prompt.user).toContain("30 normal evidence calls");
 	});
 
 	test("uses the configured max tool calls in the review system prompt", () => {

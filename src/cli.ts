@@ -163,7 +163,8 @@ Options:
   --host-evidence TEXT       Host evidence (e.g. typecheck/test output) for review
   --host-evidence-file PATH  Read host evidence as UTF-8
   --concurrency N            Maximum concurrent file reviews
-  --max-tool-rounds N        Maximum tool calls per file review task
+  --max-tool-rounds N        Nominal per-file budget incl. final submission;
+                              recovery reserved; default 32, hard stop at start 34
   --plan-threshold N         Changed-line threshold for risk planning
   --agent-dir PATH           Pi agent directory
   --session-dir PATH         Write per-task session transcripts (.jsonl) under PATH
@@ -342,14 +343,20 @@ function expandShortOptions(token: string): string {
 	return token;
 }
 
-function parseInteger(value: string | undefined, option: string, minimum: number): number | undefined {
+function parseInteger(
+	value: string | undefined,
+	option: string,
+	minimum: number,
+	maximum = Number.MAX_SAFE_INTEGER,
+): number | undefined {
 	if (value === undefined) return undefined;
+	const expected = `${minimum === 0 ? "non-negative" : "positive"} safe integer no greater than ${maximum}`;
 	if (!/^\d+$/u.test(value)) {
-		optionSyntaxError(`Invalid --${option}; expected a ${minimum === 0 ? "non-negative" : "positive"} safe integer.`);
+		optionSyntaxError(`Invalid --${option}; expected a ${expected}.`);
 	}
 	const parsed = Number(value);
-	if (!Number.isSafeInteger(parsed) || parsed < minimum) {
-		optionSyntaxError(`Invalid --${option}; expected a ${minimum === 0 ? "non-negative" : "positive"} safe integer.`);
+	if (!Number.isSafeInteger(parsed) || parsed < minimum || parsed > maximum) {
+		optionSyntaxError(`Invalid --${option}; expected a ${expected}.`);
 	}
 	return parsed;
 }
@@ -450,7 +457,8 @@ export function parseArgs(
 		hostEvidenceFile: values.hostEvidenceFile,
 		rulesFile: values.rulesFile,
 		concurrency: parseInteger(values.concurrency, "concurrency", 1),
-		maxToolRounds: parseInteger(values.maxToolRounds, "max-tool-rounds", 1),
+		// The runner cap reserves one additional start for submit_review.
+		maxToolRounds: parseInteger(values.maxToolRounds, "max-tool-rounds", 1, Number.MAX_SAFE_INTEGER - 1),
 		planThreshold: parseInteger(values.planThreshold, "plan-threshold", 0),
 		agentDir: values.agentDir,
 		sessionDir: values.sessionDir,
@@ -546,6 +554,7 @@ export function renderText(result: ReviewResult): string {
 		`  completed: ${formatList(result.coverage.completed)}`,
 		`  failed: ${formatFailureList(result.coverage.failed)}`,
 		`  skipped: ${formatFailureList(result.coverage.skipped)}`,
+		`  excluded: ${formatFailureList(result.coverage.excluded)}`,
 		"Warnings:",
 	];
 

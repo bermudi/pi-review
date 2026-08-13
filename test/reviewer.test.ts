@@ -368,6 +368,23 @@ function options(overrides: Partial<Parameters<Reviewer["review"]>[1]> = {}) {
 }
 
 describe("Reviewer", () => {
+	test("rejects a maxToolRounds value that cannot reserve the runner's submission start", async () => {
+		let targetCreated = false;
+		const result = await new Reviewer({
+			targetFactory: async () => {
+				targetCreated = true;
+				return target([]);
+			},
+		}).review(
+			{ repository: "/fake", mode: { kind: "workspace" } },
+			options({ maxToolRounds: Number.MAX_SAFE_INTEGER }),
+		);
+
+		expect(result.status).toBe("failed");
+		expect(result.message).toContain(String(Number.MAX_SAFE_INTEGER - 1));
+		expect(targetCreated).toBe(false);
+	});
+
 	test("passes the resolved repository root to Pi task sessions", async () => {
 		const executor = new PhaseExecutor({ noFindings: true });
 		let runnerCwd: string | undefined;
@@ -565,12 +582,28 @@ describe("Reviewer", () => {
 
 		expect(result.status).toBe("complete");
 		expect(result.coverage.selected).toEqual(["src/ok.ts"]);
-		expect(result.coverage.skipped).toEqual([
+		expect(result.coverage.skipped).toEqual([]);
+		expect(result.coverage.excluded).toEqual([
 			{ path: "README.md", reason: "unsupported_ext" },
 			{ path: "src/empty.ts", reason: "empty_diff" },
 			{ path: "src/excluded.ts", reason: "user_exclude" },
 		]);
 		expect(executor.tasks).toHaveLength(1);
+	});
+
+	test("returns skipped only when every file is excluded before dispatch", async () => {
+		const result = await new Reviewer({
+			targetFactory: async () => target([changedFile("README.md"), changedFile("docs.txt")]),
+			taskExecutor: new PhaseExecutor({ noFindings: true }),
+		}).review({ repository: "/fake/repository", mode: { kind: "workspace" } }, options());
+
+		expect(result.status).toBe("skipped");
+		expect(result.coverage.selected).toEqual([]);
+		expect(result.coverage.completed).toEqual([]);
+		expect(result.coverage.failed).toEqual([]);
+		expect(result.coverage.skipped).toEqual([]);
+		expect(result.coverage.excluded).toHaveLength(2);
+		expect(result.message).toBe("Review skipped: no reviewable files were selected. 2 files were excluded before review.");
 	});
 
 	test("suppresses unanchored candidates with a visible warning", async () => {
@@ -659,6 +692,7 @@ describe("Reviewer", () => {
 		expect(result.coverage.selected).toEqual(["src/a.ts", "src/b.ts"]);
 		expect(result.coverage.completed).toEqual(["src/b.ts"]);
 		expect(result.coverage.failed[0]?.path).toBe("src/a.ts");
+		expect(result.message).toBe("Review partial: 1 of 2 selected files completed; 1 selected file failed. Findings are incomplete.");
 		expect(result.message.toLowerCase()).not.toContain("looks good");
 	});
 
@@ -708,7 +742,9 @@ describe("Reviewer", () => {
 
 		expect(executor.abortAllCalls).toBe(1);
 		expect(result.status).toBe("failed");
-		expect(result.coverage.failed[0]?.path).toBe("src/pending.ts");
+		expect(result.coverage.failed).toHaveLength(0);
+		expect(result.coverage.skipped).toEqual([{ path: "src/pending.ts", reason: "aborted" }]);
+		expect(result.message).toBe("Review failed: 0 of 1 selected file completed; 1 selected file was skipped after cancellation.");
 	});
 
 	test("warns when all selected files complete after an abort", async () => {
@@ -826,7 +862,8 @@ describe("Reviewer", () => {
 
 		expect(result.status).toBe("complete");
 		expect(result.coverage.selected).toEqual(["src/ok.ts"]);
-		expect(result.coverage.skipped).toEqual([{ path: "src/secret.ts", reason: "user_exclude" }]);
+		expect(result.coverage.skipped).toEqual([]);
+		expect(result.coverage.excluded).toEqual([{ path: "src/secret.ts", reason: "user_exclude" }]);
 		for (const task of executor.tasks) {
 			const prompt = task.prompt as { user: string };
 			expect(prompt.user).not.toContain("secretHelper");
@@ -850,7 +887,8 @@ describe("Reviewer", () => {
 
 		expect(result.status).toBe("complete");
 		expect(result.coverage.selected).toEqual(["src/ok.ts"]);
-		expect(result.coverage.skipped).toContainEqual({ path: "src/huge.ts", reason: "diff_size_limit" });
+		expect(result.coverage.skipped).not.toContainEqual({ path: "src/huge.ts", reason: "diff_size_limit" });
+		expect(result.coverage.excluded).toContainEqual({ path: "src/huge.ts", reason: "diff_size_limit" });
 		expect(executor.tasks).toHaveLength(1);
 		const prompt = executor.tasks[0]?.prompt as { user: string } | undefined;
 		// No cross-file edges (ok.ts only adds, huge.ts is metadata-only), so

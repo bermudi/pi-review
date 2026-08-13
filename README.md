@@ -71,14 +71,14 @@ Available options are:
 - `--include PATTERN` and `--exclude PATTERN` — repeatable path filters.
 - `--background TEXT`, `--background-file PATH`, and `--rules-file PATH` — review context; the two background forms are mutually exclusive.
 - `--concurrency N` — positive maximum number of concurrent file tasks; default `4`.
-- `--max-tool-rounds N` — positive per-task tool-call budget; default `32` (the runner's hard cap allows one extra start so a single overshoot can still submit).
+- `--max-tool-rounds N` — compatibility name for the nominal per-file tool budget, including the final submission; default `32`. The hard runner cap is one start higher (`33` by default) because recovery capacity is reserved, so not all nominal calls are normal evidence calls. Lower values still preserve a submit-only path.
 - `--plan-threshold N` — non-negative changed-line threshold for risk planning; default `50`.
 - `--agent-dir PATH` — Pi agent directory override.
 - `--session-dir PATH` — persist each per-task Pi session transcript (`.jsonl`) under PATH for debugging; off by default.
 - `--json` — output the exact `ReviewResult` object instead of the human-readable rendering.
 - `--help` — print usage.
 
-Human-readable results and JSON go to stdout. Progress events and warnings go to stderr, so `--json` remains machine-readable. The text renderer includes status, message, coverage, warnings, and anchored findings.
+Human-readable results and JSON go to stdout. Progress events and warnings go to stderr, so `--json` remains machine-readable. The text renderer includes status, message, separate selected/completed/failed/skipped/excluded coverage lists, warnings, and anchored findings.
 
 ### Exit status
 
@@ -147,7 +147,7 @@ const commit = {
 };
 ```
 
-`ReviewResult` contains `status`, `message`, findings, selected/completed/failed/skipped coverage, warnings, token usage, and elapsed time. The public facade exports `review`, `Reviewer`, `createReviewer`, the review domain types, and deterministic Git/diff/selection/finding-placement seams. Pi runner types, prompts, phase toolkits, and model-visible tool definitions are internal.
+`ReviewResult` contains `status`, `message`, findings, selected/completed/failed/skipped/excluded coverage, warnings, token usage, and elapsed time. The public facade exports `review`, `Reviewer`, `createReviewer`, the review domain types, and deterministic Git/diff/selection/finding-placement seams. Pi runner types, prompts, phase toolkits, and model-visible tool definitions are internal.
 
 ## Review modes and target data
 
@@ -155,7 +155,7 @@ const commit = {
 - **Range** compares `head` with the merge-base of `base` and `head`. Diff files and evidence reads are pinned to the `head` Git snapshot.
 - **Commit** compares a commit with its first parent, or with the root tree for a root commit. Diff files and evidence reads are pinned to the commit snapshot.
 
-Git refs, repository-relative paths, traversal, absolute paths, `.git` paths, and workspace/Git symlinks are checked at the acquisition/read boundaries. Binary, deleted, unsupported, excluded, over-limit, and otherwise non-reviewable files appear as skipped coverage rather than being sent to a model.
+Git refs, repository-relative paths, traversal, absolute paths, `.git` paths, and workspace/Git symlinks are checked at the acquisition/read boundaries. Binary, deleted, unsupported, user-excluded, over-limit, empty, oversized, and otherwise non-reviewable files appear as `coverage.excluded` rather than being sent to a model. `coverage.selected` contains only files eligible for dispatch; its partition is `completed + failed + skipped`. Selected files that never run or are cancelled appear in `coverage.skipped`.
 
 ## Precision pipeline
 
@@ -163,16 +163,16 @@ The useful behavior is the set of hard boundaries around the model:
 
 1. **Deterministic target acquisition.** `git.ts` validates the repository and refs, obtains the selected Git diff, parses it into changed files, and enriches text files with the target-side content. Range and commit targets are pinned; workspace targets use the working tree.
 2. **Deterministic selection.** Files are ordered before selection. Safety, binary/deletion, user-exclude, default extension/path, and the `2,000` changed-line cap are applied before model work. A selected file also must have a non-empty diff no larger than `100,000` bytes and at least one changed line.
-3. **Optional structured planning.** A file with at least `50` changed lines receives a separate risk-planning task. Its only terminating tool is `submit_plan`, which accepts a schema-checked `change_summary` plus prioritized issues and bounded evidence guidance. The planner describes evidence; the later worker performs the evidence reads. A planner failure emits a warning and the main review still runs.
+3. **Optional structured planning.** A file with at least `50` changed lines receives a separate risk-planning task. Its only terminating tool is `submit_plan`, which accepts a schema-checked `change_summary` plus at most four prioritized risks, with one evidence suggestion per risk. The planner describes evidence; the later worker performs the evidence reads. A planner failure emits a warning and the main review still runs.
 4. **One isolated task per selected file.** The main worker receives the current file's diff, other changed paths for orientation, optional background/rules, and an optional plan. Its explicit tool allowlist contains only bounded evidence tools and `submit_review`.
-5. **Atomic structured output.** The worker must call `submit_review` exactly once as its final action. One call supplies `state: "DONE"` or `"FAILED"` and the complete comments array (up to 20). Candidates are not accepted as a successful file result until the terminating `DONE` submission is received; a task that ends without it fails that file.
+5. **Atomic structured output.** The worker must finish with one successful `submit_review` action; a rejected submission may be corrected within reserved recovery starts. The successful call supplies `state: "DONE"` or `"FAILED"` and the complete comments array (up to 20). Candidates are not accepted as a successful file result until the terminating `DONE` submission is received; a task that ends without it fails that file.
 6. **Deterministic placement.** `existingCode` is matched against target-side content and a finding is accepted only when its range intersects an added target-side line. An unanchored candidate is discarded with a warning rather than placed at line `0`.
 7. **Conservative veto.** Resolved findings go through a separate veto task using `submit_veto`. It may remove a candidate only when the current diff directly disproves the candidate's central claim; uncertainty keeps the finding. A non-aborted veto failure keeps all findings and adds a warning.
-8. **Coverage-aware assembly.** Per-file tasks may run concurrently, but findings, coverage, warnings, and token usage are assembled into a deterministic result. `complete` means every selected file completed; partial or failed work is never reported as complete.
+8. **Coverage-aware assembly.** Per-file tasks may run concurrently, but findings, coverage, warnings, and token usage are assembled into a deterministic result. `complete` means every selected file completed; partial or failed work is never reported as complete. `skipped` is used only when no files were selected.
 
 The main worker's model-visible tools are `file_read`, `code_search`, `file_find`, `file_read_diff`, and `submit_review`. Reads/searches/diffs have output and result limits, and each task has a tool-call budget. There is no model-visible shell, edit, or write tool. Prompt data is fenced as untrusted evidence so repository text cannot change system policy or authorize tools.
 
-The evidence bounds are intentionally explicit: file reads return at most `500` numbered lines and `100,000` bytes; searches return at most `100` results and `50,000` bytes; finds return at most `100` paths and `50,000` bytes; changed-file diffs return at most `100,000` bytes. Search skips files over `1,000,000` bytes and binary files. The default per-task budget is `32` tool calls, including `submit_review`; the runner's hard tool-start cap is one start higher so a model that overshoots exploration by a single call can still submit instead of being killed.
+The evidence bounds are intentionally explicit: file reads return at most `500` numbered lines and `100,000` bytes; searches return at most `100` results and `50,000` bytes; finds return at most `100` paths and `50,000` bytes; changed-file diffs return at most `100,000` bytes. Search skips files over `1,000,000` bytes and binary files. The default nominal per-file budget is `32` starts, including `submit_review`. The reviewer deliberately reserves capacity for recovery and termination: 30 normal evidence calls + up to two rejected/recovery starts + the final submission means up to `33` actual starts. The hard runner cap is one start above the nominal budget; start 34 aborts. `--max-tool-rounds` remains the compatibility name; lower values still preserve a submit-only path.
 
 ## Security and read-only guarantees
 
@@ -190,7 +190,7 @@ The evidence bounds are intentionally explicit: file reads return at most `500` 
 - **Bounded output is not a sandbox.** Evidence results are capped, but target reads and Git operations are performed with host permissions. Safe relative-path and symlink checks reduce traversal risk; they do not provide an OS sandbox.
 - **Workspace evidence can change.** The workspace diff and initial target content are acquired before tasks start, but workspace `readFile`/`listFiles` evidence reads the live working tree. A long review can therefore observe changes made after acquisition. Range and commit evidence are pinned.
 - **Target acquisition is buffered but capped.** Git command output is collected in memory with a 64 MiB stdout / 2 MiB stderr ceiling, and workspace/Git-blob files are rejected above 16 MiB. Parsing and enrichment are still whole-buffer operations rather than streaming; the later 100,000-byte per-file diff gate is stricter than these host-side safety ceilings.
-- **Selection is conservative.** Binary, deleted, unsafe, unsupported, excluded, over-line-limit, oversized-diff, empty-diff, and otherwise gated files may be skipped and are reported in coverage.
+- **Selection is conservative.** Binary, deleted, unsafe, unsupported, excluded, over-line-limit, oversized-diff, empty-diff, and otherwise gated files are reported in `coverage.excluded` and never sent to a model.
 - **Model/provider failures remain visible.** A provider or task failure can produce `partial` or `failed`; `complete` means selected tasks terminated successfully, not that the code is correct.
 
 ## SDK reference and public boundary

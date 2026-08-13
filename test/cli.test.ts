@@ -3,6 +3,7 @@ import { describe, expect, test } from "bun:test";
 import {
 	exitCodeForResult,
 	formatProgress,
+	HELP_TEXT,
 	parseArgs,
 	renderJson,
 	renderText,
@@ -42,10 +43,11 @@ function result(status: ReviewResult["status"]): ReviewResult {
 		model: "test/model",
 		findings: status === "complete" ? [finding] : [],
 		coverage: {
-			selected: ["src/app.ts", "src/other.ts"],
-			completed: status === "complete" ? ["src/app.ts", "src/other.ts"] : ["src/app.ts"],
+			selected: status === "skipped" ? [] : status === "failed" ? ["src/app.ts"] : ["src/app.ts", "src/other.ts"],
+			completed: status === "complete" ? ["src/app.ts", "src/other.ts"] : status === "partial" ? ["src/app.ts"] : [],
 			failed: status === "partial" ? [{ path: "src/other.ts", reason: "task failed" }] : [],
-			skipped: status === "skipped" ? [{ path: "src/app.ts", reason: "no_changed_lines" }] : [],
+			skipped: status === "failed" ? [{ path: "src/app.ts", reason: "aborted" }] : [],
+			excluded: status === "skipped" ? [{ path: "README.md", reason: "unsupported_ext" }] : [],
 		},
 		warnings: ["One planner warning."],
 		usage,
@@ -162,6 +164,11 @@ describe("CLI argument parsing", () => {
 		expect(parseArgs(["--model", "openrouter/org/model:variant"]).model).toBe("openrouter/org/model:variant");
 		expect(() => parseArgs(["--model", "p/m", "--thinking", "turbo"])).toThrow("--thinking");
 		expect(() => parseArgs(["--model", "p/m", "--concurrency", "0"])).toThrow("--concurrency");
+		expect(() => parseArgs(["--model", "p/m", "--max-tool-rounds", "0"])).toThrow("--max-tool-rounds");
+		expect(() => parseArgs(["--model", "p/m", "--max-tool-rounds", "-1"])).toThrow("--max-tool-rounds");
+		expect(() => parseArgs(["--model", "p/m", "--max-tool-rounds", "1.5"])).toThrow("--max-tool-rounds");
+		expect(() => parseArgs(["--model", "p/m", "--max-tool-rounds", "9007199254740991"])).toThrow("9007199254740990");
+		expect(parseArgs(["--model", "p/m", "--max-tool-rounds", "9007199254740990"]).maxToolRounds).toBe(Number.MAX_SAFE_INTEGER - 1);
 		expect(() => parseArgs(["--model", "p/m", "--plan-threshold", "1.5"])).toThrow("--plan-threshold");
 		expect(parseArgs(["--help"]).help).toBe(true);
 	});
@@ -211,6 +218,8 @@ describe("CLI rendering and exit codes", () => {
 		expect(text).toContain("Status: complete");
 		expect(text).toContain("Message: Review complete");
 		expect(text).toContain("Coverage:");
+		expect(text).toContain("excluded:");
+		expect(text).toContain("skipped:");
 		expect(text).toContain("Warnings:");
 		expect(text).toContain("high/bug src/app.ts:12-13");
 		expect(text).toContain("Validate the value before using it.");
@@ -221,6 +230,11 @@ describe("CLI rendering and exit codes", () => {
 		const expected = result("partial");
 		expect(renderJson(expected)).toBe(`${JSON.stringify(expected)}\n`);
 		expect(JSON.parse(renderJson(expected))).toEqual(expected);
+	});
+
+	test("documents the compatibility budget name and reserved recovery in help", () => {
+		expect(HELP_TEXT).toContain("--max-tool-rounds N");
+		expect(HELP_TEXT).toContain("recovery reserved");
 	});
 
 	test("maps result status to the documented exit code", () => {
