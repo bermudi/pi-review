@@ -133,8 +133,17 @@ describe("CLI argument parsing", () => {
 			planThreshold: 50,
 			agentDir: ".agents",
 			sessionDir: "/tmp/sessions",
+			resume: undefined,
 			json: true,
 		});
+	});
+
+	test("parses resume and rejects conflicting persistence or concurrency options", () => {
+		const parsed = parseArgs(["--model", "p/m", "--resume", "/tmp/review.jsonl"]);
+		expect(parsed.resume).toBe("/tmp/review.jsonl");
+		expect(parseArgs(["--model", "p/m", "--resume", "a", "--concurrency", "01"]).concurrency).toBe(1);
+		expect(() => parseArgs(["--model", "p/m", "--resume", "a", "--session-dir", "b"])).toThrow("mutually exclusive");
+		expect(() => parseArgs(["--model", "p/m", "--resume", "a", "--concurrency", "2"])).toThrow("concurrency 1");
 	});
 
 	test("selects range and commit modes and rejects invalid combinations", () => {

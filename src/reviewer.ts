@@ -89,6 +89,7 @@ interface NormalizedReviewOptions {
 	readonly planChangedLineThreshold: number;
 	readonly agentDir: string | undefined;
 	readonly sessionDir: string | undefined;
+	readonly resumeSessionFile: string | undefined;
 	readonly onEvent: ((event: ReviewEvent) => void) | undefined;
 	readonly signal: AbortSignal | undefined;
 }
@@ -222,6 +223,15 @@ function normalizeReviewOptions(options: ReviewOptions): NormalizedReviewOptions
 	if (options.sessionDir !== undefined && typeof options.sessionDir !== "string") {
 		throw new TypeError("Review options.sessionDir must be a string");
 	}
+	if (options.resumeSessionFile !== undefined && (typeof options.resumeSessionFile !== "string" || options.resumeSessionFile.length === 0)) {
+		throw new TypeError("Review options.resumeSessionFile must be a non-empty string");
+	}
+	if (options.resumeSessionFile !== undefined && options.sessionDir !== undefined) {
+		throw new TypeError("resumeSessionFile and sessionDir cannot be combined");
+	}
+	if (options.resumeSessionFile !== undefined && options.concurrency !== undefined && options.concurrency !== 1) {
+		throw new TypeError("resumeSessionFile requires concurrency 1");
+	}
 	if (options.signal !== undefined && (options.signal === null || typeof options.signal !== "object")) {
 		throw new TypeError("Review options.signal must be an AbortSignal");
 	}
@@ -247,6 +257,7 @@ function normalizeReviewOptions(options: ReviewOptions): NormalizedReviewOptions
 		planChangedLineThreshold,
 		agentDir: options.agentDir,
 		sessionDir: options.sessionDir,
+		resumeSessionFile: options.resumeSessionFile,
 		onEvent: options.onEvent,
 		signal: options.signal,
 	};
@@ -355,6 +366,26 @@ export function buildTask(
 function taskSessionId(path: string, phase: "plan" | "review" | "verification"): string {
 	const safe = path.replace(/[^A-Za-z0-9._-]+/gu, "-").replace(/^-+|-+$/gu, "");
 	return `review-${safe === "" ? "file" : safe}-${phase}`;
+}
+
+function resumedPhase(sessionFile: string | undefined, selected: readonly SelectedReviewFile[], options: NormalizedReviewOptions): "plan" | "review" | undefined {
+	if (sessionFile === undefined) return undefined;
+	if (selected.length !== 1) {
+		throw new TypeError("resumeSessionFile requires exactly one selected review file; narrow the review with --include");
+	}
+	const path = selected[0]?.path ?? "";
+	for (const phase of ["plan", "review"] as const) {
+		if (sessionFile.endsWith(`_${taskSessionId(path, phase)}.jsonl`)) {
+			if (phase === "plan" && changedLineCount(selected[0]!.file) < options.planChangedLineThreshold) {
+				throw new TypeError("The resumed planning session no longer meets the planning threshold");
+			}
+			return phase;
+		}
+	}
+	if (sessionFile.endsWith(`_${taskSessionId(path, "verification")}.jsonl`)) {
+		throw new TypeError("Verification sessions cannot be resumed because their evidence ledger is host-only");
+	}
+	throw new TypeError("Resume session does not match the selected file's planning or review task");
 }
 
 function abortedTaskOutcome(signal: AbortSignal): TaskOutcome {
@@ -732,6 +763,14 @@ export class Reviewer {
 		} catch (error) {
 			warn(`Unable to build or render cross-file change map: ${errorMessage(error, "change map construction or rendering failed")}`);
 		}
+		let resumePhase: "plan" | "review" | undefined;
+		try {
+			resumePhase = resumedPhase(normalized.resumeSessionFile, selected, normalized);
+		} catch (error) {
+			const message = `Unable to resume review: ${errorMessage(error, "invalid resume session")}`;
+			return makeEarlyFailure(startedAt, normalized.model, message, warnings, normalized.onEvent);
+		}
+
 		const findings: Finding[] = [];
 		let usage = zeroUsage();
 		let aborted = normalized.signal?.aborted === true;
@@ -813,6 +852,7 @@ export class Reviewer {
 							changeMap: changeMapSlices.get(entry.path),
 						},
 						normalized,
+						resumePhase,
 						executor,
 						warn,
 						(event) => emit(event),
@@ -915,6 +955,7 @@ export class Reviewer {
 		onEvent: (event: TaskEvent) => void,
 		sessionId: string,
 		extractValue?: (outcome: TaskOutcome) => T,
+		resumeSessionFile?: string,
 	): Promise<RunPhaseResult<T>> {
 		const task = this.makeTask(
 			phaseForTerminalTool(terminalTool),
@@ -923,6 +964,7 @@ export class Reviewer {
 			options,
 			onEvent,
 			sessionId,
+			resumeSessionFile,
 		);
 		let raw: unknown;
 		try {
@@ -983,6 +1025,7 @@ export class Reviewer {
 		selected: readonly SelectedReviewFile[],
 		context: ReviewContext,
 		options: NormalizedReviewOptions,
+		resumePhase: "plan" | "review" | undefined,
 		executor: TaskExecutor,
 		warn: (message: string) => void,
 		emit: (event: ReviewEvent) => void,
@@ -1000,7 +1043,7 @@ export class Reviewer {
 			}
 		};
 
-		if (changedLineCount(entry.file) >= options.planChangedLineThreshold) {
+		if (changedLineCount(entry.file) >= options.planChangedLineThreshold && resumePhase !== "review") {
 			const planToolkit: PlanToolkit = createPlanToolkit();
 			const prompt = buildRiskPlanPrompt({
 				currentFilePath: entry.path,
@@ -1021,6 +1064,7 @@ export class Reviewer {
 				taskEvent(entry.path),
 				taskSessionId(entry.path, "plan"),
 				() => planToolkit.value,
+				resumePhase === "plan" ? options.resumeSessionFile : undefined,
 			);
 			usage = addUsage(usage, plan.usage);
 			if (plan.value !== undefined) {
@@ -1072,6 +1116,8 @@ export class Reviewer {
 				options,
 				taskEvent(entry.path),
 				taskSessionId(entry.path, "review"),
+				undefined,
+				resumePhase === "review" ? options.resumeSessionFile : undefined,
 			);
 		} catch (error) {
 			if (error instanceof RunPhaseError) {
@@ -1214,8 +1260,12 @@ export class Reviewer {
 		options: NormalizedReviewOptions,
 		onEvent: (event: TaskEvent) => void,
 		sessionId?: string,
+		resumeSessionFile?: string,
 	): PiTask {
-		return buildTask(phase, prompt, tools, options, onEvent, sessionId);
+		return {
+			...buildTask(phase, prompt, tools, options, onEvent, sessionId),
+			...(resumeSessionFile === undefined ? {} : { resumeSessionFile }),
+		};
 	}
 }
 

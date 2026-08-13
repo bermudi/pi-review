@@ -41,6 +41,7 @@ type RawCliValues = {
 	planThreshold?: string;
 	agentDir?: string;
 	sessionDir?: string;
+	resume?: string;
 	json: boolean;
 	help: boolean;
 };
@@ -69,6 +70,7 @@ const rawCliValuesSchema = z.object({
 	planThreshold: optionValue.optional(),
 	agentDir: optionValue.optional(),
 	sessionDir: optionValue.optional(),
+	resume: optionValue.optional(),
 	json: z.boolean(),
 	help: z.boolean(),
 }).strict();
@@ -92,6 +94,7 @@ export interface CliOptions {
 	readonly planThreshold: number | undefined;
 	readonly agentDir: string | undefined;
 	readonly sessionDir: string | undefined;
+	readonly resume: string | undefined;
 	readonly json: boolean;
 }
 
@@ -168,6 +171,7 @@ Options:
   --plan-threshold N         Changed-line threshold for risk planning
   --agent-dir PATH           Pi agent directory
   --session-dir PATH         Write per-task session transcripts (.jsonl) under PATH
+  --resume PATH              Continue one failed plan/review session transcript
   --json                     Emit the exact ReviewResult as JSON
   --help                     Show this help
 
@@ -193,6 +197,7 @@ const knownValueOptions = new Set([
 	"plan-threshold",
 	"agent-dir",
 	"session-dir",
+	"resume",
 ]);
 
 function isThinkingLevel(value: string): value is ThinkingLevel {
@@ -274,6 +279,10 @@ function setValue(raw: RawCliValues, name: string, value: string): void {
 		case "session-dir":
 			if (raw.sessionDir !== undefined) optionSyntaxError("Duplicate --session-dir option.");
 			raw.sessionDir = value;
+			return;
+		case "resume":
+			if (raw.resume !== undefined) optionSyntaxError("Duplicate --resume option.");
+			raw.resume = value;
 			return;
 		default:
 			optionSyntaxError("Unknown command-line option.");
@@ -420,6 +429,7 @@ export function parseArgs(
 			planThreshold: undefined,
 			agentDir: values.agentDir,
 			sessionDir: values.sessionDir,
+			resume: values.resume,
 			json: values.json,
 		};
 	}
@@ -442,6 +452,13 @@ export function parseArgs(
 	if (values.hostEvidence !== undefined && values.hostEvidenceFile !== undefined) {
 		optionSyntaxError("--host-evidence and --host-evidence-file are mutually exclusive.");
 	}
+	if (values.resume !== undefined && values.sessionDir !== undefined) {
+		optionSyntaxError("--resume and --session-dir are mutually exclusive.");
+	}
+	const concurrency = parseInteger(values.concurrency, "concurrency", 1);
+	if (values.resume !== undefined && concurrency !== undefined && concurrency !== 1) {
+		optionSyntaxError("--resume requires --concurrency 1 when concurrency is specified.");
+	}
 
 	return {
 		help: false,
@@ -456,12 +473,13 @@ export function parseArgs(
 		hostEvidence: values.hostEvidence,
 		hostEvidenceFile: values.hostEvidenceFile,
 		rulesFile: values.rulesFile,
-		concurrency: parseInteger(values.concurrency, "concurrency", 1),
+		concurrency,
 		// The runner cap reserves one additional start for submit_review.
 		maxToolRounds: parseInteger(values.maxToolRounds, "max-tool-rounds", 1, Number.MAX_SAFE_INTEGER - 1),
 		planThreshold: parseInteger(values.planThreshold, "plan-threshold", 0),
 		agentDir: values.agentDir,
 		sessionDir: values.sessionDir,
+		resume: values.resume,
 		json: values.json,
 	};
 }
@@ -703,6 +721,7 @@ export async function runCli(
 			...(parsed.planThreshold === undefined ? {} : { planChangedLineThreshold: parsed.planThreshold }),
 			...(parsed.agentDir === undefined ? {} : { agentDir: parsed.agentDir }),
 			...(parsed.sessionDir === undefined ? {} : { sessionDir: parsed.sessionDir }),
+			...(parsed.resume === undefined ? {} : { resumeSessionFile: parsed.resume }),
 		};
 
 		let reviewer: CliReviewer;

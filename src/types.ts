@@ -29,6 +29,8 @@ export interface ReviewOptions {
 	agentDir?: string;
 	/** When set, persist each per-task Pi session transcript (.jsonl) under this directory. */
 	sessionDir?: string;
+	/** Continue an interrupted planning or main-review transcript. */
+	resumeSessionFile?: string;
 	onEvent?: (event: ReviewEvent) => void;
 	signal?: AbortSignal;
 }

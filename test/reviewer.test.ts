@@ -498,6 +498,48 @@ describe("Reviewer", () => {
 		]);
 	});
 
+	test("resumes a matching main-review transcript and starts later phases fresh", async () => {
+		const executor = new PhaseExecutor({ rejected: ["c-1"] });
+		const result = await new Reviewer({
+			targetFactory: async () => target([changedFile("src/current.ts", 2)]),
+			taskExecutor: executor,
+		}).review(
+			{ repository: "/fake", mode: { kind: "workspace" } },
+			options({ resumeSessionFile: "/tmp/2026-01-01_review-src-current.ts-review.jsonl", concurrency: 1 }),
+		);
+
+		expect(result.status).toBe("complete");
+		expect(executor.tasks).toHaveLength(2);
+		expect(executor.tasks[0]?.resumeSessionFile).toBe("/tmp/2026-01-01_review-src-current.ts-review.jsonl");
+		expect(executor.tasks[1]?.resumeSessionFile).toBeUndefined();
+	});
+
+	test("rejects ambiguous and verification-session resume requests before dispatch", async () => {
+		const executor = new PhaseExecutor({ noFindings: true });
+		const reviewer = new Reviewer({
+			targetFactory: async () => target([changedFile("src/a.ts"), changedFile("src/b.ts")]),
+			taskExecutor: executor,
+		});
+		const ambiguous = await reviewer.review(
+			{ repository: "/fake", mode: { kind: "workspace" } },
+			options({ resumeSessionFile: "/tmp/x_review-src-a.ts-review.jsonl" }),
+		);
+		expect(ambiguous.status).toBe("failed");
+		expect(ambiguous.message).toContain("exactly one selected");
+		expect(executor.tasks).toHaveLength(0);
+
+		const verification = await new Reviewer({
+			targetFactory: async () => target([changedFile("src/a.ts")]),
+			taskExecutor: executor,
+		}).review(
+			{ repository: "/fake", mode: { kind: "workspace" } },
+			options({ resumeSessionFile: "/tmp/x_review-src-a.ts-verification.jsonl" }),
+		);
+		expect(verification.status).toBe("failed");
+		expect(verification.message).toContain("evidence ledger");
+		expect(executor.tasks).toHaveLength(0);
+	});
+
 	test("surfaces the persisted session file on failed files", async () => {
 		const executor = new PhaseExecutor({ missingDone: true, sessionFile: "/tmp/sessions/rev.jsonl" });
 		const events: Array<{ type: string; sessionFile?: string }> = [];

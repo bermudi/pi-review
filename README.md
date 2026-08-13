@@ -75,6 +75,7 @@ Available options are:
 - `--plan-threshold N` — non-negative changed-line threshold for risk planning; default `50`.
 - `--agent-dir PATH` — Pi agent directory override.
 - `--session-dir PATH` — persist each per-task Pi session transcript (`.jsonl`) under PATH for debugging; off by default.
+- `--resume PATH` — continue one interrupted planning or main-review transcript. Narrow selection to exactly one file (usually with `--include`) and keep the same target and review options. Verification transcripts cannot be resumed because their evidence ledger is host-only. Cannot be combined with `--session-dir`.
 - `--json` — output the exact `ReviewResult` object instead of the human-readable rendering.
 - `--help` — print usage.
 
@@ -108,7 +109,7 @@ Set `PI_REVIEW_MODEL` to make `--model` optional in the CLI, for example `export
 
 Model references follow the same rules as `pi --model`: `provider/model[:thinking]`, a bare name, or a partial name, all resolved through `~/.pi/agent/models.json` by the Pi model runtime. Names that do not resolve produce a failed task/review with the resolver's error rather than an interactive prompt.
 
-Pi sessions use an in-memory session/settings manager and a minimal resource loader by default. With `--session-dir PATH` (or `ReviewOptions.sessionDir`), each per-task session transcript is persisted as a `.jsonl` file under that directory — useful for debugging failed or aborted reviews; failed files carry the transcript path in the result. Repository `AGENTS.md` files, skills, extensions, prompts, and settings are not loaded into review sessions. Repository material is evidence, not authority. Review evidence and context are sent to the configured model provider, so use the tool where that disclosure is acceptable.
+Pi sessions use an in-memory session/settings manager and a minimal resource loader by default. With `--session-dir PATH` (or `ReviewOptions.sessionDir`), each per-task session transcript is persisted as a `.jsonl` file under that directory — useful for debugging failed or aborted reviews; failed files carry the transcript path in the result. Pass that path back with `--resume PATH` (or `ReviewOptions.resumeSessionFile`) to append a fresh attempt to the matching plan or main-review conversation. Resume requires exactly one selected file and a transcript outside the reviewed repository; it requires a new atomic terminal submission and does not reuse historical usage or tool results. The persisted task fingerprint must match the current model, thinking level, prompts, tool configuration, and budget. Later phases remain fresh isolated sessions. Repository `AGENTS.md` files, skills, extensions, prompts, and settings are not loaded into review sessions. Repository material is evidence, not authority. Review evidence and context are sent to the configured model provider, so use the tool where that disclosure is acceptable.
 
 ## Library usage
 
@@ -184,7 +185,7 @@ The evidence bounds are intentionally explicit: file reads return at most `500` 
 
 ## Limitations
 
-- **No resume.** Sessions and phase state are in memory; a partially completed run cannot be resumed.
+- **Phase-level resume only.** One persisted planning or main-review session can be continued. This does not merge coverage from a previous multi-file run, restore in-memory tool state, or resume verification evidence; narrow the current run to the same single file and use unchanged review inputs.
 - **No full scan.** The reviewer audits the selected Git workspace/range/commit diff. It has no whole-repository or whole-directory review mode.
 - **No mechanical validation.** It does not run compilers, tests, formatters, linters, or arbitrary repository commands. A model review is not CI.
 - **Bounded output is not a sandbox.** Evidence results are capped, but target reads and Git operations are performed with host permissions. Safe relative-path and symlink checks reduce traversal risk; they do not provide an OS sandbox.

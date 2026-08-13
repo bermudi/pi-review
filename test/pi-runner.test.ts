@@ -52,15 +52,18 @@ class FakeSession implements TaskSession {
 	disposeCalls = 0;
 	promptError: Error | undefined;
 	readonly messages: readonly unknown[] = [];
+	readonly sessionManager: unknown | undefined;
 	readonly sessionFile: string | undefined;
 	private readonly promptImplementation: (session: FakeSession) => Promise<void>;
 
 	constructor(
 		promptImplementation: (session: FakeSession) => Promise<void>,
 		sessionFile?: string,
+		sessionManager?: unknown,
 	) {
 		this.promptImplementation = promptImplementation;
 		this.sessionFile = sessionFile;
+		this.sessionManager = sessionManager;
 	}
 
 	subscribe(listener: (event: unknown) => void): () => void {
@@ -277,6 +280,68 @@ describe("PiTaskRunner", () => {
 
 		expect(outcome.status).toBe("complete");
 		expect(outcome.sessionFile).toBe("/tmp/sessions/rev.jsonl");
+	});
+
+	test("forwards a resume transcript and excludes historical messages", async () => {
+		const old = assistant("toolUse", "old", { input: 100, totalTokens: 100 });
+		const fresh = assistant("stop", "fresh");
+		class ResumedSession extends FakeSession {
+			override readonly messages: readonly unknown[] = [
+				{ role: "user", content: [{ type: "text", text: "continue" }] },
+				old,
+				fresh,
+			];
+		}
+		const expectedConfig = {
+			version: 1,
+			modelProvider: "fake",
+			modelId: "model",
+			thinkingLevel: "high",
+			systemPrompt: "system",
+			userPrompt: "continue",
+			allowedTools: [],
+			customToolDefinitions: [],
+		};
+		const manager = {
+			getEntries: () => [{ type: "custom", customType: "pi-reviewer.task-config.v1", data: expectedConfig }],
+			appendCustomEntry: () => undefined,
+		};
+		const { runner, factoryInputs } = harness(() =>
+			new ResumedSession(async (session) => {
+				session.emit({ type: "agent_end", messages: [fresh] });
+			}, undefined, manager),
+		);
+
+		const outcome = await runner.run({
+			prompt: { system: "system", user: "continue" },
+			resumeSessionFile: "/tmp/sessions/review-src-x-review.jsonl",
+		});
+
+		expect(factoryInputs[0]?.resumeSessionFile).toBe("/tmp/sessions/review-src-x-review.jsonl");
+		expect(outcome.text).toBe("fresh");
+		expect(outcome.usage.inputTokens).toBe(2);
+		expect(outcome.usage.totalTokens).toBe(14);
+	});
+
+	test("rejects resume when the persisted task configuration differs", async () => {
+		const manager = {
+			getEntries: () => [{
+				type: "custom",
+				customType: "pi-reviewer.task-config.v1",
+				data: { version: 1, modelProvider: "other" },
+			}],
+			appendCustomEntry: () => undefined,
+		};
+		const { runner, sessions } = harness(() => new FakeSession(async () => undefined, undefined, manager));
+
+		const outcome = await runner.run({
+			prompt: { system: "system", user: "changed evidence" },
+			resumeSessionFile: "/tmp/review.jsonl",
+		});
+
+		expect(outcome.status).toBe("failed");
+		expect(outcome.error).toContain("different model, prompts, tools, or review options");
+		expect(sessions[0]?.promptInputs).toEqual([]);
 	});
 
 	test("omits the session transcript path when none was persisted", async () => {

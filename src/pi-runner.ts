@@ -1,5 +1,6 @@
+import { realpath, stat } from "node:fs/promises";
 import { homedir } from "node:os";
-import { join } from "node:path";
+import { isAbsolute, join, relative } from "node:path";
 
 import type { BuiltPrompt } from "./prompts.js";
 import { EMPTY_USAGE, type ReviewUsage } from "./types.js";
@@ -49,6 +50,8 @@ export interface TaskSession {
 	abort(): Promise<void>;
 	dispose(): void;
 	readonly messages?: readonly unknown[];
+	/** Pi's session manager, used only for host-only resume metadata. */
+	readonly sessionManager?: unknown;
 	/** Path of the persisted session transcript, when the session manager writes one. */
 	readonly sessionFile?: string;
 }
@@ -64,6 +67,8 @@ export interface TaskSessionFactoryOptions {
 	readonly sessionDir?: string;
 	/** Optional caller-chosen session id, used to name the persisted transcript. */
 	readonly sessionId?: string;
+	/** Existing transcript to continue for this task. */
+	readonly resumeSessionFile?: string;
 	readonly systemPrompt: string;
 	/** Explicit names only. An empty list means no tools. */
 	readonly tools: readonly string[];
@@ -145,6 +150,8 @@ export interface PiTask {
 	readonly maxToolStarts?: number;
 	/** Optional caller-chosen session id, used to name a persisted session transcript. */
 	readonly sessionId?: string;
+	/** Existing transcript to continue. A fresh terminal submission is still required. */
+	readonly resumeSessionFile?: string;
 	readonly signal?: AbortSignal;
 	readonly onEvent?: TaskEventListener;
 	readonly onToolStart?: TaskToolStartListener;
@@ -171,6 +178,7 @@ interface PiCodingAgentModule {
 	readonly SessionManager?: {
 		readonly inMemory: (cwd?: string, options?: { readonly id?: string }) => unknown;
 		readonly create: (cwd: string, sessionDir?: string, options?: { readonly id?: string }) => unknown;
+		readonly open: (path: string, sessionDir?: string, cwdOverride?: string) => unknown;
 	};
 	readonly SettingsManager?: {
 		readonly inMemory: (settings?: unknown) => unknown;
@@ -207,6 +215,7 @@ interface NormalizedTask {
 	readonly allowedTools: readonly string[];
 	readonly maxToolStarts?: number;
 	readonly sessionId?: string;
+	readonly resumeSessionFile?: string;
 	readonly signal?: AbortSignal;
 	readonly onEvent?: TaskEventListener;
 	readonly onToolStart?: TaskToolStartListener;
@@ -455,12 +464,7 @@ function assistantMessage(value: unknown): UnknownRecord | undefined {
 	return record?.role === "assistant" ? record : undefined;
 }
 
-function assistantStopReason(value: UnknownRecord): TaskStopReason | undefined {
-	const reason = stringValue(value.stopReason);
-	return reason && STOP_REASONS.has(reason as TaskStopReason) ? (reason as TaskStopReason) : undefined;
-}
-
-function assistantText(value: UnknownRecord): string {
+function messageText(value: UnknownRecord): string {
 	const content = value.content;
 	if (typeof content === "string") return content;
 	if (!Array.isArray(content)) return "";
@@ -470,6 +474,86 @@ function assistantText(value: UnknownRecord): string {
 			return record?.type === "text" && typeof record.text === "string" ? record.text : "";
 		})
 		.join("");
+}
+
+const TASK_CONFIG_CUSTOM_TYPE = "pi-reviewer.task-config.v1";
+
+interface TaskConfigFingerprint {
+	readonly version: 1;
+	readonly modelProvider: string;
+	readonly modelId: string;
+	readonly thinkingLevel?: TaskThinkingLevel;
+	readonly systemPrompt: string;
+	readonly userPrompt: string;
+	readonly allowedTools: readonly string[];
+	readonly customToolDefinitions: readonly unknown[];
+	readonly maxToolStarts?: number;
+}
+
+function taskConfigFingerprint(
+	task: NormalizedTask,
+	model: ResolvedTaskModel,
+	maxToolStarts: number | undefined,
+): TaskConfigFingerprint {
+	return {
+		version: 1,
+		modelProvider: model.provider,
+		modelId: model.id,
+		thinkingLevel: model.thinkingLevel,
+		systemPrompt: task.systemPrompt,
+		userPrompt: task.userPrompt,
+		allowedTools: [...task.allowedTools],
+		customToolDefinitions: task.customTools.map((tool) => {
+			const record = asRecord(tool);
+			return sanitizeDetails({
+				name: record?.name,
+				label: record?.label,
+				description: record?.description,
+				parameters: record?.parameters,
+			});
+		}),
+		maxToolStarts,
+	};
+}
+
+function canonicalJson(value: unknown): string {
+	return JSON.stringify(value);
+}
+
+function sessionManagerMethod(session: TaskSession, name: string): ((...args: unknown[]) => unknown) | undefined {
+	const manager = asRecord(session.sessionManager);
+	return manager === undefined ? undefined : functionValue(manager[name]);
+}
+
+function validateOrPersistTaskConfig(session: TaskSession, expected: TaskConfigFingerprint, resumed: boolean): void {
+	const manager = session.sessionManager;
+	const getEntries = sessionManagerMethod(session, "getEntries");
+	const appendCustomEntry = sessionManagerMethod(session, "appendCustomEntry");
+	if (!getEntries || !appendCustomEntry || manager === undefined) {
+		throw new Error("Pi session does not expose resume metadata operations.");
+	}
+	const entries = getEntries.call(manager);
+	if (!Array.isArray(entries)) throw new Error("Pi session returned invalid resume metadata.");
+	const matching = entries
+		.map((entry) => asRecord(entry))
+		.filter((entry) => entry?.type === "custom" && entry.customType === TASK_CONFIG_CUSTOM_TYPE);
+	const latest = matching.at(-1);
+	if (resumed) {
+		if (latest === undefined || canonicalJson(latest.data) !== canonicalJson(expected)) {
+			throw new Error("Resume session was created for different model, prompts, tools, or review options.");
+		}
+		return;
+	}
+	appendCustomEntry.call(manager, TASK_CONFIG_CUSTOM_TYPE, expected);
+}
+
+function assistantStopReason(value: UnknownRecord): TaskStopReason | undefined {
+	const reason = stringValue(value.stopReason);
+	return reason && STOP_REASONS.has(reason as TaskStopReason) ? (reason as TaskStopReason) : undefined;
+}
+
+function assistantText(value: UnknownRecord): string {
+	return messageText(value);
 }
 
 function numericField(record: UnknownRecord, name: string): number {
@@ -636,20 +720,56 @@ async function resolveWithoutInstalledResolver(handle: RuntimeHandle, modelSpec:
 
 async function defaultSessionFactory(input: TaskSessionFactoryOptions): Promise<TaskSession> {
 	const pi = await loadPiCodingAgent();
-	if (!pi.createAgentSession || !pi.SessionManager?.inMemory || !pi.SettingsManager?.inMemory) {
+	if (!pi.createAgentSession || !pi.SessionManager?.inMemory || !pi.SessionManager.open || !pi.SettingsManager?.inMemory) {
 		throw new Error("Installed Pi SDK does not expose the AgentSession factory.");
 	}
 	const extensionRuntime = pi.createExtensionRuntime?.();
 	const resourceLoader = createMinimalResourceLoader(input.systemPrompt, extensionRuntime);
-	// Persist the session transcript when a session dir is configured; otherwise
-	// keep sessions in memory so review runs do not litter disk by default.
-	const sessionManager = input.sessionDir === undefined
-		? pi.SessionManager.inMemory(input.cwd)
-		: pi.SessionManager.create(
-				input.cwd,
-				input.sessionDir,
-				input.sessionId === undefined ? undefined : { id: input.sessionId },
-			);
+	let sessionManager: unknown;
+	if (input.resumeSessionFile !== undefined) {
+		const [sessionPath, repositoryPath] = await Promise.all([
+			realpath(input.resumeSessionFile),
+			realpath(input.cwd),
+		]);
+		const info = await stat(sessionPath);
+		if (!info.isFile() || info.size === 0) {
+			throw new Error("Resume session must be a non-empty regular file.");
+		}
+		const fromRepository = relative(repositoryPath, sessionPath);
+		if (fromRepository === "" || (!fromRepository.startsWith("..") && !isAbsolute(fromRepository))) {
+			throw new Error("Resume session must be outside the reviewed repository.");
+		}
+		sessionManager = pi.SessionManager.open(sessionPath);
+		const manager = asRecord(sessionManager);
+		const getCwd = manager === undefined ? undefined : functionValue(manager.getCwd);
+		const getSessionId = manager === undefined ? undefined : functionValue(manager.getSessionId);
+		if (!getCwd || !getSessionId) throw new Error("Pi opened an invalid resume session manager.");
+		const sessionCwd = await Promise.resolve(getCwd.call(sessionManager));
+		const sessionId = await Promise.resolve(getSessionId.call(sessionManager));
+		if (typeof sessionCwd !== "string") throw new Error("Resume session has an invalid repository path.");
+		let canonicalSessionCwd: string;
+		try {
+			canonicalSessionCwd = await realpath(sessionCwd);
+		} catch {
+			throw new Error(`Resume session repository no longer exists (${sessionCwd}).`);
+		}
+		if (canonicalSessionCwd !== repositoryPath) {
+			throw new Error(`Resume session belongs to a different repository (${sessionCwd}).`);
+		}
+		if (input.sessionId !== undefined && sessionId !== input.sessionId) {
+			throw new Error("Resume session id does not match the requested review task.");
+		}
+	} else {
+		// Persist the session transcript when a session dir is configured; otherwise
+		// keep sessions in memory so review runs do not litter disk by default.
+		sessionManager = input.sessionDir === undefined
+			? pi.SessionManager.inMemory(input.cwd)
+			: pi.SessionManager.create(
+					input.cwd,
+					input.sessionDir,
+					input.sessionId === undefined ? undefined : { id: input.sessionId },
+				);
+	}
 	const options: Record<string, unknown> = {
 		cwd: input.cwd,
 		agentDir: input.agentDir,
@@ -708,6 +828,7 @@ function normalizeTask(task: PiTask): NormalizedTask {
 		allowedTools,
 		maxToolStarts: validateLimit(task.maxToolStarts, "maxToolStarts"),
 		sessionId: task.sessionId,
+		resumeSessionFile: task.resumeSessionFile,
 		signal: task.signal,
 		onEvent: task.onEvent,
 		onToolStart: task.onToolStart,
@@ -751,6 +872,7 @@ export class PiTaskRunner {
 		if (signal?.aborted) return abortedOutcome(abortText(signal));
 
 		let session: TaskSession | undefined;
+		let initialMessageCount = 0;
 		let unsubscribe: (() => void) | undefined;
 		let cleanupError: unknown;
 		let runError: string | undefined;
@@ -844,6 +966,7 @@ export class PiTaskRunner {
 				agentDir: normalizeAgentDir(this.options.agentDir),
 				sessionDir: this.options.sessionDir,
 				sessionId: normalized.sessionId,
+				resumeSessionFile: normalized.resumeSessionFile,
 				systemPrompt: normalized.systemPrompt,
 				tools: normalized.allowedTools,
 				allowedTools: normalized.allowedTools,
@@ -856,6 +979,15 @@ export class PiTaskRunner {
 				),
 			});
 			session = sessionFromFactoryResult(created);
+			const initialMessages = Array.isArray(session.messages) ? session.messages : [];
+			initialMessageCount = initialMessages.length;
+			if (normalized.resumeSessionFile !== undefined || session.sessionManager !== undefined) {
+				validateOrPersistTaskConfig(
+					session,
+					taskConfigFingerprint(normalized, resolved, maxToolStarts),
+					normalized.resumeSessionFile !== undefined,
+				);
+			}
 			activeRun = {
 				session,
 				abortRequested: false,
@@ -916,7 +1048,10 @@ export class PiTaskRunner {
 				if (signal) signal.removeEventListener("abort", abortListener);
 				if (activeRun.abortPromise) await activeRun.abortPromise;
 			}
-			const sessionMessages = Array.isArray(session.messages) ? session.messages : [];
+			// A resumed session contains historical messages. Only messages appended by
+			// this prompt may affect usage, tool results, or terminal success.
+			const allSessionMessages = Array.isArray(session.messages) ? session.messages : [];
+			const sessionMessages = allSessionMessages.slice(initialMessageCount);
 			if (finalMessages.length === 0 && sessionMessages.length > 0) finalMessages = sessionMessages;
 			for (const message of sessionMessages) {
 				collectToolResultMessage(message);
