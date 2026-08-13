@@ -31,7 +31,7 @@
     "types": "./dist/index.d.ts",
     "import": "./dist/index.js"
   },
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Precision-first, read-only AI code reviews powered by Pi",
   "license": "GPL-2.0-only",
   "author": "bermudi",
