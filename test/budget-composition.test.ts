@@ -13,15 +13,16 @@ import {
 } from "../src/pi-runner.ts";
 import {
 	buildTask,
-	MAX_PLAN_VETO_TOOL_STARTS,
+	MAX_PLAN_TOOL_STARTS,
 } from "../src/reviewer.ts";
 import {
 	createPlanToolkit,
-	createVetoToolkit,
 } from "../src/phase-tools.ts";
 import {
 	DEFAULT_MAX_TOOL_CALLS,
+	DEFAULT_VERIFICATION_MAX_TOOL_CALLS,
 	createReviewToolkit,
+	createVerificationToolkit,
 	type ReviewToolkit,
 } from "../src/tools.ts";
 import type { ChangedFile, ReviewMode, ReviewTarget } from "../src/types.ts";
@@ -203,7 +204,16 @@ describe("budget composition (dispatcher x runner)", () => {
 	test("buildTask derives the runner cap from the phase and configured budget", () => {
 		const reviewToolkit = makeToolkit().toolkit;
 		const planToolkit = createPlanToolkit();
-		const vetoToolkit = createVetoToolkit(["c-0"]);
+		const verificationToolkit = createVerificationToolkit(
+			fakeTarget({
+				files: { "src/current.ts": "added\n" },
+				changed: [changedFile("src/current.ts")],
+				readPaths: [],
+			}),
+			"src/current.ts",
+			"diff for src/current.ts\n+added\n",
+			["c-0"],
+		);
 
 		const reviewTask = buildTask(
 			"review",
@@ -231,16 +241,16 @@ describe("budget composition (dispatcher x runner)", () => {
 				{ maxToolRounds: undefined, signal: undefined },
 				() => {},
 			).maxToolStarts,
-		).toBe(MAX_PLAN_VETO_TOOL_STARTS);
+		).toBe(MAX_PLAN_TOOL_STARTS);
 		expect(
 			buildTask(
-				"veto",
+				"verification",
 				{ system: "system", user: "work" },
-				vetoToolkit.tools,
+				verificationToolkit.tools,
 				{ maxToolRounds: undefined, signal: undefined },
 				() => {},
 			).maxToolStarts,
-		).toBe(MAX_PLAN_VETO_TOOL_STARTS);
+		).toBe(DEFAULT_VERIFICATION_MAX_TOOL_CALLS + 1);
 	});
 
 	test("30 evidence calls plus submission completes", async () => {

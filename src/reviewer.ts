@@ -1,15 +1,10 @@
 import { createReviewTarget } from "./git.js";
 import { buildChangeMap, renderChangeMapSlice, type ChangeMap } from "./change-map.js";
-import {
-	createPlanToolkit,
-	createVetoToolkit,
-	type PlanToolkit,
-	type VetoToolkit,
-} from "./phase-tools.js";
+import { createPlanToolkit, type PlanToolkit } from "./phase-tools.js";
 import {
 	buildFileReviewPrompt,
 	buildRiskPlanPrompt,
-	buildVetoFilterPrompt,
+	buildVerificationPrompt,
 	type BuiltPrompt,
 } from "./prompts.js";
 import {
@@ -24,9 +19,14 @@ import { resolveFinding } from "./resolver.js";
 import { changedLineCount, selectFiles, SELECTION_REASON, type SelectionDecision } from "./selection.js";
 import {
 	DEFAULT_MAX_TOOL_CALLS,
+	DEFAULT_VERIFICATION_MAX_TOOL_CALLS,
 	MAX_DIFF_OUTPUT_BYTES,
+	REVIEW_RECOVERY_STARTS,
 	createReviewToolkit,
+	createVerificationToolkit,
 	type ReviewToolkit,
+	type VerificationToolkit,
+	type VerificationSubmission,
 } from "./tools.js";
 import {
 	EMPTY_USAGE,
@@ -317,9 +317,8 @@ function toolNames(tools: readonly { readonly name: string }[]): string[] {
 	return tools.map((tool) => tool.name);
 }
 
-/** Plan/veto phases have only their terminal tool (submit_plan/submit_veto),
- *  so every start is a submission attempt. 3 = one bad + one recovered + buffer. */
-export const MAX_PLAN_VETO_TOOL_STARTS = 3;
+/** Planning has only submit_plan. 3 = one bad + one recovered + buffer. */
+export const MAX_PLAN_TOOL_STARTS = 3;
 
 interface TaskBudgetOptions {
 	readonly maxToolRounds: number | undefined;
@@ -327,18 +326,20 @@ interface TaskBudgetOptions {
 }
 
 export function buildTask(
-	phase: "plan" | "review" | "veto",
+	phase: "plan" | "review" | "verification",
 	prompt: { readonly system: string; readonly user: string },
 	tools: readonly { readonly name: string }[],
 	options: TaskBudgetOptions,
 	onEvent: (event: TaskEvent) => void,
 	sessionId?: string,
 ): PiTask {
-	// Review gets budget + 1 start of slack for submit_review; plan/veto get the fixed constant above.
-	const maxToolStarts =
-		phase === "review"
-			? (options.maxToolRounds ?? DEFAULT_MAX_TOOL_CALLS) + 1
-			: MAX_PLAN_VETO_TOOL_STARTS;
+	// Evidence phases get one runner start above their nominal toolkit budget;
+	// planning has only its terminal tool and uses a small fixed recovery cap.
+	const maxToolStarts = phase === "plan"
+		? MAX_PLAN_TOOL_STARTS
+		: phase === "verification"
+			? DEFAULT_VERIFICATION_MAX_TOOL_CALLS + 1
+			: (options.maxToolRounds ?? DEFAULT_MAX_TOOL_CALLS) + 1;
 	return {
 		prompt,
 		customTools: tools,
@@ -351,7 +352,7 @@ export function buildTask(
 }
 
 /** Stable per-task session id used to name persisted transcripts for debugging. */
-function taskSessionId(path: string, phase: "plan" | "review" | "veto"): string {
+function taskSessionId(path: string, phase: "plan" | "review" | "verification"): string {
 	const safe = path.replace(/[^A-Za-z0-9._-]+/gu, "-").replace(/^-+|-+$/gu, "");
 	return `review-${safe === "" ? "file" : safe}-${phase}`;
 }
@@ -566,10 +567,10 @@ class RunPhaseError extends Error {
 	}
 }
 
-function phaseForTerminalTool(terminalTool: string): "plan" | "review" | "veto" {
+function phaseForTerminalTool(terminalTool: string): "plan" | "review" | "verification" {
 	if (terminalTool === "submit_plan") return "plan";
 	if (terminalTool === "submit_review") return "review";
-	if (terminalTool === "submit_veto") return "veto";
+	if (terminalTool === "submit_verification") return "verification";
 	throw new Error(`Unknown terminal tool: ${terminalTool}`);
 }
 
@@ -579,8 +580,8 @@ function phaseFailedMessage(terminalTool: string): string {
 			return "planner task failed";
 		case "submit_review":
 			return "main review task failed";
-		case "submit_veto":
-			return "filter task failed";
+		case "submit_verification":
+			return "verification task failed";
 		default:
 			return `${terminalTool} task failed`;
 	}
@@ -592,8 +593,8 @@ function phaseDidNotCompleteMessage(terminalTool: string): string {
 			return "planner did not submit a plan";
 		case "submit_review":
 			return "main review did not complete";
-		case "submit_veto":
-			return "filter did not submit a result";
+		case "submit_verification":
+			return "verification did not submit a result";
 		default:
 			return `${terminalTool} did not complete successfully`;
 	}
@@ -1123,55 +1124,91 @@ export class Reviewer {
 		if (resolved.length === 0) return { success: true, findings: [], usage };
 
 		const candidateIds = resolved.map((_finding, index) => `c-${index}`);
-		const vetoToolkit: VetoToolkit = createVetoToolkit(candidateIds);
-		const vetoPrompt = buildVetoFilterPrompt({
+		let verificationToolkit: VerificationToolkit;
+		try {
+			verificationToolkit = createVerificationToolkit(
+				entry.target,
+				entry.path,
+				entry.file.rawDiff,
+				candidateIds,
+			);
+		} catch (error) {
+			const reason = `Unable to create verification tools for ${entry.path}: ${errorMessage(error, "verification toolkit initialization failed")}`;
+			warn(reason);
+			return { success: false, findings: [], usage, reason };
+		}
+		const verificationPrompt = buildVerificationPrompt({
 			currentFilePath: entry.path,
 			currentFileDiff: entry.file.rawDiff,
+			maxEvidenceCalls: Math.max(0, DEFAULT_VERIFICATION_MAX_TOOL_CALLS - REVIEW_RECOVERY_STARTS),
 			comments: resolved.map((finding, index) => ({
-				id: candidateIds[index],
+				id: candidateIds[index] ?? `c-${index}`,
 				content: finding.content,
 				existingCode: finding.existingCode,
+				suggestionCode: finding.suggestionCode,
+				startLine: finding.startLine,
+				endLine: finding.endLine,
+				category: finding.category,
+				severity: finding.severity,
 			})),
 		});
-		const veto = await this.runPhase(
-			vetoPrompt,
-			vetoToolkit.tools,
-			"submit_veto",
-			{ failOpen: true },
-			executor,
-			options,
-			taskEvent(entry.path),
-			taskSessionId(entry.path, "veto"),
-			() => vetoToolkit.vetoedIds,
-		);
-		usage = addUsage(usage, veto.usage);
-
-		if (veto.value !== undefined) {
-			const vetoed = new Set(veto.value);
-			return {
-				success: !signalIsAborted(options.signal),
-				findings: resolved.filter((_finding, index) => !vetoed.has(candidateIds[index] ?? "")),
-				usage,
-				reason: signalIsAborted(options.signal)
-					? `Review aborted after veto filtering for ${entry.path}`
-					: undefined,
-			};
+		let verification: RunPhaseResult<VerificationSubmission>;
+		try {
+			verification = await this.runPhase(
+				verificationPrompt,
+				verificationToolkit.tools,
+				"submit_verification",
+				{ failOpen: false },
+				executor,
+				options,
+				taskEvent(entry.path),
+				taskSessionId(entry.path, "verification"),
+				() => {
+					const value = verificationToolkit.value;
+					if (value === undefined) throw new Error("submit_verification completed without a captured value");
+					return value;
+				},
+			);
+		} catch (error) {
+			if (error instanceof RunPhaseError) {
+				usage = addUsage(usage, error.usage);
+				const reason = `Verification task failed for ${entry.path}: ${error.outcome === undefined ? error.message : taskReason(error.outcome, error.message)}`;
+				warn(reason);
+				return { success: false, findings: [], usage, reason, sessionFile: error.outcome?.sessionFile };
+			}
+			throw error;
 		}
+		usage = addUsage(usage, verification.usage);
 
-		warn(`Veto filter returned no usable result for ${entry.path}; keeping all findings (${taskReason(veto.outcome, "filter did not submit a result")}).`);
 		if (signalIsAborted(options.signal)) {
 			return {
 				success: false,
-				findings: resolved,
+				findings: [],
 				usage,
-				reason: `Review aborted during veto filtering for ${entry.path}`,
+				reason: `Review aborted during verification for ${entry.path}`,
+				sessionFile: verification.outcome.sessionFile,
 			};
 		}
-		return { success: true, findings: resolved, usage };
+		if (verification.value === undefined || !verificationToolkit.completed) {
+			const reason = `Verification task failed for ${entry.path}: no usable exhaustive verification result`;
+			warn(reason);
+			return { success: false, findings: [], usage, reason, sessionFile: verification.outcome.sessionFile };
+		}
+
+		const verifiedIds = new Set(
+			verification.value.decisions
+				.filter((decision) => decision.verdict === "verified")
+				.map((decision) => decision.candidateId),
+		);
+		return {
+			success: true,
+			findings: resolved.filter((_finding, index) => verifiedIds.has(candidateIds[index] ?? "")),
+			usage,
+		};
 	}
 
 	private makeTask(
-		phase: "plan" | "review" | "veto",
+		phase: "plan" | "review" | "verification",
 		prompt: { readonly system: string; readonly user: string },
 		tools: readonly { readonly name: string }[],
 		options: NormalizedReviewOptions,

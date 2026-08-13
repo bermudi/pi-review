@@ -269,9 +269,9 @@ const validPlan = {
 class PhaseExecutor implements TaskExecutor {
 	readonly tasks: PiTask[] = [];
 	abortAllCalls = 0;
-	readonly vetoed: readonly string[] | undefined;
+	readonly rejected: readonly string[] | undefined;
 	readonly failPlan: boolean;
-	readonly failVeto: boolean;
+	readonly failVerification: boolean;
 	readonly noFindings: boolean;
 	readonly unanchored: boolean;
 	readonly missingDone: boolean;
@@ -279,18 +279,18 @@ class PhaseExecutor implements TaskExecutor {
 	readonly sessionFile: string | undefined;
 
 	constructor(options: {
-		vetoed?: readonly string[];
+		rejected?: readonly string[];
 		failPlan?: boolean;
-		failVeto?: boolean;
+		failVerification?: boolean;
 		noFindings?: boolean;
 		unanchored?: boolean;
 		missingDone?: boolean;
 		invalidPlan?: boolean;
 		sessionFile?: string;
 	} = {}) {
-		this.vetoed = options.vetoed;
+		this.rejected = options.rejected;
 		this.failPlan = options.failPlan === true;
-		this.failVeto = options.failVeto === true;
+		this.failVerification = options.failVerification === true;
 		this.noFindings = options.noFindings === true;
 		this.unanchored = options.unanchored === true;
 		this.missingDone = options.missingDone === true;
@@ -303,8 +303,8 @@ class PhaseExecutor implements TaskExecutor {
 		const names = task.allowedTools ?? [];
 		const name = names.includes("submit_plan")
 			? "submit_plan"
-			: names.includes("submit_veto")
-				? "submit_veto"
+			: names.includes("submit_verification")
+				? "submit_verification"
 				: names.includes("submit_review")
 					? "submit_review"
 					: names[0];
@@ -347,10 +347,17 @@ class PhaseExecutor implements TaskExecutor {
 			await invoke(task, name, { state: "DONE", comments });
 			return complete(usage(20), "submit_review");
 		}
-		if (name === "submit_veto") {
-			if (this.failVeto) return failed("filter unavailable", usage(30));
-			await invoke(task, name, { candidate_ids: this.vetoed ?? [] });
-			return complete(usage(30), "submit_veto");
+		if (name === "submit_verification") {
+			if (this.failVerification) return failed("verification unavailable", usage(30), this.sessionFile);
+			const prompt = task.prompt as { user: string };
+			const ids = ["c-0", "c-1"].filter((id) => prompt.user.includes(`\"id\": \"${id}\"`));
+			const decisions = ids.map((id, index) => ({
+				candidate_id: id,
+				verdict: this.rejected?.includes(id) === true ? "disproved" : "verified",
+				citations: [{ evidence_id: "e-0", quote: `+const value${index + 1} = ${index + 1};` }],
+			}));
+			await invoke(task, name, { decisions });
+			return complete(usage(30), "submit_verification", this.sessionFile);
 		}
 		return failed(`unexpected phase ${name}`);
 	}
@@ -400,9 +407,9 @@ describe("Reviewer", () => {
 		expect(runnerCwd).toBe("/fake/repository");
 	});
 
-	test("runs plan, main, and veto phases through their supplied structured tools", async () => {
+	test("runs plan, main, and verification phases through their supplied structured tools", async () => {
 		const file = changedFile("src/large.ts", 50);
-		const executor = new PhaseExecutor({ vetoed: ["c-1"] });
+		const executor = new PhaseExecutor({ rejected: ["c-1"] });
 		const events: string[] = [];
 		const result = await new Reviewer({
 			targetFactory: async () => target([file]),
@@ -434,9 +441,9 @@ describe("Reviewer", () => {
 		expect(executor.tasks.map((task) => task.allowedTools)).toEqual([
 			["submit_plan"],
 			["file_read", "code_search", "file_find", "file_read_diff", "submit_review"],
-			["submit_veto"],
+			["file_read", "code_search", "file_find", "file_read_diff", "submit_verification"],
 		]);
-		expect(executor.tasks.map((task) => task.maxToolStarts)).toEqual([3, 9, 3]);
+		expect(executor.tasks.map((task) => task.maxToolStarts)).toEqual([3, 9, 11]);
 		expect((executor.tasks[1]?.prompt as { user: string }).user).toContain("The value must be validated.");
 		expect((executor.tasks[1]?.prompt as { user: string }).user).toContain("Adds a large changed block.");
 		expect((executor.tasks[2]?.prompt as { user: string }).user).toContain('"id": "c-0"');
@@ -469,7 +476,7 @@ describe("Reviewer", () => {
 
 	test("threads sessionDir and per-phase session ids through to tasks", async () => {
 		const file = changedFile("src/large.ts", 50);
-		const executor = new PhaseExecutor({ vetoed: ["c-1"] });
+		const executor = new PhaseExecutor({ rejected: ["c-1"] });
 		let runnerSessionDir: string | undefined;
 		const result = await new Reviewer({
 			targetFactory: async () => target([file]),
@@ -487,7 +494,7 @@ describe("Reviewer", () => {
 		expect(executor.tasks.map((task) => task.sessionId)).toEqual([
 			"review-src-large.ts-plan",
 			"review-src-large.ts-review",
-			"review-src-large.ts-veto",
+			"review-src-large.ts-verification",
 		]);
 	});
 
@@ -659,9 +666,9 @@ describe("Reviewer", () => {
 		expect(result.coverage.failed[0]?.reason).toContain("final successful tool result");
 	});
 
-	test("fails open when veto filtering fails", async () => {
-		const file = changedFile("src/current.ts");
-		const executor = new PhaseExecutor({ failVeto: true });
+	test("drops candidates classified as disproved during verification", async () => {
+		const file = changedFile("src/current.ts", 2);
+		const executor = new PhaseExecutor({ rejected: ["c-0"] });
 		const result = await new Reviewer({
 			targetFactory: async () => target([file]),
 			taskExecutor: executor,
@@ -669,7 +676,20 @@ describe("Reviewer", () => {
 
 		expect(result.status).toBe("complete");
 		expect(result.findings).toHaveLength(1);
-		expect(result.warnings.some((warning) => warning.includes("keeping all findings"))).toBe(true);
+		expect(result.findings[0]?.existingCode).toBe("const value2 = 2;");
+	});
+
+	test("fails the file when evidence verification fails", async () => {
+		const file = changedFile("src/current.ts");
+		const executor = new PhaseExecutor({ failVerification: true });
+		const result = await new Reviewer({
+			targetFactory: async () => target([file]),
+			taskExecutor: executor,
+		}).review({ repository: "/fake", mode: { kind: "workspace" } }, options());
+
+		expect(result.status).toBe("failed");
+		expect(result.findings).toEqual([]);
+		expect(result.coverage.failed[0]?.reason).toContain("Verification task failed");
 	});
 
 	test("reports partial coverage instead of claiming success", async () => {

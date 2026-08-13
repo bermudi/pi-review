@@ -91,21 +91,8 @@ export interface PlanToolkit {
 	readonly plan: RiskPlan | undefined;
 }
 
-/** A veto toolkit owns one terminating submit_veto call. */
-export interface VetoToolkit {
-	readonly tools: readonly ToolDefinition[];
-	readonly value: readonly string[] | undefined;
-	/** Named alias for callers that do not use the generic value property. */
-	readonly vetoedIds: readonly string[] | undefined;
-}
-
 interface PlanState {
 	value: RiskPlan | undefined;
-	terminated: boolean;
-}
-
-interface VetoState {
-	value: readonly string[] | undefined;
 	terminated: boolean;
 }
 
@@ -222,100 +209,6 @@ function makePlanTool(state: PlanState): ToolDefinition {
 	});
 }
 
-function validateCandidateIds(candidateIds: readonly string[]): string[] {
-	if (!Array.isArray(candidateIds)) throw new TypeError("candidateIds must be an array");
-
-	const seen = new Set<string>();
-	for (const [index, candidateId] of candidateIds.entries()) {
-		if (typeof candidateId !== "string" || candidateId.length === 0 || !isNonBlank(candidateId)) {
-			throw new TypeError(`candidateIds[${index}] must be a non-blank string`);
-		}
-		if (seen.has(candidateId)) throw new Error(`candidateIds contains duplicate ID ${JSON.stringify(candidateId)}`);
-		seen.add(candidateId);
-	}
-	return [...candidateIds];
-}
-
-function makeCandidateIdSchema(candidateIds: readonly string[]) {
-	const literals = candidateIds.map((candidateId) => Type.Literal(candidateId));
-	if (literals.length === 0) return Type.Never({ description: "No candidate IDs are available to veto" });
-	if (literals.length === 1) {
-		const [literal] = literals;
-		if (literal !== undefined) return literal;
-	}
-	return Type.Union(literals);
-}
-
-function validateVetoIds(
-	value: unknown,
-	candidateIds: ReadonlySet<string>,
-	parameters: TSchema,
-	signal: AbortSignal | undefined,
-): string[] {
-	throwIfAborted(signal);
-	if (!Array.isArray(value)) throw new TypeError("submit_veto expects an array of candidate IDs");
-
-	const ids: string[] = [];
-	const seen = new Set<string>();
-	for (const [index, candidateId] of value.entries()) {
-		throwIfAborted(signal);
-		if (typeof candidateId !== "string" || candidateId.length === 0 || !isNonBlank(candidateId)) {
-			throw new TypeError(`submit_veto ID at index ${index} must be a non-blank string`);
-		}
-		if (!candidateIds.has(candidateId)) {
-			throw new Error(`submit_veto ID ${JSON.stringify(candidateId)} is unknown`);
-		}
-		if (seen.has(candidateId)) {
-			throw new Error(`submit_veto IDs must be unique; duplicate ${JSON.stringify(candidateId)}`);
-		}
-		seen.add(candidateId);
-		ids.push(candidateId);
-	}
-	if (!Value.Check(parameters, ids)) {
-		throw new Error(`submit_veto parameters are invalid: ${validationDetail(parameters, ids)}`);
-	}
-	return ids;
-}
-
-function makeVetoTool(state: VetoState, candidateIds: readonly string[]): ToolDefinition {
-	const suppliedIds = new Set(candidateIds);
-	const candidateIdsSchema = Type.Array(makeCandidateIdSchema(candidateIds), {
-		maxItems: candidateIds.length,
-		uniqueItems: true,
-		description: "Unique candidate IDs to veto; an empty array keeps every candidate",
-	});
-	const parameters = Type.Object(
-		{ candidate_ids: candidateIdsSchema },
-		{ additionalProperties: false },
-	);
-
-	return defineTool({
-		name: "submit_veto",
-		label: "submit_veto",
-		description: "Submit the candidate IDs disproved directly by the current diff and terminate the veto stage.",
-		promptSnippet: "Submit the candidate IDs to veto and terminate",
-		promptGuidelines: [
-			"Call submit_veto exactly once with { candidate_ids: [...] }.",
-			"Use only candidate IDs supplied for this veto stage, with no duplicates.",
-		],
-		parameters,
-		executionMode: "sequential",
-		async execute(_toolCallId, params, signal) {
-			throwIfAborted(signal);
-			ensurePending(state.terminated, "submit_veto");
-			const ids = validateVetoIds(params.candidate_ids, suppliedIds, candidateIdsSchema, signal);
-			throwIfAborted(signal);
-			state.value = [...ids];
-			state.terminated = true;
-			return {
-				content: [{ type: "text", text: `Veto submitted (${ids.length} candidate${ids.length === 1 ? "" : "s"}).` }],
-				details: [...ids],
-				terminate: true,
-			};
-		},
-	});
-}
-
 export function createPlanToolkit(): PlanToolkit {
 	const state: PlanState = { value: undefined, terminated: false };
 	const tools = [makePlanTool(state)];
@@ -326,21 +219,6 @@ export function createPlanToolkit(): PlanToolkit {
 		},
 		get plan() {
 			return state.value === undefined ? undefined : clonePlan(state.value);
-		},
-	};
-}
-
-export function createVetoToolkit(candidateIds: readonly string[]): VetoToolkit {
-	const suppliedIds = validateCandidateIds(candidateIds);
-	const state: VetoState = { value: undefined, terminated: false };
-	const tools = [makeVetoTool(state, suppliedIds)];
-	return {
-		tools,
-		get value() {
-			return state.value === undefined ? undefined : [...state.value];
-		},
-		get vetoedIds() {
-			return state.value === undefined ? undefined : [...state.value];
 		},
 	};
 }

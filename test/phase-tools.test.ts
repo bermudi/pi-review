@@ -5,20 +5,18 @@ import {
 	MAX_PLAN_TOOL_GUIDANCE,
 	MAX_TOOL_GUIDANCE_PER_ISSUE,
 	createPlanToolkit,
-	createVetoToolkit,
 	type PlanToolkit,
 	type RiskPlan,
-	type VetoToolkit,
 } from "../src/phase-tools.ts";
 
-function tool(toolkit: PlanToolkit | VetoToolkit, name: string) {
+function tool(toolkit: PlanToolkit, name: string) {
 	const definition = toolkit.tools.find((candidate) => candidate.name === name);
 	if (definition === undefined) throw new Error(`Missing tool ${name}`);
 	return definition;
 }
 
 async function execute(
-	toolkit: PlanToolkit | VetoToolkit,
+	toolkit: PlanToolkit,
 	name: string,
 	params: unknown,
 	signal?: AbortSignal,
@@ -101,39 +99,4 @@ describe("phase toolkits", () => {
 		expect(toolkit.value).toBeUndefined();
 	});
 
-	test("submit_veto accepts only unique supplied IDs, including an empty result", async () => {
-		const toolkit = createVetoToolkit(["c-0", "c-1", "c-2"]);
-		expect(toolkit.tools.map((candidate) => candidate.name)).toEqual(["submit_veto"]);
-		expect(toolkit.value).toBeUndefined();
-
-		const result = await execute(toolkit, "submit_veto", { candidate_ids: ["c-2", "c-0"] });
-		expect(result).toMatchObject({ terminate: true, details: ["c-2", "c-0"] });
-		expect(toolkit.value).toEqual(["c-2", "c-0"]);
-		expect(toolkit.vetoedIds).toEqual(["c-2", "c-0"]);
-		await expect(execute(toolkit, "submit_veto", { candidate_ids: [] })).rejects.toThrow(/already terminated/);
-
-		const keepAll = createVetoToolkit(["c-0"]);
-		const empty = await execute(keepAll, "submit_veto", { candidate_ids: [] });
-		expect(empty).toMatchObject({ terminate: true, details: [] });
-		expect(keepAll.value).toEqual([]);
-	});
-
-	test("submit_veto rejects unknown and duplicate IDs, and validates caller IDs", async () => {
-		const toolkit = createVetoToolkit(["c-0", "c-1"]);
-		await expect(execute(toolkit, "submit_veto", { candidate_ids: ["c-9"] })).rejects.toThrow(/unknown/);
-		await expect(execute(toolkit, "submit_veto", { candidate_ids: ["c-0", "c-0"] })).rejects.toThrow(/unique|duplicate/);
-		expect(toolkit.value).toBeUndefined();
-
-		expect(() => createVetoToolkit(["c-0", "c-0"])).toThrow(/duplicate/);
-		expect(() => createVetoToolkit(["c-0", " "])).toThrow(/non-blank/);
-	});
-
-	test("submit_veto honors cancellation before capture", async () => {
-		const toolkit = createVetoToolkit(["c-0"]);
-		const controller = new AbortController();
-		controller.abort();
-
-		await expect(execute(toolkit, "submit_veto", { candidate_ids: ["c-0"] }, controller.signal)).rejects.toThrow(/aborted/i);
-		expect(toolkit.value).toBeUndefined();
-	});
 });

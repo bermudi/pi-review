@@ -10,6 +10,7 @@ import {
 	MAX_SEARCH_FILE_BYTES,
 	MAX_SEARCH_RESULTS,
 	createReviewToolkit,
+	createVerificationToolkit,
 } from "../src/tools.ts";
 
 interface FakeTargetData {
@@ -54,14 +55,16 @@ function fakeTarget(data: FakeTargetData): ReviewTarget {
 	};
 }
 
-function tool(toolkit: ReturnType<typeof createReviewToolkit>, name: string) {
+type TestedToolkit = ReturnType<typeof createReviewToolkit> | ReturnType<typeof createVerificationToolkit>;
+
+function tool(toolkit: TestedToolkit, name: string) {
 	const definition = toolkit.tools.find((candidate) => candidate.name === name);
 	if (definition === undefined) throw new Error(`Missing tool ${name}`);
 	return definition;
 }
 
 async function execute(
-	toolkit: ReturnType<typeof createReviewToolkit>,
+	toolkit: TestedToolkit,
 	name: string,
 	params: unknown,
 	signal?: AbortSignal,
@@ -324,6 +327,125 @@ describe("review tool kit", () => {
 		expect(result.details).toMatchObject({ scanCapped: true });
 		expect(text(result)).toContain("[scan capped:");
 		expect(text(result)).toMatch(/\d+ files \/ \d+ bytes/);
+	});
+
+	test("records evidence and atomically validates exhaustive verification", async () => {
+		const diff = "diff for src/current.ts\n+return value;\n";
+		const data: FakeTargetData = {
+			files: {
+				"src/current.ts": "return value;\n",
+				"src/contract.ts": "export function value(): number { return 1; }\n",
+			},
+			changed: [changedFile("src/current.ts", diff)],
+			readPaths: [],
+		};
+		const toolkit = createVerificationToolkit(fakeTarget(data), "src/current.ts", diff, ["c-0", "c-1"]);
+		expect(toolkit.tools.map((candidate) => candidate.name)).toEqual([
+			"file_read",
+			"code_search",
+			"file_find",
+			"file_read_diff",
+			"submit_verification",
+		]);
+
+		const read = await execute(toolkit, "file_read", { path: "src/contract.ts" });
+		expect(text(read)).toContain("[evidence_id=e-1]");
+		const submission = {
+			decisions: [
+				{
+					candidate_id: "c-0",
+					verdict: "verified",
+					citations: [{ evidence_id: "e-0", quote: "+return value;" }],
+				},
+				{
+					candidate_id: "c-1",
+					verdict: "disproved",
+					citations: [{ evidence_id: "e-1", quote: "export function value(): number" }],
+				},
+			],
+		};
+		const result = await execute(toolkit, "submit_verification", submission);
+		expect(result).toMatchObject({ terminate: true });
+		expect(toolkit.completed).toBe(true);
+		expect(toolkit.value).toEqual({
+			decisions: [
+				{
+					candidateId: "c-0",
+					verdict: "verified",
+					citations: [{ evidenceId: "e-0", quote: "+return value;" }],
+				},
+				{
+					candidateId: "c-1",
+					verdict: "disproved",
+					citations: [{ evidenceId: "e-1", quote: "export function value(): number" }],
+				},
+			],
+		});
+	});
+
+	test("allows a rejected verification submission to be corrected within recovery capacity", async () => {
+		const diff = "diff for src/current.ts\n+return value;\n";
+		const data: FakeTargetData = {
+			files: { "src/current.ts": "return value;\n" },
+			changed: [changedFile("src/current.ts", diff)],
+			readPaths: [],
+		};
+		const toolkit = createVerificationToolkit(fakeTarget(data), "src/current.ts", diff, ["c-0"], {
+			maxToolCalls: 1,
+		});
+
+		await expect(execute(toolkit, "submit_verification", {
+			decisions: [{
+				candidate_id: "c-0",
+				verdict: "verified",
+				citations: [{ evidence_id: "e-0", quote: "invented" }],
+			}],
+		})).rejects.toThrow(/exact substring/);
+		expect(toolkit.completed).toBe(false);
+		expect(toolkit.value).toBeUndefined();
+
+		const corrected = await execute(toolkit, "submit_verification", {
+			decisions: [{
+				candidate_id: "c-0",
+				verdict: "verified",
+				citations: [{ evidence_id: "e-0", quote: "+return value;" }],
+			}],
+		});
+		expect(corrected).toMatchObject({ terminate: true });
+		expect(toolkit.completed).toBe(true);
+		expect(toolkit.toolCallCount).toBe(2);
+	});
+
+	test("rejects unsupported verification claims and malformed citations", async () => {
+		const diff = "diff for src/current.ts\n+return value;\n";
+		const data: FakeTargetData = {
+			files: { "src/current.ts": "return value;\n" },
+			changed: [changedFile("src/current.ts", diff)],
+			readPaths: [],
+		};
+		const makeToolkit = () => createVerificationToolkit(fakeTarget(data), "src/current.ts", diff, ["c-0", "c-1"]);
+
+		await expect(execute(makeToolkit(), "submit_verification", {
+			decisions: [{ candidate_id: "c-0", verdict: "verified", citations: [] }],
+		})).rejects.toThrow(/requires evidence|every candidate/);
+		await expect(execute(makeToolkit(), "submit_verification", {
+			decisions: [
+				{ candidate_id: "c-0", verdict: "verified", citations: [{ evidence_id: "e-9", quote: "return" }] },
+				{ candidate_id: "c-1", verdict: "unverified", citations: [] },
+			],
+		})).rejects.toThrow(/unknown evidence ID/);
+		await expect(execute(makeToolkit(), "submit_verification", {
+			decisions: [
+				{ candidate_id: "c-0", verdict: "verified", citations: [{ evidence_id: "e-0", quote: "invented" }] },
+				{ candidate_id: "c-1", verdict: "unverified", citations: [] },
+			],
+		})).rejects.toThrow(/exact substring/);
+		await expect(execute(makeToolkit(), "submit_verification", {
+			decisions: [
+				{ candidate_id: "c-0", verdict: "unverified", citations: [] },
+			],
+		})).rejects.toThrow(/missing c-1/);
+		expect(() => createVerificationToolkit(fakeTarget(data), "src/current.ts", diff, ["c-0", "c-0"])).toThrow(/duplicate/);
 	});
 
 	test("rejects a code_search pattern containing a null byte", async () => {

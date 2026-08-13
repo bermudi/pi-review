@@ -23,7 +23,7 @@ The system is a deterministic host pipeline around isolated, per-file Pi tasks:
 2. select reviewable changed files;
 3. optionally plan risks, then review one file per task;
 4. deterministically place findings on changed code;
-5. conservatively veto comments disproved by the diff;
+5. independently verify each finding against cited, host-validated evidence;
 6. return findings together with honest coverage and warnings.
 
 Keep the public seam domain-level: callers should deal in review inputs, results, findings, events, and abort—not Pi sessions or provider messages. Keep deterministic policy independent of Pi so it remains cheap to test.
@@ -36,7 +36,7 @@ See `docs/architecture.md` for protocol rationale, safety tradeoffs, and failure
 - Findings belong to the current file and must anchor to a target-side range intersecting an added line. Never emit guessed locations or line zero.
 - Main review output is one atomic, schema-validated terminal submission. Invalid or incomplete submissions fail that file.
 - Planning is advisory: planner failure warns and continues to the main review.
-- Veto is asymmetric: remove a finding only when the current diff directly disproves it. Filter uncertainty or failure keeps findings and emits a warning.
+- Verification is mandatory for resolved findings: emit only positively verified candidates whose exact evidence citations pass host validation. Verification uncertainty drops the candidate; verification failure fails the file.
 - `complete` means every selected file completed. Preserve selected/completed/failed/skipped coverage in every result.
 - Range and commit evidence is pinned to Git objects. Workspace evidence is live and may change during a long review; do not imply snapshot guarantees it does not have.
 

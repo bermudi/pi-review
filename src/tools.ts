@@ -1,6 +1,7 @@
 import { defineTool, type ToolDefinition } from "@earendil-works/pi-coding-agent";
 import { minimatch } from "minimatch";
 import { type Static, Type } from "typebox";
+import { Value } from "typebox/value";
 
 import { assertSafeDiffPath } from "./diff.js";
 import type {
@@ -30,11 +31,15 @@ export const MAX_READ_OUTPUT_BYTES = 100_000;
 export const MAX_DIFF_OUTPUT_BYTES = 100_000;
 /** The nominal per-file tool budget, including the final submit_review call. */
 export const DEFAULT_MAX_TOOL_CALLS = 32;
+/** Verification permits eight targeted evidence calls plus recovery and terminal submission. */
+export const DEFAULT_VERIFICATION_MAX_TOOL_CALLS = 10;
 /** Two starts remain available for rejected/recovery attempts before submission. */
 export const REVIEW_RECOVERY_STARTS = 2;
 
 const MAX_COMMENT_CONTENT_LENGTH = 10_000;
 const MAX_COMMENT_CODE_LENGTH = 5_000;
+const MAX_VERIFICATION_QUOTE_LENGTH = 5_000;
+const MAX_VERIFICATION_CITATIONS = 4;
 
 const FINDING_SEVERITIES = ["critical", "high", "medium", "low"] as const;
 const FINDING_CATEGORIES = [
@@ -138,6 +143,54 @@ const submitReviewParameters = Type.Object(
 
 type SubmitReviewParameters = Static<typeof submitReviewParameters>;
 
+const verificationCitationParameters = Type.Object(
+	{
+		evidence_id: Type.String({ minLength: 1, maxLength: 64 }),
+		quote: Type.String({ minLength: 1, maxLength: MAX_VERIFICATION_QUOTE_LENGTH }),
+	},
+	{ additionalProperties: false },
+);
+
+const verificationDecisionParameters = Type.Object(
+	{
+		candidate_id: Type.String({ minLength: 1, maxLength: 64 }),
+		verdict: stringEnum(["verified", "disproved", "unverified"] as const),
+		citations: Type.Array(verificationCitationParameters, {
+			maxItems: MAX_VERIFICATION_CITATIONS,
+		}),
+	},
+	{ additionalProperties: false },
+);
+
+const submitVerificationParameters = Type.Object(
+	{
+		decisions: Type.Array(verificationDecisionParameters, {
+			minItems: 1,
+			maxItems: MAX_CANDIDATES_PER_REVIEW,
+		}),
+	},
+	{ additionalProperties: false },
+);
+
+type SubmitVerificationParameters = Static<typeof submitVerificationParameters>;
+
+export type VerificationVerdict = "verified" | "disproved" | "unverified";
+
+export interface EvidenceCitation {
+	readonly evidenceId: string;
+	readonly quote: string;
+}
+
+export interface VerificationDecision {
+	readonly candidateId: string;
+	readonly verdict: VerificationVerdict;
+	readonly citations: readonly EvidenceCitation[];
+}
+
+export interface VerificationSubmission {
+	readonly decisions: readonly VerificationDecision[];
+}
+
 export type CompletionState = "pending" | "DONE" | "FAILED";
 
 export interface ReviewToolkitOptions {
@@ -149,6 +202,19 @@ export interface ReviewToolkit {
 	readonly tools: ToolDefinition[];
 	readonly candidates: readonly CandidateFinding[];
 	readonly completion: CompletionState;
+	readonly completed: boolean;
+	readonly toolCallCount: number;
+	readonly maxToolCalls: number;
+}
+
+export interface VerificationToolkitOptions {
+	/** Nominal verification budget, including submit_verification. */
+	readonly maxToolCalls?: number;
+}
+
+export interface VerificationToolkit {
+	readonly tools: ToolDefinition[];
+	readonly value: VerificationSubmission | undefined;
 	readonly completed: boolean;
 	readonly toolCallCount: number;
 	readonly maxToolCalls: number;
@@ -190,12 +256,27 @@ export interface SubmitReviewDetails {
 	readonly recorded: number;
 }
 
+interface EvidenceRecord {
+	readonly id: string;
+	readonly source: "current_diff" | "file_read" | "code_search" | "file_find" | "file_read_diff";
+	readonly text: string;
+}
+
+type EvidenceRecorder = (source: EvidenceRecord["source"], text: string) => string;
+
 interface MutableToolkitState {
 	calls: number;
 	evidenceCalls: number;
 	completion: CompletionState;
 	candidates: CandidateFinding[];
 	maxToolCalls: number;
+	terminalTool: "submit_review" | "submit_verification";
+}
+
+interface VerificationState extends MutableToolkitState {
+	value: VerificationSubmission | undefined;
+	evidence: Map<string, EvidenceRecord>;
+	nextEvidenceId: number;
 }
 
 interface KnownChangedFile {
@@ -447,8 +528,11 @@ function parseSubmittedReview(value: unknown): {
 	return { state: value.state, comments: value.comments.map(validateCandidate) };
 }
 
-function validateMaxToolCalls(options: ReviewToolkitOptions | undefined): number {
-	const value = options?.maxToolCalls ?? DEFAULT_MAX_TOOL_CALLS;
+function validateMaxToolCalls(
+	options: ReviewToolkitOptions | VerificationToolkitOptions | undefined,
+	defaultValue = DEFAULT_MAX_TOOL_CALLS,
+): number {
+	const value = options?.maxToolCalls ?? defaultValue;
 	if (!Number.isSafeInteger(value) || value < 1) {
 		throw new Error("maxToolCalls must be a positive safe integer");
 	}
@@ -462,7 +546,7 @@ function beginCall(
 ): void {
 	throwIfAborted(signal);
 	if (state.completion !== "pending") {
-		throw new Error(`Review task already terminated with ${state.completion}`);
+		throw new Error(`${state.terminalTool} task already terminated with ${state.completion}`);
 	}
 	// Count every started call, including rejected/recovery attempts. The
 	// runner's per-task hard cap is maxToolCalls + 1; the default is therefore
@@ -471,7 +555,7 @@ function beginCall(
 	if (!terminating) {
 		const evidenceAllowance = Math.max(0, state.maxToolCalls - REVIEW_RECOVERY_STARTS);
 		if (state.evidenceCalls >= evidenceAllowance) {
-			throw new Error("Evidence budget exhausted. Call submit_review now; do not make another evidence call.");
+			throw new Error(`Evidence budget exhausted. Call ${state.terminalTool} now; do not make another evidence call.`);
 		}
 		state.evidenceCalls += 1;
 	}
@@ -517,7 +601,21 @@ function findChangedFile(
 	return { path, file: match.file };
 }
 
-function makeFileReadTool(target: ReviewTarget, state: MutableToolkitState): ToolDefinition {
+function evidenceOutput(
+	record: EvidenceRecorder | undefined,
+	source: EvidenceRecord["source"],
+	text: string,
+): string {
+	if (record === undefined) return text;
+	const id = record(source, text);
+	return `[evidence_id=${id}]\n${text}`;
+}
+
+function makeFileReadTool(
+	target: ReviewTarget,
+	state: MutableToolkitState,
+	record?: EvidenceRecorder,
+): ToolDefinition {
 	return defineTool({
 		name: "file_read",
 		label: "file_read",
@@ -558,7 +656,7 @@ function makeFileReadTool(target: ReviewTarget, state: MutableToolkitState): Too
 				if (outputWasLarge) notices.push(`output capped at ${MAX_READ_OUTPUT_BYTES} bytes`);
 				const text = appendNotices(numbered, notices, MAX_READ_OUTPUT_BYTES);
 				return {
-					content: [{ type: "text", text }],
+					content: [{ type: "text", text: evidenceOutput(record, "file_read", text) }],
 					details: {
 						path,
 						startLine: selected.length > 0 ? start + 1 : offset,
@@ -572,7 +670,11 @@ function makeFileReadTool(target: ReviewTarget, state: MutableToolkitState): Too
 	});
 }
 
-function makeCodeSearchTool(target: ReviewTarget, state: MutableToolkitState): ToolDefinition {
+function makeCodeSearchTool(
+	target: ReviewTarget,
+	state: MutableToolkitState,
+	record?: EvidenceRecorder,
+): ToolDefinition {
 	return defineTool({
 		name: "code_search",
 		label: "code_search",
@@ -673,7 +775,7 @@ function makeCodeSearchTool(target: ReviewTarget, state: MutableToolkitState): T
 				const base = outputLines.length > 0 ? outputLines.join("\n") : "No literal matches found.";
 				const text = appendNotices(base, notices, MAX_SEARCH_OUTPUT_BYTES);
 				return {
-					content: [{ type: "text", text }],
+					content: [{ type: "text", text: evidenceOutput(record, "code_search", text) }],
 					details: {
 						pattern: params.pattern,
 						matchCount: outputLines.length,
@@ -690,7 +792,11 @@ function makeCodeSearchTool(target: ReviewTarget, state: MutableToolkitState): T
 	});
 }
 
-function makeFileFindTool(target: ReviewTarget, state: MutableToolkitState): ToolDefinition {
+function makeFileFindTool(
+	target: ReviewTarget,
+	state: MutableToolkitState,
+	record?: EvidenceRecorder,
+): ToolDefinition {
 	return defineTool({
 		name: "file_find",
 		label: "file_find",
@@ -734,7 +840,7 @@ function makeFileFindTool(target: ReviewTarget, state: MutableToolkitState): Too
 				if (truncatedOutput) notices.push(`output capped at ${MAX_SEARCH_OUTPUT_BYTES} bytes`);
 				const text = appendNotices(rawOutput, notices, MAX_SEARCH_OUTPUT_BYTES);
 				return {
-					content: [{ type: "text", text }],
+					content: [{ type: "text", text: evidenceOutput(record, "file_find", text) }],
 					details: {
 						pattern: params.pattern,
 						resultCount: matches.length,
@@ -750,6 +856,7 @@ function makeFileFindTool(target: ReviewTarget, state: MutableToolkitState): Too
 function makeFileReadDiffTool(
 	state: MutableToolkitState,
 	changedFiles: readonly KnownChangedFile[],
+	record?: EvidenceRecorder,
 ): ToolDefinition {
 	return defineTool({
 		name: "file_read_diff",
@@ -769,10 +876,126 @@ function makeFileReadDiffTool(
 				}
 				const text = appendNotices(file.rawDiff, notices, MAX_DIFF_OUTPUT_BYTES);
 				return {
-					content: [{ type: "text", text }],
+					content: [{ type: "text", text: evidenceOutput(record, "file_read_diff", text) }],
 					details: { path, truncated: notices.length > 0 } satisfies FileReadDiffDetails,
 				};
 			});
+		},
+	});
+}
+
+function validateCandidateIds(candidateIds: readonly string[]): string[] {
+	if (!Array.isArray(candidateIds) || candidateIds.length === 0) {
+		throw new TypeError("candidateIds must be a non-empty array");
+	}
+	if (candidateIds.length > MAX_CANDIDATES_PER_REVIEW) {
+		throw new Error(`candidateIds must contain at most ${MAX_CANDIDATES_PER_REVIEW} IDs`);
+	}
+	const seen = new Set<string>();
+	for (const [index, id] of candidateIds.entries()) {
+		if (typeof id !== "string" || id.trim().length === 0 || id.length > 64) {
+			throw new TypeError(`candidateIds[${index}] must be a non-blank string of at most 64 characters`);
+		}
+		if (seen.has(id)) throw new Error(`candidateIds contains duplicate ID ${JSON.stringify(id)}`);
+		seen.add(id);
+	}
+	return [...candidateIds];
+}
+
+function cloneVerification(value: VerificationSubmission): VerificationSubmission {
+	return {
+		decisions: value.decisions.map((decision) => ({
+			candidateId: decision.candidateId,
+			verdict: decision.verdict,
+			citations: decision.citations.map((citation) => ({ ...citation })),
+		})),
+	};
+}
+
+function validateVerificationSubmission(
+	params: unknown,
+	candidateIds: readonly string[],
+	evidence: ReadonlyMap<string, EvidenceRecord>,
+): VerificationSubmission {
+	if (!Value.Check(submitVerificationParameters, params)) {
+		const first = Value.Errors(submitVerificationParameters, params)[0];
+		const detail = first === undefined
+			? "value does not match the required schema"
+			: `${first.message}${first.instancePath.length > 0 ? ` at ${first.instancePath}` : ""}`;
+		throw new Error(`submit_verification parameters are invalid: ${detail}`);
+	}
+	const submission = params as SubmitVerificationParameters;
+	const expected = new Set(candidateIds);
+	const seen = new Set<string>();
+	const decisions: VerificationDecision[] = [];
+
+	for (const [index, decision] of submission.decisions.entries()) {
+		const candidateId = decision.candidate_id;
+		if (!expected.has(candidateId)) {
+			throw new Error(`submit_verification candidate ID ${JSON.stringify(candidateId)} is unknown`);
+		}
+		if (seen.has(candidateId)) {
+			throw new Error(`submit_verification decisions must be unique; duplicate ${JSON.stringify(candidateId)}`);
+		}
+		seen.add(candidateId);
+
+		if (decision.verdict === "unverified" && decision.citations.length !== 0) {
+			throw new Error(`submit_verification decision ${index} must not cite evidence when unverified`);
+		}
+		if (decision.verdict !== "unverified" && decision.citations.length === 0) {
+			throw new Error(`submit_verification decision ${index} requires evidence for ${decision.verdict}`);
+		}
+
+		const citations: EvidenceCitation[] = decision.citations.map((citation, citationIndex) => {
+			const record = evidence.get(citation.evidence_id);
+			if (record === undefined) {
+				throw new Error(`submit_verification citation ${citationIndex} uses unknown evidence ID ${JSON.stringify(citation.evidence_id)}`);
+			}
+			if (citation.quote.trim().length === 0) {
+				throw new Error(`submit_verification citation ${citationIndex} quote must not be blank`);
+			}
+			if (!record.text.includes(citation.quote)) {
+				throw new Error(`submit_verification citation ${citationIndex} quote is not an exact substring of ${citation.evidence_id}`);
+			}
+			return { evidenceId: citation.evidence_id, quote: citation.quote };
+		});
+		decisions.push({ candidateId, verdict: decision.verdict, citations });
+	}
+
+	const missing = candidateIds.filter((id) => !seen.has(id));
+	if (missing.length > 0) {
+		throw new Error(`submit_verification must decide every candidate; missing ${missing.join(", ")}`);
+	}
+	return { decisions };
+}
+
+function makeSubmitVerificationTool(
+	state: VerificationState,
+	candidateIds: readonly string[],
+): ToolDefinition {
+	return defineTool({
+		name: "submit_verification",
+		label: "submit_verification",
+		description: "Submit one evidence-backed verdict for every supplied review candidate and terminate verification.",
+		promptSnippet: "Submit exhaustive evidence-backed candidate verdicts and terminate",
+		promptGuidelines: [
+			"Decide every supplied candidate exactly once.",
+			"Verified and disproved verdicts require exact quotes from known evidence IDs; unverified verdicts have no citations.",
+		],
+		parameters: submitVerificationParameters,
+		executionMode: "sequential",
+		async execute(_toolCallId, params: SubmitVerificationParameters, signal) {
+			return withCallBudget(state, signal, async () => {
+				throwIfAborted(signal);
+				const value = validateVerificationSubmission(params, candidateIds, state.evidence);
+				state.value = value;
+				state.completion = "DONE";
+				return {
+					content: [{ type: "text", text: `Verification submitted (${value.decisions.length} candidate(s)).` }],
+					details: cloneVerification(value),
+					terminate: true,
+				};
+			}, true);
 		},
 	});
 }
@@ -828,6 +1051,7 @@ export function createReviewToolkit(
 		completion: "pending",
 		candidates: [],
 		maxToolCalls,
+		terminalTool: "submit_review",
 	};
 	const tools: ToolDefinition[] = [
 		makeFileReadTool(target, state),
@@ -847,6 +1071,66 @@ export function createReviewToolkit(
 		},
 		get completed() {
 			return state.completion !== "pending";
+		},
+		get toolCallCount() {
+			return state.calls;
+		},
+		maxToolCalls,
+	};
+}
+
+export function createVerificationToolkit(
+	target: ReviewTarget,
+	currentPath: string,
+	currentDiff: string,
+	candidateIds: readonly string[],
+	options?: VerificationToolkitOptions,
+): VerificationToolkit {
+	const suppliedIds = validateCandidateIds(candidateIds);
+	const maxToolCalls = validateMaxToolCalls(options, DEFAULT_VERIFICATION_MAX_TOOL_CALLS);
+	const changedFiles = knownChangedFiles(target);
+	const safeCurrentPath = normalizeRequestedPath(currentPath, "current file path");
+	if (!changedFiles.some((candidate) => candidate.paths.has(safeCurrentPath))) {
+		throw new Error(`Current file is not a known changed file: ${safeCurrentPath}`);
+	}
+	if (typeof currentDiff !== "string" || currentDiff.length === 0) {
+		throw new Error("currentDiff must be a non-empty string");
+	}
+
+	const evidence = new Map<string, EvidenceRecord>();
+	evidence.set("e-0", { id: "e-0", source: "current_diff", text: currentDiff });
+	const state: VerificationState = {
+		calls: 0,
+		evidenceCalls: 0,
+		completion: "pending",
+		candidates: [],
+		maxToolCalls,
+		terminalTool: "submit_verification",
+		value: undefined,
+		evidence,
+		nextEvidenceId: 1,
+	};
+	const record: EvidenceRecorder = (source, text) => {
+		const id = `e-${state.nextEvidenceId}`;
+		state.nextEvidenceId += 1;
+		state.evidence.set(id, { id, source, text });
+		return id;
+	};
+	const tools: ToolDefinition[] = [
+		makeFileReadTool(target, state, record),
+		makeCodeSearchTool(target, state, record),
+		makeFileFindTool(target, state, record),
+		makeFileReadDiffTool(state, changedFiles, record),
+		makeSubmitVerificationTool(state, suppliedIds),
+	];
+
+	return {
+		tools,
+		get value() {
+			return state.value === undefined ? undefined : cloneVerification(state.value);
+		},
+		get completed() {
+			return state.completion === "DONE";
 		},
 		get toolCallCount() {
 			return state.calls;
