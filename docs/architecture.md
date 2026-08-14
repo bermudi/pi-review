@@ -1,5 +1,12 @@
 # Architecture
 
+> **Legacy current state.** This document describes the implementation that
+> exists today, not the target architecture. The clarified project goal is a
+> behavioral port of Open Code Review v1.9.3 on the Pi SDK. The pinned
+> reference, parity contract, migration sequence, and cutover criteria are in
+> `docs/ocr-v1.9.3-port-plan.md`. Do not treat the precision-first deviations
+> below as requirements for the new compatibility engine.
+
 `pi-reviewer` is a deterministic Git-target pipeline wrapped around isolated Pi tasks. The public library seam is:
 
 ```ts

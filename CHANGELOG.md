@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Relicense the project from GPL-2.0-only to GPL-3.0-or-later, add Apache-2.0
+  attribution for the Open Code Review v1.9.3 source port, and pin that release
+  as the behavioral compatibility target.
 - Replace the diff-only, fail-open veto with mandatory evidence-backed finding verification. Only positively verified candidates with exact host-validated citations are emitted; verification failure now marks the file incomplete.
 
 ## [0.2.0](https://github.com/bermudi/pi-reviewer/compare/v0.1.0...v0.2.0) (2026-08-13)

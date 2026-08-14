@@ -1,6 +1,16 @@
 # pi-reviewer
 
-`pi-reviewer` is a precision-first, read-only AI reviewer for Git changes. It is a TypeScript library with a `pi-review` CLI. The public library boundary is small; Pi sessions, prompts, and model-visible tools remain behind `Reviewer`.
+`pi-reviewer` is a TypeScript library and `pi-review` CLI for running Open Code
+Review's core behavior through the Pi SDK.
+
+> **Migration status:** the current v0.2 implementation is a precision-first
+> fork and does not yet match the newly clarified port target. Open Code Review
+> v1.9.3 is now the pinned behavioral reference. The compatibility plan and
+> cutover criteria are in `docs/ocr-v1.9.3-port-plan.md`. The implementation
+> details below describe the current legacy engine until that cutover.
+
+The public library boundary is small; Pi sessions, prompts, and model-visible
+tools remain behind `Reviewer`.
 
 A quiet review is preferable to a clever-looking false positive. An incomplete review is reported as incomplete rather than presented as success.
 
@@ -205,3 +215,12 @@ The deliberate public boundary is `src/index.ts`:
 - review, diff, finding, target, and selection types.
 
 `src/pi-runner.ts`, `src/prompts.ts`, `src/tools.ts`, and `src/phase-tools.ts` stay internal so consumers depend on the review domain rather than Pi SDK details.
+
+## License and upstream attribution
+
+`pi-reviewer` is licensed under
+[GPL-3.0-or-later](LICENSE). It ports Open Code Review v1.9.3, whose source and
+prompt material is licensed under Apache-2.0. Upstream identity, provenance,
+and attribution are recorded in
+[THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md); the Apache license text is in
+[LICENSES/Apache-2.0.txt](LICENSES/Apache-2.0.txt).

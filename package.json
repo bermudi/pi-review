@@ -32,8 +32,8 @@
     "import": "./dist/index.js"
   },
   "version": "0.2.0",
-  "description": "Precision-first, read-only AI code reviews powered by Pi",
-  "license": "GPL-2.0-only",
+  "description": "Open Code Review v1.9.3 port powered by the Pi SDK",
+  "license": "GPL-3.0-or-later",
   "author": "bermudi",
   "homepage": "https://github.com/bermudi/pi-reviewer#readme",
   "repository": {
@@ -54,6 +54,8 @@
   "files": [
     "dist",
     "README.md",
-    "LICENSE"
+    "LICENSE",
+    "THIRD_PARTY_NOTICES.md",
+    "LICENSES/Apache-2.0.txt"
   ]
 }
