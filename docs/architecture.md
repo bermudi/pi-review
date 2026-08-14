@@ -90,7 +90,7 @@ The same shape applies to planning and verification: one validated structured va
 - `src/prompts.ts` — fixed precision-first system prompts and delimited user data.
 - `src/tools.ts` — bounded target-snapshot evidence tools and atomic finding collector.
 - `src/phase-tools.ts` — schema-checked planning termination tool.
-- `src/pi-runner.ts` — Pi `0.82.1` runtime/model/auth/session adapter.
+- `src/pi-runner.ts` — Pi `0.84.2` runtime/model/auth/session adapter.
 - `src/reviewer.ts` — per-file workflow, planning threshold, concurrency, verification, warnings, and coverage.
 - `src/cli.ts` — argv validation, file-option loading, signal handling, progress, output rendering, and exit status; no review policy or Pi objects leak through it.
 - `src/index.ts` — deliberate public facade; it exports the review domain and deterministic seams, not Pi internals or model-visible tool definitions.
@@ -112,7 +112,7 @@ CLI usage, option-file, initialization, and pre-result failures also return `1`;
 
 ## Pi dependency and configuration
 
-The implementation reference was the neighboring `../pi-mono` checkout. Runtime does not import that path. `package.json` pins the released dependency `@earendil-works/pi-coding-agent` to exact version `0.82.1`.
+The implementation reference was the neighboring `../pi-mono` checkout. Runtime does not import that path. `package.json` pins the released dependency `@earendil-works/pi-coding-agent` to exact version `0.84.2`.
 
 By default, the runner uses `~/.pi/agent` and its `auth.json`/`models.json`. `PI_CODING_AGENT_DIR`, `--agent-dir`, and `ReviewOptions.agentDir` can select another agent directory, with an explicit option taking precedence over the environment. There is no interactive login flow; authentication failure becomes a task/review failure.
 

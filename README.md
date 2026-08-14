@@ -106,7 +106,7 @@ The result status maps to these exact review exit codes:
 
 ## Pi authentication and configuration
 
-The runtime dependency is the released Pi SDK package **`@earendil-works/pi-coding-agent` `0.82.1`**, pinned exactly in `package.json` and the lockfile. The implementation reference was the local `../pi-mono` checkout; it is not a runtime path dependency.
+The runtime dependency is the released Pi SDK package **`@earendil-works/pi-coding-agent` `0.84.2`**, pinned exactly in `package.json` and the lockfile. The implementation reference was the local `../pi-mono` checkout; it is not a runtime path dependency.
 
 There is no login flow in `pi-reviewer`. By default, Pi uses the agent directory `~/.pi/agent`, including:
 
@@ -206,7 +206,7 @@ The evidence bounds are intentionally explicit: file reads return at most `500` 
 
 ## SDK reference and public boundary
 
-`../pi-mono` was the implementation reference for the Pi session/runtime seams. The runtime dependency is the pinned released package `@earendil-works/pi-coding-agent` `0.82.1`, not the neighboring checkout.
+`../pi-mono` was the implementation reference for the Pi session/runtime seams. The runtime dependency is the pinned released package `@earendil-works/pi-coding-agent` `0.84.2`, not the neighboring checkout.
 
 The deliberate public boundary is `src/index.ts`:
 

@@ -21,7 +21,7 @@ must not import legacy review policy. Reuse low-level utilities only after
 OCR-derived tests prove equivalent behavior.
 
 Before creating that engine or a broad comparison harness, complete the public
-Pi SDK feasibility gate in Phase 1 of the port plan. If Pi `0.82.1` cannot
+Pi SDK feasibility gate in Phase 1 of the port plan. If Pi `0.84.2` (was `0.82.1`) cannot
 provide OCR round accounting, dynamic terminal-only tools, one restricted grace
 request, and OCR-controlled compression without private imports, stop and
 report the blocker.
