@@ -1,0 +1,29 @@
+{
+  "provenance": "Verbatim template imports for OCR v1.9.3 parity engine",
+  "upstream": "alibaba/open-code-review",
+  "tag": "v1.9.3",
+  "tag_object": "4d796ae54cabdcf4e22b69ef502ed8871456a909",
+  "commit": "c35ddd7223f2b5540ce03aa43c9a25ef643fca27",
+  "license": "Apache-2.0",
+  "license_file": "LICENSES/Apache-2.0.txt",
+  "notices": "THIRD_PARTY_NOTICES.md",
+  "loader": "src/ocr-v193/template/template.ts (Ported from internal/config/template/template.go)",
+  "note": "task-template.json and scan-template.json are byte-identical to upstream. For prompt files see prompts/PROVENANCE.json. Hashes are frozen in template.ts and verified on every LoadDefault call.",
+  "files": [
+    {
+      "dest": "src/ocr-v193/template/task-template.json",
+      "upstream": "internal/config/template/task_template.json",
+      "sha256": "1f54f497084962fb6584314fb33790a029fcaa363cffe47ba3631fd13b2a5b9f"
+    },
+    {
+      "dest": "src/ocr-v193/template/scan-template.json",
+      "upstream": "internal/config/template/scan_template.json",
+      "sha256": "19801e31f020751a30d4fc0d8dcf7657081312a79f612ce9bc67dcd874682a5d"
+    },
+    {
+      "dest": "src/ocr-v193/template/prompts/*.md (10 files)",
+      "upstream": "internal/config/template/prompts/*.md",
+      "sha256_manifest": "see prompts/PROVENANCE.json and template.ts EXPECTED_PROMPT_HASHES"
+    }
+  ]
+}

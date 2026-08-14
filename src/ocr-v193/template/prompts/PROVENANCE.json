@@ -1,0 +1,64 @@
+{
+  "provenance": "Verbatim copies of OCR v1.9.3 prompts — do not edit without updating hash table",
+  "upstream": "alibaba/open-code-review",
+  "tag": "v1.9.3",
+  "tag_object": "4d796ae54cabdcf4e22b69ef502ed8871456a909",
+  "commit": "c35ddd7223f2b5540ce03aa43c9a25ef643fca27",
+  "source_dir": "internal/config/template/prompts",
+  "license": "Apache-2.0",
+  "license_file": "LICENSES/Apache-2.0.txt",
+  "notices": "THIRD_PARTY_NOTICES.md",
+  "note": "Prompt bytes are byte-identical to upstream. Provenance is kept in this adjacent metadata file and in src/ocr-v193/template/template.ts EXPECTED_PROMPT_HASHES so model input is unchanged. Modifications are distributed under GPL-3.0-or-later.",
+  "files": [
+    {
+      "file": "main_task_system.md",
+      "upstream": "internal/config/template/prompts/main_task_system.md",
+      "sha256": "0c347f143a928bfc87962b3a6c19743e59e6873c0441ec0b6776c35b035f924d"
+    },
+    {
+      "file": "main_task_user.md",
+      "upstream": "internal/config/template/prompts/main_task_user.md",
+      "sha256": "7f18be6a39269b694b7f692fb8bb657f731a3284c8f8a895ff00a424eec6d2a3"
+    },
+    {
+      "file": "memory_compression_task_system.md",
+      "upstream": "internal/config/template/prompts/memory_compression_task_system.md",
+      "sha256": "8af8c89594af3221e49154bb9ca7ee82be3550eec9bb033354e9d084f2c90b5e"
+    },
+    {
+      "file": "memory_compression_task_user.md",
+      "upstream": "internal/config/template/prompts/memory_compression_task_user.md",
+      "sha256": "d17923ad1281238a759f39dfcf2951d75b3893a494646b1164f7b903f840f56f"
+    },
+    {
+      "file": "plan_task_system.md",
+      "upstream": "internal/config/template/prompts/plan_task_system.md",
+      "sha256": "94cc42ed55dac16fbfa166e91b747c34b7a1dde441614b8ddf1f6b171317219a"
+    },
+    {
+      "file": "plan_task_user.md",
+      "upstream": "internal/config/template/prompts/plan_task_user.md",
+      "sha256": "3421c18fffbf1734e19c5cc8b1a31eaa5ea26f96e212472c9dd88a402689c8e5"
+    },
+    {
+      "file": "re_location_task_system.md",
+      "upstream": "internal/config/template/prompts/re_location_task_system.md",
+      "sha256": "4a7956f379ff49cac4251582931e35836516162edacac0ce74e81d9e48fa783f"
+    },
+    {
+      "file": "re_location_task_user.md",
+      "upstream": "internal/config/template/prompts/re_location_task_user.md",
+      "sha256": "a931857542a500c733dedd1090528e986c9bf1d4924d762645f79512411d2685"
+    },
+    {
+      "file": "review_filter_task_system.md",
+      "upstream": "internal/config/template/prompts/review_filter_task_system.md",
+      "sha256": "5082e90fd7a6a78fae4d12c5e7ab26da95d937f7771670d78821576eb5facded"
+    },
+    {
+      "file": "review_filter_task_user.md",
+      "upstream": "internal/config/template/prompts/review_filter_task_user.md",
+      "sha256": "2421fe5859e7a5f0b81b1c1497b0ed0108e401e4d879fb3b37548489908b33d5"
+    }
+  ]
+}

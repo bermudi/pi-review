@@ -21,7 +21,8 @@
     "test": "bun test",
     "build": "bun run clean && bun build ./src/cli.ts ./src/index.ts --outdir ./dist --target bun --packages external && tsc -p tsconfig.build.json",
     "start": "bun run src/cli.ts",
-    "clean": "bun -e 'import { rm } from \"node:fs/promises\"; await rm(\"dist\", { recursive: true, force: true })'"
+    "clean": "bun -e 'import { rm } from \"node:fs/promises\"; await rm(\"dist\", { recursive: true, force: true })'",
+    "harness": "bun run test/ocr-v193/harness/index.ts"
   },
   "main": "dist/index.js",
   "engines": {
