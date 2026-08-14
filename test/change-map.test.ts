@@ -147,11 +147,11 @@ describe("buildChangeMap", () => {
 				isNew: true,
 				hunks: [hunk([line("addition", "# Title", { newLine: 1 })])],
 			}),
-			decision("src/handler_test.go", "defaultPath", {
+			decision("src/handler.pb.go", "defaultPath", {
 				isRenamed: true,
-				oldPath: "src/old_test.go",
-				newPath: "src/handler_test.go",
-				hunks: [hunk([line("addition", "func TestHandler() {}", { newLine: 2 })])],
+				oldPath: "src/old.pb.go",
+				newPath: "src/handler.pb.go",
+				hunks: [hunk([line("addition", "func Handler() {}", { newLine: 2 })])],
 			}),
 			decision("src/huge.ts", "changedLinesLimit", {
 				isNew: true,
@@ -161,7 +161,7 @@ describe("buildChangeMap", () => {
 
 		expect(map.facts).toEqual([
 			{ kind: "new_file", path: "README.md" },
-			{ kind: "rename", from: "src/old_test.go", to: "src/handler_test.go" },
+			{ kind: "rename", from: "src/old.pb.go", to: "src/handler.pb.go" },
 			{ kind: "new_file", path: "src/huge.ts" },
 		]);
 		expect(declarationNames(map)).toEqual([]);

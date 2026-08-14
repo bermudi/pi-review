@@ -86,25 +86,9 @@ export const DEFAULT_EXTENSIONS = [
 	".proto",
 ] as const;
 
-/** Generated/test paths omitted unless an explicit include admits them. */
+/** Generated/fixture/snapshot/testdata paths omitted unless an explicit include admits them. Test sources are selected by default. */
 export const DEFAULT_PATH_EXCLUDES = [
-	"**/*_test.go",
-	"**/src/test/java/**/*.java",
-	"**/src/test/**/*.kt",
-	"**/*.test.{js,jsx,ts,tsx}",
-	"**/*.spec.{js,jsx,ts,tsx}",
-	"**/__tests__/**",
-	"**/test/**/*_test.py",
-	"**/tests/**/*_test.py",
-	"**/*_test.py",
-	"**/*_spec.rb",
-	"**/spec/**/*_spec.rb",
-	"**/*Test.java",
-	"**/*Tests.java",
-	"**/*_test.rs",
 	"**/oh_modules/**",
-	"**/*.test.ets",
-	"**/test/**/*.jl",
 	"**/__snapshots__/**",
 	"**/*.snap",
 	"**/testdata/**",

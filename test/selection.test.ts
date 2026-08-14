@@ -46,11 +46,11 @@ describe("selectFiles", () => {
 
 	test("an include bypasses only default extension and path exclusions", () => {
 		const unsupported = changedFile("src/notes.md");
-		const defaultPath = changedFile("src/handler_test.go");
+		const defaultPath = changedFile("src/handler.pb.go");
 		const regular = changedFile("lib/main.ts");
 
 		const result = selectFiles([unsupported, defaultPath, regular], {
-			include: ["src/**/*.md", "src/**/*_test.go"],
+			include: ["src/**/*.md", "src/**/*.pb.go"],
 		});
 
 		expect(result.selected).toEqual([unsupported, defaultPath, regular]);
@@ -75,7 +75,7 @@ describe("selectFiles", () => {
 		const files = [
 			changedFile("README.md"),
 			changedFile("script-without-extension"),
-			changedFile("foo_test.go"),
+			changedFile("foo.pb.go"),
 			changedFile(".env"),
 			changedFile("Makefile"),
 			changedFile("main.go"),
@@ -92,6 +92,68 @@ describe("selectFiles", () => {
 			SELECTION_REASON.selected,
 		]);
 		expect(second).toEqual(first);
+	});
+
+	test("selects test sources by default and still skips generated/fixture/snapshot/testdata paths", () => {
+		const files = [
+			changedFile("src/foo.test.ts"),
+			changedFile("src/foo_test.go"),
+			changedFile("src/foo_test.py"),
+			changedFile("src/FooTest.java"),
+			changedFile("src/__tests__/foo.ts"),
+			changedFile("src/foo.pb.go"),
+			changedFile("src/__snapshots__/foo.ts"),
+			changedFile("testdata/x.go"),
+			changedFile("fixtures/input.go"),
+		];
+
+		const result = selectFiles(files);
+
+		expect(result.selected.map((entry) => entry.newPath)).toEqual([
+			"src/foo.test.ts",
+			"src/foo_test.go",
+			"src/foo_test.py",
+			"src/FooTest.java",
+			"src/__tests__/foo.ts",
+		]);
+		expect(result.skipped.map((entry) => entry.path)).toEqual([
+			"src/foo.pb.go",
+			"src/__snapshots__/foo.ts",
+			"testdata/x.go",
+			"fixtures/input.go",
+		]);
+		expect(result.decisions.map((entry) => entry.reason)).toEqual([
+			SELECTION_REASON.selected,
+			SELECTION_REASON.selected,
+			SELECTION_REASON.selected,
+			SELECTION_REASON.selected,
+			SELECTION_REASON.selected,
+			SELECTION_REASON.defaultPath,
+			SELECTION_REASON.defaultPath,
+			SELECTION_REASON.defaultPath,
+			SELECTION_REASON.defaultPath,
+		]);
+	});
+
+	test("selects hand-written test sources across conventions, not just the listed ones", () => {
+		// Pins the policy as a property, not an enumeration: re-adding any test
+		// pattern to DEFAULT_PATH_EXCLUDES fails here even for conventions the
+		// concrete test above does not list.
+		for (const path of [
+			"src/foo.test.ts",
+			"src/foo.spec.tsx",
+			"src/foo_test.go",
+			"src/foo_test.rs",
+			"src/foo_test.py",
+			"src/foo_spec.rb",
+			"src/FooTest.java",
+			"src/test/java/FooTest.java",
+			"src/__tests__/foo.ts",
+			"src/foo.test.ets",
+			"src/test/foo.jl",
+		]) {
+			expect(decideFileSelection(changedFile(path)).reason).toBe(SELECTION_REASON.selected);
+		}
 	});
 
 	test("enforces changed-line and UTF-8 byte limits, including for includes", () => {
