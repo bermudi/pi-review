@@ -101,7 +101,7 @@ Hash discipline: every imported prompt/template/tool-schema/default-rule/output-
 | Scan mode: batching (lang/dir/none), dedup, summary, `--no-*` flags, scan checkpoint | implemented | `src/ocr-v193/scan/*` batch.ts + estimate.ts + provider.ts + preview.ts + scan.ts (filterScanItems, dedup/summary flags, preview) |
 | Session checkpoints: fingerprints, sealed input identity, lineage, trusted resume, Ctrl-C checkpoint | implemented | `src/ocr-v193/session/*` history.ts + manifest.ts + persist.ts + resume.ts (ManifestBuilder, JSONL writer, ResumeState, ListSessions) |
 | CLI: text/JSON/SARIF/agent output, diagnostics on stderr, usage/retry summaries, exit codes, preview | implemented | `src/ocr-v193/cli/*` + `output/*` ported; text (manifestMessage + badge+wrap), JSON, SARIF v2.1.0, preview, agent audience, exit 0/2/1, stderr vs stdout separated |
-| Pi adapter transport (public SDK only) | implemented (stub) | `src/ocr-v193/pi-adapter/pi-transport.ts` proves public APIs; wiring TODO for full prompt driving documented |
+| Pi adapter transport (public SDK only) | implemented | `src/ocr-v193/pi-adapter/pi-transport.ts` functional on public APIs (`createAgentSession`, `SessionManager`, `SettingsManager`, `setActiveToolsByName`, message translation, `complete()` & `streamComplete()` with abort, grace & dynamic allowlist); spike + harness prove no private imports |
 | Grace abort (cancel before grace) | matched (spike) | `spike/feasibility-v2.ts` testCancelledGrace |
 | Round accounting (multi-tool = 1 round) | matched (spike) | `spike/feasibility-v2.ts` testRoundAccounting |
 | Dynamic allowlist | matched (spike) | `spike/feasibility-v2.ts` testDynamicAllowlist via `setActiveToolsByName` |
