@@ -17,9 +17,12 @@ Fixed reference for every translated file, per `docs/ocr-v1.9.3-port-plan.md` Ph
 
 | OCR path | Dest path | Port commit | Prompt/template/schema/fixture hashes |
 |---|---|---|---|
-| `internal/llmloop/loop.go` | `src/ocr-v193/llmloop/loop.ts` | — | — |
-| `internal/llmloop/compression.go` | `src/ocr-v193/llmloop/compression.ts` | — | `memory_compression_task_system.md` sha256:… |
-| `internal/llmloop/pool.go` | `src/ocr-v193/llmloop/pool.ts` | — | — |
+| `internal/llmloop/loop.go` | `src/ocr-v193/llmloop/loop.ts` | 9535de6 | — |
+| `internal/llmloop/compression.go` | `src/ocr-v193/llmloop/compression.ts` | 9535de6 | `memory_compression_task_system.md` sha256:… (stub; full XML host rebuild in Pi adapter) |
+| `internal/llmloop/pool.go` | `src/ocr-v193/llmloop/pool.ts` | 9535de6 | — |
+| `internal/model/review.go` | `src/ocr-v193/model/types.ts` | 9535de6 | minimal LlmComment port |
+| `internal/llmloop` seam | `src/ocr-v193/llmloop/types.ts` + `transcript.ts` | 9535de6 | provider-independent LlmTransport + ScriptedTransport |
+| `internal/llm` adapter | `src/ocr-v193/pi-adapter/pi-transport.ts` | 9535de6 | public Pi SDK only (createAgentSession, SessionManager, SettingsManager, setActiveToolsByName) |
 | `internal/tool/code_comment.go` | `src/ocr-v193/tool/code-comment.ts` | — | tool schema sha256:… |
 | `internal/tool/comment_collector.go` | `src/ocr-v193/tool/collector.ts` | — | — |
 | `internal/config/template/prompts/*.md` | `src/ocr-v193/template/prompts/*.md` (verbatim) | — | per-file sha256 + golden tests |
@@ -33,8 +36,8 @@ Hash discipline: every imported prompt/template/tool-schema/default-rule/output-
 
 | Port test file | OCR test names represented | Status |
 |---|---|---|
-| `test/ocr-v193/llmloop/loop.test.ts` | `TestRunPerFile*`, `TestLoop*` in `internal/llmloop/loop_test.go` | — |
-| `test/ocr-v193/llmloop/compression.test.ts` | `TestCompression*` in `compression_test.go` | — |
+| `test/ocr-v193/llmloop/loop.test.ts` | `TestRunPerFile_TaskDoneSuccess`, `MultiToolTurnIsOneRound`, `EmptyToolCallsRetry`, `ThreeConsecutiveEmptyResults`, `MaxRoundsGrace`, `CancelPreventsGrace`, `CompressionThreshold`, `GraceRoundToolDefs` in `internal/llmloop/loop_test.go` | implemented (8 pass) |
+| `test/ocr-v193/llmloop/compression.test.ts` | `TestCompression*` in `compression_test.go` | — (thresholds + partition covered via loop tests; dedicated file TBD) |
 | `test/ocr-v193/diff/parser.test.ts` | `TestParser*` in `internal/diff/parser_test.go` | — |
 | *(expand as tests land; omission needs reason in parity matrix)* | | |
 
@@ -47,8 +50,8 @@ Hash discipline: every imported prompt/template/tool-schema/default-rule/output-
 | Diff workspace/range/commit targets + merge-base + staged/untracked | unexamined | |
 | File selection: allowlist, excludes, rules, size/line limits, preview, background | unexamined | |
 | Planning threshold + plan failure open + token limits | unexamined | |
-| Main loop: 30 rounds review / 60 scan, multi-tool turn, grace (1 terminal), empty 3x, typed stops, usage counted | specified | `loop.go`/`compression.go` mapped, feasibility gate proves Pi can host via public `setActiveToolsByName`, `turn_end`, `followUp`/`prompt` for empty, `abort`, `compact` + `session.state.messages` replacement |
-| Compression: 60%/80% thresholds, warning, prompt, async ownership per-file, isolation, failure-keeps-original | specified | See `docs/pi-sdk-feasibility-report.md` gaps: `compact()` alone not OCR-equiv; host must rebuild via OCR prompt + `session.agent.state.messages`; Pi gap filed |
+| Main loop: 30 rounds review / 60 scan, multi-tool turn, grace (1 terminal), empty 3x, typed stops, usage counted | implemented | `src/ocr-v193/llmloop/loop.ts` + `types.ts` + `transcript.ts` via `ScriptedTransport`; 8 loop tests pass (task_done, multi-tool=1round, empty retry, 3× empty → StopEmptyRounds, budget→grace filtered, cancel prevents grace). Still stub: diff re-location + retry identity + full scan budget (60) param |
+| Compression: 60%/80% thresholds, warning, prompt, async ownership per-file, isolation, failure-keeps-original | implemented | `src/ocr-v193/llmloop/compression.ts` ports thresholds (0.60/0.80), PromptTokenLimit, CountMessagesTokens, groupIntoRounds, computeActiveZoneSize, partitionMessages, buildMessageXML, CompressionState per-file isolation; Pi adapter notes manual host rebuild required (not compact alone) |
 | Comment pipeline: `code_comment` incremental collector + `task_done` termination, relocation via `re_location_task`, validation, async drain, review filter (`--no-filter`) | unexamined | Legacy `submit_review`+verifier not on parity path |
 | Operational limits: concurrency, per-file timeout, global cancel, token budget look-ahead, Git process cap, retry reporting | unexamined | `pi-runner.ts` start-budget ≠ OCR round budget; must replace |
 | Scan mode: batching (lang/dir/none), dedup, summary, `--no-*` flags, scan checkpoint | unexamined | |
