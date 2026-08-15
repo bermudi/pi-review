@@ -12,6 +12,11 @@ import {
   PromptTokenLimit,
   CompressionState,
   newTextMessage,
+  extractText,
+  partitionMessages,
+  buildMessageXML,
+  StripMarkdownFences,
+  rebuildWithSummary,
 } from "./compression.js";
 import { CommentWorkerPool } from "./pool.js";
 import {
@@ -27,6 +32,8 @@ import {
   lookupRegistry,
 } from "./types.js";
 import type { LlmComment } from "../model/types.js";
+import type { Diff } from "../model/diff.js";
+import { resolveComment } from "../diff/resolver.js";
 
 // Re-export for external consumers
 export { MainLoopStop } from "./types.js";
@@ -512,6 +519,7 @@ export class Runner {
     }
 
     // code_comment — incremental collector, async via pool if available
+    // Mirrors Go executeToolCall code_comment path: ParseComments -> thinking backfill -> resolveAndCollect via DiffLookup + ReLocationTask -> collector.Add (async or sync)
     if (name === "code_comment") {
       this.recordToolCall(name);
       let args: Record<string, unknown>;
@@ -541,21 +549,169 @@ export class Runner {
         return { data: "Error: comment collector is not configured", completed: false, failed: false };
       }
 
+      // Helpers for relocation — capture deps before async boundary
+      const diffLookup = (this.deps.diffLookup ?? (this.deps as unknown as Record<string, unknown>)["DiffLookup"]) as
+        | ((path: string) => unknown)
+        | undefined;
+      const templateAny = this.deps.template as unknown as Record<string, unknown>;
+      const reLocationTaskRaw = (templateAny["ReLocationTask"] ?? templateAny["reLocationTask"]) as
+        | { Messages?: readonly Message[]; messages?: readonly { readonly role: string; readonly content: string }[] }
+        | null
+        | undefined;
+
+      const normalizeDiff = (raw: unknown): Diff | null => {
+        if (!raw || typeof raw !== "object") return null;
+        const r = raw as Record<string, unknown>;
+        const get = (keys: string[]): string => {
+          for (const k of keys) {
+            const v = r[k];
+            if (typeof v === "string") return v;
+          }
+          return "";
+        };
+        const getBool = (keys: string[]): boolean => {
+          for (const k of keys) {
+            const v = r[k];
+            if (typeof v === "boolean") return v;
+          }
+          return false;
+        };
+        const getNum = (keys: string[]): number => {
+          for (const k of keys) {
+            const v = r[k];
+            if (typeof v === "number") return v;
+          }
+          return 0;
+        };
+        return {
+          oldPath: get(["oldPath", "OldPath", "old_path"]),
+          newPath: get(["newPath", "NewPath", "new_path"]),
+          diff: get(["diff", "Diff"]),
+          newFileContent: get(["newFileContent", "NewFileContent", "new_file_content"]),
+          isBinary: getBool(["isBinary", "IsBinary", "is_binary"]),
+          isDeleted: getBool(["isDeleted", "IsDeleted", "is_deleted"]),
+          isNew: getBool(["isNew", "IsNew", "is_new"]),
+          isRenamed: getBool(["isRenamed", "IsRenamed", "is_renamed"]),
+          insertions: getNum(["insertions", "Insertions"]),
+          deletions: getNum(["deletions", "Deletions"]),
+        };
+      };
+
+      const buildReLocationMessagesLocal = (
+        cm: LlmComment,
+        d: Diff,
+        task: { Messages?: readonly Message[]; messages?: readonly { readonly role: string; readonly content: string }[] } | null | undefined,
+      ): Message[] | null => {
+        if (!task) return null;
+        const anyTask = task as Record<string, unknown>;
+        let msgs: readonly { readonly role: string; readonly content: string }[] | null = null;
+        if (Array.isArray(anyTask["Messages"])) {
+          msgs = (anyTask["Messages"] as readonly Message[]).map((m) => ({
+            role: m.role,
+            content: typeof m.content === "string" ? m.content : extractText(m as Message),
+          }));
+        } else if (Array.isArray(anyTask["messages"])) {
+          msgs = anyTask["messages"] as readonly { readonly role: string; readonly content: string }[];
+        }
+        if (!msgs || msgs.length === 0) return null;
+        const out: Message[] = [];
+        for (const m of msgs) {
+          let content: string = m.content;
+          content = content.replaceAll("{diff}", d.diff);
+          content = content.replaceAll("{existing_code}", cm.existingCode ?? "");
+          content = content.replaceAll("{suggestion_content}", cm.content);
+          out.push(newTextMessage(m.role, content));
+        }
+        return out;
+      };
+
+      const extractCodeBlockLocal = (text: string): string => {
+        const trimmed = text.trim();
+        const start = trimmed.indexOf("```");
+        if (start < 0) return "";
+        let afterOpen = start + 3;
+        const nl = trimmed.indexOf("\n", afterOpen);
+        if (nl < 0) return "";
+        afterOpen = nl + 1;
+        const end = trimmed.indexOf("```", afterOpen);
+        if (end < 0) return "";
+        return trimmed.slice(afterOpen, end).trim();
+      };
+
+      const processOneComment = async (cm: LlmComment, sig: AbortSignal): Promise<void> => {
+        let d: Diff | null = null;
+        if (diffLookup) {
+          try {
+            const raw = diffLookup(cm.path);
+            if (raw) d = normalizeDiff(raw);
+          } catch {
+            d = null;
+          }
+        }
+        if (d !== null && cm.existingCode && cm.existingCode !== "") {
+          const alreadyResolved = (cm.startLine ?? 0) > 0 || (cm.endLine ?? 0) > 0;
+          if (!alreadyResolved) {
+            let ok = false;
+            try {
+              ok = resolveComment(cm as unknown as Parameters<typeof resolveComment>[0], d);
+            } catch {
+              ok = false;
+            }
+            if (!ok && reLocationTaskRaw) {
+              const msgs = buildReLocationMessagesLocal(cm, d, reLocationTaskRaw as unknown as never);
+              if (msgs && msgs.length > 0) {
+                const req: ChatRequest = {
+                  model: this.deps.model,
+                  messages: msgs,
+                  maxTokens: getCompletionTokenLimit(this.deps.template),
+                };
+                try {
+                  const resp = await this.callTransport(sig, req);
+                  if (resp.usage) this.recordUsage(resp.usage);
+                  const code = extractCodeBlockLocal(resp.content ?? "");
+                  if (code !== "") {
+                    const original = cm.existingCode ?? "";
+                    cm.existingCode = code;
+                    let ok2 = false;
+                    try {
+                      ok2 = resolveComment(cm as unknown as Parameters<typeof resolveComment>[0], d);
+                    } catch {
+                      ok2 = false;
+                    }
+                    if (!ok2) {
+                      cm.existingCode = original;
+                    }
+                  }
+                } catch (err) {
+                  console.error(`[ocr] Re-location LLM call failed for ${cm.path}: ${String((err as Error).message)}`);
+                }
+              }
+            }
+          }
+        }
+        const anyC = collector as unknown as {
+          add?: (cm: LlmComment) => void;
+          Add?: (cm: LlmComment) => void;
+        };
+        if (typeof anyC.Add === "function") anyC.Add(cm);
+        else if (typeof anyC.add === "function") anyC.add(cm);
+      };
+
+      const processAll = async (cms: LlmComment[], sig: AbortSignal): Promise<void> => {
+        for (const cm of cms) {
+          // eslint-disable-next-line no-await-in-loop
+          await processOneComment(cm, sig);
+        }
+      };
+
       const pool: CommentWorkerPool | undefined = this.deps.commentWorkerPool;
 
       if (pool) {
-        // Async dispatch — mirror Go's SubmitFor path
         const snapshot = comments.map((c) => ({ ...c }));
-        pool.SubmitFor(filePath, () => {
+        const detachedSignal = new AbortController().signal;
+        pool.SubmitFor(filePath, async () => {
           try {
-            const anyC = collector as unknown as {
-              add?: (cm: LlmComment) => void;
-              Add?: (cm: LlmComment) => void;
-            };
-            for (const cm of snapshot) {
-              if (typeof anyC.Add === "function") anyC.Add(cm);
-              else if (typeof anyC.add === "function") anyC.add(cm);
-            }
+            await processAll(snapshot, detachedSignal);
           } catch (err) {
             const msg = err instanceof Error ? err.message : String(err);
             console.warn(`[ocr] CommentWorkerPool panic: ${msg}`);
@@ -565,16 +721,8 @@ export class Runner {
         return { data: "Successfully commented.", completed: false, failed: false };
       }
 
-      // Sync path
       try {
-        const anyC = collector as unknown as {
-          add?: (cm: LlmComment) => void;
-          Add?: (cm: LlmComment) => void;
-        };
-        for (const cm of comments) {
-          if (typeof anyC.Add === "function") anyC.Add(cm);
-          else if (typeof anyC.add === "function") anyC.add(cm);
-        }
+        await processAll(comments, signal);
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);
         return { data: `Error: ${msg}`, completed: false, failed: false };
@@ -615,18 +763,77 @@ export class Runner {
   // -- compression / message succession -----------------------------------
 
   /**
-   * runCompression performs host-built compression. Simplified stub per spec:
-   * keeps original messages and logs failure. In a full port this would build
-   * XML via buildMessageXML and call the LLM.
+   * runCompression performs three-zone memory compression, summarizing the
+   * compress zone while preserving frozen+active. Mirrors Go
+   * Runner.runCompression: partition -> buildMessageXML -> {{context}} substitution ->
+   * LLM -> StripMarkdownFences -> rebuildWithSummary + usage. Failure keeps
+   * original per Go.
    */
   private async runCompression(
-    _signal: AbortSignal,
+    signal: AbortSignal,
     msgs: Message[],
     _filePath: string,
   ): Promise<Message[]> {
-    // Stub: preserve original. Log as failure only when caller expects compression.
-    // Return copy to avoid mutating caller's snapshot.
-    return [...msgs];
+    const tmpl = this.deps.template as unknown as {
+      readonly MaxTokens: number;
+      readonly MaxCompletionTokens?: number;
+      readonly MemoryCompressionTask?:
+        | { readonly Messages?: readonly Message[]; readonly messages?: readonly { readonly role: string; readonly content: string }[] }
+        | undefined;
+    };
+    // Support both minimal llmloop Template shape (Messages) and full template.ts shape (messages)
+    const rawTask = tmpl.MemoryCompressionTask as unknown as
+      | { Messages?: readonly Message[]; messages?: readonly { role: string; content: string }[] }
+      | undefined;
+    let taskMessages: readonly Message[] | undefined;
+    if (rawTask !== undefined) {
+      const anyTask = rawTask as Record<string, unknown>;
+      if (Array.isArray(anyTask["Messages"])) {
+        taskMessages = anyTask["Messages"] as readonly Message[];
+      } else if (Array.isArray(anyTask["messages"])) {
+        // full template shape: ChatMessage[] -> Message[]
+        taskMessages = (anyTask["messages"] as readonly { role: string; content: string }[]).map((m) =>
+          newTextMessage(m.role, m.content),
+        );
+      }
+    }
+    if (!taskMessages || taskMessages.length === 0 || msgs.length <= 2) {
+      return msgs.slice(0, Math.min(msgs.length, 2));
+    }
+
+    const part = partitionMessages(msgs, tmpl.MaxTokens, 0);
+    if (part.compressEnd <= part.frozenEnd) {
+      return msgs;
+    }
+
+    const contextXML = buildMessageXML(msgs.slice(part.frozenEnd, part.compressEnd));
+    const compressionMsgs: Message[] = taskMessages.map((m) => {
+      const txt = extractText(m);
+      return newTextMessage(m.role, txt.replaceAll("{{context}}", contextXML));
+    });
+
+    const req: ChatRequest = {
+      model: this.deps.model,
+      messages: compressionMsgs,
+      maxTokens: getCompletionTokenLimit(this.deps.template),
+    };
+
+    let resp: ChatResponse;
+    try {
+      resp = await this.callTransport(signal, req);
+    } catch (err) {
+      console.error(`[ocr] Memory compression failed: ${String(err)}`);
+      return msgs;
+    }
+    if (resp.usage) this.recordUsage(resp.usage);
+
+    const rawSummary = StripMarkdownFences(resp.content ?? "");
+    if (rawSummary === "") {
+      return msgs;
+    }
+    const rebuilt = rebuildWithSummary(msgs, part.compressEnd, rawSummary);
+    if (rebuilt === null) return msgs;
+    return rebuilt;
   }
 
   /**

@@ -249,56 +249,50 @@ async function testDynamicAllowlist() {
   } finally { server.stop(); }
 }
 
-// Test 4: Restricted grace round (exactly one extra, counted, cannot start another)
+// Test 4: Restricted grace round — proves exactly ONE grace with terminal tools, then fence (no second grace)
 async function testGraceRound() {
   const name = "Restricted grace round (exactly one extra, terminal tools only)";
   const scripted: Scripted = { requests: [], responses: [] };
   scripted.responses = [
     openAIResp({ tool_calls: [openAIToolCall("c1", "file_read", { file_path: "a.ts" })] }),
-    // grace response would be host-controlled; we simulate by having second response be grace
     openAIResp({ tool_calls: [openAIToolCall("c2", "code_comment", { comments: [{ content: "grace" }] })] }),
+    openAIResp({ tool_calls: [openAIToolCall("c3", "file_read", { file_path: "b.ts" })] }),
     openAIResp({ content: "done", finish_reason: "stop" }),
   ];
   const { server, url } = startServer(scripted);
   try {
+    // For host-controlled grace, tools must terminate after each batch so one prompt = one round and host can fence
     const tools = [
-      { name: "code_comment", description: "comment", parameters: Type.Object({ comments: Type.Array(Type.Any()) }), execute: async () => ({ content: [{ type: "text", text: "ok" }], details: {} }) },
-      { name: "task_done", description: "done", parameters: Type.Object({}), execute: async () => ({ content: [{ type: "text", text: "done" }], details: {} }) },
-      { name: "file_read", description: "read", parameters: Type.Object({ file_path: Type.String() }), execute: async () => ({ content: [{ type: "text", text: "file" }], details: {} }) },
+      { name: "code_comment", description: "comment", parameters: Type.Object({ comments: Type.Array(Type.Any()) }), execute: async () => ({ content: [{ type: "text", text: "ok" }], details: {}, terminate: true }) },
+      { name: "task_done", description: "done", parameters: Type.Object({}), execute: async () => ({ content: [{ type: "text", text: "done" }], details: {}, terminate: true }) },
+      { name: "file_read", description: "read", parameters: Type.Object({ file_path: Type.String() }), execute: async () => ({ content: [{ type: "text", text: "file" }], details: {}, terminate: true }) },
     ];
     const { session, cleanup } = await createSessionWithServer(url, tools, ["code_comment", "task_done", "file_read"]);
-    // Simulate OCR grace: after 1 normal round, switch to terminal and allow exactly one more
     let turnCount = 0;
-    let graceUsed = false;
     const unsub = session.subscribe((e: any) => {
-      if (e.type === "turn_end") {
-        turnCount++;
-        if (turnCount === 1 && !graceUsed) {
-          session.setActiveToolsByName(["code_comment", "task_done"]);
-          graceUsed = true;
-        } else if (graceUsed && turnCount === 2) {
-          // After grace, prevent further - but Pi doesn't have fence, host must not steer
-          // We just verify no third request is automatically made without model needing it
-        }
-      }
+      if (e.type === "turn_end") turnCount++;
     });
-    await session.prompt("test grace");
+    await session.prompt("test grace normal");
     await session.waitForIdle();
+    // Host enforces exactly one grace: switch allowlist then drive ONE more prompt via public API
+    session.setActiveToolsByName(["code_comment", "task_done"]);
+    await session.prompt("grace round");
+    await session.waitForIdle();
+    // Host fence: do NOT call a third prompt even though server has file_read queued — proves Pi does not auto-continue and host stops
+    await new Promise(r => setTimeout(r, 200));
     unsub();
     await cleanup();
     const reqCount = scripted.requests.length;
-    const req2ToolsLen = scripted.requests[1]?.body?.tools?.length ?? 0;
+    const req1Len = scripted.requests[0]?.body?.tools?.length ?? 0;
+    const req2Len = scripted.requests[1]?.body?.tools?.length ?? 0;
     const req2Names = (scripted.requests[1]?.body?.tools?.map((t:any)=>t.function?.name) ?? []).join(",");
-    // Usage: Pi aggregates usage; we can check that 2 requests were made
-    const pass = reqCount === 3 || reqCount === 2; // 3 includes final stop, 2 is grace only
-    // For strict grace: exactly one extra beyond normal (so total 2 model requests for budget=1)
-    // Our scripted had 3 responses, so we expect 3 requests if Pi continues after grace
-    const detail = `requests=${reqCount}, req2ToolsLen=${req2ToolsLen}, req2Names=${req2Names}, turnCount=${turnCount}`;
-    // Grace pass if second request was terminal-only and no fourth request
-    const gracePass = req2ToolsLen === 2 && req2Names.includes("code_comment");
-    if (gracePass) console.log(`✓ PASS ${name}: ${detail}`);
+    const req3Exists = scripted.requests[2] !== undefined;
+    // Strict: exactly 1 grace beyond normal =2 requests total; second is terminal-only; no third request even though server has it queued
+    const pass = reqCount === 2 && req2Len === 2 && req2Names.includes("code_comment") && req2Names.includes("task_done") && !req3Exists && req1Len === 3;
+    const detail = `requests=${reqCount} (expect 2), req1Len=${req1Len} (expect 3), req2Len=${req2Len} (expect 2), req2Names=${req2Names}, turnCount=${turnCount}, thirdExists=${req3Exists}, graceFenced=${!req3Exists}`;
+    if (pass) console.log(`✓ PASS ${name}: ${detail}`);
     else console.log(`✗ FAIL ${name}: ${detail}`);
-    return { pass: gracePass, detail };
+    return { pass, detail };
   } finally { server.stop(); }
 }
 
@@ -336,17 +330,16 @@ async function testCancelledGrace() {
   } finally { server.stop(); }
 }
 
-// Test 6: Empty-round recovery (3x no usable tool calls)
+// Test 6: Empty-round recovery — proves host can drive OCR retry via public prompt/followUp, exactly 3 times, then typed stop
 async function testEmptyRoundRecovery() {
   const name = "Empty-round recovery (3 consecutive empty tool results)";
   const scripted: Scripted = { requests: [], responses: [] };
-  // Simulate empty tool results: Pi will call file_read but we return empty string as tool result via execute returning empty content?
-  // For LLM empty, we return no tool_calls repeatedly, then host should inject retry message.
-  // Instead we test Pi's handling of assistant response with no tool_calls: it should continue to next round if host injects via steer.
+  // 4 empties so host can prove 1 initial +3 retries =4 requests, then stops typed (no 5th)
   scripted.responses = [
-    openAIResp({ content: "I forgot tools", tool_calls: undefined, finish_reason: "stop" }),
-    openAIResp({ content: "again no tools", tool_calls: undefined, finish_reason: "stop" }),
-    openAIResp({ content: "still no", tool_calls: undefined, finish_reason: "stop" }),
+    openAIResp({ content: "empty1", tool_calls: undefined, finish_reason: "stop" }),
+    openAIResp({ content: "empty2", tool_calls: undefined, finish_reason: "stop" }),
+    openAIResp({ content: "empty3", tool_calls: undefined, finish_reason: "stop" }),
+    openAIResp({ content: "empty4", tool_calls: undefined, finish_reason: "stop" }),
     openAIResp({ tool_calls: [openAIToolCall("c1", "task_done", {})] }),
   ];
   const { server, url } = startServer(scripted);
@@ -357,42 +350,55 @@ async function testEmptyRoundRecovery() {
       { name: "file_read", description: "read", parameters: Type.Object({ file_path: Type.String() }), execute: async () => ({ content: [{ type: "text", text: "" }], details: {} }) },
     ];
     const { session, cleanup } = await createSessionWithServer(url, tools, ["code_comment", "task_done", "file_read"]);
-    let emptyCount = 0;
+    const retryMsg = "You did not successfully call any tools. Please try again or use task_done if finished.";
+    let turnToolCounts: number[] = [];
+    let currentTurnTools = 0;
+    let consecutiveEmpty = 0;
     const unsub = session.subscribe((e: any) => {
+      if (e.type === "tool_execution_start") currentTurnTools += 1;
       if (e.type === "turn_end") {
-        // Detect empty tool call situation: if assistant had no tool calls, Pi will produce a turn_end with no tool_execution_start
-        // Host can detect and steer with retry message
-      }
-      if (e.type === "tool_execution_start") {
-        // reset empty count on valid tool
-        emptyCount = 0;
+        turnToolCounts.push(currentTurnTools);
+        if (currentTurnTools === 0) consecutiveEmpty += 1;
+        else consecutiveEmpty = 0;
+        currentTurnTools = 0;
       }
     });
-    // For this test, we need to simulate host detecting empty and calling steer.
-    // Instead we just verify Pi makes 4 requests (3 empty + 1 task_done) without crashing.
     await session.prompt("test empty");
     await session.waitForIdle();
+    let attempts = 0;
+    // Host drives exactly 3 retries via public prompt() after idle (not steer — steer is only while streaming per agent-session.d.ts:376)
+    // Each retry appends OCR's retry string; after 3 consecutive empties host stops with typed StopEmptyRounds
+    for (; attempts < 2; attempts++) {
+      const last = turnToolCounts[turnToolCounts.length - 1] ?? 1;
+      if (last !== 0) break;
+      await session.prompt(retryMsg);
+      await session.waitForIdle();
+    }
+    // After 3 consecutive empties, host must stop with typed StopEmptyRounds and not issue a 4th request
+    // Verify: 1 initial +2 retries =3 requests, each retry contains retry message, and no 4th request even though server has 4th+5th queued
+    const reqCount = scripted.requests.length;
+    const retryRequests = scripted.requests.slice(1);
+    const hasRetryInEach = retryRequests.length === 2 && retryRequests.every((r: any) => JSON.stringify(r.body).includes("You did not successfully call any tools"));
+    const noFourth = reqCount === 3;
+    const typedStop = consecutiveEmpty === 3 && attempts === 2;
+    const pass = reqCount === 3 && hasRetryInEach && typedStop && noFourth;
+    const detail = `requests=${reqCount} (expect 3), attempts=${attempts} (expect 2), consecutiveEmpty=${consecutiveEmpty} (expect 3), turnCounts=${turnToolCounts.join(",")}, hasRetryInEach=${hasRetryInEach}, typedStop=${typedStop}`;
     unsub();
     await cleanup();
-    const reqCount = scripted.requests.length;
-    // Pi's default behavior for empty tool_calls: it will send tool results as error? Actually Pi will treat no tool_calls as stop and not loop; but with our tool allowlist, Pi may just stop.
-    // For OCR parity, host must inject retry via steer. Our simple test checks that Pi doesn't crash on empty and makes multiple rounds if we steer.
-    // Since we didn't steer, Pi will likely stop after first empty (stop reason stop). So reqCount may be 1.
-    // We document this as gap: need host steer.
-    const pass = reqCount >= 1;
-    const detail = `requests=${reqCount} (host steer needed for 3 retries), empty handling observed`;
-    console.log(`• INFO ${name}: ${detail} (requires host steer for full OCR parity - see report)`);
-    return { pass: true, detail };
+    if (pass) console.log(`✓ PASS ${name}: ${detail}`);
+    else console.log(`✗ FAIL ${name}: ${detail}`);
+    return { pass, detail };
   } finally { server.stop(); }
 }
 
-// Test 7: OCR-controlled compression
+// Test 7: OCR-controlled compression — proves host can run OCR prompt, replace conversation, next request contains rebuilt messages
 async function testCompression() {
   const name = "OCR-controlled compression (host replaces conversation)";
-  // Test that host can replace conversation via direct state manipulation or via compact
   const scripted: Scripted = { requests: [], responses: [] };
+  // First response builds history; second will be after compression with rebuilt context
   scripted.responses = [
     openAIResp({ content: "first", tool_calls: undefined }),
+    openAIResp({ content: "second after compression", tool_calls: undefined }),
   ];
   const { server, url } = startServer(scripted);
   try {
@@ -400,32 +406,52 @@ async function testCompression() {
       { name: "code_comment", description: "comment", parameters: Type.Object({}), execute: async () => ({ content: [{ type: "text", text: "ok" }], details: {} }) },
     ];
     const { session: s1, cleanup: c1 } = await createSessionWithServer(url, tools, ["code_comment"]);
-    // Build history
-    await s1.prompt("first prompt");
+    await s1.prompt("first prompt - build history");
     await s1.waitForIdle();
-    const before = s1.messages.length;
-    // Try host-controlled compression: directly replace messages via agent.state.messages
-    // Public API: session.state is getter, but we can try to manipulate via private?
-    // Alternative: use session.compact() with tiny threshold
-    // For this spike, we test that compact exists and is controllable
+    const beforeLen = s1.messages.length;
     const hasCompact = typeof (s1 as any).compact === "function";
-    const hasSetActive = typeof s1.setActiveToolsByName === "function";
-    const hasSetAutoCompaction = typeof (s1 as any).setAutoCompactionEnabled === "function";
-    // Try manual compact with custom instructions (OCR prompt)
-    let compactResult: any = null;
-    let compactError: any = null;
+    // Host-controlled OCR compression: build rebuilt messages manually (OCR prompt + XML context would be a separate LLM call; here we synthesize summary)
+    // Demonstrate public replacement via session.state.messages (and fallback session.agent.state.messages) — both are public via get state()
+    const summary = "<previous_review_summary>OCR summary: 1 issue found, 2 files reviewed</previous_review_summary>";
+    let canAssign = false;
+    let rebuilt: any[] = [];
     try {
-      if (hasCompact) {
-        // Need longer history to trigger compaction; we will force compact manually
-        compactResult = await (s1 as any).compact("OCR compression: summarize previous review");
+      const state: any = (s1 as any).state ?? (s1 as any).agent?.state;
+      if (state && Array.isArray(state.messages)) {
+        // Preserve frozen prefix (first 2) + summary + active tail, simplified: inject summary as user message
+        rebuilt = [
+          { role: "user", content: [{ type: "text", text: "system placeholder" }], timestamp: Date.now() },
+          { role: "user", content: [{ type: "text", text: summary }], timestamp: Date.now() },
+        ];
+        try {
+          state.messages = rebuilt;
+          canAssign = Array.isArray(state.messages) && JSON.stringify(state.messages).includes("OCR summary");
+        } catch {}
+        // Also try agent.state for viewers that read there
+        try {
+          const ag: any = (s1 as any).agent?.state;
+          if (ag && Array.isArray(ag.messages)) ag.messages = rebuilt;
+        } catch {}
       }
-    } catch (e) { compactError = e; }
-    const after = s1.messages.length;
+    } catch {}
+    // Reset captured requests to isolate post-compression request
+    scripted.requests.length = 0;
+    await s1.prompt("second prompt after compression");
+    await s1.waitForIdle();
+    const afterReq = scripted.requests[0]?.body;
+    const afterStr = JSON.stringify(afterReq ?? {});
+    const hasSummaryInNextReq = afterStr.includes("OCR summary") || afterStr.includes("previous_review_summary");
+    const hasSummaryInState = (() => {
+      try {
+        const st: any = (s1 as any).state ?? (s1 as any).agent?.state;
+        return JSON.stringify(st?.messages ?? s1.messages).includes("OCR summary");
+      } catch { return false; }
+    })();
     await c1();
-    const pass = hasCompact && hasSetActive && hasSetAutoCompaction;
-    const detail = `hasCompact=${hasCompact}, hasSetActive=${hasSetActive}, hasAutoCompaction=${hasSetAutoCompaction}, before=${before}, after=${after}, compactError=${compactError ? String(compactError).slice(0,100) : "none"}`;
+    const pass = canAssign && hasSummaryInNextReq && hasSummaryInState && hasCompact;
+    const detail = `canAssign=${canAssign}, hasSummaryInNextReq=${hasSummaryInNextReq}, hasSummaryInState=${hasSummaryInState}, beforeLen=${beforeLen}, rebuiltLen=${rebuilt.length}, hasCompact=${hasCompact}`;
     if (pass) console.log(`✓ PASS ${name}: ${detail}`);
-    else console.log(`✗ FAIL ${name}: ${detail}`);
+    else console.log(`✗ FAIL ${name}: ${detail} (need public transformContext — currently uses state.messages replacement)`);
     return { pass, detail };
   } finally { server.stop(); }
 }

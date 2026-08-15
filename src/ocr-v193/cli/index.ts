@@ -337,7 +337,7 @@ function buildReviewOptions(map: Map<string, string | boolean>): ReviewOptions {
 
 function buildScanOptions(map: Map<string, string | boolean>): ScanOptions {
   const base = defaultScanOptions();
-  return {
+  const out: ScanOptions = {
     toolConfigPath: flagVal(map, "tools") ?? base.toolConfigPath,
     rulePath: flagVal(map, "rule") ?? base.rulePath,
     repoDir: flagVal(map, "repo") ?? base.repoDir,
@@ -361,6 +361,10 @@ function buildScanOptions(map: Map<string, string | boolean>): ScanOptions {
     model: flagVal(map, "model") ?? base.model,
     resume: flagVal(map, "resume") ?? base.resume,
   };
+  if (out.maxTools > 0 && out.maxTools < 10) {
+    (out as unknown as Record<string, unknown>)["maxTools"] = 10;
+  }
+  return out;
 }
 
 // ---------------------------------------------------------------------------
@@ -522,6 +526,14 @@ export async function runCli(
       if (err instanceof CliUsageError) io.stderr(`Error: ${err.message}\n\n${HELP_TEXT}`);
       else io.stderr(`Error: ${String((err as Error).message)}\n`);
       return 1;
+    }
+
+    const rawScanMaxTools = flagVal(map, "max-tools");
+    if (rawScanMaxTools !== undefined) {
+      const n = Number(rawScanMaxTools);
+      if (Number.isSafeInteger(n) && n > 0 && n < 10) {
+        io.stderr(`[ocr] --max-tools ${String(n)} is below minimum 10, using 10\n`);
+      }
     }
 
     const startMs = Date.now();

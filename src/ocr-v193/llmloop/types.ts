@@ -106,7 +106,12 @@ export interface Template {
   readonly MaxCompletionTokens?: number;
   readonly MemoryCompressionTask?: {
     readonly Messages: readonly Message[];
+    readonly messages?: readonly { readonly role: string; readonly content: string }[];
   };
+  readonly ReLocationTask?: {
+    readonly Messages?: readonly Message[];
+    readonly messages?: readonly { readonly role: string; readonly content: string }[];
+  } | null;
 }
 
 // ---------------------------------------------------------------------------
@@ -145,6 +150,23 @@ export function lookupRegistry(reg: ToolRegistryLike | Map<string, ToolProvider>
 }
 
 // ---------------------------------------------------------------------------
+// Diff lookup — mirrors Deps.DiffLookup func(path string) *model.Diff
+// ---------------------------------------------------------------------------
+
+export interface DiffLike {
+  readonly newPath?: string;
+  readonly oldPath?: string;
+  readonly diff?: string;
+  readonly NewPath?: string;
+  readonly OldPath?: string;
+  readonly Diff?: string;
+  readonly newFileContent?: string;
+  readonly NewFileContent?: string;
+}
+
+export type DiffLookup = (path: string) => DiffLike | null | undefined;
+
+// ---------------------------------------------------------------------------
 // RunnerDeps — mirrors Go llmloop.Deps minimal surface
 // ---------------------------------------------------------------------------
 
@@ -163,6 +185,10 @@ export interface RunnerDeps {
   readonly toolRegistry?: ToolRegistryLike | Map<string, ToolProvider>;
   /** Legacy alias for toolRegistry. */
   readonly tools?: ToolRegistryLike | Map<string, ToolProvider>;
+  /** Diff lookup for code_comment relocation (mirrors Deps.DiffLookup). */
+  readonly diffLookup?: DiffLookup;
+  /** Legacy alias for diffLookup (Go field name). */
+  readonly DiffLookup?: DiffLookup;
 }
 
 // ---------------------------------------------------------------------------

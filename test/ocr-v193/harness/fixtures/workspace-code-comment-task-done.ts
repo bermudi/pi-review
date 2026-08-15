@@ -64,7 +64,6 @@ export async function runWorkspaceFixture(opts: WorkspaceFixtureOpts = {}): Prom
   // Apply workspace diff: single insertion that should be reviewed
   await applyWorkspaceChanges(repo.dir, {
     "main.go": "package main\nfunc Add(a int, b int) int {\n  // TODO: handle nil?\n  return a + b\n}\n",
-    "README.md": "# Fixture\nWorkspace change for vertical slice.\n",
   });
 
   // Ensure workspace diff is visible (git diff)

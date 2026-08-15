@@ -15,11 +15,12 @@ import { isAllowedExt, isExcludedPath } from "../rules/allowed_ext.js";
 import { estimateDiffCost, estimateDiffFileTokens, humanTokens } from "./estimate.js";
 import { effectivePath, whyExcluded } from "./preview.js";
 import { reviewModeString, stripEmptyPlanBlock } from "./util.js";
-import { countTokens, PromptTokenLimit } from "../llmloop/compression.js";
+import { countTokens, PromptTokenLimit, StripMarkdownFences } from "../llmloop/compression.js";
 import { Runner } from "../llmloop/loop.js";
 import type { AnyLlmClient, ToolDef } from "../llmloop/types.js";
 import type { Template, ChatMessage } from "../template/template.js";
 import type { FileFilter } from "../rules/system_rules.js";
+import { CommentWorkerPool } from "../llmloop/pool.js";
 
 // ---------------------------------------------------------------------------
 // RuntimeConfig — mirrors Go RuntimeConfig
@@ -192,27 +193,51 @@ export class Agent {
   private repoRemoteIdentity = "";
   private warnings: Array<{ type: string; file: string; message: string }> = [];
 
+  // Public for test harness to observe pool draining behavior if needed
+  public readonly commentWorkerPool: CommentWorkerPool;
+
   constructor(private readonly args: Args) {
     this.currentDate = new Date().toISOString().slice(0, 16).replace("T", " ");
     // Build runner with LlmTransport seam — mirrors Go llmloop.NewRunner.
-    // We construct a minimal deps object compatible with Runner; Runner will adapt via complete/CompletionsWithCtx.
     const commentCollector = (args.commentCollector ?? createInMemoryCollector()) as unknown as CommentCollectorLike;
     const mainToolDefs = args.mainToolDefs ?? [];
     const toolRegistry = (args.tools ?? null) as unknown as ToolRegistryLike | null;
+    // CommentWorkerPool: 8 workers, per-file isolation via AwaitKey (mirrors Go NewCommentWorkerPool(8))
+    this.commentWorkerPool = new CommentWorkerPool(8);
+
+    // DiffLookup: resolve path -> Diff for relocation (mirrors Go Deps.DiffLookup)
+    const diffLookup = (path: string): Diff | null => {
+      for (const dd of this.diffs) {
+        if (dd.newPath === path || dd.oldPath === path) return dd;
+      }
+      return null;
+    };
+
+    // Forward ReLocationTask and MemoryCompressionTask faithfully; Runner will handle both Shapes
+    const templateForRunner: Record<string, unknown> = {
+      MaxTokens: args.template.MaxTokens,
+      MaxToolRequestTimes: args.template.MaxToolRequestTimes,
+      MaxCompletionTokens: args.template.MaxCompletionTokens,
+      MemoryCompressionTask: args.template.MemoryCompressionTask !== undefined
+        ? { Messages: args.template.MemoryCompressionTask.messages.map((m) => ({ role: m.role, content: m.content })) as unknown as readonly { role: string; content: string }[] }
+        : undefined,
+      ReLocationTask: (args.template as unknown as Record<string, unknown>)["ReLocationTask"] ?? (args.template as unknown as { ReLocationTask?: unknown }).ReLocationTask ?? null,
+    };
+    // If ReLocationTask exists but is in template's shape (messages), keep as is; Runner handles both
+    if (args.template.ReLocationTask !== undefined && args.template.ReLocationTask !== null) {
+      // Ensure the runner sees it as Messages or messages; we preserve original
+      (templateForRunner as unknown as Record<string, unknown>)["ReLocationTask"] = args.template.ReLocationTask as unknown;
+    }
+
     this.runner = new Runner({
       model: args.model,
-      template: {
-        MaxTokens: args.template.MaxTokens,
-        MaxToolRequestTimes: args.template.MaxToolRequestTimes,
-        MaxCompletionTokens: args.template.MaxCompletionTokens,
-        MemoryCompressionTask: args.template.MemoryCompressionTask !== undefined
-          ? { Messages: args.template.MemoryCompressionTask.messages.map((m) => ({ role: m.role, content: m.content })) as unknown as readonly { role: string; content: string }[] }
-          : undefined,
-      },
+      template: templateForRunner as unknown as import("../llmloop/types.js").Template,
       llmClient: args.llmClient,
       mainToolDefs: mainToolDefs as unknown as readonly ToolDef[],
       commentCollector: commentCollector as unknown as never,
       toolRegistry: toolRegistry as unknown as never,
+      diffLookup: diffLookup as unknown as never,
+      commentWorkerPool: this.commentWorkerPool as unknown as never,
     });
   }
 
@@ -663,12 +688,17 @@ export class Agent {
       return { completed: false, error: e };
     }
 
-    // Review filter stub: if template has filter and not skipped, run a no-op filter (or real if llmClient supports it)
-    // For now we keep it as a no-op that does not require an extra LLM call; errors are ignored per Go.
     if (completed) {
-      // In full port, executeReviewFilter would run an LLM call; here we skip to avoid extra cost in stub.
-      // The hook is preserved: if args.template.ReviewFilterTask exists and skipFilter is false, we would call a filter.
-      // Stub does nothing.
+      // Drain per-file async comment workers before filtering, mirroring Go's AwaitKey(newPath)
+      // This must be keyed to newPath to avoid racing with other files' Submit calls.
+      try {
+        if (this.commentWorkerPool) {
+          await this.commentWorkerPool.AwaitKey(newPath);
+        }
+      } catch {
+        // best-effort
+      }
+      await this.executeReviewFilter(signal, d, newPath);
     }
 
     if (!completed && stop === undefined) {
@@ -732,8 +762,123 @@ export class Agent {
     console.error(`[ocr] Plan completed for ${newPath}`);
     return resp.content ?? "";
   }
+
+  /**
+   * executeReviewFilter runs REVIEW_FILTER_TASK to remove comments that are
+   * provably incorrect based solely on diff. Errors are logged and silently ignored,
+   * matching Go's behavior (filter failure keeps comments).
+   * Mirrors Go Agent.executeReviewFilter.
+   */
+  private async executeReviewFilter(signal: AbortSignal, d: Diff, newPath: string): Promise<void> {
+    const ft = this.args.template.ReviewFilterTask;
+    if (!ft || ft.messages.length === 0) return;
+    if (this.args.skipFilter) {
+      console.error(`[ocr] Review filter skipped for ${newPath} (--no-filter)`);
+      return;
+    }
+    const collector = this.args.commentCollector;
+    if (!collector || typeof collector.commentsForPath !== "function") return;
+    const comments = collector.commentsForPath(newPath) ?? [];
+    if (comments.length === 0) return;
+
+    const commentsJSON = buildFilterCommentsJSON(comments);
+    const messages: ChatMessage[] = ft.messages.map((m) => {
+      let content: string = m.content;
+      content = content.replaceAll("{{path}}", newPath);
+      content = content.replaceAll("{{diff}}", d.diff);
+      content = content.replaceAll("{{comments}}", commentsJSON);
+      return { role: m.role, content };
+    });
+
+    const client = this.args.llmClient as unknown as Record<string, unknown>;
+    const req = {
+      model: this.args.model,
+      messages: messages as unknown as import("../llmloop/compression.js").Message[],
+      maxTokens: this.args.template.MaxCompletionTokens ?? this.args.template.MaxTokens,
+    };
+
+    let resp: { content: string; usage?: unknown } | null = null;
+    const completionsFn = client["CompletionsWithCtx"] as ((sig: AbortSignal, r: unknown) => Promise<{ content: string; usage?: unknown }>) | undefined;
+    const completeFn = client["complete"] as ((sig: AbortSignal, r: unknown) => Promise<{ content: string; usage?: unknown }>) | undefined;
+    try {
+      if (typeof completionsFn === "function") {
+        resp = await completionsFn.call(client, signal, req);
+      } else if (typeof completeFn === "function") {
+        resp = await completeFn.call(client, signal, req);
+      } else {
+        throw new Error("llmClient must provide complete(signal, req) or CompletionsWithCtx(signal, req)");
+      }
+    } catch (err) {
+      console.error(`[ocr] Review filter failed for ${newPath}: ${String((err as Error).message)}`);
+      return;
+    }
+    if (!resp) return;
+    const usage = (resp as unknown as { usage?: { PromptTokens?: number; CompletionTokens?: number; CacheReadTokens?: number; CacheWriteTokens?: number } }).usage;
+    if (usage) {
+      try {
+        this.runner.RecordUsage(usage as unknown as never);
+      } catch {}
+    }
+    const rawContent = (resp as unknown as { content?: string }).content ?? (resp as unknown as { Content?: string }).Content ?? "";
+    const indices = parseFilterResponse(rawContent, comments.length);
+    if (!indices || indices.size === 0) return;
+    try {
+      if (typeof collector.removeByPathAndIndices === "function") {
+        collector.removeByPathAndIndices(newPath, indices);
+      } else {
+        const anyC = collector as unknown as { RemoveByPathAndIndices?: (path: string, indices: Map<number, unknown>) => void };
+        if (typeof anyC.RemoveByPathAndIndices === "function") anyC.RemoveByPathAndIndices(newPath, indices);
+      }
+      console.error(`[ocr] Review filter removed ${indices.size} comment(s) for ${newPath}`);
+    } catch (err) {
+      console.error(`[ocr] Review filter removal failed for ${newPath}: ${String((err as Error).message)}`);
+    }
+  }
+
 }
 
+// ---------------------------------------------------------------------------
+// Review filter — mirrors Go executeReviewFilter + buildFilterCommentsJSON + parseFilterResponse
+// ---------------------------------------------------------------------------
+
+function buildFilterCommentsJSON(comments: LlmComment[]): string {
+  type FilterComment = { id: string; content: string; existing_code?: string };
+  const items: FilterComment[] = comments.map((cm, i) => ({
+    id: `c-${i}`,
+    content: cm.content,
+    ...(cm.existingCode ? { existing_code: cm.existingCode } : {}),
+  }));
+  return JSON.stringify(items);
+}
+
+function parseFilterResponse(raw: string, total: number): Map<number, unknown> | null {
+  const cleaned = StripMarkdownFences(raw);
+  let ids: unknown;
+  try {
+    ids = JSON.parse(cleaned);
+  } catch (err) {
+    const preview = cleaned.length > 200 ? cleaned.slice(0, 200) + "..." : cleaned;
+    console.error(`[ocr] Review filter: failed to parse LLM response: ${String((err as Error).message)}, raw: ${preview}`);
+    return null;
+  }
+  if (!Array.isArray(ids)) {
+    const preview = cleaned.length > 200 ? cleaned.slice(0, 200) + "..." : cleaned;
+    console.error(`[ocr] Review filter: failed to parse LLM response: expected array, raw: ${preview}`);
+    return null;
+  }
+  const indices = new Map<number, unknown>();
+  for (const id of ids) {
+    if (typeof id !== "string") continue;
+    const m = /^c-(\d+)$/.exec(id);
+    if (!m) continue;
+    const idx = Number(m[1]);
+    if (!Number.isInteger(idx) || idx < 0 || idx >= total) continue;
+    indices.set(idx, {});
+  }
+  return indices;
+}
+
+  
 // ---------------------------------------------------------------------------
 // formatToolDefs — mirrors Go formatToolDefs (simplified)
 // ---------------------------------------------------------------------------

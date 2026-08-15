@@ -279,6 +279,24 @@ export class PiTransport implements TranscriptLlmTransport {
     this.session = session;
   }
 
+  /** Dispose the underlying Pi session — await to surface cleanup failure. */
+  async dispose(): Promise<void> {
+    const sess = this.session as unknown as { dispose?: () => Promise<void>; abort?: () => Promise<void> };
+    if (typeof sess.dispose === "function") {
+      await sess.dispose();
+    } else if (typeof sess.abort === "function") {
+      await sess.abort();
+    }
+  }
+
+  /** Forward abort without swallowing rejection. */
+  async abort(): Promise<void> {
+    const sess = this.session as unknown as { abort?: () => Promise<void> };
+    if (typeof sess.abort === "function") {
+      await sess.abort();
+    }
+  }
+
   async complete(req: ChatRequest, signal: AbortSignal): Promise<ChatResponse>;
   async complete(signal: AbortSignal, req: ChatRequest): Promise<ChatResponse>;
   async complete(
@@ -295,10 +313,20 @@ export class PiTransport implements TranscriptLlmTransport {
     // -----------------------------------------------------------------
     if (req.tools !== undefined) {
       const names = req.tools.map((t) => t.function.name);
-      const sess = this.session as unknown as { setActiveToolsByName?: (names: string[]) => void };
+      const sess = this.session as unknown as {
+        setActiveToolsByName?: (names: string[]) => void;
+        getActiveToolNames?: () => string[];
+      };
       if (typeof sess.setActiveToolsByName === "function") {
         try {
           sess.setActiveToolsByName(names);
+          // Verify allowlist took effect when getter available (feasibility row 3)
+          if (typeof sess.getActiveToolNames === "function") {
+            const active = sess.getActiveToolNames();
+            if (active.length !== names.length || !names.every((n) => active.includes(n))) {
+              console.warn(`[pi-adapter] allowlist mismatch: expected ${names.join(",")} got ${active.join(",")}`);
+            }
+          }
         } catch {
           // Non-fatal — allow request to proceed with previous allowlist
         }
@@ -307,11 +335,15 @@ export class PiTransport implements TranscriptLlmTransport {
 
     // -----------------------------------------------------------------
     // 2) Abort forwarding — forward AbortSignal -> session.abort()
-    //    (feasibility row 9). Use once:true and cleanup.
+    //    (feasibility row 9). Use once:true and cleanup. Await rejection.
     // -----------------------------------------------------------------
     const sessForAbort = this.session as unknown as { abort?: () => Promise<void> };
     const abortHandler = (): void => {
-      if (typeof sessForAbort.abort === "function") void sessForAbort.abort();
+      if (typeof sessForAbort.abort === "function") {
+        void sessForAbort.abort().catch((e) => {
+          console.warn(`[pi-adapter] abort failed: ${String(e)}`);
+        });
+      }
     };
     signal.addEventListener("abort", abortHandler, { once: true });
 
@@ -536,7 +568,23 @@ export async function createPiTransportForFile(
   const settingsManager = SettingsManager.inMemory({
     compaction: { enabled: false },
     retry: { enabled: false },
+    extensions: [],
+    skills: [],
+    prompts: [],
+    themes: [],
+    enableSkillCommands: false,
+    packages: [],
   } as unknown as Parameters<typeof SettingsManager.inMemory>[0]);
+  // Explicitly disable discovery that could load AGENTS.md/skills/extensions via cwd
+  try {
+    settingsManager.setExtensionPaths([]);
+    settingsManager.setSkillPaths([]);
+    settingsManager.setPromptTemplatePaths([]);
+    settingsManager.setThemePaths([]);
+    settingsManager.setEnableSkillCommands(false);
+  } catch {
+    // ignore if not available
+  }
 
   const customTools = tools.map((def) => {
     const name = def.function.name;

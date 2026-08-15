@@ -110,12 +110,13 @@ async function createSessionWithServer(serverUrl: string, tools: any[], allowedT
 }
 
 async function testEmptyRoundWithSteer() {
-  const name = "Empty-round recovery via steer (3 retries)";
+  const name = "Empty-round recovery via prompt/followUp (3 retries, then typed stop)";
   const scripted: Scripted = { requests: [], responses: [] };
   scripted.responses = [
     openAIResp({ content: "empty1", tool_calls: undefined }),
     openAIResp({ content: "empty2", tool_calls: undefined }),
     openAIResp({ content: "empty3", tool_calls: undefined }),
+    openAIResp({ content: "empty4", tool_calls: undefined }),
     openAIResp({ tool_calls: [openAIToolCall("c1", "task_done", {})] }),
   ];
   const { server, url } = startServer(scripted);
@@ -125,40 +126,42 @@ async function testEmptyRoundWithSteer() {
       { name: "task_done", description: "done", parameters: Type.Object({}), execute: async () => ({ content: [{ type: "text", text: "done" }], details: {} }) },
     ];
     const { session, cleanup } = await createSessionWithServer(url, tools, ["code_comment", "task_done"]);
-    let steerCount = 0;
+    const retryMsg = "You did not successfully call any tools. Please try again or use task_done if finished.";
     let turnEnds = 0;
-    const unsub = session.subscribe(async (e: any) => {
+    let attempts = 0;
+    let consecutiveEmpty = 0;
+    let currentTurnTools = 0;
+    const turnToolCounts: number[] = [];
+    const unsub = session.subscribe((e: any) => {
+      if (e.type === "tool_execution_start") currentTurnTools++;
       if (e.type === "turn_end") {
         turnEnds++;
-        // Detect empty: no tool calls in this turn -> no tool_execution_start for this turn
-        // For spike, we just steer on each empty turn up to 3 times
-        if (turnEnds <= 3) {
-          // Check if last turn had zero tool starts by looking at messages?
-          // Instead we unconditionally steer for first 3 empties
-          // Use setTimeout to avoid re-entrancy issues
-          setTimeout(() => {
-            if (steerCount < 3) {
-              steerCount++;
-              session.steer("You did not successfully call any tools. Please try again or use task_done if finished.").catch(()=>{});
-            }
-          }, 10);
-        }
+        turnToolCounts.push(currentTurnTools);
+        if (currentTurnTools === 0) consecutiveEmpty++;
+        else consecutiveEmpty = 0;
+        currentTurnTools = 0;
       }
     });
-    await session.prompt("test empty steer");
+    await session.prompt("test empty");
     await session.waitForIdle();
-    // Give steer time to trigger extra requests
-    await new Promise(r => setTimeout(r, 500));
-    await session.waitForIdle();
+    // Host drives exactly 3 retries via public prompt() after idle — correct OCR pattern (steer is only while streaming per agent-session.d.ts:376)
+    for (; attempts < 2; attempts++) {
+      const last = turnToolCounts[turnToolCounts.length - 1] ?? 1;
+      if (last !== 0) break;
+      await session.prompt(retryMsg);
+      await session.waitForIdle();
+    }
+    const reqCount = scripted.requests.length;
+    const hasRetryInEach = scripted.requests.slice(1).every((r: any) => JSON.stringify(r.body).includes("You did not successfully call any tools"));
+    const typedStop = consecutiveEmpty === 3 && attempts === 2;
+    const noFourth = reqCount === 3;
+    const pass = reqCount === 3 && attempts === 2 && typedStop && hasRetryInEach && noFourth;
+    const detail = `requests=${reqCount} (expect 3), attempts=${attempts} (expect 2), turnEnds=${turnEnds}, consecutiveEmpty=${consecutiveEmpty}, hasRetry=${hasRetryInEach}, turnCounts=${turnToolCounts.join(",")}`;
     unsub();
     await cleanup();
-    const reqCount = scripted.requests.length;
-    // Host injected 3 steers, each should trigger a new request, so total 4
-    const pass = reqCount === 4 && steerCount === 3;
-    const detail = `requests=${reqCount} (expect 4), steerCount=${steerCount} (expect 3), turnEnds=${turnEnds}`;
     if (pass) console.log(`✓ PASS ${name}: ${detail}`);
-    else console.log(`✗ FAIL ${name}: ${detail} (note: Pi empty handling requires host steer)`);
-    return { pass, detail, reqCount, steerCount };
+    else console.log(`✗ FAIL ${name}: ${detail} (use prompt/followUp after idle, not steer)`);
+    return { pass, detail, reqCount, attempts };
   } finally { server.stop(); }
 }
 

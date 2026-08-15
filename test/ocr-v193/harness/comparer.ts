@@ -82,6 +82,13 @@ export function compareRuns(
     `excluded differ`,
   );
   check(
+    "coverage.skipped",
+    setEquals(expected.coverage.skipped, actual.coverage.skipped),
+    expected.coverage.skipped,
+    actual.coverage.skipped,
+    `skipped differ`,
+  );
+  check(
     "coverage.completed",
     setEquals(expected.coverage.completed, actual.coverage.completed),
     expected.coverage.completed,
@@ -149,13 +156,34 @@ export function compareRuns(
     actual.commentsAfter.length,
     `commentsAfter count differs`,
   );
-  // Deep compare comments by path+content (order significant per OCR guarantee; do not sort)
+  // Deep compare comments by path+content+suggestion+category+severity+lines (order significant per OCR guarantee; do not sort)
   if (expected.commentsAfter.length === actual.commentsAfter.length && expected.commentsAfter.length > 0) {
     for (let i = 0; i < expected.commentsAfter.length; i++) {
       const e = expected.commentsAfter[i] as NonNullable<(typeof expected.commentsAfter)[number]>;
       const a = actual.commentsAfter[i] as NonNullable<(typeof actual.commentsAfter)[number]>;
-      const same = e.path === a.path && e.content === a.content;
+      const eStart = ((e as any).start_line ?? (e as any).startLine ?? 0) as number;
+      const aStart = ((a as any).start_line ?? (a as any).startLine ?? 0) as number;
+      const eEnd = ((e as any).end_line ?? (e as any).endLine ?? 0) as number;
+      const aEnd = ((a as any).end_line ?? (a as any).endLine ?? 0) as number;
+      const linesMatch = (eStart === 0 || aStart === 0 || eStart === aStart) && (eEnd === 0 || aEnd === 0 || eEnd === aEnd);
+      const same =
+        e.path === a.path &&
+        e.content === a.content &&
+        (((e as any).existing_code ?? (e as any).existingCode ?? "") as string) === (((a as any).existing_code ?? (a as any).existingCode ?? "") as string) &&
+        (((e as any).suggestion_code ?? (e as any).suggestionCode ?? "") as string) === (((a as any).suggestion_code ?? (a as any).suggestionCode ?? "") as string) &&
+        (e.category ?? "") === (a.category ?? "") &&
+        (e.severity ?? "") === (a.severity ?? "") &&
+        linesMatch;
       check(`commentsAfter[${i}]`, same, e, a, `comment ${i} differs: ${JSON.stringify(e)} vs ${JSON.stringify(a)}`);
+    }
+  }
+  // Also deep-compare commentsBefore when present
+  if (expected.commentsBefore.length === actual.commentsBefore.length && expected.commentsBefore.length > 0) {
+    for (let i = 0; i < expected.commentsBefore.length; i++) {
+      const e = expected.commentsBefore[i] as NonNullable<(typeof expected.commentsBefore)[number]>;
+      const a = actual.commentsBefore[i] as NonNullable<(typeof actual.commentsBefore)[number]>;
+      const same = e.path === a.path && e.content === a.content;
+      check(`commentsBefore[${i}]`, same, e, a, `commentsBefore ${i} differs`);
     }
   }
 
@@ -167,6 +195,20 @@ export function compareRuns(
     expected.usage.totalTokens,
     actual.usage.totalTokens,
     `totalTokens differ`,
+  );
+  check(
+    "usage.promptTokens",
+    (expected.usage.promptTokens ?? 0) === (actual.usage.promptTokens ?? 0),
+    expected.usage.promptTokens,
+    actual.usage.promptTokens,
+    `promptTokens differ`,
+  );
+  check(
+    "usage.completionTokens",
+    (expected.usage.completionTokens ?? 0) === (actual.usage.completionTokens ?? 0),
+    expected.usage.completionTokens,
+    actual.usage.completionTokens,
+    `completionTokens differ`,
   );
 
   // Output fields (normalized)

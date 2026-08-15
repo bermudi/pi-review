@@ -1,0 +1,120 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2026 alibaba/open-code-review Contributors
+// Ported from internal/tool/comment_collector_test.go at c35ddd7223f2b5540ce03aa43c9a25ef643fca27
+
+import { describe, test, expect } from "bun:test";
+import { CommentCollector, NewCommentCollector } from "../../../src/ocr-v193/tool/collector.js";
+import type { LlmComment } from "../../../src/ocr-v193/model/types.js";
+
+function cm(path: string, content: string): LlmComment {
+  return { path, content };
+}
+
+describe("ocr-v193 CommentCollector (ported)", () => {
+  test("Add and Comments", () => {
+    const c = NewCommentCollector();
+    c.Add(cm("a.go", "issue 1"));
+    c.Add(cm("b.go", "issue 2"));
+    const got = c.Comments();
+    expect(got.length).toBe(2);
+    expect(got[0]!.path).toBe("a.go");
+    expect(got[1]!.path).toBe("b.go");
+  });
+
+  test("Comments returns defensive copy", () => {
+    const c = NewCommentCollector();
+    c.Add(cm("a.go", "x"));
+    const got = c.Comments();
+    got[0]!.content = "mutated";
+    expect(c.Comments()[0]!.content).toBe("x");
+  });
+
+  test("CommentsForPath", () => {
+    const c = NewCommentCollector();
+    c.Add(cm("a.go", "1"));
+    c.Add(cm("b.go", "2"));
+    c.Add(cm("a.go", "3"));
+    const got = c.CommentsForPath("a.go");
+    expect(got.length).toBe(2);
+    expect(got[0]!.content).toBe("1");
+    expect(got[1]!.content).toBe("3");
+    expect(c.CommentsForPath("nonexist.go").length).toBe(0);
+  });
+
+  test("Snapshot and Since", () => {
+    const c = NewCommentCollector();
+    c.Add(cm("a.go", "old"));
+    const snap = c.Snapshot();
+    expect(snap).toBe(1);
+    c.Add(cm("b.go", "new1"));
+    c.Add(cm("c.go", "new2"));
+    const since = c.Since(snap);
+    expect(since!.length).toBe(2);
+    expect(since![0]!.path).toBe("b.go");
+  });
+
+  test("Since edge cases", () => {
+    const c = NewCommentCollector();
+    c.Add(cm("a.go", "x"));
+    expect(c.Since(-1)!.length).toBe(1);
+    expect(c.Since(100)).toBeNull();
+  });
+
+  test("ReplaceSince", () => {
+    const c = NewCommentCollector();
+    c.Add(cm("a.go", "keep"));
+    const snap = c.Snapshot();
+    c.Add(cm("b.go", "raw1"));
+    c.Add(cm("c.go", "raw2"));
+    c.ReplaceSince(snap, [cm("merged.go", "deduped")]);
+    const got = c.Comments();
+    expect(got.length).toBe(2);
+    expect(got[0]!.path).toBe("a.go");
+    expect(got[1]!.path).toBe("merged.go");
+  });
+
+  test("ReplaceSince out of bounds no-op", () => {
+    const c = NewCommentCollector();
+    c.Add(cm("a.go", "x"));
+    c.ReplaceSince(100, [cm("z.go", "nope")]);
+    expect(c.Comments().length).toBe(1);
+  });
+
+  test("RemoveByPathAndIndices", () => {
+    const c = NewCommentCollector();
+    c.Add(cm("a.go", "a0"));
+    c.Add(cm("b.go", "b0"));
+    c.Add(cm("a.go", "a1"));
+    c.Add(cm("a.go", "a2"));
+    c.Add(cm("b.go", "b1"));
+    c.RemoveByPathAndIndices("a.go", new Map([[0, {}], [2, {}]]));
+    const got = c.Comments();
+    expect(got.length).toBe(3);
+    const paths = got.map((g) => `${g.path}:${g.content}`);
+    expect(paths).toEqual(["b.go:b0", "a.go:a1", "b.go:b1"]);
+  });
+
+  test("RemoveByPathAndIndices no match", () => {
+    const c = NewCommentCollector();
+    c.Add(cm("a.go", "x"));
+    c.RemoveByPathAndIndices("a.go", new Map([[99, {}]]));
+    expect(c.Comments().length).toBe(1);
+  });
+
+  test("RemoveByPath (convenience) removes all for path", () => {
+    const c = NewCommentCollector();
+    c.Add(cm("a.go", "1"));
+    c.Add(cm("b.go", "2"));
+    c.Add(cm("a.go", "3"));
+    c.RemoveByPath("a.go");
+    expect(c.Comments().length).toBe(1);
+    expect(c.Comments()[0]!.path).toBe("b.go");
+  });
+
+  test("deterministic ordering preserved", () => {
+    const c = NewCommentCollector();
+    for (let i = 0; i < 5; i++) c.Add(cm(`file${i}.go`, `issue ${i}`));
+    const got = c.Comments();
+    for (let i = 0; i < 5; i++) expect(got[i]!.path).toBe(`file${i}.go`);
+  });
+});

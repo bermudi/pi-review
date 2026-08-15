@@ -20,7 +20,7 @@
 import type { Diff } from "../../../src/ocr-v193/model/diff.js";
 import type { LlmComment } from "../../../src/ocr-v193/model/review.js";
 import { CommentCollector } from "../../../src/ocr-v193/tool/collector.js";
-import { Runner } from "../../../src/ocr-v193/llmloop/loop.js";
+import { Runner, MainLoopStop } from "../../../src/ocr-v193/llmloop/loop.js";
 import { ScriptedTransport, type ScriptedResponse } from "../../../src/ocr-v193/llmloop/transcript.js";
 import type { ToolDef, Template } from "../../../src/ocr-v193/llmloop/types.js";
 import type { HarnessRunResult, ScriptedTurn, Usage } from "./types.js";
@@ -40,6 +40,9 @@ export interface PiRunnerOpts {
   readonly template?: Partial<Template>;
   /** Mode override (default: workspace). */
   readonly mode?: typeof ModeWorkspace | 1 | 2;
+  readonly from?: string;
+  readonly to?: string;
+  readonly commit?: string;
   /** Fixed clock millis for deterministic date (unused here, but recorded). */
   readonly fixedNowMs?: number;
 }
@@ -121,8 +124,28 @@ export async function runPiHarness(opts: PiRunnerOpts): Promise<HarnessRunResult
     const provider = new Provider({
       repoDir: opts.repoDir,
       mode: opts.mode ?? ModeWorkspace,
+      from: opts.from,
+      to: opts.to,
+      commit: opts.commit,
       runner: gitRunner,
     });
+    // For range/commit fixtures, allow fallback to reading range/commit from fixture sidecar files when opts not provided
+    if ((opts.mode === 2 || (opts as any).isRange) && !provider.from) {
+      try {
+        const fs = await import("node:fs/promises");
+        const raw = await fs.readFile(`${opts.repoDir}/.ocr-fixture-range`, "utf-8");
+        const j = JSON.parse(raw);
+        (provider as any).from = j.from;
+        (provider as any).to = j.to;
+      } catch {}
+    }
+    if ((opts.mode === 1 || (opts as any).isCommit) && !provider.commit) {
+      try {
+        const fs = await import("node:fs/promises");
+        const c = (await fs.readFile(`${opts.repoDir}/.ocr-fixture-commit`, "utf-8")).trim();
+        (provider as any).commit = c;
+      } catch {}
+    }
     diffs = await provider.getDiff();
     coverageSelected = diffs.filter((d) => !d.isBinary && !d.isDeleted).map((d) => d.newPath);
     // gitignore excluded is not directly exposed; keep empty for now (comparer will handle)
@@ -141,9 +164,11 @@ export async function runPiHarness(opts: PiRunnerOpts): Promise<HarnessRunResult
 
   const signal = AbortSignal.timeout(15000);
   let completed = false;
-  let stop: any = 0;
+  let stop: any = MainLoopStop.StopNone;
   const warnings: any[] = [];
   const toolCallsBefore: LlmComment[] = collector.Comments();
+  const perFileCompleted: string[] = [];
+  const perFileFailed: string[] = [];
 
   for (const d of diffs) {
     const pathForFile = d.newPath;
@@ -152,25 +177,42 @@ export async function runPiHarness(opts: PiRunnerOpts): Promise<HarnessRunResult
       content: m.content.replaceAll("{{current_file_path}}", pathForFile).replaceAll("{{diff}}", d.diff),
     }));
     const res = await runner.RunPerFile(signal, msgs as any, pathForFile);
+    if (res.completed) perFileCompleted.push(pathForFile);
+    else perFileFailed.push(pathForFile);
     completed = res.completed;
     stop = res.stop;
     if (res.error) warnings.push({ type: "subtask_error", file: pathForFile, message: res.error.message });
-    // For harness we run first file only for minimal slice (workspace single file); break after one
-    break;
+    // For deterministic harness with multiple files, run all through pool semantics (sequential here)
+    // Keep running to cover completed/failed per file; only break for single-file fast path if needed
+    // (no break — run all files)
   }
 
   const commentsAfter = collector.Comments();
   const commentsBefore = toolCallsBefore;
 
-  // Model requests from transport
-  const modelRequests = (transport.requests as any[]).map((req: any, idx: number) => ({
-    index: idx,
-    model: req.model ?? "test-model",
-    tools: (req.tools ?? []).map((t: any) => ({ name: t.function?.name ?? String(t) })),
-    messages: req.messages ?? [],
-    toolCalls: [], // ScriptedTransport captures tool calls in responses separately; we infer from requests' next turn? Use transport captured separately
-    usage: undefined,
-  }));
+  // Model requests from transport — pair each request with its scripted response's toolCalls
+  const modelRequests = (transport.requests as any[]).map((req: any, idx: number) => {
+    const src: any = (scripted as any[])[Math.min(idx, (scripted as any[]).length - 1)];
+    const toolCalls = (src?.toolCalls ?? []).map((tc: any) => {
+      let args: Record<string, unknown> = {};
+      try {
+        args = tc.arguments ? JSON.parse(tc.arguments) : {};
+        if (args === null || typeof args !== "object" || Array.isArray(args)) args = {};
+      } catch {
+        args = { _raw: tc.arguments, _parseError: true } as unknown as Record<string, unknown>;
+      }
+      return { id: tc.id, name: tc.name, args, result: undefined, error: undefined };
+    });
+    const usage = src?.usage ? { promptTokens: src.usage.PromptTokens ?? src.usage.promptTokens ?? 0, completionTokens: src.usage.CompletionTokens ?? src.usage.completionTokens ?? 0, totalTokens: src.usage.TotalTokens ?? src.usage.totalTokens ?? 0 } : undefined;
+    return {
+      index: idx,
+      model: req.model ?? "test-model",
+      tools: (req.tools ?? []).map((t: any) => ({ name: t.function?.name ?? String(t) })),
+      messages: req.messages ?? [],
+      toolCalls,
+      usage,
+    };
+  });
 
   // Usage from runner aggregates
   const usage: Usage = {
@@ -181,16 +223,20 @@ export async function runPiHarness(opts: PiRunnerOpts): Promise<HarnessRunResult
     cacheWriteTokens: runner.totalCacheWriteTokens(),
   };
 
-  // Coverage mapping (selected/completed/failed)
+  // Coverage mapping (selected/completed/failed) — per-file when multiple diffs
   const coverage = {
     selected: coverageSelected,
     excluded: coverageExcluded,
     skipped: [] as string[],
-    completed: completed ? coverageSelected.slice(0, 1) : ([] as string[]),
-    failed: !completed && warnings.length > 0 ? coverageSelected.slice(0, 1) : ([] as string[]),
+    completed: perFileCompleted.length > 0 ? perFileCompleted : completed ? coverageSelected.slice(0, 1) : ([] as string[]),
+    failed: perFileFailed.length > 0 ? perFileFailed : !completed && warnings.length > 0 ? coverageSelected.slice(0, 1) : ([] as string[]),
   };
 
-  const stopReason = completed ? "complete" : warnings.length > 0 ? "failed" : "partial";
+  let stopReason: string;
+  if (stop === MainLoopStop.StopEmptyRounds) stopReason = "empty_rounds";
+  else if (stop === MainLoopStop.StopCompression) stopReason = "compression";
+  else if (stop === MainLoopStop.StopMaxRounds) stopReason = warnings.length > 0 ? "budget_exceeded" : "partial";
+  else stopReason = completed ? "complete" : warnings.length > 0 ? "failed" : "partial";
 
   // Tool defs per phase (main = advertised, grace = filtered)
   const toolDefsPerPhase: Record<string, readonly string[]> = {

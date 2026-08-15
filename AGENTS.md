@@ -20,11 +20,11 @@ The parity engine is a fresh core under `src/ocr-v193` with its own tests. It
 must not import legacy review policy. Reuse low-level utilities only after
 OCR-derived tests prove equivalent behavior.
 
-Before creating that engine or a broad comparison harness, complete the public
-Pi SDK feasibility gate in Phase 1 of the port plan. If Pi `0.84.2` (was `0.82.1`) cannot
-provide OCR round accounting, dynamic terminal-only tools, one restricted grace
-request, and OCR-controlled compression without private imports, stop and
-report the blocker.
+Treat the existing parity tree as `building`, not proven. Do not expand its
+scope or call a phase complete until the corresponding committed verifier in
+`docs/ocr-v1.9.3-port-plan.md` passes. If Pi `0.84.2` cannot provide OCR round
+accounting, dynamic terminal-only tools, one restricted grace request, and
+OCR-controlled compression through public APIs, stop and report the blocker.
 
 ## Stack
 
@@ -102,10 +102,10 @@ During iteration, run the narrowest affected test file before the full suite. Us
 
 - Ported OCR source, prompts, templates, schemas, and fixtures must identify
   their v1.9.3 provenance and retain required Apache-2.0 attribution.
-- Do not begin the source port or broad parity harness until the Phase 1 public
-  Pi SDK feasibility gate passes.
+- Do not advance beyond the active evidence gate or replace it with a
+  test-count/status-document claim.
 - Never use private/deep Pi imports or transitive `pi-agent-core` access to make
-  the feasibility spike pass.
+  a verifier pass.
 - Never test against OCR `main` when claiming parity; verify the pinned tag and
   commit first.
 - Never replace an OCR mechanism with a preferred design in compatibility mode
