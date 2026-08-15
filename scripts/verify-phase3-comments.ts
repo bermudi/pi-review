@@ -177,17 +177,14 @@ async function main():Promise<void>{
     const env=await makePiEnv(id,fake.url,[{type:"function",function:{name:"code_comment",description:""}},{type:"function",function:{name:"task_done",description:""}}]);
     try{
       const collector=new CommentCollector();
-      const { Provider, ModeWorkspace } = await import("../src/ocr-v193/diff/git.js");
-      const { Runner: GitRunner } = await import("../src/ocr-v193/diff/runner.js");
-      const prov=new Provider({repoDir:repo.dir,mode:ModeWorkspace as unknown,runner:new GitRunner(16)} as never);
-      const diffs=await prov.getDiff();
-      const diffLookup=(p:string)=> diffs.find(d=> (d as {newPath:string}).newPath===p)??null;
+      const manualDiff={ oldPath:"main.go", newPath:"main.go", diff:`@@ -10,6 +10,8 @@\n import "fmt"\n\n func main() {\n+    x := 1\n+    y := 2\n     fmt.Println("hello")\n }\n`, newFileContent:"", isBinary:false, isDeleted:false, isNew:false, isRenamed:false, insertions:2, deletions:0 };
+      const diffLookup=(p:string)=> p==="main.go" ? manualDiff as unknown as never : null;
       const runner=new Runner({model:"test-model",template:{MaxTokens:128000,MaxToolRequestTimes:30,MaxCompletionTokens:4096,MemoryCompressionTask:{Messages:[]},ReLocationTask:{messages:[{role:"system",content:"relocate"},{role:"user",content:"diff:{diff} code:{existing_code} suggestion:{suggestion_content}"}]}} as unknown,llmClient:env.adapter as unknown,mainToolDefs:[{type:"function",function:{name:"code_comment",description:""}},{type:"function",function:{name:"task_done",description:""}}] as unknown,commentCollector:collector as unknown,diffLookup} as unknown);
-      const msgs=[{role:"system",content:"review"},{role:"user",content:`Review main.go diff:${(diffs[0] as {diff:string})?.diff??""}`}];
+      const msgs=[{role:"system",content:"review"},{role:"user",content:`Review main.go diff:${manualDiff.diff}`}];
       const res=await runner.RunPerFile(AbortSignal.timeout(15000) as unknown as AbortSignal, msgs as unknown as never, "main.go");
       assertions++; if(!res.completed) fail(`relocation-success should complete`,join(artifactsDir,id));
       const trace=env.recorder.build({coverage:{selected:["main.go"],excluded:[],skipped:[],completed:["main.go"],failed:[]},rawComments:collector.Comments() as unknown as never,processedComments:collector.Comments() as unknown as never,usage:{PromptTokens:runner.totalInputTokens(),CompletionTokens:runner.totalOutputTokens(),TotalTokens:runner.totalTokensUsed()},stopReason:"complete",exitCode:0} as unknown as never);
-      assertions++; if((trace as {requests:unknown[]}).requests.length < 2) fail(`relocation should have >=2 requests got ${(trace as {requests:unknown[]}).requests.length}`,join(artifactsDir,id));
+      assertions++; if((trace as unknown as {requests: readonly unknown[]}).requests.length < 2) fail(`relocation should have >=2 requests got ${(trace as unknown as {requests: readonly unknown[]}).requests.length}`,join(artifactsDir,id));
       assertions++; if(runner.totalTokensUsed()<=0) fail(`usage not counted`,join(artifactsDir,id));
       assertions++; if(runner.totalTokensUsed() < 120+30) fail(`usage should include relocation 150+ got ${runner.totalTokensUsed()}`,join(artifactsDir,id));
       const c=(collector.Comments() as unknown as {existingCode?:string; startLine?:number}[])[0]; assertions++; if(!c|| (c.startLine??0)<=0) fail(`relocation should resolve, got startLine ${c?.startLine}`,join(artifactsDir,id));
@@ -207,22 +204,19 @@ async function main():Promise<void>{
     const repo=await createTempRepo({mode:"workspace",files:{"main.go":"package main\nfunc Foo(){\nx:=1\ny:=2\n}\n"}});
     await applyWorkspaceChanges(repo.dir,{"main.go":"package main\nfunc Foo(){\nx:=1\ny:=2\n}\n"});
     const fake=startFakeServer({turns:turns as unknown as never});
-    const env=await makePiEnv(id,fake.url,[{type:"function",function:{name:"code_comment",description:""}},{type:"function",function:{name:"task_done",description:""}}]);
+    const env2=await makePiEnv(id,fake.url,[{type:"function",function:{name:"code_comment",description:""}},{type:"function",function:{name:"task_done",description:""}}]);
     try{
       const collector=new CommentCollector();
-      const { Provider, ModeWorkspace } = await import("../src/ocr-v193/diff/git.js");
-      const { Runner: GitRunner } = await import("../src/ocr-v193/diff/runner.js");
-      const prov=new Provider({repoDir:repo.dir,mode:ModeWorkspace as unknown,runner:new GitRunner(16)} as never);
-      const diffs=await prov.getDiff();
-      const runner=new Runner({model:"test-model",template:{MaxTokens:128000,MaxToolRequestTimes:30,MaxCompletionTokens:4096,MemoryCompressionTask:{Messages:[]},ReLocationTask:{messages:[{role:"system",content:"relocate"},{role:"user",content:"diff:{diff} code:{existing_code}"}]}} as unknown,llmClient:env.adapter as unknown,mainToolDefs:[{type:"function",function:{name:"code_comment",description:""}},{type:"function",function:{name:"task_done",description:""}}] as unknown,commentCollector:collector as unknown,diffLookup:(p:string)=> diffs.find(d=> (d as {newPath:string}).newPath===p)??null} as unknown);
-      await runner.RunPerFile(AbortSignal.timeout(15000) as unknown as AbortSignal,[{role:"system",content:"review"},{role:"user",content:`diff:${(diffs[0] as {diff:string})?.diff??""}`}] as unknown as never,"main.go");
-      const trace=env.recorder.build({coverage:{selected:["main.go"],excluded:[],skipped:[],completed:["main.go"],failed:[]},rawComments:collector.Comments() as unknown as never,processedComments:collector.Comments() as unknown as never,usage:{PromptTokens:runner.totalInputTokens(),CompletionTokens:runner.totalOutputTokens(),TotalTokens:runner.totalTokensUsed()},stopReason:"complete",exitCode:0} as unknown as never);
-      assertions++; if((trace as {requests:unknown[]}).requests.length < 2) fail(`rollback needs relocation request`,join(artifactsDir,id));
+      const manualDiff={ oldPath:"main.go", newPath:"main.go", diff:`@@ -1,1 +1,1 @@\n-old\n+new\n`, newFileContent:"", isBinary:false, isDeleted:false, isNew:false, isRenamed:false, insertions:1, deletions:1 };
+      const runner=new Runner({model:"test-model",template:{MaxTokens:128000,MaxToolRequestTimes:30,MaxCompletionTokens:4096,MemoryCompressionTask:{Messages:[]},ReLocationTask:{messages:[{role:"system",content:"relocate"},{role:"user",content:"diff:{diff} code:{existing_code}"}]}} as unknown,llmClient:env2.adapter as unknown,mainToolDefs:[{type:"function",function:{name:"code_comment",description:""}},{type:"function",function:{name:"task_done",description:""}}] as unknown,commentCollector:collector as unknown,diffLookup:(p:string)=> p==="main.go" ? manualDiff as unknown as never : null} as unknown);
+      await runner.RunPerFile(AbortSignal.timeout(15000) as unknown as AbortSignal,[{role:"system",content:"review"},{role:"user",content:`diff:${manualDiff.diff}`}] as unknown as never,"main.go");
+      const trace=env2.recorder.build({coverage:{selected:["main.go"],excluded:[],skipped:[],completed:["main.go"],failed:[]},rawComments:collector.Comments() as unknown as never,processedComments:collector.Comments() as unknown as never,usage:{PromptTokens:runner.totalInputTokens(),CompletionTokens:runner.totalOutputTokens(),TotalTokens:runner.totalTokensUsed()},stopReason:"complete",exitCode:0} as unknown as never);
+      assertions++; if((trace as unknown as {requests: readonly unknown[]}).requests.length < 2) fail(`rollback needs relocation request`,join(artifactsDir,id));
       const c=(collector.Comments() as unknown as {existingCode?:string; startLine?:number}[])[0]; assertions++; if(!c|| c.existingCode!=="WRONG") fail(`rollback should keep original WRONG got ${JSON.stringify(c?.existingCode)}`,join(artifactsDir,id));
       assertions++; if((c.startLine??0)!==0) fail(`rollback startLine should be 0 got ${c.startLine}`,join(artifactsDir,id));
       assertions++; if(runner.totalTokensUsed() < 150) fail(`usage should still count relocation even on failure`,join(artifactsDir,id));
       console.error(`[verify:phase3-comments] PASS ${id}`);
-    }finally{ fake.stop(); await env.cleanup(); await repo.cleanup().catch(()=>{}); }
+    }finally{ fake.stop(); await env2.cleanup(); await repo.cleanup().catch(()=>{}); }
   }
 
   // ---- fixture 4: async-drain-before-filter ----
@@ -276,7 +270,7 @@ async function main():Promise<void>{
       assertions++; if(collector.Comments().length!==2) fail(`plain filter should leave 2 got ${collector.Comments().length}`,join(artifactsDir,id));
       assertions++; if(collector.Comments().some(c=>c.content==="remove")) fail(`remove should be gone`,join(artifactsDir,id));
       const trace=env.recorder.build({coverage:{selected:["a.go"],excluded:[],skipped:[],completed:["a.go"],failed:[]},rawComments:collector.Comments() as unknown as never,processedComments:collector.Comments() as unknown as never,usage:{PromptTokens:10,CompletionTokens:5,TotalTokens:15},stopReason:"complete",exitCode:0} as unknown as never);
-      assertions++; if((trace as {requests:unknown[]}).requests.length===0) fail(`plain filter trace empty`,join(artifactsDir,id));
+      assertions++; if((trace as unknown as {requests: readonly unknown[]}).requests.length===0) fail(`plain filter trace empty`,join(artifactsDir,id));
       fake.stop(); await env.cleanup();
     }
     // fenced
@@ -316,7 +310,7 @@ async function main():Promise<void>{
       await (agent as unknown as {executeReviewFilter:(s:AbortSignal,d:unknown,p:string)=>Promise<void>}).executeReviewFilter(new AbortController().signal,{newPath:"a.go",diff:"+code"} as unknown,"a.go");
       assertions++; if(collector.Comments().length!==cs.expectLen) fail(`filter ${cs.name} expected ${cs.expectLen} got ${collector.Comments().length}`,join(artifactsDir,id));
       const trace=env.recorder.build({coverage:{selected:["a.go"],excluded:[],skipped:[],completed:["a.go"],failed:[]},rawComments:collector.Comments() as unknown as never,processedComments:collector.Comments() as unknown as never,usage:{PromptTokens:10,CompletionTokens:5,TotalTokens:15},stopReason:"complete",exitCode:0} as unknown as never);
-      assertions++; if((trace as {requests:unknown[]}).requests.length===0) fail(`filter ${cs.name} trace empty`,join(artifactsDir,id));
+      assertions++; if((trace as unknown as {requests: readonly unknown[]}).requests.length===0) fail(`filter ${cs.name} trace empty`,join(artifactsDir,id));
       fake.stop(); await env.cleanup();
     }
     console.error(`[verify:phase3-comments] PASS ${id}`);
@@ -374,7 +368,7 @@ async function main():Promise<void>{
       assertions++; if(collector.Comments().length!==1) fail(`partial should keep comment got ${collector.Comments().length}`,join(artifactsDir,id));
       assertions++; if(runner.totalTokensUsed() < 70) fail(`usage should survive partial, got ${runner.totalTokensUsed()}`,join(artifactsDir,id));
       const trace=env.recorder.build({coverage:{selected:["a.go"],excluded:[],skipped:[],completed:[],failed:["a.go"]},rawComments:collector.Comments() as unknown as never,processedComments:collector.Comments() as unknown as never,usage:{PromptTokens:runner.totalInputTokens(),CompletionTokens:runner.totalOutputTokens(),TotalTokens:runner.totalTokensUsed()},stopReason:"empty_rounds",exitCode:1} as unknown as never);
-      assertions++; if((trace as {requests:unknown[]}).requests.length < 2) fail(`partial trace should have requests`,join(artifactsDir,id));
+      assertions++; if((trace as unknown as {requests: readonly unknown[]}).requests.length < 2) fail(`partial trace should have requests`,join(artifactsDir,id));
       console.error(`[verify:phase3-comments] PASS ${id}`);
     }finally{ fake.stop(); await env.cleanup(); await repo.cleanup().catch(()=>{}); }
   }
