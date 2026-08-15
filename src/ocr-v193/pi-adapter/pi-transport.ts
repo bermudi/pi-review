@@ -376,12 +376,11 @@ export class PiTransport implements TranscriptLlmTransport {
       const getStateMessages = (): unknown[] => {
         if (sessAny.state !== undefined && Array.isArray(sessAny.state.messages)) return sessAny.state.messages;
         if (Array.isArray(sessAny.messages)) return sessAny.messages as unknown[];
-        if (sessAny.agent?.state !== undefined && Array.isArray(sessAny.agent.state.messages)) return sessAny.agent.state.messages;
         return [];
       };
 
       const setStateMessages = (msgs: unknown[]): void => {
-        // Public path: session.state.messages
+        // Public path: session.state.messages (feasibility row 7, public `get state(): AgentState`)
         try {
           if (sessAny.state !== undefined && "messages" in sessAny.state) {
             (sessAny.state as { messages: unknown[] }).messages = msgs;
@@ -389,15 +388,9 @@ export class PiTransport implements TranscriptLlmTransport {
         } catch {
           // ignore
         }
-        // Fallback for alternate shape
+        // Fallback for alternate shape exposed by some SDK builds
         try {
           if (Array.isArray(sessAny.messages)) (sessAny as unknown as { messages: unknown[] }).messages = msgs;
-        } catch {}
-        // Low-level public via session.agent.state.messages (proven in feasibility-v3)
-        try {
-          if (sessAny.agent?.state !== undefined && "messages" in sessAny.agent.state) {
-            (sessAny.agent.state as { messages: unknown[] }).messages = msgs;
-          }
         } catch {}
       };
 
