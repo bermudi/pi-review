@@ -351,18 +351,19 @@ async function main():Promise<void>{
     const id="partial-failure-comments-survive"; fixtures.push(id);
     const turns=[
       {toolCalls:[{id:"c1",name:"code_comment",arguments:JSON.stringify({path:"a.go",comments:[{content:"survive",existing_code:"x",category:"bug",severity:"medium"}]})}],usage:{promptTokens:50,completionTokens:20,totalTokens:70}},
-      // 3 empty rounds (no tool calls) -> StopEmptyRounds
-      {content:"no tool",usage:{promptTokens:10,completionTokens:5,totalTokens:15}},
-      {content:"no tool",usage:{promptTokens:10,completionTokens:5,totalTokens:15}},
-      {content:"no tool",usage:{promptTokens:10,completionTokens:5,totalTokens:15}},
+      {toolCalls:[{id:"c2",name:"file_read",arguments:JSON.stringify({path:"a.go"})}],usage:{promptTokens:10,completionTokens:5,totalTokens:15}},
+      {toolCalls:[{id:"c3",name:"file_read",arguments:JSON.stringify({path:"a.go"})}],usage:{promptTokens:10,completionTokens:5,totalTokens:15}},
+      {toolCalls:[{id:"c4",name:"file_read",arguments:JSON.stringify({path:"a.go"})}],usage:{promptTokens:10,completionTokens:5,totalTokens:15}},
     ];
     const repo=await createTempRepo({mode:"workspace",files:{"a.go":"package main\nfunc Foo(){}\n"}});
     await applyWorkspaceChanges(repo.dir,{"a.go":"package main\nfunc Foo(){ x:=1 }\n"});
     const fake=startFakeServer({turns:turns as unknown as never});
-    const env=await makePiEnv(id,fake.url,[{type:"function",function:{name:"code_comment",description:""}},{type:"function",function:{name:"task_done",description:""}}]);
+    const env=await makePiEnv(id,fake.url,[{type:"function",function:{name:"code_comment",description:""}},{type:"function",function:{name:"task_done",description:""}},{type:"function",function:{name:"file_read",description:""}}]);
     try{
       const collector=new CommentCollector();
-      const runner=new Runner({model:"test-model",template:{MaxTokens:128000,MaxToolRequestTimes:10,MaxCompletionTokens:4096,MemoryCompressionTask:{Messages:[]}} as unknown,llmClient:env.adapter as unknown,mainToolDefs:[{type:"function",function:{name:"code_comment",description:""}},{type:"function",function:{name:"task_done",description:""}}] as unknown,commentCollector:collector as unknown} as unknown);
+      const emptyTool={ name:"file_read", execute: async ()=> "" };
+      const registry=new Map([["file_read", emptyTool as unknown as never]]);
+      const runner=new Runner({model:"test-model",template:{MaxTokens:128000,MaxToolRequestTimes:10,MaxCompletionTokens:4096,MemoryCompressionTask:{Messages:[]}} as unknown,llmClient:env.adapter as unknown,mainToolDefs:[{type:"function",function:{name:"code_comment",description:""}},{type:"function",function:{name:"task_done",description:""}},{type:"function",function:{name:"file_read",description:""}}] as unknown,commentCollector:collector as unknown,toolRegistry:registry as unknown} as unknown);
       const res=await runner.RunPerFile(AbortSignal.timeout(15000) as unknown as AbortSignal,[{role:"user",content:"hi"}] as unknown as never,"a.go");
       assertions++; if(res.stop !== MainLoopStop.StopEmptyRounds) fail(`expected StopEmptyRounds got ${res.stop}`,join(artifactsDir,id));
       assertions++; if(collector.Comments().length!==1) fail(`partial should keep comment got ${collector.Comments().length}`,join(artifactsDir,id));
