@@ -469,22 +469,26 @@ async function main(): Promise<void> {
     return {pass, detail, trace, requests};
   });
 
-  // Scenario 4: Three OCR empty-result retries send OCR's retry text three times, then finish with StopEmptyRounds
+  // Scenario 4: Three OCR empty-result retries (empty tool results) then StopEmptyRounds
+  // Mirrors Go TestRunPerFile_EmptyToolResultsStopWithEmptyRounds: 3x file_read returning "" => StopEmptyRounds
   await assertScenario("three-empty-retries", async ()=>{
     const turns: ScriptedTurn[] = [
-      { content: "", toolCalls: [], usage:{promptTokens:10,completionTokens:5,totalTokens:15}},
-      { content: "", toolCalls: [], usage:{promptTokens:10,completionTokens:5,totalTokens:15}},
-      { content: "", toolCalls: [], usage:{promptTokens:10,completionTokens:5,totalTokens:15}},
-      // extra turn that should not be consumed (loop stops after 3)
-      { toolCalls: [{id:"c1",name:"task_done",arguments:JSON.stringify({state:"DONE"})}], usage:{promptTokens:10,completionTokens:5,totalTokens:15}},
+      { toolCalls: [{id:"c1",name:"file_read",arguments:JSON.stringify({path:"main.go"})}], usage:{promptTokens:10,completionTokens:5,totalTokens:15}},
+      { toolCalls: [{id:"c2",name:"file_read",arguments:JSON.stringify({path:"main.go"})}], usage:{promptTokens:10,completionTokens:5,totalTokens:15}},
+      { toolCalls: [{id:"c3",name:"file_read",arguments:JSON.stringify({path:"main.go"})}], usage:{promptTokens:10,completionTokens:5,totalTokens:15}},
+      // extra turn that should NOT be consumed (loop stops after 3 empties)
+      { toolCalls: [{id:"c4",name:"task_done",arguments:JSON.stringify({state:"DONE"})}], usage:{promptTokens:10,completionTokens:5,totalTokens:15}},
     ];
-    const {trace, requests} = await runRunnerScenario({fixtureId:"phase1-empty-3", turns, template: smallTemplate, mainTools:["code_comment","task_done","file_read"], filePath:"main.go"});
-    const retryText = "You did not successfully call any tools";
-    // Check that turns 2 and 3's requests contain retry text in messages
-    const req2HasRetry = JSON.stringify(requests[1]?.body?.messages ?? "").includes(retryText);
-    const req3HasRetry = JSON.stringify(requests[2]?.body?.messages ?? "").includes(retryText);
-    const pass = trace.requests.length===3 && trace.responses.length===3 && trace.final.stopReason==="empty_rounds" && req2HasRetry && req3HasRetry && requests.length===3;
-    const detail = `requests=${trace.requests.length} expect3, responses=${trace.responses.length} expect3, stop=${trace.final.stopReason} expect empty_rounds, req2Retry=${req2HasRetry}, req3Retry=${req3HasRetry}, serverRequests=${requests.length}`;
+    // Registry that returns empty string for file_read => consecutiveEmptyRounds increments
+    const emptyRegistry = new Map<string,any>([
+      ["file_read",{name:"file_read", execute: async ()=> "" }],
+      ["file_read_diff",{name:"file_read_diff", execute: async ()=> "" }],
+      ["code_search",{name:"code_search", execute: async ()=> "" }],
+      ["file_find",{name:"file_find", execute: async ()=> "" }],
+    ]);
+    const {trace, requests} = await runRunnerScenario({fixtureId:"phase1-empty-3", turns, template: smallTemplate, mainTools:["code_comment","task_done","file_read","file_find"], toolRegistry: emptyRegistry, filePath:"main.go"});
+    const pass = trace.requests.length===3 && trace.responses.length===3 && trace.final.stopReason==="empty_rounds" && requests.length===3 && trace.toolExecutions.length===3;
+    const detail = `requests=${trace.requests.length} expect3, responses=${trace.responses.length} expect3, stop=${trace.final.stopReason} expect empty_rounds, toolExecs=${trace.toolExecutions.length} expect3, serverRequests=${requests.length}`;
     return {pass, detail, trace, requests};
   });
 
