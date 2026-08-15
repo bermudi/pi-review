@@ -26,7 +26,10 @@ export class TraceRecorder {
       ordinal: this.nextRequestOrdinal++,
       model,
       messages: JSON.parse(JSON.stringify(messages)) as unknown[],
-      tools: tools.map((t) => ({ name: t.name, schema: JSON.parse(JSON.stringify(t.schema)) as unknown })),
+      tools: tools.map((t) => ({
+        name: t.name,
+        schema: t.schema !== undefined ? (JSON.parse(JSON.stringify(t.schema)) as unknown) : undefined,
+      })),
     });
   }
 
