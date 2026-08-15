@@ -13,6 +13,20 @@ Fixed reference for every translated file, per `docs/ocr-v1.9.3-port-plan.md` Ph
 - Bun: `>=1.3.0` (package.json `engines`)
 - Pi SDK: `@earendil-works/pi-coding-agent` `0.84.2` (was `0.82.1`, see `docs/pi-sdk-feasibility-report.md` bump note)
 
+## Verification status (per `docs/ocr-v1.9.3-port-plan.md` gates)
+
+| Phase | Status | Verifier | Commit | Report |
+|---|---|---|---|---|
+| Phase 0 — evidence plumbing | `verified` | `bun run verify:phase0-evidence` | `cd472e0983574a98affe8724611d559f3627bff4` | `{"phase":"phase0-evidence","commit":"cd472e0983574a98affe8724611d559f3627bff4","fixtures":["phase0-negative-5-fields","phase0-missing-trace","trace-ordinal-sequencing"],"assertions":13,"privateImports":0,"result":"pass"}` |
+| Phase 1 — Pi SDK gate (7 scenarios) | `building` | `bun run verify:phase1-sdk` | — | feasibility 9/9 pass on public APIs (`spike/feasibility-v2.ts`), but trace harness via `PiTransport` for all 7 plan scenarios not yet wired — see `verify:phase1-sdk` BUILDING output |
+| Phase 2 — vertical slice | `building` | `bun run verify:phase2-vertical` | — | harness uses `ScriptedTransport` for Pi; needs `PiTransport` + typed trace differential — see harness `index.ts --all` |
+| Phase 3 — comments lifecycle | `building` | `bun run verify:phase3-comments` | — | awaiting Phase 2 |
+| Phase 4 — inputs | `building` | `bun run verify:phase4-inputs` | — | awaiting Phase 2/3 |
+| Phase 5 — scan/session/output | `building` | `bun run verify:phase5-scan-session` | — | awaiting earlier phases |
+| Cutover | `building` | `bun run verify:cutover` | — | awaiting all phases |
+
+Ledger rule: a phase is `verified` only when its committed verifier exits 0 and prints the JSON report above. `building` means code/tests exist but no verifier has passed. `blocked` would name a public-SDK blocker.
+
 ## Port vectors (source -> dest, to be filled as files land)
 
 | OCR path | Dest path | Port commit | Prompt/template/schema/fixture hashes |
