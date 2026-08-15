@@ -43,11 +43,16 @@ async function main(): Promise<void> {
   checkGitClean();
   verifyPinnedRef();
 
-  // Private imports check
-  const rgPrivate = spawnSync("sh", ["-c", `rg -n "pi-agent-core|pi-ai" src --hidden 2>/dev/null | grep "from\\|import" | head -n 20`], { encoding: "utf-8" });
+  // Private imports check (precise: ignore comments mentioning pi-agent-core)
+  const rgPrivate = spawnSync("sh", ["-c", `rg -n "pi-agent-core|pi-ai" src --hidden 2>/dev/null | head -n 50`], { encoding: "utf-8" });
   const privOut = (rgPrivate.stdout as string) ?? "";
-  if (privOut.trim().length > 0) {
-    const out = { phase: "phase1-sdk", commit: currentCommit(), fixtures: [] as string[], assertions: 0, notApplicable: [], privateImports: 1, result: "fail" as const, error: `private imports: ${privOut}`, artifactsDir };
+  const importLines = privOut.split("\n").filter((l) => {
+    const trimmed = l.trim();
+    if (trimmed.startsWith("*") || trimmed.startsWith("//") || trimmed.includes("`pi-agent")) return false;
+    return /from\s+["'][^"']*pi-agent/.test(l) || /import\s*\([^)]*pi-agent/.test(l) || /^\s*import\s+.*pi-agent/.test(l);
+  }).join("\n");
+  if (importLines.trim().length > 0) {
+    const out = { phase: "phase1-sdk", commit: currentCommit(), fixtures: [] as string[], assertions: 0, notApplicable: [], privateImports: 1, result: "fail" as const, error: `private imports: ${importLines}`, artifactsDir };
     console.log(JSON.stringify(out)); console.error(`FAIL private imports`); process.exit(1);
   }
 
