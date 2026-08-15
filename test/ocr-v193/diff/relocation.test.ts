@@ -151,4 +151,30 @@ describe("ocr-v193 relocation (ported)", () => {
     expect(extractCodeBlock("```go")).toBe("");
     expect(extractCodeBlock("```\nfoo\nbar")).toBe("");
   });
+
+  test("ResolveComment_TextMatchSuccess", async () => {
+    const { resolveComment } = await import("../../../src/ocr-v193/diff/resolver.js");
+    const d = makeDiff();
+    const c: LlmComment = { path: "main.go", content: "x", existingCode: "x := 1\ny := 2" };
+    const ok = resolveComment(c, d);
+    expect(ok).toBe(true);
+    expect(c.startLine).toBeGreaterThan(0);
+  });
+
+  test("ResolveComment_AlreadyResolved", async () => {
+    const { resolveComment } = await import("../../../src/ocr-v193/diff/resolver.js");
+    const d = makeDiff();
+    const c: LlmComment = { path: "main.go", content: "x", existingCode: "x := 1", startLine: 5, endLine: 5 };
+    const ok = resolveComment(c, d);
+    expect(ok).toBe(true);
+    expect(c.startLine).toBe(5);
+  });
+
+  test("ResolveComment_EmptyExistingCode", async () => {
+    const { resolveComment } = await import("../../../src/ocr-v193/diff/resolver.js");
+    const d = makeDiff();
+    const c: LlmComment = { path: "main.go", content: "x", existingCode: "" };
+    const ok = resolveComment(c, d);
+    expect(ok).toBe(false);
+  });
 });

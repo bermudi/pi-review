@@ -117,4 +117,32 @@ describe("ocr-v193 CommentCollector (ported)", () => {
     const got = c.Comments();
     for (let i = 0; i < 5; i++) expect(got[i]!.path).toBe(`file${i}.go`);
   });
+
+  test("ReplaceSince_NegativeSnap", () => {
+    const c = NewCommentCollector();
+    c.Add(cm("a.go", "keep"));
+    c.ReplaceSince(-5, [cm("b.go", "replaced")]);
+    const got = c.Comments();
+    expect(got.length).toBe(1);
+    expect(got[0]!.path).toBe("b.go");
+  });
+
+  test("ReplaceSince_Zero", () => {
+    const c = NewCommentCollector();
+    c.Add(cm("a.go", "old1"));
+    c.Add(cm("b.go", "old2"));
+    c.ReplaceSince(0, [cm("c.go", "new")]);
+    const got = c.Comments();
+    expect(got.length).toBe(1);
+    expect(got[0]!.path).toBe("c.go");
+  });
+
+  test("Since negative returns all", () => {
+    const c = NewCommentCollector();
+    c.Add(cm("a.go", "x"));
+    c.Add(cm("b.go", "y"));
+    const s = c.Since(-10);
+    expect(s).not.toBeNull();
+    expect(s!.length).toBe(2);
+  });
 });

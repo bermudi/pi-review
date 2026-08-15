@@ -371,4 +371,88 @@ describe("ocr-v193 loop Phase 5 — comment processing", () => {
     expect(res.completed).toBe(true);
     expect(collector.Comments()[0]!.startLine).toBeGreaterThan(0);
   });
+
+  // ---- Ported from internal/llmloop/loop_execute_test.go ----
+  test("ExecuteToolCall_DynamicNotRegistered", async () => {
+    const { runner, transport } = makeRunner({
+      responses: [{ toolCalls: [{ id: "1", name: "unknown_tool", arguments: "{}" }] }, { toolCalls: [{ id: "2", name: "task_done", arguments: JSON.stringify({ state: "DONE" }) }] }],
+    });
+    const res = await runner.executeToolCall(new AbortController().signal, "a.go", { id: "1", type: "function", function: { name: "unknown_tool", arguments: "{}" } } as unknown as never, "");
+    expect(res.data).toContain("Tool not found");
+    expect(transport.requests.length).toBe(0);
+  });
+
+  test("ExecuteToolCall_DynamicExecuteError", async () => {
+    const collector = makeCollector();
+    // Create a runner with a tool that throws
+    const transport = new ScriptedTransport([] as unknown as never);
+    const failingTool = { name: "file_read", execute: async () => { throw new Error("read failed"); } };
+    const template: Record<string, unknown> = { MaxTokens: 128000, MaxToolRequestTimes: 5, MaxCompletionTokens: 4096, MemoryCompressionTask: { Messages: [] } };
+    const runner2 = new Runner({
+      model: "test-model",
+      template: template as unknown as never,
+      llmClient: transport as unknown as never,
+      mainToolDefs: [{ type: "function", function: { name: "file_read", description: "" } }] as unknown as readonly ToolDef[],
+      commentCollector: collector as unknown as never,
+      toolRegistry: { get: (n: string) => (n === "file_read" ? failingTool : undefined) } as unknown as never,
+    } as unknown as never);
+    const res = await runner2.executeToolCall(new AbortController().signal, "a.go", { id: "1", type: "function", function: { name: "file_read", arguments: JSON.stringify({ path: "missing.go" }) } } as unknown as never, "");
+    expect(res.data).toContain("Error executing tool file_read");
+  });
+
+  test("ExecuteToolCall_DynamicSuccessRecordsResult", async () => {
+    const collector = makeCollector();
+    const transport = new ScriptedTransport([] as unknown as never);
+    const okTool = { name: "file_read", execute: async () => "file content" };
+    const template: Record<string, unknown> = { MaxTokens: 128000, MaxToolRequestTimes: 5, MaxCompletionTokens: 4096, MemoryCompressionTask: { Messages: [] } };
+    const runner2 = new Runner({
+      model: "test-model",
+      template: template as unknown as never,
+      llmClient: transport as unknown as never,
+      mainToolDefs: [{ type: "function", function: { name: "file_read", description: "" } }] as unknown as readonly ToolDef[],
+      commentCollector: collector as unknown as never,
+      toolRegistry: { get: (n: string) => (n === "file_read" ? okTool : undefined) } as unknown as never,
+    } as unknown as never);
+    const res = await runner2.executeToolCall(new AbortController().signal, "a.go", { id: "1", type: "function", function: { name: "file_read", arguments: JSON.stringify({ path: "a.go" }) } } as unknown as never, "");
+    expect(res.data).toBe("file content");
+  });
+
+  test("ExecuteToolCall_DynamicParseError", async () => {
+    const { runner } = makeRunner({ responses: [] });
+    const res = await runner.executeToolCall(new AbortController().signal, "a.go", { id: "1", type: "function", function: { name: "code_comment", arguments: "not-json" } } as unknown as never, "");
+    expect(res.data).toContain("Error parsing tool arguments");
+  });
+
+  test("CollectPendingComments_AwaitsPool", async () => {
+    const collector = makeCollector();
+    const pool = new CommentWorkerPool(1);
+    const { runner } = makeRunner({ collector, pool, responses: [{ toolCalls: [{ id: "1", name: "code_comment", arguments: JSON.stringify({ comments: [{ content: "x", existing_code: "a" }] }) }] }, { toolCalls: [{ id: "2", name: "task_done", arguments: JSON.stringify({ state: "DONE" }) }] }] });
+    await runner.RunPerFile(new AbortController().signal, [newTextMessage("user", "hi")], "a.go");
+    // collectPendingComments should await pool
+    const pending = await runner.collectPendingComments();
+    expect(pending.length).toBe(1);
+    await pool.Await();
+  });
+
+  test("ExecuteToolCall_CodeCommentOverridesHallucinatedPath", async () => {
+    const collector = makeCollector();
+    const { runner } = makeRunner({
+      collector,
+      responses: [{ toolCalls: [{ id: "1", name: "code_comment", arguments: JSON.stringify({ path: "hallucinated.go", comments: [{ content: "x", existing_code: "a" }] }) }] }, { toolCalls: [{ id: "2", name: "task_done", arguments: JSON.stringify({ state: "DONE" }) }] }],
+    });
+    await runner.RunPerFile(new AbortController().signal, [newTextMessage("user", "hi")], "real.go");
+    const cs = collector.Comments();
+    expect(cs[0]!.path).toBe("real.go");
+  });
+
+  test("ExecuteToolCall_TaskDone handling", async () => {
+    const { runner } = makeRunner({ responses: [] });
+    const ok = await runner.executeToolCall(new AbortController().signal, "a.go", { id: "1", type: "function", function: { name: "task_done", arguments: JSON.stringify({ state: "DONE" }) } } as unknown as never, "");
+    expect(ok.completed).toBe(true);
+    const failed = await runner.executeToolCall(new AbortController().signal, "a.go", { id: "1", type: "function", function: { name: "task_done", arguments: JSON.stringify({ state: "FAILED" }) } } as unknown as never, "");
+    expect(failed.failed).toBe(true);
+    const invalid = await runner.executeToolCall(new AbortController().signal, "a.go", { id: "1", type: "function", function: { name: "task_done", arguments: JSON.stringify({ state: "UNKNOWN" }) } } as unknown as never, "");
+    expect(invalid.completed).toBe(false);
+    expect(invalid.data).toContain("invalid");
+  });
 });
