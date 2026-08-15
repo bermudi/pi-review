@@ -17,8 +17,8 @@ Fixed reference for every translated file, per `docs/ocr-v1.9.3-port-plan.md` Ph
 
 | Phase | Status | Verifier | Commit | Report |
 |---|---|---|---|---|
-| Phase 0 — evidence plumbing | `verified` | `bun run verify:phase0-evidence` | `cd472e0983574a98affe8724611d559f3627bff4` | `{"phase":"phase0-evidence","commit":"cd472e0983574a98affe8724611d559f3627bff4","fixtures":["phase0-negative-5-fields","phase0-missing-trace","trace-ordinal-sequencing"],"assertions":13,"privateImports":0,"result":"pass"}` |
-| Phase 1 — Pi SDK gate (7 scenarios) | `building` | `bun run verify:phase1-sdk` | — | feasibility 9/9 pass on public APIs (`spike/feasibility-v2.ts`), but trace harness via `PiTransport` for all 7 plan scenarios not yet wired — see `verify:phase1-sdk` BUILDING output |
+| Phase 0 — evidence plumbing | `verified` | `bun run verify:phase0-evidence` | `8c5c298258e4b1935ef69480b7ee4404fcc505c8` | `{"phase":"phase0-evidence","commit":"8c5c298258e4b1935ef69480b7ee4404fcc505c8","fixtures":["phase0-negative-5-fields","phase0-missing-trace","trace-ordinal-sequencing"],"assertions":13,"privateImports":0,"result":"pass"}` |
+| Phase 1 — Pi SDK gate (7 scenarios) | `verified` | `bun run verify:phase1-sdk` | `8c5c298258e4b1935ef69480b7ee4404fcc505c8` | `{"phase":"phase1-sdk","commit":"8c5c298258e4b1935ef69480b7ee4404fcc505c8","fixtures":["one-response-two-tool-calls-one-round","grace-exactly-one","cancel-prevents-grace","three-empty-retries","compression-rebuilt","isolation-two-sessions","stall-abort-settles"],"assertions":7,"privateImports":0,"result":"pass"}` |
 | Phase 2 — vertical slice | `building` | `bun run verify:phase2-vertical` | — | harness uses `ScriptedTransport` for Pi; needs `PiTransport` + typed trace differential — see harness `index.ts --all` |
 | Phase 3 — comments lifecycle | `building` | `bun run verify:phase3-comments` | — | awaiting Phase 2 |
 | Phase 4 — inputs | `building` | `bun run verify:phase4-inputs` | — | awaiting Phase 2/3 |
