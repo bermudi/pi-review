@@ -259,10 +259,20 @@ export async function runPiRealHarness(opts: PiRealRunnerOpts): Promise<{ harnes
     const toolCalls = (resp?.toolCalls ?? []).map((tc: any) => {
       let args: Record<string, unknown> = {};
       try {
-        const parsed = tc.arguments ? JSON.parse(tc.arguments) : {};
-        if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) args = parsed as Record<string, unknown>;
+        if (tc.arguments !== undefined && tc.arguments !== null) {
+          if (typeof tc.arguments === "string") {
+            const parsed = tc.arguments ? JSON.parse(tc.arguments) : {};
+            if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) args = parsed as Record<string, unknown>;
+          } else if (typeof tc.arguments === "object" && !Array.isArray(tc.arguments)) {
+            args = tc.arguments as Record<string, unknown>;
+          }
+        } else if (tc.rawArguments && typeof tc.rawArguments === "string") {
+          const parsed = JSON.parse(tc.rawArguments);
+          if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) args = parsed as Record<string, unknown>;
+        }
+        if (args === null || typeof args !== "object" || Array.isArray(args)) args = {};
       } catch {
-        args = { _raw: tc.arguments } as any;
+        args = { _raw: tc.rawArguments ?? tc.arguments } as any;
       }
       return { id: tc.id, name: tc.name, args, result: undefined, error: undefined };
     });
