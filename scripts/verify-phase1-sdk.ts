@@ -284,10 +284,13 @@ async function runRunnerScenario(opts:{
     const origComplete2 = wrappedTransport.complete;
     let reqCount=0;
     (wrappedTransport as any).complete = async (sig:AbortSignal, req:any)=>{
-      reqCount++;
       const res = await origComplete2(sig, req);
+      reqCount++;
       if (reqCount===1) {
-        setTimeout(()=>abortController!.abort(), 50);
+        // Abort immediately before Runner can enter grace; signal abort is checked at loop top and in runGraceRound
+        abortController!.abort();
+        // Also abort Pi session to ensure no in-flight provider request continues
+        try{ await (transport as any).abort?.(); }catch{}
       }
       return res;
     };
