@@ -88,6 +88,9 @@ async function runScenarioInConsumer(opts: {
   timeoutMs?: number;
 }): Promise<{ stdout: string; stderr: string; exitCode: number | null; outputJson: any }> {
   const driverPath = join(opts.consumerDir, "driver.mjs");
+  const resultFile = join(opts.consumerDir, `result-${opts.scenario}-${Date.now()}.json`);
+  // Clean up any old result file for this scenario
+  try { rmSync(resultFile, { force: true }); } catch {}
   const env: Record<string, string> = {};
   for (const [k, v] of Object.entries(process.env)) if (v !== undefined) env[k] = v;
   for (const k of Object.keys(env)) {
@@ -98,6 +101,7 @@ async function runScenarioInConsumer(opts: {
   }
   env["SERVER_URL"] = opts.serverUrl;
   env["SCENARIO"] = opts.scenario;
+  env["RESULT_FILE"] = resultFile;
   // Async spawn so server can handle requests
   const { spawn } = await import("node:child_process");
   return await new Promise((resolve, reject) => {
@@ -117,7 +121,26 @@ async function runScenarioInConsumer(opts: {
     child.on("close", (code) => {
       clearTimeout(timer);
       let outputJson: any = null;
-      try { outputJson = stdout ? JSON.parse(stdout) : null; } catch { outputJson = null; }
+      // Prefer result file (driver writes JSON there to avoid stdout pollution from Runner logs)
+      try {
+        if (existsSync(resultFile)) {
+          const txt = readFileSync(resultFile, "utf-8");
+          outputJson = txt ? JSON.parse(txt) : null;
+          // Keep stdout as well for debugging, but outputJson comes from file
+        } else if (stdout) {
+          // Fallback: try to extract last JSON line from stdout (Runner logs may be on stdout)
+          const lines = stdout.trim().split("\n");
+          for (let i = lines.length - 1; i >= 0; i--) {
+            const line = lines[i]?.trim();
+            if (line?.startsWith("{") && line?.endsWith("}")) {
+              try { outputJson = JSON.parse(line); break; } catch {}
+            }
+          }
+          if (!outputJson) try { outputJson = JSON.parse(stdout); } catch {}
+        }
+      } catch {}
+      // Clean up result file
+      try { rmSync(resultFile, { force: true }); } catch {}
       resolve({ stdout, stderr, exitCode: code, outputJson });
     });
     child.on("error", (err) => {
@@ -235,7 +258,7 @@ async function scenario1() {
     usage: { input: runner.totalInputTokens(), output: runner.totalOutputTokens(), total: runner.totalTokensUsed() },
     error: res.error?.message ?? null,
   };
-  console.log(JSON.stringify(out));
+  await writeFile(process.env.RESULT_FILE, JSON.stringify(out));
 }
 
 // Scenario 2: exhaust normal rounds, expect exactly one grace with only 2 tools
@@ -256,7 +279,7 @@ async function scenario2() {
   const signal = AbortSignal.timeout(10000);
   const res = await runner.RunPerFile(signal, messages, "main.go");
   await cleanup();
-  console.log(JSON.stringify({ scenario: "2", completed: res.completed, stop: String(res.stop), usage: { total: runner.totalTokensUsed() } }));
+  await writeFile(process.env.RESULT_FILE, JSON.stringify({ scenario: "2", completed: res.completed, stop: String(res.stop), usage: { total: runner.totalTokensUsed() } }));
 }
 
 // Scenario 3: abort before grace, no grace request, settles within 500ms
@@ -303,7 +326,7 @@ async function scenario3() {
   const res = await runner.RunPerFile(controller.signal, messages, "main.go");
   const elapsed = Date.now() - start;
   await cleanup();
-  console.log(JSON.stringify({ scenario: "3", elapsed, aborted: controller.signal.aborted, completed: res.completed, stop: String(res.stop) }));
+  await writeFile(process.env.RESULT_FILE, JSON.stringify({ scenario: "3", elapsed, aborted: controller.signal.aborted, completed: res.completed, stop: String(res.stop) }));
 }
 
 // Scenario 4: three consecutive empty responses => exactly 3 requests then stop
@@ -330,7 +353,7 @@ async function scenario4() {
   const signal = AbortSignal.timeout(10000);
   const res = await runner.RunPerFile(signal, messages, "main.go");
   await cleanup();
-  console.log(JSON.stringify({ scenario: "4", stop: String(res.stop), completed: res.completed }));
+  await writeFile(process.env.RESULT_FILE, JSON.stringify({ scenario: "4", stop: String(res.stop), completed: res.completed }));
 }
 
 // Scenario 5: compression — distinct compression request and next main request contains summary
@@ -368,7 +391,7 @@ async function scenario5() {
   const signal = AbortSignal.timeout(15000);
   const res = await runner.RunPerFile(signal, messages, "main.go");
   await cleanup();
-  console.log(JSON.stringify({ scenario: "5", stop: String(res.stop), completed: res.completed }));
+  await writeFile(process.env.RESULT_FILE, JSON.stringify({ scenario: "5", stop: String(res.stop), completed: res.completed }));
 }
 
 // Scenario 6: provider stall plus abort settles within 500ms
@@ -394,7 +417,7 @@ async function scenario6() {
   const res = await p;
   const elapsed = Date.now() - start;
   await cleanup();
-  console.log(JSON.stringify({ scenario: "6", elapsed, aborted: controller.signal.aborted, stop: String(res.stop), error: res.error?.message ?? null }));
+  await writeFile(process.env.RESULT_FILE, JSON.stringify({ scenario: "6", elapsed, aborted: controller.signal.aborted, stop: String(res.stop), error: res.error?.message ?? null }));
 }
 
 // Scenario 7: two concurrent sessions have distinct messages, usage, cancellation, compression
@@ -420,7 +443,7 @@ async function scenario7() {
   const p2 = runner2.RunPerFile(AbortSignal.timeout(10000), messages2, "b.go");
   const [r1, r2] = await Promise.all([p1, p2]);
   await c1(); await c2();
-  console.log(JSON.stringify({
+  await writeFile(process.env.RESULT_FILE, JSON.stringify({
     scenario: "7",
     r1: { stop: String(r1.stop), usage: runner1.totalTokensUsed() },
     r2: { stop: String(r2.stop), usage: runner2.totalTokensUsed() },
