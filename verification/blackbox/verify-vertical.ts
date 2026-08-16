@@ -808,13 +808,14 @@ function compareVertical(opts: {
   if (opts.ocrExit !== opts.piExit) pushMismatch("exit", opts.ocrExit, opts.piExit, "exit codes differ");
 
   // Terminal manifest: OCR json status should be complete/skipped etc — Pi parity should match
-  const ocrStatus = typeof (ocrParsed.raw as Record<string, unknown> | null)?.["status"] === "string" ? ((ocrParsed.raw as Record<string, unknown>)["status"] as string) : "";
-  const piStatus = typeof (piParsed.raw as Record<string, unknown> | null)?.["status"] === "string" ? ((piParsed.raw as Record<string, unknown>)["status"] as string) : "";
+  // Normalize "success" (legacy/parity outputJsonWithWarnings) to "complete" (Go OCR) for comparison.
+  const normalizeStatus = (s: string): string => (s === "success" ? "complete" : s);
+  const ocrStatusRaw = typeof (ocrParsed.raw as Record<string, unknown> | null)?.["status"] === "string" ? ((ocrParsed.raw as Record<string, unknown>)["status"] as string) : "";
+  const piStatusRaw = typeof (piParsed.raw as Record<string, unknown> | null)?.["status"] === "string" ? ((piParsed.raw as Record<string, unknown>)["status"] as string) : "";
+  const ocrStatus = normalizeStatus(ocrStatusRaw);
+  const piStatus = normalizeStatus(piStatusRaw);
   if (ocrStatus && piStatus && ocrStatus !== piStatus) {
-    // For parity, both should be "complete" or similar; if mismatch, report.
-    if (!(ocrStatus === "complete" && piStatus === "complete") && ocrStatus !== piStatus) {
-      pushMismatch("completion.status", ocrStatus, piStatus, `completion status differs`);
-    }
+    pushMismatch("completion.status", ocrStatusRaw, piStatusRaw, `completion status differs: OCR ${JSON.stringify(ocrStatusRaw)} vs Pi ${JSON.stringify(piStatusRaw)}`);
   }
 
   return { equal: mismatches.length === 0, mismatches, notObservable };
