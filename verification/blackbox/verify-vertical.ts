@@ -200,11 +200,24 @@ async function createTempRepo(): Promise<{ dir: string; cleanup: () => Promise<v
 }
 
 async function cloneRepo(sourceDir: string, destDir: string): Promise<void> {
-  const res = spawnSync("git", ["clone", "-q", sourceDir, destDir], { encoding: "utf-8", timeout: 10000 });
-  if (res.status !== 0) throw new Error(`git clone failed: ${res.stderr ?? res.stdout}`);
+  // Preserve workspace (unstaged) changes: git clone would drop them, so we copy the working tree.
+  // Create dest then copy everything including .git and modified files.
+  mkdirSync(destDir, { recursive: true });
+  const cpRes = spawnSync("cp", ["-a", `${sourceDir}/.`, destDir], { encoding: "utf-8", timeout: 10000 });
+  if (cpRes.status !== 0) throw new Error(`cp -a failed: ${cpRes.stderr ?? cpRes.stdout}`);
   // Ensure clones have config for completeness
-  gitSync(destDir, ["config", "user.email", "harness@pi-reviewer.test"]);
-  gitSync(destDir, ["config", "user.name", "harness"]);
+  try {
+    gitSync(destDir, ["config", "user.email", "harness@pi-reviewer.test"]);
+    gitSync(destDir, ["config", "user.name", "harness"]);
+  } catch {}
+  // Remove any leftover lock files that cp might have copied incorrectly
+  const lock = join(destDir, ".git", "index.lock");
+  if (existsSync(lock)) {
+    try {
+      const { unlinkSync } = await import("node:fs");
+      unlinkSync(lock);
+    } catch {}
+  }
 }
 
 async function createPiAgentDir(serverUrl: string): Promise<{ dir: string; cleanup: () => Promise<void> }> {
