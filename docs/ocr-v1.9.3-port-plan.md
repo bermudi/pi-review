@@ -196,7 +196,10 @@ Required scenarios:
 2. exhausted normal rounds allow exactly one additional request exposing only
    `code_comment` and `task_done`;
 3. abort before grace produces no grace request and settles within 500 ms;
-4. three consecutive empty responses stop after exactly three requests;
+4. three consecutive rounds in which the model calls tools but every tool
+   execution returns no usable result stop after exactly three requests,
+   matching OCR v1.9.3
+   `internal/llmloop/loop_test.go:TestRunPerFile_EmptyToolResultsStopWithEmptyRounds`;
 5. OCR-controlled compression sends a distinct compression request and the
    following main request contains the returned summary;
 6. provider stall plus abort settles within 500 ms;
@@ -207,6 +210,10 @@ Request counts and tool allowlists come only from server captures. Usage comes
 only from returned provider usage and public result/output. Compression is not
 proved by searching prompts for words such as “compression”; the trace must
 show the designated request, its response, and the rebuilt next request.
+Request arrival and response delivery are separate observations: a stalled,
+aborted request has a captured request but no captured provider response.
+Never pre-populate a response capture from the scripted response fixture before
+the server actually returns those bytes.
 
 **Completion command**
 
