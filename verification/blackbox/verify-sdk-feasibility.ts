@@ -79,6 +79,7 @@ function verifyPinnedRef(): { tagObject: string; commit: string } {
 }
 
 // Helper to run a driver scenario in consumer dir with a fresh server
+// Uses async spawn so the parent's Bun.serve can handle requests while driver runs (spawnSync would block the event loop).
 async function runScenarioInConsumer(opts: {
   consumerDir: string;
   serverUrl: string;
@@ -87,10 +88,8 @@ async function runScenarioInConsumer(opts: {
   timeoutMs?: number;
 }): Promise<{ stdout: string; stderr: string; exitCode: number | null; outputJson: any }> {
   const driverPath = join(opts.consumerDir, "driver.mjs");
-  // We will have written driver.mjs already; it reads SCENARIO env var and SERVER_URL
   const env: Record<string, string> = {};
   for (const [k, v] of Object.entries(process.env)) if (v !== undefined) env[k] = v;
-  // Sanitize credentials for driver env as well
   for (const k of Object.keys(env)) {
     const lower = k.toLowerCase();
     if (lower.includes("token") || lower.includes("key") || lower.includes("secret") || lower.includes("password")) {
@@ -99,16 +98,33 @@ async function runScenarioInConsumer(opts: {
   }
   env["SERVER_URL"] = opts.serverUrl;
   env["SCENARIO"] = opts.scenario;
-  // Ensure driver uses the consumer's node_modules
-  const res = spawnSync("bun", ["run", driverPath], {
-    cwd: opts.consumerDir,
-    env,
-    encoding: "utf-8",
-    timeout: opts.timeoutMs ?? 20000,
+  // Async spawn so server can handle requests
+  const { spawn } = await import("node:child_process");
+  return await new Promise((resolve, reject) => {
+    const child = spawn("bun", ["run", driverPath], {
+      cwd: opts.consumerDir,
+      env,
+      stdio: ["ignore", "pipe", "pipe"],
+    });
+    let stdout = "";
+    let stderr = "";
+    child.stdout?.on("data", (d: Buffer) => (stdout += d.toString()));
+    child.stderr?.on("data", (d: Buffer) => (stderr += d.toString()));
+    const timer = setTimeout(() => {
+      child.kill("SIGTERM");
+      reject(new Error(`driver timeout after ${opts.timeoutMs ?? 20000}ms`));
+    }, opts.timeoutMs ?? 20000);
+    child.on("close", (code) => {
+      clearTimeout(timer);
+      let outputJson: any = null;
+      try { outputJson = stdout ? JSON.parse(stdout) : null; } catch { outputJson = null; }
+      resolve({ stdout, stderr, exitCode: code, outputJson });
+    });
+    child.on("error", (err) => {
+      clearTimeout(timer);
+      reject(err);
+    });
   });
-  let outputJson: any = null;
-  try { outputJson = res.stdout ? JSON.parse(res.stdout) : null; } catch { outputJson = null; }
-  return { stdout: res.stdout ?? "", stderr: res.stderr ?? "", exitCode: res.status, outputJson };
 }
 
 function writeDriver(consumerDir: string): void {
