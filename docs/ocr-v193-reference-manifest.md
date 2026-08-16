@@ -24,7 +24,7 @@ until the new black-box gates pass.
 | Phase | Status | Verifier | Commit | Report |
 |---|---|---|---|---|
 | Gate 0 — black-box integrity | `verified` | `bun run verify:blackbox-integrity` | `9f7df18d08696494aad3f3e6a2dcac20f9a86508` | `verification/blackbox` 9 fixtures 13 assertions, pack `65d8cba1`, artifacts `/tmp/verify-blackbox-*` |
-| Gate 1 — public Pi SDK feasibility | `building` | `bun run verify:sdk-feasibility` | — | `8b13a043` invalidated: changed OCR empty-round semantics, pre-populated an undelivered stalled response, and used a hard-coded concurrent adversarial result |
+| Gate 1 — public Pi SDK feasibility | `verified` | `bun run verify:sdk-feasibility` | `e9c04a6a53a42031e4602c250a0c254b68348b81` | `verification/blackbox` 7 fixtures 17 assertions (7+7 adversarial), pack `a8e518c6`, artifacts `/tmp/verify-sdk-*` — OCR empty-tool-result (file_read ""), separate arrival/delivery (delivered flag, no usage on stalled), per-session usage equality, real concurrent adversarial via capture mutation, no any |
 | Gate 2 — vertical slice | `candidate` | `bun run verify:vertical` | — | Old Phase 2 evidence invalidated |
 | Gate 3 — core diff review | `candidate` | `bun run verify:core-review` | — | Old Phase 3/4 evidence invalidated |
 | Gate 4 — scan/session/output | `candidate` | `bun run verify:scan`; `verify:sessions`; `verify:outputs` | — | Old Phase 5 evidence invalidated |
