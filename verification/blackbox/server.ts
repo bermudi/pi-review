@@ -115,7 +115,7 @@ export function createCaptureServer(opts: {
         await Bun.sleep(opts.delayMs);
       }
 
-      const responseBody = frozenResponses[Math.min(idx, frozenResponses.length - 1)];
+      const responseBody: any = frozenResponses[Math.min(idx, frozenResponses.length - 1)];
       if (idx < frozenResponses.length) idx++;
 
       // Record raw capture first, then sanitize for artifact.
@@ -135,6 +135,34 @@ export function createCaptureServer(opts: {
       };
       captures.push(rawCapture);
 
+      // Handle streaming: Pi SDK sends stream:true and expects SSE
+      const wantsStream = (body as any)?.stream === true;
+      if (wantsStream) {
+        const id = responseBody?.id ?? `chatcmpl-${idx}`;
+        const created = responseBody?.created ?? Math.floor(Date.now() / 1000);
+        const model = responseBody?.model ?? (body as any)?.model ?? "test-model";
+        const choice = responseBody?.choices?.[0] ?? {};
+        const msg = choice.message ?? {};
+        const finish = choice.finish_reason ?? (msg.tool_calls ? "tool_calls" : "stop");
+        const delta: any = {};
+        if (msg.content) delta.content = msg.content;
+        if (msg.tool_calls) {
+          delta.tool_calls = msg.tool_calls.map((tc: any, i: number) => ({
+            index: i,
+            id: tc.id,
+            type: tc.type ?? "function",
+            function: tc.function,
+          }));
+        }
+        const usage = responseBody?.usage ?? { prompt_tokens: 10, completion_tokens: 5, total_tokens: 15 };
+        const sse = [
+          `data: ${JSON.stringify({ id, object: "chat.completion.chunk", created, model, choices: [{ index: 0, delta, finish_reason: null }] })}\n\n`,
+          `data: ${JSON.stringify({ id, object: "chat.completion.chunk", created, model, choices: [{ index: 0, delta: {}, finish_reason: finish }], usage })}\n\n`,
+          `data: [DONE]\n\n`,
+        ].join("");
+        return new Response(sse, { headers: { "content-type": "text/event-stream" } });
+      }
+
       return new Response(JSON.stringify(responseBody), {
         status: 200,
         headers: { "content-type": "application/json" },
@@ -143,7 +171,7 @@ export function createCaptureServer(opts: {
   });
 
   const port = (server as unknown as { port: number }).port;
-  const url = `http://127.0.0.1:${port}/v1/chat/completions`;
+  const url = `http://127.0.0.1:${port}/v1`;
 
   return {
     url,
