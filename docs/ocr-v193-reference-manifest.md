@@ -1,6 +1,7 @@
 # OCR v1.9.3 reference manifest
 
-Fixed reference for every translated file, per `docs/ocr-v1.9.3-port-plan.md` Phase 2.
+Fixed reference for every translated file under
+`docs/ocr-v1.9.3-port-plan.md`.
 
 ## Pinned reference
 
@@ -13,19 +14,25 @@ Fixed reference for every translated file, per `docs/ocr-v1.9.3-port-plan.md` Ph
 - Bun: `>=1.3.0` (package.json `engines`)
 - Pi SDK: `@earendil-works/pi-coding-agent` `0.84.2` (was `0.82.1`, see `docs/pi-sdk-feasibility-report.md` bump note)
 
-## Verification status (per `docs/ocr-v1.9.3-port-plan.md` gates)
+## Verification status (recovery plan v2)
+
+The earlier verifier reports were invalidated because they admitted
+fixture-constructed observations and did not prove the installed product path.
+They remain in Git history only. Existing implementation is candidate code
+until the new black-box gates pass.
 
 | Phase | Status | Verifier | Commit | Report |
 |---|---|---|---|---|
-| Phase 0 — evidence plumbing | `verified` | `bun run verify:phase0-evidence` | `e1abdedca4ee4e210044d74a8af1e47cc2905424` | `{"phase":"phase0-evidence","commit":"e1abdedca4ee4e210044d74a8af1e47cc2905424","fixtures":["phase0-negative-5-fields","phase0-missing-trace","trace-ordinal-sequencing"],"assertions":13,"privateImports":0,"result":"pass"}` |
-| Phase 1 — Pi SDK gate (7 scenarios) | `verified` | `bun run verify:phase1-sdk` | `e1abdedca4ee4e210044d74a8af1e47cc2905424` | `{"phase":"phase1-sdk","commit":"e1abdedca4ee4e210044d74a8af1e47cc2905424","fixtures":["one-response-two-tool-calls-one-round","grace-exactly-one","cancel-prevents-grace","three-empty-retries","compression-rebuilt","isolation-two-sessions","stall-abort-settles"],"assertions":7,"privateImports":0,"result":"pass"}` |
-| Phase 2 — vertical slice | `verified` | `bun run verify:phase2-vertical` | `e1abdedca4ee4e210044d74a8af1e47cc2905424` | `{"phase":"phase2-vertical","commit":"e1abdedca4ee4e210044d74a8af1e47cc2905424","fixtures":["workspace-code_comment-task_done","workspace-mismatch-comment-content"],"assertions":15,"privateImports":0,"result":"pass"}` |
-| Phase 3 — comments lifecycle | `verified` | `bun run verify:phase3-comments` | `a7eee02fdb0c37d30995e7801ebdf168c028036e` | `{"phase":"phase3-comments","commit":"a7eee02fdb0c37d30995e7801ebdf168c028036e","fixtures":["resolver-lifecycle-differential","relocation-success","relocation-failure-rollback","async-drain-before-filter","filter-production-collector-removal","filter-malformed-duplicate-invalid-outofrange","filter-error-timeout-abort-retains","partial-failure-comments-survive","negative-mismatch"],"assertions":54,"privateImports":0,"result":"pass"}` |
-| Phase 4 — inputs | `verified` | `bun run verify:phase4-inputs` | `f1da36f04ad99171054977aae9c3dc09413d8e77` | `{"phase":"phase4-inputs","commit":"f1da36f04ad99171054977aae9c3dc09413d8e77","fixtures":["workspace-pass","workspace-fail-invalid-repo","range-pass","range-fail-bad-mergebase","commit-pass","commit-fail-invalid-sha","commit-fail-option-injection","selection-rules","multi-file","budget-stop","large-diff-filter","sealed-input-pinning","planning-threshold"],"assertions":94,"privateImports":0,"result":"pass"}` |
-| Phase 5 — scan/session/output | `verified` | `bun run verify:phase5-scan-session` | `8af4c7094fffb29862a0de55ca6a652b9d9918b5` | `{"phase":"phase5-scan-session","commit":"8af4c7094fffb29862a0de55ca6a652b9d9918b5","fixtures":["scan-batch","scan-provider","scan-agent-pi","scan-preview","session-history","session-resume","manifest-terminal","output-formats","output-preview-exit","cli-flags","build-smoke","negative-scan-sarif"],"assertions":115,"privateImports":0,"result":"pass"}` |
-| Cutover | `verified` | `bun run verify:cutover` | `8af4c7094fffb29862a0de55ca6a652b9d9918b5` | `{"phase":"cutover","commit":"8af4c7094fffb29862a0de55ca6a652b9d9918b5","fixtures":["phase0","phase1","phase2","phase3","phase4","phase5","build-smoke","manifest-no-blocked","parity-importable","legacy-switch-documented"],"assertions":15,"privateImports":0,"result":"pass"}` |
+| Gate 0 — black-box integrity | `building` | `bun run verify:blackbox-integrity` | — | Old Phase 0 evidence invalidated |
+| Gate 1 — public Pi SDK feasibility | `candidate` | `bun run verify:sdk-feasibility` | — | Old Phase 1 evidence invalidated |
+| Gate 2 — vertical slice | `candidate` | `bun run verify:vertical` | — | Old Phase 2 evidence invalidated |
+| Gate 3 — core diff review | `candidate` | `bun run verify:core-review` | — | Old Phase 3/4 evidence invalidated |
+| Gate 4 — scan/session/output | `candidate` | `bun run verify:scan`; `verify:sessions`; `verify:outputs` | — | Old Phase 5 evidence invalidated |
+| Gate 5 — cutover | `candidate` | `bun run verify:cutover` | — | Installed default is currently legacy |
 
-Ledger rule: a phase is `verified` only when its committed verifier exits 0 and prints the JSON report above. `building` means code/tests exist but no verifier has passed. `blocked` would name a public-SDK blocker.
+Ledger rule: only the recovery plan v2 black-box gates may set `verified`.
+Existing source rows describe candidate implementation and historical test
+results; their old uses of “verified” are not current gate status.
 
 ## Port vectors (source -> dest, to be filled as files land)
 
@@ -107,7 +114,7 @@ Hash discipline: every imported prompt/template/tool-schema/default-rule/output-
 |---|---|---|
 | Diff workspace/range/commit targets + merge-base + staged/untracked | matched (harness) | `src/ocr-v193/diff/git.ts` + `parser.ts` + `hunk.ts` + `workspace.ts` + `runner.ts` ported; harness proves workspace + range (merge-base) + commit (first-parent) produce selected=["feature.go"]/["commit.go"], 1 comment, usage 210/195, 2 rounds Pi vs OCR — `bun run harness --all` 6 fixtures (4 differential) |
 | Gitignore + default exclude dirs | implemented | `src/ocr-v193/diff/gitignore.ts` ports hardcoded provider dirs + .gitignore last-match-wins |
-| Relocation + resolver | verified (PiTransport) | `src/ocr-v193/diff/relocation.ts` + `resolver.ts` ported (hunk-side + file-content fallback, multiline suggestion handling, deleted/context, diff-marker strip, duplicate first-match, blank-line fallback, CRLF); integrated in `loop.ts` via `diffLookup` + `ReLocationTask` with usage counting and rollback; 42 resolver + 11 relocation unit tests pass + 9 PiTransport fixtures (resolver hunk/fallback/ws/CRLF/marker/duplicate/no-match, relocation success/failure) |
+| Relocation + resolver | candidate (old PiTransport evidence invalidated) | `src/ocr-v193/diff/relocation.ts` + `resolver.ts` ported (hunk-side + file-content fallback, multiline suggestion handling, deleted/context, diff-marker strip, duplicate first-match, blank-line fallback, CRLF); integrated in `loop.ts` via `diffLookup` + `ReLocationTask` with usage counting and rollback; 42 resolver + 11 relocation unit tests pass + 9 historical PiTransport fixtures (resolver hunk/fallback/ws/CRLF/marker/duplicate/no-match, relocation success/failure) |
 | File selection: allowlist, excludes, rules, size/line limits, preview, background | implemented | `src/ocr-v193/rules/allowed_ext.ts` + `system_rules.ts` + `src/ocr-v193/model/preview.ts` + `src/ocr-v193/agent/preview.ts` + `src/ocr-v193/diff/gitignore.ts`; supported_file_types.json + default_exclude_patterns.json verbatim |
 | System rules + rule docs (35 languages) | implemented | `src/ocr-v193/rules/system_rules.ts` verbatim JSON + 35 rule_docs/*.md with hash freeze |
 | Template prompts + task/scan templates | implemented | `src/ocr-v193/template/template.ts` + 10 prompts + task-template.json/scan-template.json verbatim, hash-verified |
@@ -117,11 +124,11 @@ Hash discipline: every imported prompt/template/tool-schema/default-rule/output-
 | Pool (CommentWorkerPool 8 workers, per-key isolation) | implemented | `src/ocr-v193/llmloop/pool.ts` semaphore + per-key AwaitKey |
 | Model contracts (Diff/Preview/ScanItem/LlmComment) | implemented | `src/ocr-v193/model/*` barrel with JSON round-trip helpers |
 | Tool contracts + collector + filereader | implemented | `src/ocr-v193/tool/*` + collector Snapshot/Since/ReplaceSince, code_comment ParseComments, file_read/file_read_diff/code_search/file_find via FileReader |
-| Comment pipeline: `code_comment` incremental collector + `task_done` termination, relocation via `re_location_task`, validation, async drain, review filter (`--no-filter`) | verified (PiTransport 54 assertions) | `src/ocr-v193/tool/collector.ts` + `code-comment.ts` + `loop.ts` incremental path with `DiffLookup` + `ReLocationTask` + `resolveComment` + `buildReLocationMessages` + `extractCodeBlock` + `CommentWorkerPool.SubmitFor` per-file + `await AwaitKey` before filter (mirrors Go `Agent.executeReviewFilter` drain); `src/ocr-v193/diff/relocation.ts` + `resolver.ts` (hunk-side + file-content fallback, multiline suggestion, deleted/context, diff-marker strip, duplicate first-match); `src/ocr-v193/agent/agent.ts` `buildFilterCommentsJSON` + `parseFilterResponse` (StripMarkdownFences, regex `c-%d`, out-of-range ignore) + `executeReviewFilter` (SkipFilter, no-comments, LLM error, malformed, fences, timeout via AbortSignal, per-path `RemoveByPathAndIndices`); 95 unit tests pass (resolver 42, relocation 11, collector 14, loop-phase5 17, filter 11) + `bun run verify:phase3-comments` 9 fixtures 54 assertions via PiTransport (relocation success/failure with usage, async drain, production collector fenced, malformed/duplicate/invalid/outofrange, error/timeout/abort, partial survival, negative mismatch) |
+| Comment pipeline: `code_comment` incremental collector + `task_done` termination, relocation via `re_location_task`, validation, async drain, review filter (`--no-filter`) | candidate (old evidence invalidated) | `src/ocr-v193/tool/collector.ts` + `code-comment.ts` + `loop.ts` incremental path with `DiffLookup` + `ReLocationTask` + `resolveComment` + `buildReLocationMessages` + `extractCodeBlock` + `CommentWorkerPool.SubmitFor` per-file + `await AwaitKey` before filter (mirrors Go `Agent.executeReviewFilter` drain); `src/ocr-v193/diff/relocation.ts` + `resolver.ts` (hunk-side + file-content fallback, multiline suggestion, deleted/context, diff-marker strip, duplicate first-match); `src/ocr-v193/agent/agent.ts` `buildFilterCommentsJSON` + `parseFilterResponse` (StripMarkdownFences, regex `c-%d`, out-of-range ignore) + `executeReviewFilter` (SkipFilter, no-comments, LLM error, malformed, fences, timeout via AbortSignal, per-path `RemoveByPathAndIndices`); 95 unit tests pass (resolver 42, relocation 11, collector 14, loop-phase5 17, filter 11) + historical `bun run verify:phase3-comments` results, which do not satisfy recovery plan v2 |
 | Operational limits: concurrency, per-file timeout, global cancel, token budget look-ahead, Git process cap, retry reporting | implemented | `src/ocr-v193/agent/agent.ts` dispatch gate (semaphore), token look-ahead, global cancel, Git runner cap 16; per-file timeout via AbortSignal |
-| Scan mode: batching (lang/dir/none), dedup, summary, `--no-*` flags, scan checkpoint | `verified` (PiTransport) | `src/ocr-v193/scan/*` batch.ts + estimate.ts + provider.ts + preview.ts + scan.ts (filterScanItems, dedup/summary flags, preview) — `bun run verify:phase5-scan-session` 115 assertions (batch 11, provider 8, agent-pi 9, preview 4) via PiTransport (2-file scan Runner, isolation) |
-| Session checkpoints: fingerprints, sealed input identity, lineage, trusted resume, Ctrl-C checkpoint | `verified` (PiTransport + persist) | `src/ocr-v193/session/*` history.ts + manifest.ts + persist.ts + resume.ts — `bun run verify:phase5-scan-session` 17+12 assertions (history/manifest persist via JSONL, resume reuse gated by manifest, fingerprint lineage, terminal states, Ctrl-C via abort) |
-| CLI: text/JSON/SARIF/agent output, diagnostics on stderr, usage/retry summaries, exit codes, preview | `verified` (PiTransport + output) | `src/ocr-v193/cli/*` + `output/*` ported; `bun run verify:phase5-scan-session` 34 assertions (text/json/sarif rendering, no thinking leak, preview text/json vs sarif error, exit 0/1/2, stdout vs stderr separation, scan/review formats) via `runOcrCli` with fake runners |
+| Scan mode: batching (lang/dir/none), dedup, summary, `--no-*` flags, scan checkpoint | `candidate` (old evidence invalidated) | `src/ocr-v193/scan/*` batch.ts + estimate.ts + provider.ts + preview.ts + scan.ts; historical Phase 5 results do not satisfy recovery plan v2 |
+| Session checkpoints: fingerprints, sealed input identity, lineage, trusted resume, Ctrl-C checkpoint | `candidate` (old evidence invalidated) | `src/ocr-v193/session/*` history.ts + manifest.ts + persist.ts + resume.ts; historical Phase 5 results do not satisfy recovery plan v2 |
+| CLI: text/JSON/SARIF/agent output, diagnostics on stderr, usage/retry summaries, exit codes, preview | `candidate` (old evidence invalidated) | `src/ocr-v193/cli/*` + `output/*` ported; historical fake-runner output results do not satisfy recovery plan v2 |
 | Pi adapter transport (public SDK only) | implemented | `src/ocr-v193/pi-adapter/pi-transport.ts` functional on public APIs (`createAgentSession`, `SessionManager`, `SettingsManager`, `setActiveToolsByName`, message translation, `complete()` & `streamComplete()` with abort, grace & dynamic allowlist); spike + harness prove no private imports |
 | Grace abort (cancel before grace) | matched (spike) | `spike/feasibility-v2.ts` testCancelledGrace |
 | Round accounting (multi-tool = 1 round) | matched (spike) | `spike/feasibility-v2.ts` testRoundAccounting |
