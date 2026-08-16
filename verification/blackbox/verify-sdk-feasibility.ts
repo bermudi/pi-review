@@ -1022,10 +1022,31 @@ async function main(): Promise<void> {
         break;
       }
       case "sdk-4-three-empty-retries": {
-        // Change count from 3 to 2: drop one capture
-        if (mutatedCaptures.length === 3) mutatedCaptures = mutatedCaptures.slice(0, 2) as CapturedHttp[];
-        // Also mutate driver stop to not be empty
-        if (isRecord(mutatedDriver)) mutatedDriver = { ...mutatedDriver, stop: "0" };
+        // Remove "Tool execution returned no result" from the subsequent captured request while preserving count, delivered usage, and stop
+        if (mutatedCaptures.length >= 2) {
+          const target = mutatedCaptures[1];
+          if (target) {
+            const bodyStr = JSON.stringify(target.request.body);
+            let mutatedStr = bodyStr;
+            if (bodyStr.includes("Tool execution returned no result")) {
+              mutatedStr = bodyStr.replace(/Tool execution returned no result/g, "REMOVED");
+            } else if (bodyStr.toLowerCase().includes("no result")) {
+              mutatedStr = bodyStr.replace(/no result/gi, "REMOVED");
+            } else {
+              // Fallback: ensure hasEmptyResultError becomes false by mutating the tool result content generically
+              // The runner sends tool results as {role:"tool", content:"Error: Tool execution returned no result.", ...}
+              // If for some reason the exact string is not in the captured JSON (e.g., different formatting), replace the entire tool content
+              mutatedStr = bodyStr.replace(/Error: Tool execution returned no result\./g, "REMOVED");
+            }
+            if (mutatedStr !== bodyStr) {
+              try {
+                const mutatedBody: unknown = JSON.parse(mutatedStr);
+                mutatedCaptures[1] = { ...target, request: { ...target.request, body: mutatedBody } };
+              } catch {}
+            }
+          }
+        }
+        // Preserve request count, delivered usage, and stop — do not mutate them
         break;
       }
       case "sdk-5-compression-rebuilt": {
@@ -1390,7 +1411,7 @@ async function main(): Promise<void> {
       const deliveredUsage = sumDeliveredUsage(captures);
       const driverUsage = getNumberField(isRecord(driverJson) ? (driverJson["usage"] as unknown) : undefined, "total");
       const usageMatches = driverUsage === deliveredUsage && deliveredUsage === 45;
-      const pass = count === 3 && deliveredCount === 3 && allFileRead && isEmpty && usageMatches;
+      const pass = count === 3 && deliveredCount === 3 && allFileRead && isEmpty && hasEmptyResultError && usageMatches;
       const detail = `requests=${count} delivered=${deliveredCount} expect3, allFileRead=${allFileRead}, hasEmptyError=${hasEmptyResultError}, driverStop=${stopStr} isEmpty=${isEmpty}, driverUsage=${driverUsage} deliveredUsage=${deliveredUsage} usageMatches=${usageMatches}`;
       return { pass, detail };
     },
