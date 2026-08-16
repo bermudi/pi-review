@@ -24,7 +24,7 @@ until the new black-box gates pass.
 | Phase | Status | Verifier | Commit | Report |
 |---|---|---|---|---|
 | Gate 0 — black-box integrity | `verified` | `bun run verify:blackbox-integrity` | `9f7df18d08696494aad3f3e6a2dcac20f9a86508` | `verification/blackbox` 9 fixtures 13 assertions, pack `65d8cba1`, artifacts `/tmp/verify-blackbox-*` |
-| Gate 1 — public Pi SDK feasibility | `building` | `bun run verify:sdk-feasibility` | — | audit requires removal of transport patch, genuinely empty, positive compression, 500 ms, stall proof, concurrent cancel+compress, captured usage, no any, adversarial tests |
+| Gate 1 — public Pi SDK feasibility | `verified` | `bun run verify:sdk-feasibility` | `f70de79fcd9038be58f3504ff622688551d76191` | `verification/blackbox` 7 fixtures 17 assertions (7+7 adversarial), pack `f3a4bbe2`, artifacts `/tmp/verify-sdk-*` — audit fixes: no patch, genuinely empty, positive compression (COMPRESSION_MARKER), 500 ms, stall proof (capture before delay), concurrent cancel+compress, captured usage, no any, adversarial |
 | Gate 2 — vertical slice | `candidate` | `bun run verify:vertical` | — | Old Phase 2 evidence invalidated |
 | Gate 3 — core diff review | `candidate` | `bun run verify:core-review` | — | Old Phase 3/4 evidence invalidated |
 | Gate 4 — scan/session/output | `candidate` | `bun run verify:scan`; `verify:sessions`; `verify:outputs` | — | Old Phase 5 evidence invalidated |
