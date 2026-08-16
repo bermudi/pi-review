@@ -34,14 +34,17 @@ function getSanitizedEnv(): Record<string, string> {
   for (const [k, v] of Object.entries(process.env)) {
     if (v === undefined) continue;
     const lower = k.toLowerCase();
-    if (lower.includes("token") || lower.includes("key") || lower.includes("secret") || lower.includes("password") || lower.includes("credential") || k.startsWith("NPM_") || k.startsWith("GITHUB_")) {
+    if (lower.includes("token") || lower.includes("key") || lower.includes("secret") || lower.includes("password") || lower.includes("credential") || k.startsWith("NPM_") || k.startsWith("GITHUB_") || k.startsWith("NODE_AUTH")) {
       // Remove credential variables — the harness must never leak them and must prove offline install still works
       continue;
     }
     out[k] = v;
   }
-  // Force offline-ish: local tarball must install without registry
-  // We keep the env minimal and do not pass any registry auth.
+  // Offline: local tarball install must not need registry or network.
+  // We explicitly mark offline and ensure no registry auth is passed.
+  out["BUN_OFFLINE"] = "1";
+  out["npm_config_offline"] = "true";
+  // Do not set a registry URL; local file install must succeed without it.
   return out;
 }
 
