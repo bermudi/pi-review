@@ -354,6 +354,14 @@ export class Runner {
             messages.push(newTextMessage("assistant", content));
             messages.push(userMsg);
           }
+          // For black-box genuinely empty provider responses, count toward empty rounds as well
+          // (Go counts only empty tool results, but audit requires provider-level emptiness to be observable and bounded).
+          consecutiveEmptyRounds++;
+          if (consecutiveEmptyRounds >= maxConsecutiveEmptyRounds) {
+            console.log(`[ocr] Too many empty retries for ${filePath}, stopping.`);
+            stop = MainLoopStop.StopEmptyRounds;
+            break;
+          }
           continue;
         }
 
