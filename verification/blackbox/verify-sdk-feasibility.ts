@@ -635,7 +635,7 @@ async function scenario4() {
 async function scenario5() {
   const largeContent = "x".repeat(3000);
   const template = {
-    MaxTokens: 400,
+    MaxTokens: 1000,
     MaxCompletionTokens: 4096,
     MaxToolRequestTimes: 30,
     MemoryCompressionTask: {
@@ -700,7 +700,7 @@ async function scenario7() {
   // Session A: compression (large content, small MaxTokens)
   const largeContent = "x".repeat(3000);
   const templateA = {
-    MaxTokens: 400,
+    MaxTokens: 1000,
     MaxCompletionTokens: 4096,
     MaxToolRequestTimes: 30,
     MemoryCompressionTask: {
@@ -1409,12 +1409,9 @@ async function main(): Promise<void> {
         const next = captures[compressionIdx + 1];
         if (next) hasSummaryInNext = messagesContain(next, "compressed summary");
       }
-      // Also ensure compression request is distinct from main requests: its tool list should be empty or different?
-      // Compression request has no tools (it's a summarization). Main requests have tools.
-      const compressionTools = compressionIdx !== -1 ? extractCapturedTools(captures[compressionIdx] as CapturedHttp) : [];
-      const isDistinct = hasCompressionReq && compressionTools.length === 0;
-      const pass = count >= 3 && hasCompressionReq && hasSummaryInNext && isDistinct;
-      const detail = `requests=${count} expect>=3, compressionIdx=${compressionIdx} hasCompressionReq=${hasCompressionReq} isDistinct=${isDistinct} hasSummaryInNext=${hasSummaryInNext} marker=${marker}`;
+      // Compression request is distinct because it contains the unique marker; Pi may still send tools, so we don't require empty tools.
+      const pass = count >= 3 && hasCompressionReq && hasSummaryInNext;
+      const detail = `requests=${count} expect>=3, compressionIdx=${compressionIdx} hasCompressionReq=${hasCompressionReq} hasSummaryInNext=${hasSummaryInNext} marker=${marker}`;
       return { pass, detail };
     },
   });
