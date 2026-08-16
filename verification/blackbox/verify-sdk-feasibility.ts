@@ -735,9 +735,11 @@ async function main(): Promise<void> {
     ],
     check: (captures, driverJson) => {
       const count = captures.length;
-      // Runner should stop after 3 empties, so 4th response should not be consumed
-      const pass = count === 3 && driverJson?.stop?.includes("empty");
-      const detail = `requests=${count} expect3, driverStop=${driverJson?.stop} expect empty_rounds`;
+      // Runner should stop after 3 empties, so 4th response should not be consumed; stop is numeric 2 (StopEmptyRounds) or string
+      const stopStr = String(driverJson?.stop ?? "");
+      const isEmpty = stopStr.includes("empty") || stopStr === "2" || (driverJson as any)?.stop === 2;
+      const pass = count === 3 && isEmpty;
+      const detail = `requests=${count} expect3, driverStop=${driverJson?.stop} expect empty_rounds (2), isEmpty=${isEmpty}`;
       return { pass, detail };
     },
   });
