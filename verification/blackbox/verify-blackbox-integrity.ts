@@ -5,7 +5,7 @@
 // Allowed: Bun/Node stdlib, zod, and files under verification/blackbox.
 
 import { execSync, spawnSync } from "node:child_process";
-import { existsSync, mkdirSync, writeFileSync, readFileSync, readdirSync, statSync } from "node:fs";
+import { existsSync, mkdirSync, writeFileSync, readFileSync, readdirSync, statSync, rmSync } from "node:fs";
 import { mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -337,6 +337,7 @@ async function runNineTests(artifactDir: string): Promise<{ fixtures: string[]; 
   }
 
   // Test 4: remove OCR stdout and make the verifier fail `missing OCR stdout`
+  // Must delete real artifact files, then invoke the SAME artifact-loading path active gates use, as a subprocess.
   {
     const id = "anti-4-missing-ocr-stdout";
     fixtures.push(id);
@@ -354,28 +355,33 @@ async function runNineTests(artifactDir: string): Promise<{ fixtures: string[]; 
       messages: [{ role: "user", content: "review" }],
       tools: [{ type: "function", function: { name: "code_comment", description: "x", parameters: { type: "object" } } }],
     };
-    const result = await runDifferentialFixture({
+    await runDifferentialFixture({
       fixture: { id, ocrResponses: [response], piResponses: [JSON.parse(JSON.stringify(response))], ocrPayload: payload, piPayload: payload },
       artifactDir: baseDir,
     });
-    // Remove OCR stdout at artifact boundary: delete capture file and also zero out stdout
-    const ocrCapturePath = join(baseDir, id, "ocr", "capture.json");
-    const ocrCap = await readCaptureFromDisk(ocrCapturePath);
-    if (!ocrCap) throw new Error(`anti-4 missing OCR capture`);
-    // Simulate missing OCR stdout by creating a null capture
-    const cmp = compareCaptures(null, result.pi);
+    const fixtureDir = join(baseDir, id);
+    const ocrCapturePath = join(fixtureDir, "ocr", "capture.json");
+    const ocrStdoutPath = join(fixtureDir, "ocr", "stdout.txt");
+    if (!existsSync(ocrCapturePath)) throw new Error(`anti-4 missing OCR capture at ${ocrCapturePath}`);
+    // Delete real artifact files at the boundary
+    rmSync(ocrCapturePath, { force: true });
+    if (existsSync(ocrStdoutPath)) rmSync(ocrStdoutPath, { force: true });
+    if (existsSync(ocrCapturePath)) throw new Error(`anti-4 failed to delete OCR capture`);
+    // Invoke same artifact-loading verification path active gates use, as a subprocess (do not call compareCaptures directly)
+    const res = spawnSync("bun", ["run", "verification/blackbox/compare-artifacts.ts", "--fixtureDir", fixtureDir], {
+      encoding: "utf-8",
+    });
     assertions++;
-    if (cmp.equal) throw new Error(`anti-4 expected missing OCR stdout failure but got equal`);
-    if (!cmp.mismatches.some((m) => m.fieldPath.includes("missing OCR stdout"))) {
-      throw new Error(`anti-4 expected "missing OCR stdout" but got: ${cmp.mismatches.map((m) => m.fieldPath).join(", ")}`);
+    if (res.status === 0) throw new Error(`anti-4 expected non-zero exit for missing OCR stdout but got 0: stdout=${res.stdout} stderr=${res.stderr}`);
+    const combined = `${res.stdout} ${res.stderr}`;
+    if (!combined.includes("missing OCR stdout")) {
+      throw new Error(`anti-4 expected exact error "missing OCR stdout" but got: status=${res.status} stdout=${res.stdout.slice(0, 500)} stderr=${res.stderr.slice(0, 500)}`);
     }
-    // Also test that reading missing file fails appropriately — write artifact to prove boundary
-    const artDir = await writeMismatchArtifacts({ artifactDir: baseDir, fixtureId: `${id}-missing`, ocr: null, pi: result.pi, result: cmp });
-    if (!existsSync(join(artDir, "mismatches.json"))) throw new Error(`anti-4 missing mismatch artifact`);
-    console.error(`[verify:blackbox-integrity] PASS ${id}: correctly failed with missing OCR stdout`);
+    console.error(`[verify:blackbox-integrity] PASS ${id}: subprocess correctly failed with missing OCR stdout (exit ${res.status})`);
   }
 
-  // Test 5: remove Pi HTTP capture and make it fail `missing Pi provider trace`
+  // Test 5: remove Pi HTTP capture and make it fail `missing Pi provider trace` (via subprocess, not direct compare)
+  // Also mandatory: empty providerCaptures must fail before comparison.
   {
     const id = "anti-5-missing-pi-trace";
     fixtures.push(id);
@@ -393,28 +399,52 @@ async function runNineTests(artifactDir: string): Promise<{ fixtures: string[]; 
       messages: [{ role: "user", content: "review" }],
       tools: [{ type: "function", function: { name: "code_comment", description: "x", parameters: { type: "object" } } }],
     };
-    const result = await runDifferentialFixture({
+    await runDifferentialFixture({
       fixture: { id, ocrResponses: [response], piResponses: [JSON.parse(JSON.stringify(response))], ocrPayload: payload, piPayload: payload },
       artifactDir: baseDir,
     });
-    // Remove Pi HTTP capture at boundary: delete its provider capture and also test missing Pi capture
-    const piCapturePath = join(baseDir, id, "pi", "capture.json");
-    const piCapBefore = await readCaptureFromDisk(piCapturePath);
-    if (!piCapBefore) throw new Error(`anti-5 missing Pi capture before mutation`);
-    // Simulate missing Pi provider trace by passing null for pi
-    const cmp = compareCaptures(result.ocr, null);
+    const fixtureDir = join(baseDir, id);
+    const piCapturePath = join(fixtureDir, "pi", "capture.json");
+    const piProviderPath = join(fixtureDir, "pi", "provider-requests.json");
+    if (!existsSync(piCapturePath)) throw new Error(`anti-5 missing Pi capture at ${piCapturePath}`);
+    // Delete real artifact files at boundary (Pi HTTP capture)
+    rmSync(piCapturePath, { force: true });
+    if (existsSync(piProviderPath)) rmSync(piProviderPath, { force: true });
+    if (existsSync(piCapturePath)) throw new Error(`anti-5 failed to delete Pi capture`);
+    const res = spawnSync("bun", ["run", "verification/blackbox/compare-artifacts.ts", "--fixtureDir", fixtureDir], {
+      encoding: "utf-8",
+    });
     assertions++;
-    if (cmp.equal) throw new Error(`anti-5 expected missing Pi provider trace failure but got equal`);
-    if (!cmp.mismatches.some((m) => m.fieldPath.includes("missing Pi provider trace"))) {
-      throw new Error(`anti-5 expected "missing Pi provider trace" but got: ${cmp.mismatches.map((m) => m.fieldPath).join(", ")}`);
+    if (res.status === 0) throw new Error(`anti-5 expected non-zero exit for missing Pi provider trace but got 0: stdout=${res.stdout} stderr=${res.stderr}`);
+    const combined = `${res.stdout} ${res.stderr}`;
+    if (!combined.includes("missing Pi provider trace")) {
+      throw new Error(`anti-5 expected exact error "missing Pi provider trace" but got: status=${res.status} stdout=${res.stdout.slice(0, 500)} stderr=${res.stderr.slice(0, 500)}`);
     }
-    // Also test empty providerCaptures case
-    const emptyPi = { ...result.pi, providerCaptures: [] as unknown as typeof result.pi.providerCaptures };
-    const cmpEmpty = compareCaptures(result.ocr, emptyPi);
-    if (cmpEmpty.equal || !cmpEmpty.mismatches.some((m) => m.fieldPath.includes("pi provider contact") || m.fieldPath.includes("provider_request.count"))) {
-      // This is okay as long as at least one indicates missing contact; the primary check is null case
+    console.error(`[verify:blackbox-integrity] PASS ${id}: subprocess correctly failed with missing Pi provider trace (exit ${res.status})`);
+    // Mandatory empty-provider-capture assertion: Pi capture exists but carries 0 provider captures
+    // Recreate fixture with empty providerCaptures via disk mutation, then verify via same subprocess path
+    const idEmpty = "anti-5-empty-provider";
+    console.error(`[verify:blackbox-integrity] running ${idEmpty}...`);
+    await runDifferentialFixture({
+      fixture: { id: idEmpty, ocrResponses: [response], piResponses: [JSON.parse(JSON.stringify(response))], ocrPayload: payload, piPayload: payload },
+      artifactDir: baseDir,
+    });
+    const emptyFixtureDir = join(baseDir, idEmpty);
+    const emptyPiCapturePath = join(emptyFixtureDir, "pi", "capture.json");
+    const emptyPiRaw = readFileSync(emptyPiCapturePath, "utf-8");
+    const emptyPiJson = JSON.parse(emptyPiRaw);
+    emptyPiJson.providerCaptures = [];
+    writeFileSync(emptyPiCapturePath, JSON.stringify(emptyPiJson, null, 2), "utf-8");
+    const resEmpty = spawnSync("bun", ["run", "verification/blackbox/compare-artifacts.ts", "--fixtureDir", emptyFixtureDir], {
+      encoding: "utf-8",
+    });
+    assertions++;
+    if (resEmpty.status === 0) throw new Error(`anti-5-empty expected non-zero exit for empty Pi provider capture but got 0`);
+    const combinedEmpty = `${resEmpty.stdout} ${resEmpty.stderr}`;
+    if (!combinedEmpty.includes("pi provider contact") && !combinedEmpty.includes("provider_request.count") && !combinedEmpty.includes("missing Pi provider trace")) {
+      throw new Error(`anti-5-empty expected "pi provider contact" or "provider_request.count" or "missing Pi provider trace" but got: ${combinedEmpty.slice(0, 800)}`);
     }
-    console.error(`[verify:blackbox-integrity] PASS ${id}: correctly failed with missing Pi provider trace`);
+    console.error(`[verify:blackbox-integrity] PASS ${idEmpty}: subprocess correctly failed for empty provider capture (exit ${resEmpty.status})`);
   }
 
   // Test 6: point both result inputs at the same process and make it fail `engine identity collision`
