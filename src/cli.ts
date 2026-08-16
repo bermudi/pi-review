@@ -42,6 +42,7 @@ type RawCliValues = {
 	agentDir?: string;
 	sessionDir?: string;
 	resume?: string;
+	engine?: string;
 	json: boolean;
 	help: boolean;
 };
@@ -71,6 +72,7 @@ const rawCliValuesSchema = z.object({
 	agentDir: optionValue.optional(),
 	sessionDir: optionValue.optional(),
 	resume: optionValue.optional(),
+	engine: optionValue.optional(),
 	json: z.boolean(),
 	help: z.boolean(),
 }).strict();
@@ -95,6 +97,7 @@ export interface CliOptions {
 	readonly agentDir: string | undefined;
 	readonly sessionDir: string | undefined;
 	readonly resume: string | undefined;
+	readonly engine?: string | undefined;
 	readonly json: boolean;
 }
 
@@ -172,6 +175,7 @@ Options:
   --agent-dir PATH           Pi agent directory
   --session-dir PATH         Write per-task session transcripts (.jsonl) under PATH
   --resume PATH              Continue one failed plan/review session transcript
+  --engine ENGINE            Review engine: legacy (default) or ocr-v193
   --json                     Emit the exact ReviewResult as JSON
   --help                     Show this help
 
@@ -198,6 +202,7 @@ const knownValueOptions = new Set([
 	"agent-dir",
 	"session-dir",
 	"resume",
+	"engine",
 ]);
 
 function isThinkingLevel(value: string): value is ThinkingLevel {
@@ -283,6 +288,11 @@ function setValue(raw: RawCliValues, name: string, value: string): void {
 		case "resume":
 			if (raw.resume !== undefined) optionSyntaxError("Duplicate --resume option.");
 			raw.resume = value;
+			return;
+		case "engine":
+			if (raw.engine !== undefined) optionSyntaxError("Duplicate --engine option.");
+			if (value !== "legacy" && value !== "ocr-v193") optionSyntaxError("Invalid --engine value; expected legacy or ocr-v193.");
+			raw.engine = value;
 			return;
 		default:
 			optionSyntaxError("Unknown command-line option.");
@@ -430,6 +440,7 @@ export function parseArgs(
 			agentDir: values.agentDir,
 			sessionDir: values.sessionDir,
 			resume: values.resume,
+			engine: values.engine,
 			json: values.json,
 		};
 	}
@@ -480,6 +491,7 @@ export function parseArgs(
 		agentDir: values.agentDir,
 		sessionDir: values.sessionDir,
 		resume: values.resume,
+		engine: values.engine,
 		json: values.json,
 	};
 }
@@ -660,6 +672,44 @@ export async function runCli(
 	if (parsed.help) {
 		io.stdout(HELP_TEXT);
 		return 0;
+	}
+
+	// Engine delegation: --engine ocr-v193 runs the parity engine without importing legacy policy.
+	if (parsed.engine === "ocr-v193") {
+		const { runCli: runOcrCli } = await import("./ocr-v193/cli/index.js");
+		// Translate legacy args to OCR parity review args.
+		// Legacy model is "provider/model" or "model"; OCR wants --provider and --model separately.
+		const ocrArgv: string[] = ["review", "--repo", parsed.repo];
+		// Preserve mode.
+		if (parsed.mode.kind === "range") {
+			ocrArgv.push("--from", parsed.mode.base, "--to", parsed.mode.head);
+		} else if (parsed.mode.kind === "commit") {
+			ocrArgv.push("--commit", parsed.mode.ref);
+		}
+		// Format: legacy --json means OCR --format json else text.
+		ocrArgv.push("--format", parsed.json ? "json" : "text");
+		// Gate2 requires deterministic raw comments: always --no-filter for parity.
+		ocrArgv.push("--no-filter");
+		// Concurrency.
+		if (parsed.concurrency !== undefined) ocrArgv.push("--concurrency", String(parsed.concurrency));
+		// Provider/model split.
+		const modelRaw = parsed.model ?? "";
+		if (modelRaw.includes("/")) {
+			const slash = modelRaw.indexOf("/");
+			const prov = modelRaw.slice(0, slash);
+			const mod = modelRaw.slice(slash + 1).split(":")[0] as string;
+			if (prov) ocrArgv.push("--provider", prov);
+			if (mod) ocrArgv.push("--model", mod);
+		} else if (modelRaw) {
+			ocrArgv.push("--model", modelRaw.split(":")[0] as string);
+		}
+		// Forward include/exclude as --exclude (comma-joined) if any.
+		if (parsed.exclude.length > 0) ocrArgv.push("--exclude", parsed.exclude.join(","));
+		// Forward other known parity options that have equivalents: background
+		if (parsed.background !== undefined) ocrArgv.push("--background", parsed.background);
+		// Delegate to OCR CLI with same IO; it handles its own signal handling.
+		const ocrIo = { cwd: io.cwd, env: io.env, stdout: io.stdout, stderr: io.stderr, onSignal: io.onSignal, offSignal: io.offSignal };
+		return runOcrCli(ocrArgv, { io: ocrIo });
 	}
 
 	const controller = new AbortController();

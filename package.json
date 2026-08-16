@@ -24,7 +24,8 @@
     "clean": "bun -e 'import { rm } from \"node:fs/promises\"; await rm(\"dist\", { recursive: true, force: true })'",
     "harness": "bun run test/ocr-v193/harness/index.ts --all",
     "verify:blackbox-integrity": "bun run verification/blackbox/verify-blackbox-integrity.ts",
-    "verify:sdk-feasibility": "bun run verification/blackbox/verify-sdk-feasibility.ts"
+    "verify:sdk-feasibility": "bun run verification/blackbox/verify-sdk-feasibility.ts",
+    "verify:vertical": "bun run verification/blackbox/verify-vertical.ts"
   },
   "main": "dist/index.js",
   "engines": {
