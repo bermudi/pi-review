@@ -320,6 +320,7 @@ function messagesContain(capture: CapturedHttp, needle: string): boolean {
 }
 
 function capturedResponseToolCalls(capture: CapturedHttp): number {
+  if (!capture.delivered || capture.response === null) return 0;
   if (!isRecord(capture.response.body)) return 0;
   const choices = capture.response.body["choices"];
   if (!Array.isArray(choices) || choices.length === 0) return 0;
@@ -333,6 +334,7 @@ function capturedResponseToolCalls(capture: CapturedHttp): number {
 }
 
 function capturedResponseUsage(capture: CapturedHttp): ScriptedUsage | undefined {
+  if (!capture.delivered || capture.response === null) return undefined;
   if (!isRecord(capture.response.body)) return undefined;
   const usage = capture.response.body["usage"];
   if (!isRecord(usage)) return undefined;
@@ -343,6 +345,19 @@ function capturedResponseUsage(capture: CapturedHttp): ScriptedUsage | undefined
     return { prompt_tokens: pt, completion_tokens: ct, total_tokens: tt };
   }
   return undefined;
+}
+
+function deliveredCaptures(captures: readonly CapturedHttp[]): readonly CapturedHttp[] {
+  return captures.filter((c) => c.delivered && c.response !== null);
+}
+
+function sumDeliveredUsage(captures: readonly CapturedHttp[]): number {
+  let sum = 0;
+  for (const c of captures) {
+    const u = capturedResponseUsage(c);
+    if (u) sum += u.total_tokens;
+  }
+  return sum;
 }
 
 function driverFieldString(driverJson: unknown, key: string): string {
@@ -603,27 +618,28 @@ async function scenario3() {
   const res = await runner.RunPerFile(controller.signal, messages, "main.go");
   const elapsed = Date.now() - start;
   await cleanup();
-  await writeFile(process.env.RESULT_FILE, JSON.stringify({ scenario: "3", elapsed, aborted: controller.signal.aborted, completed: res.completed, stop: String(res.stop) }));
+  await writeFile(process.env.RESULT_FILE, JSON.stringify({ scenario: "3", elapsed, aborted: controller.signal.aborted, completed: res.completed, stop: String(res.stop), usage: { total: runner.totalTokensUsed() } }));
 }
 
 async function scenario4() {
-  // Three genuinely empty provider responses (no tool_calls, no content) => StopEmptyRounds
-  const { transport, cleanup } = await createTransport(["code_comment","task_done","file_read","file_find"], serverUrl);
+  // OCR TestRunPerFile_EmptyToolResultsStopWithEmptyRounds: 3 consecutive rounds where model calls file_read but provider returns "" (no usable result)
+  const { transport, cleanup } = await createTransport(["code_comment","task_done","file_read"], serverUrl);
   const template = {
     MaxTokens: 128000,
     MaxCompletionTokens: 4096,
-    MaxToolRequestTimes: 30,
+    MaxToolRequestTimes: 10,
     MemoryCompressionTask: null,
     ReLocationTask: null,
   };
   const collector = { comments: [], Comments() { return this.comments; }, Add(c) { this.comments.push(c); } };
+  const registry = new Map([["file_read", { name: "file_read", execute: async () => "" }]]);
   const runner = new OcrRunner({
     model: "test-model",
     template,
     llmClient: transport,
-    mainToolDefs: makeToolDefs(["code_comment","task_done","file_read","file_find"]),
+    mainToolDefs: makeToolDefs(["code_comment","task_done","file_read"]),
     commentCollector: collector,
-    toolRegistry: new Map(),
+    toolRegistry: registry,
   });
   const messages = [{ role: "system", content: "sys" }, { role: "user", content: "review" }];
   const signal = AbortSignal.timeout(10000);
@@ -694,7 +710,7 @@ async function scenario6() {
   const res = await p;
   const elapsed = Date.now() - start;
   await cleanup();
-  await writeFile(process.env.RESULT_FILE, JSON.stringify({ scenario: "6", elapsed, aborted: controller.signal.aborted, stop: String(res.stop), error: res.error?.message ?? null }));
+  await writeFile(process.env.RESULT_FILE, JSON.stringify({ scenario: "6", elapsed, aborted: controller.signal.aborted, stop: String(res.stop), error: res.error?.message ?? null, usage: { total: runner.totalTokensUsed() } }));
 }
 
 async function scenario7() {
@@ -998,6 +1014,7 @@ async function main(): Promise<void> {
               body: { model: "test-model", messages: [], tools: [{ type: "function", function: { name: "code_comment" } }] },
             },
             response: { status: 200, headers: {}, body: {} },
+            delivered: true,
             sanitized: true,
           };
           mutatedCaptures = [...mutatedCaptures, fake];
@@ -1121,11 +1138,11 @@ async function main(): Promise<void> {
     ],
     check: (captures, driverJson) => {
       const count = captures.length;
+      const deliveredCount = deliveredCaptures(captures).length;
       const firstCapturedCalls = capturedResponseToolCalls(captures[0] as CapturedHttp);
       const driverCompleted = getBooleanField(driverJson, "completed");
       const driverUsageTotal = getNumberField((driverJson as Record<string, unknown>)?.["usage"] as unknown, "total");
-      // Usage must come from captured provider responses + public result, not scripted.
-      // So we compute expected total from captures' usage
+      // Usage must equal delivered captured usage (separate arrival/delivery)
       let sumPrompt = 0;
       let sumCompletion = 0;
       for (const c of captures) {
@@ -1136,9 +1153,10 @@ async function main(): Promise<void> {
         }
       }
       const expectedTotal = sumPrompt + sumCompletion;
-      const usageMatches = driverUsageTotal === expectedTotal;
-      const pass = count === 2 && firstCapturedCalls === 2 && driverCompleted === true && usageMatches;
-      const detail = `requests=${count} expect2, firstRespCalls=${firstCapturedCalls} expect2 (from captured response), driverCompleted=${driverCompleted}, driverUsageTotal=${driverUsageTotal} expected=${expectedTotal} usageMatches=${usageMatches}`;
+      const deliveredUsage = sumDeliveredUsage(captures);
+      const usageMatches = driverUsageTotal === expectedTotal && driverUsageTotal === deliveredUsage;
+      const pass = count === 2 && deliveredCount === 2 && firstCapturedCalls === 2 && driverCompleted === true && usageMatches;
+      const detail = `requests=${count} delivered=${deliveredCount} expect2, firstRespCalls=${firstCapturedCalls} expect2 (from captured response), driverCompleted=${driverCompleted}, driverUsageTotal=${driverUsageTotal} expected=${expectedTotal} deliveredUsage=${deliveredUsage} usageMatches=${usageMatches}`;
       return { pass, detail };
     },
   });
@@ -1203,14 +1221,18 @@ async function main(): Promise<void> {
         usage: { prompt_tokens: 10, completion_tokens: 5, total_tokens: 15 },
       },
     ],
-    check: (captures) => {
+    check: (captures, driverJson) => {
       const req1Tools = extractCapturedTools(captures[0] as CapturedHttp);
       const req2Tools = extractCapturedTools(captures[1] as CapturedHttp);
       const count = captures.length;
+      const deliveredCount = deliveredCaptures(captures).length;
       const req2Len = req2Tools.length;
       const req2Names = [...req2Tools].sort().join(",");
-      const pass = count === 2 && req2Len === 2 && req2Names === "code_comment,task_done" && req1Tools.length >= 3;
-      const detail = `requests=${count} expect2, req1Tools=${req1Tools.length} expect>=3 (${req1Tools.join(",")}), req2Tools=${req2Len} expect2 (${req2Names})`;
+      const deliveredUsage = sumDeliveredUsage(captures);
+      const driverUsage = getNumberField(isRecord(driverJson) ? (driverJson["usage"] as unknown) : undefined, "total");
+      const usageMatches = driverUsage === deliveredUsage && deliveredUsage === 30 && deliveredCount === 2;
+      const pass = count === 2 && deliveredCount === 2 && req2Len === 2 && req2Names === "code_comment,task_done" && req1Tools.length >= 3 && usageMatches;
+      const detail = `requests=${count} delivered=${deliveredCount} expect2, req1Tools=${req1Tools.length} expect>=3 (${req1Tools.join(",")}), req2Tools=${req2Len} expect2 (${req2Names}), driverUsage=${driverUsage} deliveredUsage=${deliveredUsage} usageMatches=${usageMatches}`;
       return { pass, detail };
     },
   });
@@ -1259,15 +1281,20 @@ async function main(): Promise<void> {
     ],
     check: (captures, driverJson, elapsed) => {
       const count = captures.length;
+      const deliveredCount = deliveredCaptures(captures).length;
       const driverElapsed = driverFieldNumber(driverJson, "elapsed");
       const effectiveElapsed = driverElapsed ?? elapsed;
-      const pass = count === 1 && effectiveElapsed < 500;
-      const detail = `requests=${count} expect1 (no grace), driverElapsed=${driverElapsed} verifierElapsed=${elapsed} effective=${effectiveElapsed} expect<500`;
+      const deliveredUsage = sumDeliveredUsage(captures);
+      const driverUsage = getNumberField(isRecord(driverJson) ? (driverJson["usage"] as unknown) : undefined, "total");
+      // Usage must equal delivered (only one delivered, no grace)
+      const usageMatches = deliveredUsage === 15 && driverUsage === deliveredUsage && deliveredCount === 1;
+      const pass = count === 1 && deliveredCount === 1 && effectiveElapsed < 500 && usageMatches;
+      const detail = `requests=${count} delivered=${deliveredCount} expect1 (no grace), driverElapsed=${driverElapsed} verifierElapsed=${elapsed} effective=${effectiveElapsed} expect<500, driverUsage=${driverUsage} deliveredUsage=${deliveredUsage} usageMatches=${usageMatches}`;
       return { pass, detail };
     },
   });
 
-  // Scenario 4: three consecutive genuinely empty responses => exactly 3 requests
+  // Scenario 4: OCR TestRunPerFile_EmptyToolResultsStopWithEmptyRounds — 3 consecutive rounds where model calls file_read but tool returns "" (no usable result)
   await runScenario({
     id: "sdk-4-three-empty-retries",
     scenario: "4",
@@ -1277,7 +1304,17 @@ async function main(): Promise<void> {
         object: "chat.completion",
         created: 1,
         model: "test-model",
-        choices: [{ index: 0, message: { role: "assistant", content: "", tool_calls: undefined }, finish_reason: "stop" }],
+        choices: [
+          {
+            index: 0,
+            message: {
+              role: "assistant",
+              content: null,
+              tool_calls: [{ id: "c1", type: "function", function: { name: "file_read", arguments: JSON.stringify({ path: "main.go" }) } }],
+            },
+            finish_reason: "tool_calls",
+          },
+        ],
         usage: { prompt_tokens: 10, completion_tokens: 5, total_tokens: 15 },
       },
       {
@@ -1285,7 +1322,17 @@ async function main(): Promise<void> {
         object: "chat.completion",
         created: 2,
         model: "test-model",
-        choices: [{ index: 0, message: { role: "assistant", content: "", tool_calls: undefined }, finish_reason: "stop" }],
+        choices: [
+          {
+            index: 0,
+            message: {
+              role: "assistant",
+              content: null,
+              tool_calls: [{ id: "c2", type: "function", function: { name: "file_read", arguments: JSON.stringify({ path: "main.go" }) } }],
+            },
+            finish_reason: "tool_calls",
+          },
+        ],
         usage: { prompt_tokens: 10, completion_tokens: 5, total_tokens: 15 },
       },
       {
@@ -1293,21 +1340,13 @@ async function main(): Promise<void> {
         object: "chat.completion",
         created: 3,
         model: "test-model",
-        choices: [{ index: 0, message: { role: "assistant", content: "", tool_calls: undefined }, finish_reason: "stop" }],
-        usage: { prompt_tokens: 10, completion_tokens: 5, total_tokens: 15 },
-      },
-      {
-        id: "chatcmpl-4",
-        object: "chat.completion",
-        created: 4,
-        model: "test-model",
         choices: [
           {
             index: 0,
             message: {
               role: "assistant",
               content: null,
-              tool_calls: [{ id: "c4", type: "function", function: { name: "task_done", arguments: JSON.stringify({ state: "DONE" }) } }],
+              tool_calls: [{ id: "c3", type: "function", function: { name: "file_read", arguments: JSON.stringify({ path: "main.go" }) } }],
             },
             finish_reason: "tool_calls",
           },
@@ -1317,28 +1356,42 @@ async function main(): Promise<void> {
     ],
     check: (captures, driverJson) => {
       const count = captures.length;
-      // Verify genuinely empty: first 3 responses have no tool_calls and empty content
-      let genuinelyEmpty = true;
+      const deliveredCount = deliveredCaptures(captures).length;
+      // Verify each delivered response had a file_read tool call (OCR's empty-tool scenario)
+      let allFileRead = true;
       for (let i = 0; i < 3; i++) {
         const cap = captures[i];
-        if (!cap) { genuinelyEmpty = false; break; }
-        if (!isRecord(cap.response.body)) { genuinelyEmpty = false; break; }
+        if (!cap || !cap.delivered || cap.response === null) { allFileRead = false; break; }
+        if (!isRecord(cap.response.body)) { allFileRead = false; break; }
         const choices = cap.response.body["choices"];
-        if (!Array.isArray(choices) || choices.length === 0) { genuinelyEmpty = false; break; }
+        if (!Array.isArray(choices) || choices.length === 0) { allFileRead = false; break; }
         const first = choices[0];
-        if (!isRecord(first)) { genuinelyEmpty = false; break; }
+        if (!isRecord(first)) { allFileRead = false; break; }
         const msg = first["message"];
-        if (!isRecord(msg)) { genuinelyEmpty = false; break; }
-        const content = msg["content"];
+        if (!isRecord(msg)) { allFileRead = false; break; }
         const tcs = msg["tool_calls"];
-        if (content !== "" && content !== null && content !== undefined) genuinelyEmpty = false;
-        if (Array.isArray(tcs) && tcs.length > 0) genuinelyEmpty = false;
+        if (!Array.isArray(tcs) || tcs.length === 0) { allFileRead = false; break; }
+        const firstCall = tcs[0];
+        if (!isRecord(firstCall)) { allFileRead = false; break; }
+        const fn = firstCall["function"];
+        if (!isRecord(fn) || fn["name"] !== "file_read") { allFileRead = false; break; }
+      }
+      // Verify subsequent requests contain the empty-tool error (next round's messages include that string)
+      let hasEmptyResultError = false;
+      if (captures.length >= 2) {
+        const secondReqMsgs = extractCapturedMessages(captures[1] as CapturedHttp);
+        const s = JSON.stringify(secondReqMsgs);
+        if (s.includes("Tool execution returned no result") || s.includes("no result")) hasEmptyResultError = true;
       }
       const stopStr = driverFieldString(driverJson, "stop");
       const stopNum = getNumberField(driverJson, "stop");
       const isEmpty = stopStr.includes("empty") || stopStr === "2" || stopNum === 2;
-      const pass = count === 3 && genuinelyEmpty && isEmpty;
-      const detail = `requests=${count} expect3, genuinelyEmpty=${genuinelyEmpty}, driverStop=${stopStr} stopNum=${stopNum} isEmpty=${isEmpty}`;
+      // Usage must equal delivered captured usage
+      const deliveredUsage = sumDeliveredUsage(captures);
+      const driverUsage = getNumberField(isRecord(driverJson) ? (driverJson["usage"] as unknown) : undefined, "total");
+      const usageMatches = driverUsage === deliveredUsage && deliveredUsage === 45;
+      const pass = count === 3 && deliveredCount === 3 && allFileRead && isEmpty && usageMatches;
+      const detail = `requests=${count} delivered=${deliveredCount} expect3, allFileRead=${allFileRead}, hasEmptyError=${hasEmptyResultError}, driverStop=${stopStr} isEmpty=${isEmpty}, driverUsage=${driverUsage} deliveredUsage=${deliveredUsage} usageMatches=${usageMatches}`;
       return { pass, detail };
     },
   });
@@ -1395,12 +1448,13 @@ async function main(): Promise<void> {
     ],
     check: (captures, driverJson) => {
       const count = captures.length;
+      const deliveredCount = deliveredCaptures(captures).length;
       const marker = getStringField(driverJson, "marker") ?? COMPRESSION_MARKER;
-      // Positively identify compression request: it must contain the marker string
+      // Positively identify compression request: it must contain the marker string and be delivered
       let compressionIdx = -1;
       for (let i = 0; i < captures.length; i++) {
         const c = captures[i];
-        if (!c) continue;
+        if (!c || !c.delivered) continue;
         if (messagesContain(c, marker)) {
           compressionIdx = i;
           break;
@@ -1408,21 +1462,22 @@ async function main(): Promise<void> {
       }
       const hasCompressionReq = compressionIdx !== -1;
       // Following main request must contain the summary from compression response (observed, not heuristic)
-      // The summary is the second scripted response's content: "compressed summary: 2 files reviewed, 1 issue"
-      // We verify it appears in the next request's messages (rebuilt)
       let hasSummaryInNext = false;
       if (hasCompressionReq && compressionIdx + 1 < captures.length) {
         const next = captures[compressionIdx + 1];
-        if (next) hasSummaryInNext = messagesContain(next, "compressed summary");
+        if (next && next.delivered) hasSummaryInNext = messagesContain(next, "compressed summary");
       }
-      // Compression request is distinct because it contains the unique marker; Pi may still send tools, so we don't require empty tools.
-      const pass = count >= 3 && hasCompressionReq && hasSummaryInNext;
-      const detail = `requests=${count} expect>=3, compressionIdx=${compressionIdx} hasCompressionReq=${hasCompressionReq} hasSummaryInNext=${hasSummaryInNext} marker=${marker}`;
+      // Usage must equal delivered captured usage
+      const deliveredUsage = sumDeliveredUsage(captures);
+      const driverUsage = getNumberField(isRecord(driverJson) ? (driverJson["usage"] as unknown) : undefined, "total");
+      const usageMatches = driverUsage === deliveredUsage && deliveredCount === count;
+      const pass = count >= 3 && deliveredCount >= 3 && hasCompressionReq && hasSummaryInNext && usageMatches;
+      const detail = `requests=${count} delivered=${deliveredCount} expect>=3, compressionIdx=${compressionIdx} hasCompressionReq=${hasCompressionReq} hasSummaryInNext=${hasSummaryInNext} marker=${marker} driverUsage=${driverUsage} deliveredUsage=${deliveredUsage} usageMatches=${usageMatches}`;
       return { pass, detail };
     },
   });
 
-  // Scenario 6: stall + abort settles within 500ms and proves request reached server
+  // Scenario 6: stall + abort settles within 500ms, request arrived but response never delivered (no usage)
   await runScenario({
     id: "sdk-6-stall-abort-settles",
     scenario: "6",
@@ -1441,16 +1496,22 @@ async function main(): Promise<void> {
       const driverElapsed = driverFieldNumber(driverJson, "elapsed") ?? elapsed;
       const aborted = driverFieldBoolean(driverJson, "aborted");
       const requestReached = captures.length >= 1;
-      // Prove request reached server: first capture must exist and have our prompt
+      const deliveredCount = deliveredCaptures(captures).length;
       const hasPrompt = captures.length >= 1 && messagesContain(captures[0] as CapturedHttp, "review");
-      const pass = driverElapsed < 500 && aborted === true && requestReached && hasPrompt;
-      const detail = `driverElapsed=${driverElapsed} expect<500, aborted=${aborted}, requestReached=${requestReached} captures=${captures.length} hasPrompt=${hasPrompt}`;
+      // Separate arrival/delivery: aborted must have request but no delivered response and no usage
+      const hasNoDeliveredResponse = deliveredCount === 0 && captures[0]?.response === null && captures[0]?.delivered === false;
+      const deliveredUsage = sumDeliveredUsage(captures);
+      const driverUsage = getNumberField(isRecord(driverJson) ? (driverJson["usage"] as unknown) : undefined, "total");
+      const usageMatches = deliveredUsage === 0 && driverUsage === 0;
+      const noUsageInCapture = capturedResponseUsage(captures[0] as CapturedHttp) === undefined;
+      const pass = driverElapsed < 500 && aborted === true && requestReached && hasPrompt && hasNoDeliveredResponse && usageMatches && noUsageInCapture;
+      const detail = `driverElapsed=${driverElapsed} expect<500, aborted=${aborted}, requestReached=${requestReached} captures=${captures.length} delivered=${deliveredCount} hasPrompt=${hasPrompt} hasNoDeliveredResponse=${hasNoDeliveredResponse} deliveredUsage=${deliveredUsage} driverUsage=${driverUsage} usageMatches=${usageMatches} noUsageInCapture=${noUsageInCapture}`;
       return { pass, detail };
     },
     timeoutMs: 10000,
   });
 
-  // Scenario 7: two concurrent sessions — distinct messages, usage, cancellation, compression
+  // Scenario 7: two concurrent sessions — distinct messages, usage, cancellation, compression (separate arrival/delivery, per-session usage equality)
   {
     const id = "sdk-7-isolation-two-sessions";
     fixtures.push(id);
@@ -1519,77 +1580,76 @@ async function main(): Promise<void> {
     assertions++;
     const capsA = serverA.getSanitizedCaptures();
     const capsB = serverB.getSanitizedCaptures();
-    const aMessages = JSON.stringify(extractCapturedMessages(capsA[0] as CapturedHttp));
-    const bMessages = JSON.stringify(extractCapturedMessages(capsB[0] as CapturedHttp));
-    const distinctMessages = aMessages !== bMessages && aMessages.includes("a.go") && bMessages.includes("b.go");
-    const aHasB = aMessages.includes("b.go");
-    const bHasA = bMessages.includes("a.go");
 
-    // Usage derived only from captured provider responses and public driver result, not scripted
-    let aUsageFromCaptures = 0;
-    for (const c of capsA) {
-      const u = capturedResponseUsage(c);
-      if (u) aUsageFromCaptures += u.total_tokens;
-    }
-    let bUsageFromCaptures = 0;
-    for (const c of capsB) {
-      const u = capturedResponseUsage(c);
-      if (u) bUsageFromCaptures += u.total_tokens;
-    }
-    // Also check driver public result usage
-    const driverRA = isRecord(result.outputJson) ? (result.outputJson["rA"] as unknown) : undefined;
-    const driverRB = isRecord(result.outputJson) ? (result.outputJson["rB"] as unknown) : undefined;
-    const driverAUsage = isRecord(driverRA) ? getNumberField(driverRA["usage"] as unknown, "total") ?? getNumberField(driverRA, "usage") : undefined;
-    // Actually driver writes rA.usage is number
-    const driverAUsageNum = typeof driverRA === "object" && driverRA !== null && "usage" in (driverRA as Record<string, unknown>) ? (driverRA as Record<string, unknown>)["usage"] as number : undefined;
-    const driverBUsageNum = typeof driverRB === "object" && driverRB !== null && "usage" in (driverRB as Record<string, unknown>) ? (driverRB as Record<string, unknown>)["usage"] as number : undefined;
-    const distinctUsage = aUsageFromCaptures !== bUsageFromCaptures && aUsageFromCaptures > 0 && bUsageFromCaptures >= 0;
-
-    // Cancellation: B was aborted, A was not
-    const bAborted = isRecord(result.outputJson) ? getBooleanField(result.outputJson, "bAborted") : undefined;
-    const bWasCancelled = bAborted === true && capsB.length >= 1; // proves request reached even though cancelled
-
-    // Compression: A must have compression request with marker and rebuilt
-    let aCompressionIdx = -1;
-    for (let i = 0; i < capsA.length; i++) {
-      if (messagesContain(capsA[i] as CapturedHttp, COMPRESSION_MARKER)) {
-        aCompressionIdx = i;
-        break;
+    function checkIsolation(aCaps: readonly CapturedHttp[], bCaps: readonly CapturedHttp[], driverJson: unknown): CheckResult {
+      const aMessages = aCaps.length > 0 ? JSON.stringify(extractCapturedMessages(aCaps[0] as CapturedHttp)) : "";
+      const bMessages = bCaps.length > 0 ? JSON.stringify(extractCapturedMessages(bCaps[0] as CapturedHttp)) : "";
+      const distinctMessages = aMessages !== bMessages && aMessages.includes("a.go") && bMessages.includes("b.go");
+      const aHasB = aMessages.includes("b.go");
+      const bHasA = bMessages.includes("a.go");
+      // Per-session usage equality: each session's driver usage must equal its delivered captured usage
+      const aDeliveredUsage = sumDeliveredUsage(aCaps);
+      const bDeliveredUsage = sumDeliveredUsage(bCaps);
+      const aDeliveredCount = deliveredCaptures(aCaps).length;
+      const bDeliveredCount = deliveredCaptures(bCaps).length;
+      const driverRA = isRecord(driverJson) ? (driverJson["rA"] as unknown) : undefined;
+      const driverRB = isRecord(driverJson) ? (driverJson["rB"] as unknown) : undefined;
+      const driverAUsage = isRecord(driverRA) ? getNumberField(driverRA as Record<string, unknown>, "usage") : undefined;
+      const driverBUsage = isRecord(driverRB) ? getNumberField(driverRB as Record<string, unknown>, "usage") : undefined;
+      const aUsageMatches = driverAUsage === aDeliveredUsage && aDeliveredUsage === 45 && aDeliveredCount === 3;
+      const bUsageMatches = driverBUsage === bDeliveredUsage && bDeliveredUsage === 0 && bDeliveredCount === 0;
+      const distinctUsage = aDeliveredUsage !== bDeliveredUsage && aDeliveredUsage === 45 && bDeliveredUsage === 0;
+      // Cancellation: B was aborted, arrived (1 request) but not delivered (0), A not aborted and fully delivered
+      const bAborted = isRecord(driverJson) ? getBooleanField(driverJson, "bAborted") : undefined;
+      const bWasCancelled = bAborted === true && bCaps.length === 1 && bDeliveredCount === 0 && bCaps[0]?.delivered === false;
+      const bHasNoDeliveredResponse = bCaps.length === 1 && bCaps[0]?.response === null;
+      // Compression: A must have compression request with marker and rebuilt, only on delivered captures
+      let aCompressionIdx = -1;
+      for (let i = 0; i < aCaps.length; i++) {
+        const c = aCaps[i];
+        if (!c || !c.delivered) continue;
+        if (messagesContain(c as CapturedHttp, COMPRESSION_MARKER)) {
+          aCompressionIdx = i;
+          break;
+        }
       }
+      const aHasCompression = aCompressionIdx !== -1;
+      let aHasSummaryInNext = false;
+      if (aHasCompression && aCompressionIdx + 1 < aCaps.length) {
+        const nxt = aCaps[aCompressionIdx + 1];
+        if (nxt && nxt.delivered) aHasSummaryInNext = messagesContain(nxt as CapturedHttp, "compressed summary A");
+      }
+      const bHasNoCompression = bCaps.every((c) => !messagesContain(c as CapturedHttp, COMPRESSION_MARKER));
+      const driverOk = isRecord(driverJson) && isRecord(driverRA) && isRecord(driverRB);
+      const elapsed = isRecord(driverJson) ? getNumberField(driverJson, "elapsed") : undefined;
+      const elapsedOk = elapsed === undefined || elapsed < 15000;
+      const pass =
+        distinctMessages &&
+        !aHasB &&
+        !bHasA &&
+        distinctUsage &&
+        aUsageMatches &&
+        bUsageMatches &&
+        bWasCancelled &&
+        bHasNoDeliveredResponse &&
+        aHasCompression &&
+        aHasSummaryInNext &&
+        bHasNoCompression &&
+        driverOk &&
+        (elapsedOk ?? true) &&
+        aCaps.length === 3 &&
+        bCaps.length === 1;
+      const detail = `aReq=${aCaps.length} aDelivered=${aDeliveredCount} bReq=${bCaps.length} bDelivered=${bDeliveredCount} distinctMsg=${distinctMessages} distinctUsage=${distinctUsage} aUsageCap=${aDeliveredUsage} bUsageCap=${bDeliveredUsage} driverA=${driverAUsage} driverB=${driverBUsage} aMatch=${aUsageMatches} bMatch=${bUsageMatches} bCancelled=${bWasCancelled} bNoResp=${bHasNoDeliveredResponse} aComp=${aHasCompression} aSummaryNext=${aHasSummaryInNext} bNoComp=${bHasNoCompression} driverOk=${driverOk}`;
+      return { pass, detail };
     }
-    const aHasCompression = aCompressionIdx !== -1;
-    let aHasSummaryInNext = false;
-    if (aHasCompression && aCompressionIdx + 1 < capsA.length) {
-      aHasSummaryInNext = messagesContain(capsA[aCompressionIdx + 1] as CapturedHttp, "compressed summary A");
-    }
-    const bHasNoCompression = capsB.every((c) => !messagesContain(c, COMPRESSION_MARKER));
 
-    const driverOk = isRecord(result.outputJson) && isRecord(driverRA) && isRecord(driverRB);
-    const elapsed = isRecord(result.outputJson) ? getNumberField(result.outputJson, "elapsed") : undefined;
-    const elapsedOk = elapsed === undefined || elapsed < 15000; // generous but concurrent should be fast
-
-    const pass =
-      distinctMessages &&
-      !aHasB &&
-      !bHasA &&
-      distinctUsage &&
-      bWasCancelled &&
-      aHasCompression &&
-      aHasSummaryInNext &&
-      bHasNoCompression &&
-      driverOk &&
-      (elapsedOk ?? true) &&
-      capsA.length >= 3 &&
-      capsB.length >= 1;
-
-    const detail = `aReq=${capsA.length} bReq=${capsB.length} distinctMsg=${distinctMessages} distinctUsage=${distinctUsage} aUsageCap=${aUsageFromCaptures} bUsageCap=${bUsageFromCaptures} bCancelled=${bWasCancelled} aComp=${aHasCompression} aSummaryNext=${aHasSummaryInNext} bNoComp=${bHasNoCompression} driverOk=${driverOk}`;
-
+    const checkRes = checkIsolation(capsA, capsB, result.outputJson);
     const dir = join(artifactDir, id);
     mkdirSync(dir, { recursive: true });
     writeFileSync(join(dir, "serverA.json"), JSON.stringify(capsA, null, 2), "utf-8");
     writeFileSync(join(dir, "serverB.json"), JSON.stringify(capsB, null, 2), "utf-8");
     writeFileSync(join(dir, "driver.json"), JSON.stringify(result, null, 2), "utf-8");
-    if (!pass) {
+    if (!checkRes.pass) {
       const r: Gate1Report = {
         gate: "sdk-feasibility",
         commit,
@@ -1603,29 +1663,38 @@ async function main(): Promise<void> {
         forbiddenImportDetails: [],
         result: "fail",
         artifactDir,
-        error: `${id} failed: ${detail}`,
+        error: `${id} failed: ${checkRes.detail}`,
       };
-      fail(r, `${id} failed: ${detail}`);
+      fail(r, `${id} failed: ${checkRes.detail}`);
     }
-    console.error(`[verify:sdk-feasibility] PASS ${id}: ${detail}`);
+    console.error(`[verify:sdk-feasibility] PASS ${id}: ${checkRes.detail}`);
 
-    // Adversarial for concurrent: mutate to make messages same or usage same and ensure fails
+    // Adversarial: mutate captures to make isolation fail, then pass mutated captures through the REAL checkIsolation
     assertions++;
-    // Adversarial 7a: make a's message include b.go -> should fail distinct check
-    const mutatedCapsA = [...capsA];
-    // Simulate by checking that if we had same messages, our logic would fail — we test by feeding same captures
-    const adversarialCheck = (): boolean => {
-      const fakeSame = JSON.stringify(extractCapturedMessages(capsA[0] as CapturedHttp)) === JSON.stringify(extractCapturedMessages(capsA[0] as CapturedHttp));
-      // This trivial check would pass even for mutated, so we use a more realistic adversarial:
-      // If we replace b's captures with a's, distinct should be false
-      const sameMessages = JSON.stringify(extractCapturedMessages(capsA[0] as CapturedHttp)) === JSON.stringify(extractCapturedMessages(capsA[0] as CapturedHttp));
-      // Instead we directly test that our pass logic would fail if distinctMessages were false
-      // We simulate mutated where a and b have same content
-      const mutatedDistinct = false; // forced
-      const mutatedPass = mutatedDistinct && !aHasB && !bHasA && distinctUsage && bWasCancelled && aHasCompression;
-      return !mutatedPass; // should be true (fails)
-    };
-    if (!adversarialCheck()) {
+    // Create mutated copies where A's first request is changed to contain b.go, making distinctMessages false
+    const mutatedA: CapturedHttp[] = capsA.map((c) => ({
+      ...c,
+      request: { ...c.request, body: deepCloneForMutate(c.request.body) },
+      response: c.response ? { ...c.response, body: deepCloneForMutate(c.response.body) } : null,
+    }));
+    // Helper to deep clone via JSON for mutate
+    function deepCloneForMutate<T>(v: T): T {
+      return JSON.parse(JSON.stringify(v)) as T;
+    }
+    if (mutatedA.length > 0 && isRecord(mutatedA[0]?.request.body)) {
+      const body = mutatedA[0]?.request.body as Record<string, unknown>;
+      const msgs = body["messages"];
+      if (Array.isArray(msgs)) {
+        const s = JSON.stringify(msgs);
+        const mutatedStr = s.replace(/a\.go/g, "b.go");
+        try {
+          const parsed: unknown = JSON.parse(mutatedStr);
+          (mutatedA[0] as unknown as { request: { body: unknown } }).request.body = { ...(body as Record<string, unknown>), messages: parsed };
+        } catch {}
+      }
+    }
+    const mutatedRes = checkIsolation(mutatedA, capsB, result.outputJson);
+    if (mutatedRes.pass) {
       const r: Gate1Report = {
         gate: "sdk-feasibility",
         commit,
@@ -1639,11 +1708,11 @@ async function main(): Promise<void> {
         forbiddenImportDetails: [],
         result: "fail",
         artifactDir,
-        error: `adversarial ${id} did not fail`,
+        error: `adversarial ${id} did not fail as expected: ${mutatedRes.detail}`,
       };
-      fail(r, `adversarial ${id} did not fail`);
+      fail(r, `adversarial ${id} did not fail: ${mutatedRes.detail}`);
     }
-    console.error(`[verify:sdk-feasibility] ADV PASS ${id}: adversarial correctly failed`);
+    console.error(`[verify:sdk-feasibility] ADV PASS ${id}: adversarial correctly failed: ${mutatedRes.detail}`);
   }
 
   const report: Gate1Report = {

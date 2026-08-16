@@ -33,6 +33,10 @@ export interface Provenance {
 }
 
 // A single HTTP capture — what the fake provider server saw.
+// Response is null when request arrived but response was never delivered
+// (e.g., stalled and aborted). Separating arrival from delivery is
+// required by Gate 1: "a stalled, aborted request has a captured request
+// but no captured provider response."
 export interface CapturedHttp {
   readonly request: {
     readonly method: string;
@@ -44,7 +48,9 @@ export interface CapturedHttp {
     readonly status: number;
     readonly headers: Record<string, string>;
     readonly body: unknown;
-  };
+  } | null;
+  // Whether response bytes were actually delivered to the client.
+  readonly delivered: boolean;
   // Sanitized means secrets stripped (Authorization, api keys).
   readonly sanitized: boolean;
 }

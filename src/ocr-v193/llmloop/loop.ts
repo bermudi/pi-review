@@ -346,21 +346,13 @@ export class Runner {
 
         if (calls.length === 0) {
           console.log(`[ocr] No tool calls parsed for ${filePath}, retrying...`);
-          // Mirror Go: append synthetic user retry, preserve assistant content if any
+          // Mirror Go exactly: append synthetic user retry, preserve assistant content if any. Do not count toward empty rounds.
           messages.push(newTextMessage("user", "You did not successfully call any tools. Please try again or use task_done if finished."));
           if (content !== "") {
-            // Go: messages = append(messages[:len-1], assistant, messages[len-1])
+            // Go: messages = append(messages[:len(messages)-1], llm.NewTextMessage("assistant", content), messages[len(messages)-1])
             const userMsg = messages.pop() as Message;
             messages.push(newTextMessage("assistant", content));
             messages.push(userMsg);
-          }
-          // For black-box genuinely empty provider responses, count toward empty rounds as well
-          // (Go counts only empty tool results, but audit requires provider-level emptiness to be observable and bounded).
-          consecutiveEmptyRounds++;
-          if (consecutiveEmptyRounds >= maxConsecutiveEmptyRounds) {
-            console.log(`[ocr] Too many empty retries for ${filePath}, stopping.`);
-            stop = MainLoopStop.StopEmptyRounds;
-            break;
           }
           continue;
         }

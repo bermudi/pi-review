@@ -12,6 +12,10 @@ import type { ProcessCapture, CompareResult, Provenance } from "./types.js";
  * and kind, and anything we can't observe goes in notObservable.
  */
 
+function isRecord(v: unknown): v is Record<string, unknown> {
+  return typeof v === "object" && v !== null && !Array.isArray(v);
+}
+
 function provenance(
   source: Provenance["source"],
   kind: Provenance["kind"] = "observed",
@@ -165,13 +169,30 @@ export function compareCaptures(ocr: ProcessCapture | null, pi: ProcessCapture |
     );
   }
 
-  // Provider response: usage, content, tool calls
+  // Provider response: usage, content, tool calls (handle undelivered as null)
   for (let i = 0; i < minReq; i++) {
-    const oResp = ocr.providerCaptures[i]!.response.body as Record<string, unknown>;
-    const pResp = pi.providerCaptures[i]!.response.body as Record<string, unknown>;
+    const oCap = ocr.providerCaptures[i]!;
+    const pCap = pi.providerCaptures[i]!;
+    // If either side not delivered, compare delivered flag and skip body comparison (stalled aborted case not used in Gate0 diff but handle)
+    const oRespRaw = oCap.response?.body;
+    const pRespRaw = pCap.response?.body;
+    const oResp = (isRecord(oRespRaw) ? oRespRaw : {}) as Record<string, unknown>;
+    const pResp = (isRecord(pRespRaw) ? pRespRaw : {}) as Record<string, unknown>;
 
-    const oUsage = (oResp.usage ?? oResp.usageInfo ?? {}) as Record<string, unknown>;
-    const pUsage = (pResp.usage ?? pResp.usageInfo ?? {}) as Record<string, unknown>;
+    // Compare delivered flag first
+    check(
+      `provider_response[${i}].delivered`,
+      provenance("provider_response"),
+      oCap.delivered === pCap.delivered,
+      oCap.delivered,
+      pCap.delivered,
+      `delivered mismatch for response ${i}`,
+    );
+
+    if (!oCap.delivered || !pCap.delivered) continue;
+
+    const oUsage = (oResp["usage"] ?? oResp["usageInfo"] ?? {}) as Record<string, unknown>;
+    const pUsage = (pResp["usage"] ?? pResp["usageInfo"] ?? {}) as Record<string, unknown>;
 
     check(
       `provider_response[${i}].usage`,
@@ -194,8 +215,8 @@ export function compareCaptures(ocr: ProcessCapture | null, pi: ProcessCapture |
       );
     }
 
-    const oChoices = (oResp.choices ?? []) as unknown[];
-    const pChoices = (pResp.choices ?? []) as unknown[];
+    const oChoices = (oResp["choices"] ?? []) as unknown[];
+    const pChoices = (pResp["choices"] ?? []) as unknown[];
     check(
       `provider_response[${i}].choices`,
       provenance("provider_response"),

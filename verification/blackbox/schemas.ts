@@ -13,11 +13,15 @@ export const capturedHttpSchema = z.object({
     headers: z.record(z.string(), z.string()),
     body: z.unknown(),
   }),
-  response: z.object({
-    status: z.number(),
-    headers: z.record(z.string(), z.string()),
-    body: z.unknown(),
-  }),
+  response: z.union([
+    z.object({
+      status: z.number(),
+      headers: z.record(z.string(), z.string()),
+      body: z.unknown(),
+    }),
+    z.null(),
+  ]),
+  delivered: z.boolean(),
   sanitized: z.boolean(),
 });
 

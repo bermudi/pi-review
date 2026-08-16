@@ -28,8 +28,6 @@ function sanitizeHeaders(headers: Record<string, string>): Record<string, string
   const out: Record<string, string> = {};
   for (const [k, v] of Object.entries(headers)) {
     const lower = k.toLowerCase();
-    // Only redact known secret headers — not every header containing "token" would be usage,
-    // but headers never contain prompt_tokens, so this is safe to keep strict for headers.
     if (SECRET_HEADERS.has(lower) || lower.includes("key") || lower.includes("secret") || lower === "authorization") {
       out[k] = "<REDACTED>";
     } else {
@@ -42,32 +40,52 @@ function sanitizeHeaders(headers: Record<string, string>): Record<string, string
 function sanitizeBody(body: unknown): unknown {
   if (body === null || body === undefined) return body;
   if (typeof body === "string") {
-    // Redact anything that looks like a key in a JSON string
     try {
-      const parsed = JSON.parse(body) as unknown;
+      const parsed: unknown = JSON.parse(body);
       return sanitizeBody(parsed);
     } catch {
       return body.replace(/sk-[a-zA-Z0-9_-]{10,}/g, "<REDACTED>");
     }
   }
-  if (Array.isArray(body)) return body.map(sanitizeBody);
+  if (Array.isArray(body)) {
+    const arr = body as unknown[];
+    return arr.map((e) => sanitizeBody(e));
+  }
   if (typeof body === "object") {
     const obj = body as Record<string, unknown>;
     const out: Record<string, unknown> = {};
     for (const [k, v] of Object.entries(obj)) {
       const lower = k.toLowerCase();
-      // Never redact usage counters — they contain "token" but are not secrets.
-      const isUsage = lower === "prompt_tokens" || lower === "completion_tokens" || lower === "total_tokens" || lower === "prompttokens" || lower === "completiontokens" || lower === "totaltokens" || lower === "usage" || lower === "prompt_tokens" || lower.includes("cache_read") || lower.includes("cache_write");
+      const isUsage =
+        lower === "prompt_tokens" ||
+        lower === "completion_tokens" ||
+        lower === "total_tokens" ||
+        lower === "prompttokens" ||
+        lower === "completiontokens" ||
+        lower === "totaltokens" ||
+        lower === "usage" ||
+        lower.includes("cache_read") ||
+        lower.includes("cache_write");
       if (isUsage) {
-        out[k] = sanitizeBody(v) as unknown;
+        out[k] = sanitizeBody(v);
         continue;
       }
-      // Only redact true secret keys — not every field with "token" substring.
-      const isSecretKey = lower === "authorization" || lower === "api_key" || lower === "apikey" || lower === "x-api-key" || lower === "apiKey" || lower === "secret" || lower === "password" || lower === "key" || lower === "token" || lower.endsWith("_key") || lower.endsWith("_secret");
+      const isSecretKey =
+        lower === "authorization" ||
+        lower === "api_key" ||
+        lower === "apikey" ||
+        lower === "x-api-key" ||
+        lower === "apiKey" ||
+        lower === "secret" ||
+        lower === "password" ||
+        lower === "key" ||
+        lower === "token" ||
+        lower.endsWith("_key") ||
+        lower.endsWith("_secret");
       if (isSecretKey) {
         out[k] = "<REDACTED>";
       } else {
-        out[k] = sanitizeBody(v) as unknown;
+        out[k] = sanitizeBody(v);
       }
     }
     return out;
@@ -79,12 +97,34 @@ function deepClone<T>(value: T): T {
   return JSON.parse(JSON.stringify(value)) as T;
 }
 
+function isRecord(v: unknown): v is Record<string, unknown> {
+  return typeof v === "object" && v !== null && !Array.isArray(v);
+}
+
+function getStringField(obj: unknown, key: string): string | undefined {
+  if (!isRecord(obj)) return undefined;
+  const v = obj[key];
+  return typeof v === "string" ? v : undefined;
+}
+
+function getNumberField(obj: unknown, key: string): number | undefined {
+  if (!isRecord(obj)) return undefined;
+  const v = obj[key];
+  return typeof v === "number" ? v : undefined;
+}
+
 /**
  * Create a server that returns a frozen sequence of responses.
  * Each call to `url` gets the next response in the list (clamped at last).
  * The two servers for OCR and Pi get deep-frozen copies of the same sequence,
  * so giving them the same input but mutating one server's copy is a real
  * boundary mutation — not just editing an in-memory object.
+ *
+ * Request arrival and response delivery are separate: on arrival we push a
+ * capture with `delivered:false` and `response:null`. Only after delay (and
+ * after confirming the client did not abort) do we set `response` and
+ * `delivered:true` and return bytes. This ensures a stalled aborted request
+ * has a captured request but no captured response/usage.
  */
 export function createCaptureServer(opts: {
   responses: readonly unknown[];
@@ -93,6 +133,13 @@ export function createCaptureServer(opts: {
   const frozenResponses = deepClone(opts.responses);
   const captures: CapturedHttp[] = [];
   let idx = 0;
+
+  type MutableCapture = {
+    request: { method: string; url: string; headers: Record<string, string>; body: unknown };
+    response: { status: number; headers: Record<string, string>; body: unknown } | null;
+    delivered: boolean;
+    sanitized: boolean;
+  };
 
   const server = Bun.serve({
     hostname: "127.0.0.1",
@@ -111,50 +158,82 @@ export function createCaptureServer(opts: {
 
       const headers = Object.fromEntries(req.headers.entries());
 
-      const responseBody: any = frozenResponses[Math.min(idx, frozenResponses.length - 1)];
-      if (idx < frozenResponses.length) idx++;
-
-      // Record capture before delay so stalled requests are proven to have reached the server even if client aborts before we respond.
-      const rawCapture: CapturedHttp = {
+      // Record arrival immediately, before any delay or response selection.
+      const mutable: MutableCapture = {
         request: {
           method: req.method,
           url: req.url,
           headers: deepClone(headers),
           body: deepClone(body),
         },
-        response: {
-          status: 200,
-          headers: { "content-type": "application/json" },
-          body: deepClone(responseBody),
-        },
+        response: null,
+        delivered: false,
         sanitized: false,
       };
-      captures.push(rawCapture);
+      captures.push(mutable as unknown as CapturedHttp);
 
       if (opts.delayMs && opts.delayMs > 0) {
         await Bun.sleep(opts.delayMs);
       }
 
+      // If client aborted before we could deliver, leave as undelivered.
+      // req.signal aborted means the fetch was cancelled.
+      const sig = (req as unknown as { signal?: AbortSignal }).signal;
+      if (sig && sig.aborted) {
+        // Do not set response, do not advance idx, return abort-like response that will be ignored.
+        return new Response(null, { status: 499 });
+      }
+
+      // Now select the next scripted response — only after delivery is confirmed.
+      const responseBodyUnknown: unknown = frozenResponses[Math.min(idx, frozenResponses.length - 1)];
+      if (idx < frozenResponses.length) idx++;
+
+      const responseBodyRecord = isRecord(responseBodyUnknown) ? (responseBodyUnknown as Record<string, unknown>) : {};
+
+      mutable.response = {
+        status: 200,
+        headers: { "content-type": "application/json" },
+        body: deepClone(responseBodyUnknown),
+      };
+      mutable.delivered = true;
+
       // Handle streaming: Pi SDK sends stream:true and expects SSE
-      const wantsStream = (body as any)?.stream === true;
+      const wantsStream = isRecord(body) && body["stream"] === true;
       if (wantsStream) {
-        const id = responseBody?.id ?? `chatcmpl-${idx}`;
-        const created = responseBody?.created ?? Math.floor(Date.now() / 1000);
-        const model = responseBody?.model ?? (body as any)?.model ?? "test-model";
-        const choice = responseBody?.choices?.[0] ?? {};
-        const msg = choice.message ?? {};
-        const finish = choice.finish_reason ?? (msg.tool_calls ? "tool_calls" : "stop");
-        const delta: any = {};
-        if (msg.content) delta.content = msg.content;
-        if (msg.tool_calls) {
-          delta.tool_calls = msg.tool_calls.map((tc: any, i: number) => ({
-            index: i,
-            id: tc.id,
-            type: tc.type ?? "function",
-            function: tc.function,
-          }));
+        const id = getStringField(responseBodyRecord, "id") ?? `chatcmpl-${idx}`;
+        const created = getNumberField(responseBodyRecord, "created") ?? Math.floor(Date.now() / 1000);
+        const modelFromBody = isRecord(body) ? getStringField(body, "model") : undefined;
+        const model = getStringField(responseBodyRecord, "model") ?? modelFromBody ?? "test-model";
+        const choicesUnknown = responseBodyRecord["choices"];
+        const firstChoice = Array.isArray(choicesUnknown) && choicesUnknown.length > 0 ? choicesUnknown[0] : undefined;
+        const firstRecord = isRecord(firstChoice) ? firstChoice : {};
+        const msgUnknown = firstRecord["message"];
+        const msgRecord = isRecord(msgUnknown) ? msgUnknown : {};
+        const finishFromChoice = getStringField(firstRecord, "finish_reason");
+        const toolCalls = msgRecord["tool_calls"];
+        const finish = finishFromChoice ?? (Array.isArray(toolCalls) ? "tool_calls" : "stop");
+        const delta: Record<string, unknown> = {};
+        const content = msgRecord["content"];
+        if (typeof content === "string" && content !== "") delta["content"] = content;
+        if (Array.isArray(toolCalls)) {
+          const mapped: unknown[] = [];
+          for (let i = 0; i < toolCalls.length; i++) {
+            const tc = toolCalls[i];
+            if (!isRecord(tc)) continue;
+            const fn = isRecord(tc["function"]) ? (tc["function"] as Record<string, unknown>) : {};
+            mapped.push({
+              index: i,
+              id: getStringField(tc, "id") ?? `call_${i}`,
+              type: getStringField(tc, "type") ?? "function",
+              function: fn,
+            });
+          }
+          delta["tool_calls"] = mapped;
         }
-        const usage = responseBody?.usage ?? { prompt_tokens: 10, completion_tokens: 5, total_tokens: 15 };
+        const usageUnknown = responseBodyRecord["usage"];
+        const usage = isRecord(usageUnknown)
+          ? usageUnknown
+          : { prompt_tokens: 10, completion_tokens: 5, total_tokens: 15 };
         const sse = [
           `data: ${JSON.stringify({ id, object: "chat.completion.chunk", created, model, choices: [{ index: 0, delta, finish_reason: null }] })}\n\n`,
           `data: ${JSON.stringify({ id, object: "chat.completion.chunk", created, model, choices: [{ index: 0, delta: {}, finish_reason: finish }], usage })}\n\n`,
@@ -163,7 +242,7 @@ export function createCaptureServer(opts: {
         return new Response(sse, { headers: { "content-type": "text/event-stream" } });
       }
 
-      return new Response(JSON.stringify(responseBody), {
+      return new Response(JSON.stringify(responseBodyUnknown), {
         status: 200,
         headers: { "content-type": "application/json" },
       });
@@ -186,11 +265,14 @@ export function createCaptureServer(opts: {
           headers: sanitizeHeaders(c.request.headers),
           body: sanitizeBody(c.request.body),
         },
-        response: {
-          status: c.response.status,
-          headers: sanitizeHeaders(c.response.headers),
-          body: sanitizeBody(c.response.body),
-        },
+        response: c.response
+          ? {
+              status: c.response.status,
+              headers: sanitizeHeaders(c.response.headers),
+              body: sanitizeBody(c.response.body),
+            }
+          : null,
+        delivered: c.delivered,
         sanitized: true,
       })),
   };
