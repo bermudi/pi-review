@@ -86,6 +86,7 @@ async function runScenarioInConsumer(opts: {
   scenario: string;
   extraEnv?: Record<string, string>;
   timeoutMs?: number;
+  serverUrl2?: string;
 }): Promise<{ stdout: string; stderr: string; exitCode: number | null; outputJson: any }> {
   const driverPath = join(opts.consumerDir, "driver.mjs");
   const resultFile = join(opts.consumerDir, `result-${opts.scenario}-${Date.now()}.json`);
@@ -100,7 +101,9 @@ async function runScenarioInConsumer(opts: {
     }
   }
   env["SERVER_URL"] = opts.serverUrl;
+  if (opts.serverUrl2) env["SERVER_URL_2"] = opts.serverUrl2;
   env["SCENARIO"] = opts.scenario;
+  if (opts.extraEnv) for (const [k, v] of Object.entries(opts.extraEnv)) env[k] = v;
   env["RESULT_FILE"] = resultFile;
   // Async spawn so server can handle requests
   const { spawn } = await import("node:child_process");
@@ -422,9 +425,10 @@ async function scenario6() {
 
 // Scenario 7: two concurrent sessions have distinct messages, usage, cancellation, compression
 async function scenario7() {
-  // We need two separate transports and runners, concurrent
-  const { transport: t1, cleanup: c1 } = await createTransport(["code_comment","task_done","file_read"], serverUrl + "-1");
-  const { transport: t2, cleanup: c2 } = await createTransport(["code_comment","task_done","file_read"], serverUrl + "-2");
+  // For concurrent isolation, we need two servers. Verifier will pass SERVER_URL and SERVER_URL_2.
+  const serverUrl2 = process.env.SERVER_URL_2 || serverUrl;
+  const { transport: t1, cleanup: c1 } = await createTransport(["code_comment","task_done","file_read"], serverUrl);
+  const { transport: t2, cleanup: c2 } = await createTransport(["code_comment","task_done","file_read"], serverUrl2);
   // Actually verifier will give us two servers via two URLs? For simplicity, we use same serverUrl but run concurrently;
   // The verifier will host two servers on different ports and we need to use both. For now, assume serverUrl is for both and we run two runners concurrently.
   // Instead, we will create two Runners that share the same transport? No, need distinct.
@@ -819,13 +823,13 @@ async function main(): Promise<void> {
     },
   });
 
-  // Scenario 7: two concurrent sessions
-  // For this we need two servers and two drivers concurrently. We'll handle specially.
+  // Scenario 7: two concurrent sessions — distinct messages, usage, cancellation, compression
+  // We host two servers and run a single driver with scenario "7" that creates two concurrent sessions,
+  // each hitting its own server via SERVER_URL and SERVER_URL_2.
   {
     const id = "sdk-7-isolation-two-sessions";
     fixtures.push(id);
     console.error(`[verify:sdk-feasibility] running ${id}...`);
-    // Create two servers
     const scriptedA = [
       {
         id: "chatcmpl-a1",
@@ -872,49 +876,29 @@ async function main(): Promise<void> {
     ];
     const serverA = createCaptureServer({ responses: scriptedA as any });
     const serverB = createCaptureServer({ responses: scriptedB as any });
-    // We need to run two drivers concurrently, each with its own server URL.
-    // We'll write two driver invocations in parallel.
-    const dirA = join(artifactDir, id, "a");
-    const dirB = join(artifactDir, id, "b");
-    mkdirSync(dirA, { recursive: true });
-    mkdirSync(dirB, { recursive: true });
-    // For concurrent, we need two consumer drivers? We can reuse same consumerDir but run two bun processes concurrently with different SERVER_URL
-    // Simplify: spawn two driver processes concurrently
-    const start = Date.now();
-    const pA = runScenarioInConsumer({ consumerDir, serverUrl: serverA.url, scenario: "7a" }); // we need to handle 7a vs 7b
-    const pB = runScenarioInConsumer({ consumerDir, serverUrl: serverB.url, scenario: "7b" });
-    // Actually driver currently handles scenario "7" as concurrent itself, but we want verifier to control concurrency.
-    // Alternative: we let driver handle concurrency internally if scenario is "7", but we are passing 7a/7b separately.
-    // For now, we will run a single driver with scenario "7" that internally does concurrent sessions.
-    // So we should just run one driver with scenario "7" and give it two server URLs via env.
-    // To keep simple, we will run a single driver with scenario "7" that creates two sessions concurrently, but we need to give it both URLs.
-    // Instead, we will run the driver with scenario "7" and let it create two sessions that both hit the same server? That would not be isolated.
-    // We need to adjust: create a driver variant for concurrent that uses two servers.
-    // Simpler: we will directly test isolation by spawning two separate drivers concurrently, each with its own server, and check their captures are distinct.
-    const results = await Promise.all([pA, pB]);
+    const result = await runScenarioInConsumer({ consumerDir, serverUrl: serverA.url, scenario: "7", serverUrl2: serverB.url });
     serverA.stop();
     serverB.stop();
     assertions++;
     const capsA = serverA.getSanitizedCaptures();
     const capsB = serverB.getSanitizedCaptures();
-    // Check distinct messages, usage, etc.
     const aMessages = JSON.stringify((capsA[0]?.request.body as any)?.messages ?? "");
     const bMessages = JSON.stringify((capsB[0]?.request.body as any)?.messages ?? "");
     const distinctMessages = aMessages !== bMessages;
     const aUsage = (scriptedA[0] as any)?.usage?.prompt_tokens;
     const bUsage = (scriptedB[0] as any)?.usage?.prompt_tokens;
     const distinctUsage = aUsage !== bUsage;
-    // Check that each server got exactly its own requests, no cross
     const aHasB = aMessages.includes("b.go");
     const bHasA = bMessages.includes("a.go");
-    const pass = distinctMessages && distinctUsage && !aHasB && !bHasA && capsA.length === 2 && capsB.length === 2;
-    const detail = `aRequests=${capsA.length} bRequests=${capsB.length} distinctMessages=${distinctMessages} distinctUsage=${distinctUsage} aHasB=${aHasB} bHasA=${bHasA}`;
+    // Also check driver output for concurrent success
+    const driverOk = (result.outputJson as any)?.r1 && (result.outputJson as any)?.r2;
+    const pass = distinctMessages && distinctUsage && !aHasB && !bHasA && capsA.length === 2 && capsB.length === 2 && driverOk;
+    const detail = `aRequests=${capsA.length} bRequests=${capsB.length} distinctMessages=${distinctMessages} distinctUsage=${distinctUsage} aHasB=${aHasB} bHasA=${bHasA} driverOk=${!!driverOk}`;
     const dir = join(artifactDir, id);
     mkdirSync(dir, { recursive: true });
     writeFileSync(join(dir, "serverA.json"), JSON.stringify(capsA, null, 2), "utf-8");
     writeFileSync(join(dir, "serverB.json"), JSON.stringify(capsB, null, 2), "utf-8");
-    writeFileSync(join(dir, "driverA.json"), JSON.stringify(results[0], null, 2), "utf-8");
-    writeFileSync(join(dir, "driverB.json"), JSON.stringify(results[1], null, 2), "utf-8");
+    writeFileSync(join(dir, "driver.json"), JSON.stringify(result, null, 2), "utf-8");
     if (!pass) {
       const r: Gate1Report = { gate: "sdk-feasibility", commit, ocrTagObject: tagObject, ocrCommit, packageArchiveHash, fixtures, assertions, notObservable, forbiddenImports, forbiddenImportDetails: [], result: "fail", artifactDir, error: `${id} failed: ${detail}` } as Gate1Report;
       fail(r, `${id} failed: ${detail}`);
