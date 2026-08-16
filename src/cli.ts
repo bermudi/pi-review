@@ -700,7 +700,7 @@ export async function runCli(
 			void providerName;
 			const env = io.env();
 			const agentDir = parsed.agentDir ?? env["PI_CODING_AGENT_DIR"] ?? `${env["HOME"] ?? "/tmp"}/.pi/agent`;
-			const cwd = io.cwd();
+			const cwd = repoDir;
 			try {
 				const { createPiTransportForFile } = await import("./ocr-v193/pi-adapter/pi-transport.js");
 				const { Runner: LoopRunner } = await import("./ocr-v193/llmloop/loop.js");
