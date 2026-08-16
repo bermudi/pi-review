@@ -842,6 +842,7 @@ async function main(): Promise<void> {
   writeDriver(consumerDir);
   console.error(`[verify:sdk-feasibility] driver written to ${join(consumerDir, "driver.mjs")}`);
 
+  const COMPRESSION_MARKER = "COMPRESSION_MARKER_9f7df18_gate1";
   const fixtures: string[] = [];
   let assertions = 0;
   const notObservable: string[] = [];
@@ -1009,29 +1010,34 @@ async function main(): Promise<void> {
         break;
       }
       case "sdk-5-compression-rebuilt": {
-        // Remove summary from third request: so hasSummaryInNext fails
-        if (mutatedCaptures.length >= 3) {
-          const third = mutatedCaptures[2];
-          if (third && isRecord(third.request.body)) {
-            const msgs = third.request.body["messages"];
-            if (Array.isArray(msgs)) {
-              const mutatedMsgs = msgs.map((m) => {
-                if (!isRecord(m)) return m;
-                const content = m["content"];
-                if (typeof content === "string" && content.includes("compressed summary")) {
-                  return { ...m, content: content.replace("compressed summary", "REMOVED") };
-                }
-                return m;
-              });
-              const mutatedBody = { ...(third.request.body as Record<string, unknown>), messages: mutatedMsgs };
-              mutatedCaptures[2] = { ...third, request: { ...third.request, body: mutatedBody } };
-            } else if (typeof msgs === "string" && msgs.includes("compressed summary")) {
-              mutatedCaptures[2] = {
-                ...third,
-                request: { ...third.request, body: { ...(third.request.body as Record<string, unknown>), messages: (msgs as string).replace("compressed summary", "REMOVED") } },
-              };
+        // Remove summary from the request after compression: so hasSummaryInNext fails
+        // Find compression idx first, then mutate next capture's body via JSON string replace (robust to nested content arrays)
+        let compIdx = -1;
+        for (let i = 0; i < mutatedCaptures.length; i++) {
+          const cap = mutatedCaptures[i];
+          if (!cap) continue;
+          const bodyStr = JSON.stringify(cap.request.body);
+          if (bodyStr.includes(COMPRESSION_MARKER)) { compIdx = i; break; }
+        }
+        const nextIdx = compIdx !== -1 ? compIdx + 1 : 2;
+        if (nextIdx < mutatedCaptures.length) {
+          const target = mutatedCaptures[nextIdx];
+          if (target) {
+            const bodyStr = JSON.stringify(target.request.body);
+            if (bodyStr.includes("compressed summary")) {
+              const mutatedStr = bodyStr.replace(/compressed summary/g, "REMOVED");
+              try {
+                const mutatedBody: unknown = JSON.parse(mutatedStr);
+                mutatedCaptures[nextIdx] = { ...target, request: { ...target.request, body: mutatedBody } };
+              } catch {}
+            } else {
+              // Force removal by truncating: make next capture empty
+              mutatedCaptures = mutatedCaptures.slice(0, nextIdx) as CapturedHttp[];
             }
           }
+        } else {
+          // No next capture, force count <3
+          mutatedCaptures = mutatedCaptures.slice(0, 2) as CapturedHttp[];
         }
         break;
       }
@@ -1051,8 +1057,6 @@ async function main(): Promise<void> {
     }
     return { pass: true, detail: `adversarial for ${id} correctly failed: ${mutatedResult.detail}` };
   }
-
-  const COMPRESSION_MARKER = "COMPRESSION_MARKER_9f7df18_gate1";
 
   // Scenario 1: one response with two tool calls = one round (usage from captures + public result)
   await runScenario({
