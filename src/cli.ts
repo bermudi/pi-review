@@ -717,10 +717,10 @@ export async function runCli(
 					{ type: "function", function: { name: "file_read_diff", description: "Read diff", parameters: { type: "object", properties: {} } } },
 					{ type: "function", function: { name: "code_search", description: "Search", parameters: { type: "object", properties: { query: { type: "string" } } } } },
 				];
-				// Create transport per file via factory (one session per file, isolated)
+				// Create transport per file via factory (one session per file, isolated) — no explicit model needed; it resolves via agentDir models.json
 				const mkTransport = async (): Promise<unknown> => {
 					// eslint-disable-next-line @typescript-eslint/no-explicit-any
-					return (createPiTransportForFile as any)({ cwd, agentDir, tools: toolDefs, model: { id: modelId } });
+					return (createPiTransportForFile as any)({ cwd, agentDir, tools: toolDefs });
 				};
 				// Acquire diffs — workspace by default
 				let diffs: unknown[] = [];
