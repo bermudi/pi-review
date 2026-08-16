@@ -111,14 +111,10 @@ export function createCaptureServer(opts: {
 
       const headers = Object.fromEntries(req.headers.entries());
 
-      if (opts.delayMs && opts.delayMs > 0) {
-        await Bun.sleep(opts.delayMs);
-      }
-
       const responseBody: any = frozenResponses[Math.min(idx, frozenResponses.length - 1)];
       if (idx < frozenResponses.length) idx++;
 
-      // Record raw capture first, then sanitize for artifact.
+      // Record capture before delay so stalled requests are proven to have reached the server even if client aborts before we respond.
       const rawCapture: CapturedHttp = {
         request: {
           method: req.method,
@@ -134,6 +130,10 @@ export function createCaptureServer(opts: {
         sanitized: false,
       };
       captures.push(rawCapture);
+
+      if (opts.delayMs && opts.delayMs > 0) {
+        await Bun.sleep(opts.delayMs);
+      }
 
       // Handle streaming: Pi SDK sends stream:true and expects SSE
       const wantsStream = (body as any)?.stream === true;
