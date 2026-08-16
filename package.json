@@ -23,13 +23,7 @@
     "start": "bun run src/cli.ts",
     "clean": "bun -e 'import { rm } from \"node:fs/promises\"; await rm(\"dist\", { recursive: true, force: true })'",
     "harness": "bun run test/ocr-v193/harness/index.ts --all",
-    "verify:phase0-evidence": "bun run scripts/verify-phase0-evidence.ts",
-    "verify:phase1-sdk": "bun run scripts/verify-phase1-sdk.ts",
-    "verify:phase2-vertical": "bun run scripts/verify-phase2-vertical.ts",
-    "verify:phase3-comments": "bun run scripts/verify-phase3-comments.ts",
-    "verify:phase4-inputs": "bun run scripts/verify-phase4-inputs.ts",
-    "verify:phase5-scan-session": "bun run scripts/verify-phase5-scan-session.ts",
-    "verify:cutover": "bun run scripts/verify-cutover.ts"
+    "verify:blackbox-integrity": "bun run verification/blackbox/verify-blackbox-integrity.ts"
   },
   "main": "dist/index.js",
   "engines": {
