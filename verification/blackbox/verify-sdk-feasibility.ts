@@ -1499,11 +1499,11 @@ async function main(): Promise<void> {
       const deliveredCount = deliveredCaptures(captures).length;
       const hasPrompt = captures.length >= 1 && messagesContain(captures[0] as CapturedHttp, "review");
       // Separate arrival/delivery: aborted must have request but no delivered response and no usage
-      const hasNoDeliveredResponse = deliveredCount === 0 && captures[0]?.response === null && captures[0]?.delivered === false;
+      const hasNoDeliveredResponse = deliveredCount === 0 && captures.length === 1 && captures[0]?.response === null && captures[0]?.delivered === false;
       const deliveredUsage = sumDeliveredUsage(captures);
       const driverUsage = getNumberField(isRecord(driverJson) ? (driverJson["usage"] as unknown) : undefined, "total");
       const usageMatches = deliveredUsage === 0 && driverUsage === 0;
-      const noUsageInCapture = capturedResponseUsage(captures[0] as CapturedHttp) === undefined;
+      const noUsageInCapture = captures.length >= 1 ? capturedResponseUsage(captures[0] as CapturedHttp) === undefined : false;
       const pass = driverElapsed < 500 && aborted === true && requestReached && hasPrompt && hasNoDeliveredResponse && usageMatches && noUsageInCapture;
       const detail = `driverElapsed=${driverElapsed} expect<500, aborted=${aborted}, requestReached=${requestReached} captures=${captures.length} delivered=${deliveredCount} hasPrompt=${hasPrompt} hasNoDeliveredResponse=${hasNoDeliveredResponse} deliveredUsage=${deliveredUsage} driverUsage=${driverUsage} usageMatches=${usageMatches} noUsageInCapture=${noUsageInCapture}`;
       return { pass, detail };
