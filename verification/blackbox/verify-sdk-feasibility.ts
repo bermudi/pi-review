@@ -687,8 +687,10 @@ async function scenario6() {
   const controller = new AbortController();
   const start = Date.now();
   const p = runner.RunPerFile(controller.signal, messages, "main.go");
-  setTimeout(() => controller.abort(), 80);
-  setTimeout(() => { try { transport.abort?.(); } catch {} }, 90);
+  // Delay abort until after request has reached server (Pi session setup + HTTP dispatch takes ~100-150ms).
+  // 250ms ensures request is captured (server records before delay) but still settles well within 500ms.
+  setTimeout(() => controller.abort(), 250);
+  setTimeout(() => { try { transport.abort?.(); } catch {} }, 260);
   const res = await p;
   const elapsed = Date.now() - start;
   await cleanup();
@@ -733,9 +735,9 @@ async function scenario7() {
   const start = Date.now();
   const pA = runnerA.RunPerFile(AbortSignal.timeout(15000), messagesA, "a.go");
   const pB = runnerB.RunPerFile(controllerB.signal, messagesB, "b.go");
-  // Abort B shortly after start, while A is doing compression
-  setTimeout(() => controllerB.abort(), 80);
-  setTimeout(() => { try { tB.abort?.(); } catch {} }, 90);
+  // Abort B after request has reached server (ensure capture), but while A is still compressing
+  setTimeout(() => controllerB.abort(), 250);
+  setTimeout(() => { try { tB.abort?.(); } catch {} }, 260);
   const [rA, rB] = await Promise.all([pA, pB]);
   const elapsed = Date.now() - start;
   await cA(); await cB();
