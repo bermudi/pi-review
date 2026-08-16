@@ -28,7 +28,9 @@ function sanitizeHeaders(headers: Record<string, string>): Record<string, string
   const out: Record<string, string> = {};
   for (const [k, v] of Object.entries(headers)) {
     const lower = k.toLowerCase();
-    if (SECRET_HEADERS.has(lower) || lower.includes("key") || lower.includes("token") || lower.includes("secret")) {
+    // Only redact known secret headers — not every header containing "token" would be usage,
+    // but headers never contain prompt_tokens, so this is safe to keep strict for headers.
+    if (SECRET_HEADERS.has(lower) || lower.includes("key") || lower.includes("secret") || lower === "authorization") {
       out[k] = "<REDACTED>";
     } else {
       out[k] = v;
@@ -54,7 +56,15 @@ function sanitizeBody(body: unknown): unknown {
     const out: Record<string, unknown> = {};
     for (const [k, v] of Object.entries(obj)) {
       const lower = k.toLowerCase();
-      if (lower.includes("key") || lower.includes("token") || lower.includes("secret") || lower.includes("authorization")) {
+      // Never redact usage counters — they contain "token" but are not secrets.
+      const isUsage = lower === "prompt_tokens" || lower === "completion_tokens" || lower === "total_tokens" || lower === "prompttokens" || lower === "completiontokens" || lower === "totaltokens" || lower === "usage" || lower === "prompt_tokens" || lower.includes("cache_read") || lower.includes("cache_write");
+      if (isUsage) {
+        out[k] = sanitizeBody(v) as unknown;
+        continue;
+      }
+      // Only redact true secret keys — not every field with "token" substring.
+      const isSecretKey = lower === "authorization" || lower === "api_key" || lower === "apikey" || lower === "x-api-key" || lower === "apiKey" || lower === "secret" || lower === "password" || lower === "key" || lower === "token" || lower.endsWith("_key") || lower.endsWith("_secret");
+      if (isSecretKey) {
         out[k] = "<REDACTED>";
       } else {
         out[k] = sanitizeBody(v) as unknown;
