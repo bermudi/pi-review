@@ -655,10 +655,11 @@ async function main(): Promise<void> {
         usage: { prompt_tokens: 10, completion_tokens: 5, total_tokens: 15 },
       },
     ],
-    check: (captures, _driverJson, elapsed) => {
+    check: (captures, driverJson) => {
       const count = captures.length;
-      const pass = count === 1 && (elapsed ?? 1000) < 500;
-      const detail = `requests=${count} expect1 (no grace), elapsed=${elapsed} expect<500, should settle quickly`;
+      const driverElapsed = (driverJson as any)?.elapsed;
+      const pass = count === 1 && (driverElapsed ?? 1000) < 500;
+      const detail = `requests=${count} expect1 (no grace), driverElapsed=${driverElapsed} expect<500, should settle quickly`;
       return { pass, detail };
     },
   });
@@ -785,9 +786,10 @@ async function main(): Promise<void> {
       },
     ],
     delayMs: 5000,
-    check: (captures, driverJson, elapsed) => {
-      const pass = (elapsed ?? 1000) < 1000 && driverJson?.aborted === true;
-      const detail = `elapsed=${elapsed} expect<1000, aborted=${driverJson?.aborted}, requests=${captures.length}`;
+    check: (captures, driverJson) => {
+      const driverElapsed = (driverJson as any)?.elapsed;
+      const pass = (driverElapsed ?? 1000) < 1000 && driverJson?.aborted === true;
+      const detail = `driverElapsed=${driverElapsed} expect<1000, aborted=${driverJson?.aborted}, requests=${captures.length}`;
       return { pass, detail };
     },
   });
