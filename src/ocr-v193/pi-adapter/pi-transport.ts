@@ -122,8 +122,9 @@ function ocrMessagesToPiMessages(messages: readonly Message[]): unknown[] {
 
   const out: unknown[] = [];
   for (const m of messages) {
+    if (m.role === "system") continue; // system is handled via state.systemPrompt, not as a user message
     const text = extractOcrText(m);
-    if (m.role === "user" || m.role === "system") {
+    if (m.role === "user") {
       out.push({
         role: "user",
         content: text,
@@ -330,6 +331,24 @@ export class PiTransport implements TranscriptLlmTransport {
         } catch {
           // Non-fatal — allow request to proceed with previous allowlist
         }
+      }
+    }
+
+    // Set OCR system prompt as Pi systemPrompt via public state — avoids generic Pi prompt injection.
+    // Must happen after setActiveToolsByName which rebuilds the generic prompt.
+    const ocrSystemTexts = req.messages
+      .filter((m) => m.role === "system")
+      .map((m) => extractOcrText(m))
+      .filter((t) => t.length > 0)
+      .join("\n\n");
+    if (ocrSystemTexts.length > 0) {
+      try {
+        const sessForSystem = this.session as unknown as { state?: { systemPrompt?: string } };
+        if (sessForSystem.state !== undefined) {
+          sessForSystem.state.systemPrompt = ocrSystemTexts;
+        }
+      } catch {
+        // ignore — fallback is generic prompt, but deep compare will then report mismatch
       }
     }
 

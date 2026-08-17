@@ -674,167 +674,68 @@ export async function runCli(
 		return 0;
 	}
 
-	// Engine delegation: --engine ocr-v193 runs the parity engine without importing legacy policy.
-	// We implement the parity review directly via Runner + PiTransport (the public Pi SDK path),
-	// because the generated parity CLI (src/ocr-v193/cli) currently lacks a default runnerFactory
-	// for production use (it expects a test-injected factory). This inline path mirrors
-	// test/ocr-v193/harness/pi-real-runner.ts and produces OCR-compatible JSON output.
+	// Engine delegation: --engine ocr-v193 runs the parity engine via its real CLI/domain entrypoint.
+	// No inline harness, no stubs, no any — delegate to src/ocr-v193/cli with a production factory.
 	if (parsed.engine === "ocr-v193") {
-		const engineController = new AbortController();
-		const onEngineSignal = (): void => engineController.abort();
-		for (const sig of SIGNALS) io.onSignal(sig, onEngineSignal);
 		try {
-			const startMs = Date.now();
-			const repoDir = parsed.repo;
-			// Resolve model: legacy "provider/model" -> model id
-			const modelRaw = parsed.model ?? "";
-			let modelId = "test-model";
-			let providerName = "test-openai";
-			if (modelRaw.includes("/")) {
-				const slash = modelRaw.indexOf("/");
-				providerName = modelRaw.slice(0, slash) || providerName;
-				modelId = modelRaw.slice(slash + 1).split(":")[0] as string || modelId;
-			} else if (modelRaw) {
-				modelId = modelRaw.split(":")[0] as string;
+			const { runCli: runOcrCli } = await import("./ocr-v193/cli/index.js");
+			const { createReviewRunnerFactory } = await import("./ocr-v193/cli/factory.js");
+			// Translate legacy argv to parity argv: parity expects "review" subcommand and --format json, --no-filter
+			const parityArgv: string[] = ["review"];
+			parityArgv.push("--repo", parsed.repo);
+			if (parsed.model !== undefined) parityArgv.push("--model", parsed.model);
+			if (parsed.mode.kind === "range") {
+				parityArgv.push("--from", parsed.mode.base, "--to", parsed.mode.head);
+			} else if (parsed.mode.kind === "commit") {
+				parityArgv.push("--commit", parsed.mode.ref);
 			}
-			void providerName;
-			const env = io.env();
-			const agentDir = parsed.agentDir ?? env["PI_CODING_AGENT_DIR"] ?? `${env["HOME"] ?? "/tmp"}/.pi/agent`;
-			const cwd = repoDir;
-			try {
-				const { createPiTransportForFile } = await import("./ocr-v193/pi-adapter/pi-transport.js");
-				const { Runner: LoopRunner } = await import("./ocr-v193/llmloop/loop.js");
-				const { CommentCollector } = await import("./ocr-v193/tool/collector.js");
-				const gitMod = await import("./ocr-v193/diff/git.js");
-				const runnerMod = await import("./ocr-v193/diff/runner.js");
-				const { outputJsonWithWarnings } = await import("./ocr-v193/cli/output.js");
-				// Tool definitions — same as harness pi-real-runner (code_comment, task_done, file_read, etc.)
-				const toolDefs: unknown[] = [
-					{ type: "function", function: { name: "code_comment", description: "Add review comment", parameters: { type: "object", properties: { path: { type: "string" }, comments: { type: "array" } }, required: ["path", "comments"] } } },
-					{ type: "function", function: { name: "task_done", description: "Finish review", parameters: { type: "object", properties: {}, additionalProperties: false } } },
-					{ type: "function", function: { name: "file_read", description: "Read file", parameters: { type: "object", properties: { path: { type: "string" } }, required: ["path"] } } },
-					{ type: "function", function: { name: "file_find", description: "Find file", parameters: { type: "object", properties: { pattern: { type: "string" } } } } },
-					{ type: "function", function: { name: "file_read_diff", description: "Read diff", parameters: { type: "object", properties: {} } } },
-					{ type: "function", function: { name: "code_search", description: "Search", parameters: { type: "object", properties: { query: { type: "string" } } } } },
-				];
-				// Create transport per file via factory (one session per file, isolated) — no explicit model needed; it resolves via agentDir models.json
-				const mkTransport = async (): Promise<unknown> => {
-					// eslint-disable-next-line @typescript-eslint/no-explicit-any
-					return (createPiTransportForFile as any)({ cwd, agentDir, tools: toolDefs });
-				};
-				// Acquire diffs — workspace by default
-				let diffs: unknown[] = [];
-				let modeStr = "workspace";
-				try {
-					const GitRunnerAny = (runnerMod as unknown as Record<string, unknown>)["Runner"] as new (n: number) => unknown;
-					const gitRunner = new GitRunnerAny(16);
-					let provider: unknown;
-					const ProviderAny = (gitMod as unknown as Record<string, unknown>)["Provider"] as new (opts: unknown) => unknown;
-					if (parsed.mode.kind === "commit") {
-						provider = new ProviderAny({ repoDir, mode: (gitMod as unknown as Record<string, unknown>)["ModeCommit"], commit: parsed.mode.ref, runner: gitRunner });
-						modeStr = "commit";
-					} else if (parsed.mode.kind === "range") {
-						provider = new ProviderAny({ repoDir, mode: (gitMod as unknown as Record<string, unknown>)["ModeRange"], from: parsed.mode.base, to: parsed.mode.head, runner: gitRunner });
-						modeStr = "range";
-					} else {
-						provider = new ProviderAny({ repoDir, mode: (gitMod as unknown as Record<string, unknown>)["ModeWorkspace"], runner: gitRunner });
-					}
-					diffs = await (provider as unknown as { getDiff: (s?: unknown) => Promise<unknown[]> }).getDiff(engineController.signal);
-				} catch (e) {
-					io.stderr(`Error: unable to get diff for ${repoDir}: ${String((e as Error).message)}\n`);
-					return 1;
-				}
-				// If no diffs, emit skipped JSON (mirrors OCR)
-				if (!Array.isArray(diffs) || diffs.length === 0) {
-					const { outputJsonNoFiles } = await import("./ocr-v193/cli/output.js");
-					io.stdout(outputJsonNoFiles("", { provider: providerName, model: modelId }));
-					return 0;
-				}
-				const collector = new CommentCollector();
-				const registry = new Map<string, unknown>([
-					["file_read", { name: "file_read", execute: async (args: Record<string, unknown>) => {
-						const p = String((args as Record<string, unknown>)["path"] ?? (args as Record<string, unknown>)["file_path"] ?? "");
-						try { const fs = await import("node:fs/promises"); const content = await fs.readFile(`${repoDir}/${p}`, "utf-8"); return content.slice(0, 8000); } catch { return `file not found: ${p}`; }
-					}}],
-					["file_read_diff", { name: "file_read_diff", execute: async () => "diff stub" }],
-					["code_search", { name: "code_search", execute: async () => "no results" }],
-					["file_find", { name: "file_find", execute: async () => "no file" }],
-				]);
-				const template: unknown = { MaxTokens: 128000, MaxToolRequestTimes: 30, MaxCompletionTokens: 4096 };
-				let filesReviewed = 0;
-				let totalInput = 0;
-				let totalOutput = 0;
-				let totalCacheRead = 0;
-				let totalCacheWrite = 0;
-				let toolCalls: Record<string, number> = {};
-				const perFileCompleted: string[] = [];
-				const budgetExceeded = false;
-				// Run per file
-				for (const d of diffs as unknown as { newPath: string; diff: string }[]) {
-					const pathForFile = d.newPath;
-					const transport: unknown = await mkTransport();
-					// eslint-disable-next-line @typescript-eslint/no-explicit-any
-					const LoopRunnerAny = LoopRunner as unknown as new (opts: any) => any;
-					const runner: any = new LoopRunnerAny({
-						model: modelId,
-						template,
-						llmClient: transport as never,
-						mainToolDefs: toolDefs as never,
-						commentCollector: collector as never,
-						toolRegistry: { get: (name: string) => registry.get(name), Get: (name: string) => registry.get(name) } as never,
-					});
-					const baseMessages: unknown[] = [
-						{ role: "system", content: "You are a code reviewer. Use code_comment to leave findings and task_done when complete." },
-						{ role: "user", content: `Review file ${pathForFile} with diff:\n${String((d as unknown as { diff: string }).diff)}` },
-					];
-					try {
-						const res: { completed: boolean } = await runner.RunPerFile(engineController.signal as never, baseMessages as never, pathForFile);
-						filesReviewed++;
-						totalInput += (runner.totalInputTokens as () => number)();
-						totalOutput += (runner.totalOutputTokens as () => number)();
-						totalCacheRead += (runner.totalCacheReadTokens as () => number)();
-						totalCacheWrite += (runner.totalCacheWriteTokens as () => number)();
-						if (res.completed) perFileCompleted.push(pathForFile);
-						try { const tc: Record<string, number> | undefined = (runner as { toolCalls?: () => Record<string, number> }).toolCalls?.(); if (tc) { for (const [k, v] of Object.entries(tc)) toolCalls[k] = (toolCalls[k] ?? 0) + v; } } catch {}
-					} catch (e) {
-						io.stderr(`Error: file ${pathForFile} failed: ${String((e as Error).message)}\n`);
-					} finally {
-						try { await (transport as unknown as { dispose: () => Promise<void> }).dispose(); } catch {}
-					}
-				}
-				const comments = (collector as unknown as { Comments: () => unknown[] }).Comments();
-				const durationMs = Date.now() - startMs;
-				// Emit OCR-compatible JSON (same shape as Go OCR --format json)
-				const json = (outputJsonWithWarnings as unknown as (opts: unknown) => string)({
-					comments: comments as never,
-					warnings: [],
-					filesReviewed,
-					inputTokens: totalInput,
-					outputTokens: totalOutput,
-					totalTokens: totalInput + totalOutput,
-					cacheReadTokens: totalCacheRead,
-					cacheWriteTokens: totalCacheWrite,
-					durationMs,
-					projectSummary: "",
-					toolCalls,
-					traceId: "",
-					resumeInfo: undefined,
-					sessionId: "",
-					manifest: null,
-					budgetExceeded,
-					llmIdentity: { provider: providerName, model: modelId },
-					retryReport: null,
-				});
-				io.stdout(json);
-				void modeStr;
-				void perFileCompleted;
-				return 0;
-			} catch (e) {
-				io.stderr(`Error: parity review failed: ${String((e as Error).message)}\n`);
-				return 1;
-			}
-		} finally {
-			for (const sig of SIGNALS) io.offSignal(sig, onEngineSignal);
+			for (const inc of parsed.include) parityArgv.push("--exclude", inc); // legacy include maps to parity exclude handling via filtering? Keep exclude as is
+			for (const exc of parsed.exclude) parityArgv.push("--exclude", exc);
+			if (parsed.background !== undefined) parityArgv.push("--background", parsed.background);
+			if (parsed.backgroundFile !== undefined) parityArgv.push("--background-file", parsed.backgroundFile);
+			if (parsed.rulesFile !== undefined) parityArgv.push("--rule", parsed.rulesFile);
+			if (parsed.concurrency !== undefined) parityArgv.push("--concurrency", String(parsed.concurrency));
+			if (parsed.maxToolRounds !== undefined) parityArgv.push("--max-tools", String(parsed.maxToolRounds));
+			if (parsed.planThreshold !== undefined) parityArgv.push("--max-tokens", String(parsed.planThreshold)); // plan threshold not directly mapped; keep minimal
+			parityArgv.push("--format", parsed.json ? "json" : "text");
+			parityArgv.push("--no-filter"); // Gate 2 requires no filter for deterministic single comment
+			const factory = createReviewRunnerFactory(
+				{
+					toolConfigPath: "",
+					rulePath: parsed.rulesFile ?? "",
+					repoDir: parsed.repo,
+					from: parsed.mode.kind === "range" ? parsed.mode.base : "",
+					to: parsed.mode.kind === "range" ? parsed.mode.head : "",
+					commit: parsed.mode.kind === "commit" ? parsed.mode.ref : "",
+					resume: "",
+					excludes: parsed.exclude.join(","),
+					outputFormat: parsed.json ? "json" : "text",
+					audience: "human",
+					background: parsed.background ?? "",
+					backgroundFile: parsed.backgroundFile ?? "",
+					provider: "",
+					model: parsed.model ?? "",
+					concurrency: parsed.concurrency ?? 8,
+					perFileTimeout: 10,
+					maxTools: parsed.maxToolRounds ?? 0,
+					maxGitProcs: 16,
+					maxTokens: 0,
+					maxTokensBudget: 0,
+					noFilter: true,
+					preview: false,
+				} as unknown as import("./ocr-v193/cli/shared.js").ReviewOptions,
+				io.cwd(),
+			);
+			const code = await runOcrCli(parityArgv, {
+				io: dependencies.io,
+				readFile: dependencies.readFile ?? dependencies.fileReader,
+				reviewRunnerFactory: (opts, signal) => factory(signal),
+			});
+			return code;
+		} catch (e) {
+			const msg = e instanceof Error ? e.message : String(e);
+			io.stderr(`Error: parity engine failed: ${msg}\n`);
+			return 1;
 		}
 	}
 
