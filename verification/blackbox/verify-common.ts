@@ -671,9 +671,8 @@ async function runPiSubprocess(opts: {
     args.splice(1, 0, "--engine", "ocr-v193");
   }
   if (!hasPreview) {
-    // Preview does not require or accept --model.
-    const insertAt = subcommand === "review" ? 6 : 4;
-    args.splice(insertAt, 0, "--model", "test-openai/test-model");
+    // Append --model at the end to avoid splitting --concurrency 1
+    args.push("--model", "test-openai/test-model");
   }
   // consumerBinPath is typically /tmp/consumer/node_modules/.bin/pi-review which is a shell wrapper; spawn via bun? Use that path directly.
   // If it's a JS file (dist/cli.js), run via bun. Detect.
