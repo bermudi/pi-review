@@ -309,7 +309,7 @@ async function runCompleteScan(opts: {
   consumerDir?: string;
   agentDir?: string;
 }): Promise<RunResult> {
-  const baseCmd = ["--format", "json", "--no-plan", "--no-dedup", "--no-summary"];
+  const baseCmd = ["--format", "json", "--no-plan", "--no-dedup", "--no-summary", "--batch", "none"];
   let result: { stdout: string; stderr: string; exitCode: number | null; signal: string | null; command: readonly string[] };
   if (opts.engine === "ocr") {
     result = await runOcrSubprocess({
@@ -373,7 +373,7 @@ async function runInterruptedResume(opts: {
   resumeAgentDir?: string;
   files: readonly string[];
 }): Promise<ResumePair> {
-  const baseCmd = ["--format", "json", "--no-plan", "--no-dedup", "--no-summary"];
+  const baseCmd = ["--format", "json", "--no-plan", "--no-dedup", "--no-summary", "--batch", "none"];
   const childRef: { child: ChildProcess | null } = { child: null };
 
   async function runStart(): Promise<RunResult> {
@@ -435,14 +435,21 @@ async function runInterruptedResume(opts: {
     // eslint-disable-next-line no-constant-condition
     while (true) {
       // Captures: [0]=file1 code_comment, [1]=file1 task_done, [2]=file2 code_comment
-      // We want file1 task_done delivered and the second file's first request
-      // to have arrived, then kill the child.
+      // We want file1 task_done delivered, the first file's review_item_done
+      // checkpoint written, and the second file's first request to have arrived,
+      // then kill the child before the second file can complete.
       const captures = opts.startServer.captures;
-      if (captures.length >= 3 && captures[1]?.delivered) {
-        try {
-          childRef.child!.kill("SIGTERM");
-        } catch {}
-        return;
+      if (captures.length >= 2 && captures[1]?.delivered) {
+        const open = findOpenSessionFile(opts.homeDir);
+        if (
+          open !== null &&
+          open.records.some((r) => r.type === "review_item_done" && r.filePath === opts.files[0])
+        ) {
+          try {
+            childRef.child!.kill("SIGTERM");
+          } catch {}
+          return;
+        }
       }
       await sleep(50);
     }
