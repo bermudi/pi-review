@@ -281,6 +281,34 @@ export function outputText(comments: readonly LlmComment[]): string {
   return out;
 }
 
+export interface TraceSummaryOpts {
+  readonly filesReviewed: number;
+  readonly comments: number;
+  readonly inputTokens: number;
+  readonly outputTokens: number;
+  readonly totalTokens: number;
+  readonly cacheReadTokens: number;
+  readonly cacheWriteTokens: number;
+  readonly durationMs: number;
+  readonly sessionId?: string;
+}
+
+export function traceSummaryText(opts: TraceSummaryOpts): string {
+  const elapsed = formatDurationMs(opts.durationMs);
+  let base = `[ocr] Summary: ${opts.filesReviewed} file(s) reviewed, ${opts.comments} comment(s), ~${opts.totalTokens} token(s) used`;
+  if (opts.inputTokens > 0 || opts.outputTokens > 0) {
+    base += ` (input: ~${opts.inputTokens}, output: ~${opts.outputTokens})`;
+  }
+  if (opts.cacheReadTokens > 0 || opts.cacheWriteTokens > 0) {
+    base += `, cache(read: ~${opts.cacheReadTokens}, write: ~${opts.cacheWriteTokens})`;
+  }
+  base += `, ${elapsed} elapsed\n`;
+  if (opts.sessionId && opts.sessionId !== "") {
+    base += `[ocr] Session: ${opts.sessionId}\n`;
+  }
+  return base;
+}
+
 export function outputTextWithWarnings(
   comments: readonly LlmComment[],
   warnings: readonly AgentWarning[],

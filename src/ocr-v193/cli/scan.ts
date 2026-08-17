@@ -17,6 +17,7 @@ import {
   outputJsonNoFiles,
   outputPreview,
   outputRetryReportText,
+  traceSummaryText,
   type AgentWarning,
   type JsonLlmIdentity,
   type RetryReport,
@@ -118,12 +119,23 @@ function emitScanResult(
   }
 
   const { stdout, stderr } = outputTextWithWarnings([...comments] as LlmComment[], provider.Warnings(), manifest);
-  io.stdout(stdout);
+  const summary = traceSummaryText({
+    filesReviewed: provider.FilesReviewed(),
+    comments: comments.length,
+    inputTokens: provider.TotalInputTokens(),
+    outputTokens: provider.TotalOutputTokens(),
+    totalTokens: provider.TotalTokensUsed(),
+    cacheReadTokens: provider.TotalCacheReadTokens(),
+    cacheWriteTokens: provider.TotalCacheWriteTokens(),
+    durationMs,
+    sessionId: "",
+  });
+  io.stdout(`${summary}${stdout}`);
   if (stderr !== "") io.stderr(stderr);
   const retryText = outputRetryReportText(retryReport);
   if (retryText !== "") io.stdout(retryText);
-  const summary = provider.ProjectSummary();
-  if (summary !== "") io.stdout(`\n\n──────── Project Summary ────────\n\n${summary}\n`);
+  const projectSummary = provider.ProjectSummary();
+  if (projectSummary !== "") io.stdout(`\n\n──────── Project Summary ────────\n\n${projectSummary}\n`);
 }
 
 // ---------------------------------------------------------------------------

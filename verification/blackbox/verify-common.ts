@@ -4,6 +4,7 @@
 // See docs/ocr-v1.9.3-port-plan.md Gate 2.
 
 import { spawn, spawnSync } from "node:child_process";
+import type { ChildProcess } from "node:child_process";
 import { existsSync, mkdirSync, readdirSync, readFileSync } from "node:fs";
 import { mkdtemp, rm, writeFile, readFile, mkdir } from "node:fs/promises";
 import { tmpdir } from "node:os";
@@ -592,8 +593,13 @@ async function runOcrSubprocess(opts: {
   subcommand?: string;
   command?: readonly string[];
   timeoutMs?: number;
-}): Promise<{ stdout: string; stderr: string; exitCode: number | null; signal: string | null }> {
-  const homeDir = await mkdtemp(join(tmpdir(), "ocr-vert-home-"));
+  homeDir?: string;
+  preserveHome?: boolean;
+  onSpawn?: (child: ChildProcess) => void;
+}): Promise<{ stdout: string; stderr: string; exitCode: number | null; signal: string | null; command: readonly string[] }> {
+  const createdHome = opts.homeDir === undefined;
+  const homeDir = opts.homeDir ?? (await mkdtemp(join(tmpdir(), "ocr-vert-home-")));
+  const keepHome = opts.preserveHome ?? !createdHome;
   const env: Record<string, string> = {
     ...getSanitizedEnv(),
     HOME: homeDir,
@@ -609,8 +615,10 @@ async function runOcrSubprocess(opts: {
   const extra = opts.command ?? ["--format", "json", "--no-filter"];
   const subcommand = opts.subcommand ?? "review";
   const args = [subcommand, "--repo", opts.repoDir, "--concurrency", "1", ...extra];
+  const command: readonly string[] = [opts.binaryPath, ...args];
   const result = await new Promise<{ stdout: string; stderr: string; exitCode: number | null; signal: string | null }>((resolve) => {
     const child = spawn(opts.binaryPath, args, { cwd: opts.repoDir, env, stdio: ["ignore", "pipe", "pipe"] as unknown as never });
+    if (opts.onSpawn) opts.onSpawn(child);
     let stdout = "";
     let stderr = "";
     (child.stdout as unknown as { on: (ev: string, cb: (d: Buffer) => void) => void }).on("data", (d: Buffer) => (stdout += d.toString()));
@@ -636,8 +644,10 @@ async function runOcrSubprocess(opts: {
       resolve({ stdout, stderr, exitCode: code, signal: signal as string | null });
     });
   });
-  await rm(homeDir, { recursive: true, force: true }).catch(() => {});
-  return result;
+  if (!keepHome) {
+    await rm(homeDir, { recursive: true, force: true }).catch(() => {});
+  }
+  return { ...result, command };
 }
 
 async function runPiSubprocess(opts: {
@@ -649,8 +659,13 @@ async function runPiSubprocess(opts: {
   subcommand?: string;
   command?: readonly string[];
   timeoutMs?: number;
+  homeDir?: string;
+  preserveHome?: boolean;
+  onSpawn?: (child: ChildProcess) => void;
 }): Promise<{ stdout: string; stderr: string; exitCode: number | null; signal: string | null; command: readonly string[] }> {
-  const homeDir = await mkdtemp(join(tmpdir(), "pi-vert-home-"));
+  const createdHome = opts.homeDir === undefined;
+  const homeDir = opts.homeDir ?? (await mkdtemp(join(tmpdir(), "pi-vert-home-")));
+  const keepHome = opts.preserveHome ?? !createdHome;
   const env: Record<string, string> = {
     ...getSanitizedEnv(),
     HOME: homeDir,
@@ -694,6 +709,7 @@ async function runPiSubprocess(opts: {
   const result = await new Promise<{ stdout: string; stderr: string; exitCode: number | null; signal: string | null }>((resolve) => {
     const spawnOpts = { cwd: opts.repoDir, env, stdio: ["ignore", "pipe", "pipe"] as unknown as never };
     const child = useBun ? spawn("bun", [bin, ...binArgs], spawnOpts) : spawn(bin, binArgs, spawnOpts);
+    if (opts.onSpawn) opts.onSpawn(child);
     let stdout = "";
     let stderr = "";
     (child.stdout as unknown as { on: (ev: string, cb: (d: Buffer) => void) => void }).on("data", (d: Buffer) => (stdout += d.toString()));
@@ -719,7 +735,9 @@ async function runPiSubprocess(opts: {
       resolve({ stdout, stderr, exitCode: code, signal: signal as string | null });
     });
   });
-  await rm(homeDir, { recursive: true, force: true }).catch(() => {});
+  if (!keepHome) {
+    await rm(homeDir, { recursive: true, force: true }).catch(() => {});
+  }
   return { stdout: result.stdout, stderr: result.stderr, exitCode: result.exitCode, signal: result.signal, command: commandForLog };
 }
 
@@ -1210,6 +1228,92 @@ function compareCoreReview(opts: CompareCoreOptions): { equal: boolean; mismatch
   return { equal: mismatches.length === 0, mismatches, notObservable };
 }
 
+interface CompareScanOptions {
+  readonly id: string;
+  readonly ocrCaptures: readonly CapturedHttp[];
+  readonly piCaptures: readonly CapturedHttp[];
+  readonly ocrStdout: string;
+  readonly piStdout: string;
+  readonly ocrExit: number | null;
+  readonly piExit: number | null;
+  readonly expectedCommentCount?: number;
+  readonly expectedStatus?: string;
+  readonly expectedExit?: number;
+  readonly mutateField?: string;
+}
+
+function compareScan(opts: CompareScanOptions): { equal: boolean; mismatches: FieldMismatch[]; notObservable: string[] } {
+  const mismatches: FieldMismatch[] = [];
+  const notObservable: string[] = [];
+  const push = (fp: string, ov: unknown, pv: unknown, msg: string) => mismatches.push({ fieldPath: fp, ocrValue: ov, piValue: pv, message: msg });
+
+  const expectedExit = opts.expectedExit ?? 0;
+  if (opts.ocrExit !== expectedExit) push("exit.ocr", expectedExit, opts.ocrExit, `OCR exit ${String(opts.ocrExit)} expected ${expectedExit}`);
+  if (opts.piExit !== expectedExit) push("exit.pi", expectedExit, opts.piExit, `Pi exit ${String(opts.piExit)} expected ${expectedExit}`);
+  if (opts.ocrExit !== opts.piExit) push("exit", opts.ocrExit, opts.piExit, "exit codes differ");
+
+  if (opts.ocrCaptures.length === 0) push("provider_request.count.ocr", 1, 0, "OCR made no provider requests");
+  if (opts.piCaptures.length === 0) push("provider_request.count.pi", 1, 0, "Pi made no provider requests");
+
+  if (opts.ocrCaptures.length !== opts.piCaptures.length) {
+    push("provider_request.count", opts.ocrCaptures.length, opts.piCaptures.length, "provider request count differs");
+  } else if (opts.ocrCaptures.length > 0) {
+    for (let i = 0; i < opts.ocrCaptures.length; i++) {
+      const o = opts.ocrCaptures[i]!;
+      const p = opts.piCaptures[i]!;
+      const oTools = extractCapturedToolsDeep(o);
+      const pTools = extractCapturedToolsDeep(p);
+      if (stableStringify(oTools) !== stableStringify(pTools)) push(`provider_request[${i}].tools`, oTools, pTools, "tool schemas differ");
+      const oMsgs = extractCapturedMessagesDeep(o);
+      const pMsgs = extractCapturedMessagesDeep(p);
+      if (stableStringify(oMsgs) !== stableStringify(pMsgs)) push(`provider_request[${i}].messages`, oMsgs, pMsgs, "provider messages differ");
+    }
+  }
+
+  const oParsed = parseOcrJson(opts.ocrStdout);
+  const pParsed = parsePiJson(opts.piStdout);
+
+  const expectedStatus = opts.expectedStatus ?? "success";
+  const oStatus = oParsed.status || "";
+  const pStatus = pParsed.status || "";
+  if (oStatus !== expectedStatus) push("status.ocr", expectedStatus, oStatus, `OCR status ${oStatus} expected ${expectedStatus}`);
+  if (pStatus !== expectedStatus) push("status.pi", expectedStatus, pStatus, `Pi status ${pStatus} expected ${expectedStatus}`);
+  if (oStatus !== pStatus) push("status", oStatus, pStatus, "status differs");
+
+  const expectedCount = opts.expectedCommentCount ?? 1;
+  if (oParsed.comments.length !== expectedCount) push("comments.count.ocr", expectedCount, oParsed.comments.length, "OCR comment count mismatch");
+  if ((pParsed.findings as unknown[]).length !== expectedCount) push("comments.count.pi", expectedCount, (pParsed.findings as unknown[]).length, "Pi comment count mismatch");
+
+  for (let i = 0; i < Math.min(oParsed.comments.length, (pParsed.findings as unknown[]).length); i++) {
+    const oC = oParsed.comments[i] as Record<string, unknown>;
+    const pC = (pParsed.findings as unknown[])[i] as Record<string, unknown>;
+    const fields = ["path", "content", "category", "severity", "existing_code"] as const;
+    for (const f of fields) {
+      const oV = (oC[f] ?? "") as string;
+      const pV = (pC[f] ?? "") as string;
+      if (oV !== pV) push(`comments[${i}].${f}`, oV, pV, `comment ${f} differs`);
+    }
+    const oStart = (typeof oC.start_line === "number" ? oC.start_line : typeof oC.startLine === "number" ? oC.startLine : 0) as number;
+    const pStart = (typeof pC.start_line === "number" ? pC.start_line : typeof pC.startLine === "number" ? pC.startLine : 0) as number;
+    const oEnd = (typeof oC.end_line === "number" ? oC.end_line : typeof oC.endLine === "number" ? oC.endLine : 0) as number;
+    const pEnd = (typeof pC.end_line === "number" ? pC.end_line : typeof pC.endLine === "number" ? pC.endLine : 0) as number;
+    if (oStart !== pStart) push(`comments[${i}].start_line`, oStart, pStart, "start line differs");
+    if (oEnd !== pEnd) push(`comments[${i}].end_line`, oEnd, pEnd, "end line differs");
+  }
+
+  const oUsage = usageTotalTokensFromSummary(oParsed.summary);
+  const pUsage = isRecord(pParsed.coverage["summary"]) ? usageTotalTokensFromSummary(pParsed.coverage["summary"] as Record<string, unknown>) : 0;
+  if (oUsage !== pUsage) push("usage.total_tokens", oUsage, pUsage, "total token usage differs");
+  if (oUsage === 0 && pUsage === 0) notObservable.push("usage.total_tokens");
+
+  if (opts.mutateField === "comments[0].content") {
+    const hasContentMismatch = mismatches.some((m) => m.fieldPath.includes("comments[0].content"));
+    if (mismatches.length === 0) push("mutation", true, false, "mutated response did not produce a mismatch");
+  }
+
+  return { equal: mismatches.length === 0, mismatches, notObservable };
+}
+
 function comparePreview(opts: {
   ocrCommand: readonly string[];
   piCommand: readonly string[];
@@ -1291,10 +1395,11 @@ function comparePreview(opts: {
 // Exports for shared use by Gate 4 verifiers
 // ---------------------------------------------------------------------------
 
-export type { CompareCoreOptions, CoreReviewGateReport, FieldMismatch, PackResult };
+export type { CompareCoreOptions, CompareScanOptions, CoreReviewGateReport, FieldMismatch, PackResult };
 
 export {
   checkGitClean,
+  compareScan,
   cleanupOcrBinary,
   cloneRepo,
   createCaptureServer,
