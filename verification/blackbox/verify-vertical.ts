@@ -610,7 +610,16 @@ function extractTextFromContent(content: unknown): string {
 function normalizeMessageForCompare(msg: unknown): unknown {
   if (!isRecord(msg)) return msg;
   const role = typeof msg["role"] === "string" ? (msg["role"] as string) : "";
-  const content = extractTextFromContent(msg["content"]);
+  let content = extractTextFromContent(msg["content"]);
+  // Normalize environmental artifacts that are not OCR review content:
+  // 1. Pi SDK injects "\nCurrent working directory: <path>\n" at the end of the system prompt.
+  //    OCR does not have this; it's Pi runtime info, not review semantics. Strip it.
+  // 2. OCR replaces {{current_system_date_time}} with the actual timestamp; both engines
+  //    run at different times so the timestamp differs. Normalize to a placeholder.
+  if (role === "system") {
+    content = content.replace(/\nCurrent working directory: [^\n]*\n$/, "");
+  }
+  content = content.replace(/Current time in the real world: \d{4}-\d{2}-\d{2} \d{2}:\d{2}/g, "Current time in the real world: <NORMALIZED_TIMESTAMP>");
   const out: Record<string, unknown> = { role, content };
   // Preserve tool_calls for assistant
   const tcs = msg["tool_calls"] ?? msg["toolCalls"];

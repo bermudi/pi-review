@@ -213,6 +213,8 @@ export function createReviewRunnerFactory(
         content = content.replaceAll("{{plan_guidance}}", "");
         // Strip empty plan block if no plan
         if (content.includes("{{plan_guidance}}")) content = content.replaceAll("{{plan_guidance}}", "");
+        // Replace timestamp placeholder (mirrors Agent.currentDate format: "YYYY-MM-DD HH:MM")
+        content = content.replaceAll("{{current_system_date_time}}", new Date().toISOString().replace("T", " ").slice(0, 16));
         return { role: m.role, content };
       });
     };
