@@ -427,7 +427,7 @@ export class PiTransport implements TranscriptLlmTransport {
         // new user message, matching OCR's message array exactly.
         const historySlice: readonly Message[] = lastIsUser ? req.messages.slice(0, -1) : req.messages;
 
-        if (historySlice.length === 0) {
+      if (historySlice.length === 0) {
           const current = getStateMessages();
           if (current.length !== 0) setStateMessages([]);
         } else {
@@ -443,7 +443,9 @@ export class PiTransport implements TranscriptLlmTransport {
               }
             }
           }
-          if (needsReplace) setStateMessages(expected);
+          if (needsReplace) {
+            setStateMessages(expected);
+          }
         }
       }
 
@@ -481,9 +483,23 @@ export class PiTransport implements TranscriptLlmTransport {
       let capturedUsage: UsageInfo | undefined = undefined;
       let turnEnded = false;
 
+      const abortSession = (): void => {
+        try {
+          const s = this.session as unknown as { abort?: () => void };
+          if (typeof s.abort === "function") s.abort();
+        } catch {
+          // ignore
+        }
+      };
+
       const unsubscribe = (sessAny.subscribe as (l: (e: unknown) => void) => () => void)((event: unknown) => {
         const e = event as Record<string, unknown>;
         if (e["type"] === "turn_end") {
+          if (turnEnded) {
+            // SDK may emit a second turn_end after an aborted recovery turn;
+            // keep the first captured assistant message.
+            return;
+          }
           turnEnded = true;
           const msg = e["message"];
           if (msg !== undefined) {
@@ -491,6 +507,11 @@ export class PiTransport implements TranscriptLlmTransport {
             capturedToolCalls = extractPiToolCalls(msg);
             capturedUsage = mapPiUsage((msg as Record<string, unknown>)["usage"]);
           }
+          // Fenced round accounting: one complete() call = one provider request.
+          // The SDK's internal tool loop is halted after the assistant message is
+          // captured. Runner will execute tool calls itself and supply real tool
+          // results on the next complete() call, mirroring OCR's per-round loop.
+          abortSession();
         } else if (e["type"] === "agent_end") {
           const msgs = e["messages"] as unknown[] | undefined;
           if (!turnEnded && Array.isArray(msgs)) {
@@ -526,24 +547,25 @@ export class PiTransport implements TranscriptLlmTransport {
           // Round 1 or no agent.continue available: use prompt()
           const isIdle = sessAny.isIdle !== undefined ? sessAny.isIdle : true;
           if (isIdle) {
-            await (sessAny.prompt as (t: string) => Promise<void>)(promptText);
+            await (sessAny.prompt as (t: string) => Promise<void>)(promptText).catch(() => {});
           } else {
             const followUp = sessAny.followUp as ((t: string) => Promise<void>) | undefined;
             if (typeof followUp === "function") {
-              await followUp(promptText);
+              await followUp(promptText).catch(() => {});
             } else {
-              await (sessAny.prompt as (t: string) => Promise<void>)(promptText);
+              await (sessAny.prompt as (t: string) => Promise<void>)(promptText).catch(() => {});
             }
           }
         } else {
           // Round 2+: continue from the existing transcript (no new user message)
-          await sessAgent.continue();
+          await sessAgent.continue().catch(() => {});
         }
 
         // Wait until Pi is idle so turn_end accounting is settled before the
-        // next complete() call (row 1). Forward abort will wake this via session.abort().
+        // next complete() call (row 1). Abort after turn_end will cause prompt/
+        // continue to reject; catch so we can use the captured assistant message.
         if (typeof sessAny.waitForIdle === "function") {
-          await sessAny.waitForIdle();
+          await sessAny.waitForIdle().catch(() => {});
         }
 
         if (signal.aborted) throw createAbortError();

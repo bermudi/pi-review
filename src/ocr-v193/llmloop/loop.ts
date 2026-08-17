@@ -313,6 +313,7 @@ export class Runner {
     const st = new CompressionState();
     let stop: MainLoopStop = MainLoopStop.StopMaxRounds;
 
+    console.error(`[ocr] RunPerFile start ${filePath} toolReqCount=${toolReqCount}`);
     try {
       for (; toolReqCount > 0; ) {
         if (signal.aborted) {
@@ -418,6 +419,7 @@ export class Runner {
         await this.runGraceRound(signal, messages, filePath, sessionId);
       }
 
+      console.error(`[ocr] RunPerFile end ${filePath} completed=false stop=${stop}`);
       return { completed: false, stop };
     } finally {
       st.cancelPendingCompression();
