@@ -25,7 +25,7 @@ until the new black-box gates pass.
 |---|---|---|---|---|
 | Gate 0 — black-box integrity | `verified` | `bun run verify:blackbox-integrity` | `9f7df18d08696494aad3f3e6a2dcac20f9a86508` | `verification/blackbox` 9 fixtures 13 assertions, pack `65d8cba1`, artifacts `/tmp/verify-blackbox-*` |
 | Gate 1 — public Pi SDK feasibility | `verified` | `bun run verify:sdk-feasibility` | `a8f97c827a98839d54d5bd70b100bc833e1f166b` | `verification/blackbox` 7 fixtures 17 assertions (7+7 adversarial), pack `a8e518c6`, artifacts `/tmp/verify-sdk-*` — OCR empty-tool-result (file_read ""), separate arrival/delivery (delivered flag, no usage on stalled), per-session usage equality, real concurrent adversarial via capture mutation, no any, hasEmptyResultError required |
-| Gate 2 — vertical slice | `verified` | `bun run verify:vertical` | `c200fad498649d99816926239fe7e73f6401e579` | `verification/blackbox` 2 fixtures 22 assertions, pack `8d6e41d8`, artifacts `/tmp/verify-vertical-*` — one workspace one-file one-comment positive, one Pi provider-response mutation at provider_response[0].tool_calls[0].arguments + stdout.comments[0].content |
+| Gate 2 — vertical slice | `building` | `bun run verify:vertical` | — | `18394460` invalidated: messages and schemas were not deeply compared; Pi omitted coverage, line range, and tool-call accounting; product path duplicated a harness with stubs and `any` |
 | Gate 3 — core diff review | `candidate` | `bun run verify:core-review` | — | Old Phase 3/4 evidence invalidated |
 | Gate 4 — scan/session/output | `candidate` | `bun run verify:scan`; `verify:sessions`; `verify:outputs` | — | Old Phase 5 evidence invalidated |
 | Gate 5 — cutover | `candidate` | `bun run verify:cutover` | — | Installed default is currently legacy |

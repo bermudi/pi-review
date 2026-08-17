@@ -244,9 +244,21 @@ Compare:
 - completion/partial/failure state; and
 - exit code.
 
+For this gate, “compare messages and schemas” means normalized deep equality,
+not merely checking that messages exist or that tool names match. Provider-only
+HTTP metadata may be normalized, but system/user/tool message content,
+ordering, tool descriptions, parameter schemas, and required fields may not.
+OCR manifest coverage is observable and must be compared to Pi coverage; a
+missing Pi coverage field is a mismatch, not `not_observable`. The positive
+fixture must also compare comment line range and output tool-call accounting.
+
 The positive fixture must pass with no ignored applicable fields. A second
 fixture changes only the Pi server's comment content and must fail at the
 specific comment path.
+
+The installed `--engine ocr-v193` path must delegate to the parity CLI/domain
+entrypoint. Do not duplicate a test harness inline in the legacy CLI, add stub
+tool implementations, use `any`, or swallow failures to make this fixture run.
 
 **Completion command**
 
