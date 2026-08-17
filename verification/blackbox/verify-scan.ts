@@ -254,7 +254,10 @@ async function main(): Promise<void> {
     // write artifacts
     await Promise.all([
       writeFile(join(artifactDir, `${id}-ocr-stdout.json`), ocrRes.stdout, "utf-8"),
+      writeFile(join(artifactDir, `${id}-ocr-stderr.txt`), ocrRes.stderr, "utf-8"),
       writeFile(join(artifactDir, `${id}-pi-stdout.json`), piRes.stdout, "utf-8"),
+      writeFile(join(artifactDir, `${id}-pi-stderr.txt`), piRes.stderr, "utf-8"),
+      writeFile(join(artifactDir, `${id}-pi-command.txt`), piRes.command.join(" "), "utf-8"),
       writeFile(join(artifactDir, `${id}-compare.json`), JSON.stringify(compared, null, 2), "utf-8"),
     ]);
 
