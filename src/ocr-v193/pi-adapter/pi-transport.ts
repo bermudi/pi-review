@@ -21,7 +21,7 @@
  * `SettingsManager` from `@earendil-works/pi-coding-agent`.
  */
 
-import { createAgentSession, SessionManager, SettingsManager } from "@earendil-works/pi-coding-agent";
+import { createAgentSession, SessionManager, SettingsManager, DefaultResourceLoader } from "@earendil-works/pi-coding-agent";
 import { Type } from "typebox";
 
 import type { Message, ToolCall } from "../llmloop/compression.js";
@@ -275,9 +275,11 @@ export interface CreatePiTransportForFileOptions {
  */
 export class PiTransport implements TranscriptLlmTransport {
   private readonly session: PiSession;
+  private readonly promptRef: { current: string | undefined } | undefined;
 
-  constructor(session: PiSession) {
+  constructor(session: PiSession, promptRef?: { current: string | undefined }) {
     this.session = session;
+    this.promptRef = promptRef;
   }
 
   /** Dispose the underlying Pi session — await to surface cleanup failure. */
@@ -312,6 +314,16 @@ export class PiTransport implements TranscriptLlmTransport {
     // 1) Dynamic allowlist — sync req.tools via setActiveToolsByName
     //    before each turn (feasibility row 3). Must happen before prompt.
     // -----------------------------------------------------------------
+    // Extract OCR system prompt for this turn — will be set as Pi systemPrompt via ResourceLoader
+    const ocrSystemTexts = req.messages
+      .filter((m) => m.role === "system")
+      .map((m) => extractOcrText(m))
+      .filter((t) => t.length > 0)
+      .join("\n\n");
+    if (this.promptRef !== undefined && ocrSystemTexts.length > 0) {
+      this.promptRef.current = ocrSystemTexts;
+    }
+
     if (req.tools !== undefined) {
       const names = req.tools.map((t) => t.function.name);
       const sess = this.session as unknown as {
@@ -332,23 +344,19 @@ export class PiTransport implements TranscriptLlmTransport {
           // Non-fatal — allow request to proceed with previous allowlist
         }
       }
-    }
-
-    // Set OCR system prompt as Pi systemPrompt via public state — avoids generic Pi prompt injection.
-    // Must happen after setActiveToolsByName which rebuilds the generic prompt.
-    const ocrSystemTexts = req.messages
-      .filter((m) => m.role === "system")
-      .map((m) => extractOcrText(m))
-      .filter((t) => t.length > 0)
-      .join("\n\n");
-    if (ocrSystemTexts.length > 0) {
-      try {
-        const sessForSystem = this.session as unknown as { state?: { systemPrompt?: string } };
-        if (sessForSystem.state !== undefined) {
-          sessForSystem.state.systemPrompt = ocrSystemTexts;
+    } else if (this.promptRef !== undefined && ocrSystemTexts.length > 0) {
+      // No tool change this turn (e.g., compression) but systemPrompt changed — force rebuild
+      const sess = this.session as unknown as {
+        setActiveToolsByName?: (names: string[]) => void;
+        getActiveToolNames?: () => string[];
+      };
+      if (typeof sess.setActiveToolsByName === "function" && typeof sess.getActiveToolNames === "function") {
+        try {
+          const current = sess.getActiveToolNames();
+          sess.setActiveToolsByName(current);
+        } catch {
+          // ignore
         }
-      } catch {
-        // ignore — fallback is generic prompt, but deep compare will then report mismatch
       }
     }
 
@@ -598,6 +606,19 @@ export async function createPiTransportForFile(
     // ignore if not available
   }
 
+  const promptRef = { current: undefined as string | undefined };
+  const resourceLoader = new DefaultResourceLoader({
+    cwd,
+    agentDir,
+    settingsManager,
+  });
+  await resourceLoader.reload();
+  const originalGetSystemPrompt = resourceLoader.getSystemPrompt.bind(resourceLoader);
+  (resourceLoader as unknown as { getSystemPrompt: () => string | undefined }).getSystemPrompt = (): string | undefined => {
+    if (promptRef.current !== undefined && promptRef.current.length > 0) return promptRef.current;
+    return originalGetSystemPrompt();
+  };
+
   const customTools = tools.map((def) => {
     const name = def.function.name;
     const description = def.function.description ?? `Tool ${name}`;
@@ -633,6 +654,7 @@ export async function createPiTransportForFile(
     agentDir,
     sessionManager,
     settingsManager,
+    resourceLoader,
     customTools,
     tools: allowedNames,
   };
@@ -642,5 +664,5 @@ export async function createPiTransportForFile(
 
   const { session } = await createAgentSession(createOpts as unknown as Parameters<typeof createAgentSession>[0]);
 
-  return new PiTransport(session as PiSession);
+  return new PiTransport(session as PiSession, promptRef);
 }
