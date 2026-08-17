@@ -2,17 +2,25 @@
 // Ported from cmd/opencodereview review wiring at c35ddd7223f2b5540ce03aa43c9a25ef643fca27.
 // Factory for the parity review CLI — production wiring with real tools, no stubs, no any.
 
+import * as fs from "node:fs";
+import * as path from "node:path";
 import { randomUUID } from "node:crypto";
 import { spawnSync } from "node:child_process";
 
-import type { ReviewOptions } from "./shared.js";
+import type { ReviewOptions, ScanOptions } from "./shared.js";
 import type { ReviewRunner } from "./review.js";
+import type { ScanRunner } from "./scan.js";
+import { type AgentWarning } from "./output.js";
+import type { Preview } from "../model/preview.js";
 import type { LlmComment } from "../model/review.js";
-import { loadDefaultTemplate, applyLanguage } from "../template/template.js";
-import { newResolver } from "../rules/system_rules.js";
+import { loadDefaultTemplate, loadDefaultScanTemplate, applyLanguage, applyLanguageScan } from "../template/template.js";
+import { newResolver, type FileFilter } from "../rules/system_rules.js";
+import { minimatch } from "minimatch";
 import { mainTaskToolDefs, planTaskToolDefs } from "../tool/tools-config.js";
 import { CommentCollector } from "../tool/collector.js";
+import { CommentWorkerPool } from "../llmloop/pool.js";
 import { Agent, newAgent, reviewItemFingerprint } from "../agent/agent.js";
+import { Agent as ScanAgent, NewAgent as NewScanAgent } from "../scan/scan.js";
 import { reviewModeString } from "../agent/util.js";
 import { createPiTransportForFile } from "../pi-adapter/pi-transport.js";
 import { FileReader, FileReadProvider, DiffMap, FileReadDiffProvider, CodeSearchProvider, FileFindProvider } from "../tool/filereader.js";
@@ -20,6 +28,11 @@ import { Registry } from "../tool/definitions.js";
 import { Provider, ModeWorkspace, ModeRange, ModeCommit } from "../diff/git.js";
 import { Runner as GitRunner } from "../diff/runner.js";
 import { ManifestBuilder, ItemID, StatePartial, StateFailed, StateSkipped, FailureBudget, FailureTimeout, FailureUnknown } from "../session/manifest.js";
+import { SessionHistory, ReviewModeFullScan } from "../session/history.js";
+import { newJSONLWriter, type JsonlWriter } from "../session/persist.js";
+import { ResumeState, LoadResumeState } from "../session/resume.js";
+import type { ResumeLineage } from "../session/resume.js";
+import type { RunManifest } from "../session/manifest.js";
 import type { Diff } from "../model/diff.js";
 
 /**
@@ -311,5 +324,262 @@ export function createReviewRunnerFactory(
     };
 
     return reviewRunner;
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Scan factory — mirrors cmd/opencodereview/scan_cmd.go executeScan
+// ---------------------------------------------------------------------------
+
+export function createScanRunnerFactory(
+  opts: ScanOptions,
+  _ioCwd: string,
+): (signal?: AbortSignal) => Promise<ScanRunner> {
+  return async (signal?: AbortSignal): Promise<ScanRunner> => {
+    const effectiveSignal = signal ?? new AbortController().signal;
+    const repoDir = opts.repoDir !== "" ? path.resolve(opts.repoDir) : process.cwd();
+
+    if (!fs.existsSync(repoDir)) {
+      throw new Error(`repo directory not found: ${repoDir}`);
+    }
+
+    let template = loadDefaultScanTemplate();
+    template = applyLanguageScan(template, "English");
+    if (opts.maxTools > 0 && opts.maxTools > (template.MaxToolRequestTimes ?? 0)) {
+      template = { ...template, MaxToolRequestTimes: opts.maxTools };
+    }
+    if (opts.maxTokens > 0) {
+      template = { ...template, MaxTokens: opts.maxTokens };
+    }
+    if (opts.batch !== "") {
+      (template as unknown as Record<string, unknown>)["BatchStrategy"] = opts.batch;
+    }
+
+    const ruleSet = newResolver(repoDir, opts.rulePath);
+    const ruleResolver = ruleSet.resolver;
+    const fileFilter = ruleSet.filter;
+    const scanFileFilter = makeScanFileFilter(fileFilter);
+
+    const scanPaths = splitPaths(opts.paths);
+    const excludes = splitPaths(opts.excludes);
+
+    let resume: ResumeState | null = null;
+    if (opts.resume !== "") {
+      resume = LoadResumeState(repoDir, opts.resume);
+      const err = resume.ValidateScanOptions(scanPaths);
+      if (err) throw err;
+      if (resume.CompletedCount() === 0) {
+        throw new Error(`resume session ${opts.resume} has no completed scan items`);
+      }
+    }
+
+    const gitBranch = detectGitBranch(repoDir);
+    const runId = randomUUID();
+    const session = new SessionHistory(repoDir, gitBranch, modelIdFromModel(opts.model), {
+      reviewMode: ReviewModeFullScan,
+      scanPaths,
+      resumedFrom: resume?.SessionID ?? "",
+    }, runId);
+    const writer = newJSONLWriter(runId, repoDir, gitBranch, modelIdFromModel(opts.model), {
+      reviewMode: ReviewModeFullScan,
+      scanPaths,
+      resumedFrom: resume?.SessionID ?? "",
+    });
+    session._attachPersist(jsonlWriterToPersistHandle(writer));
+
+    const collector = new CommentCollector();
+    const workerPool = new CommentWorkerPool(opts.concurrency > 0 ? opts.concurrency : 8);
+
+    const fileReader = new FileReader({ RepoDir: repoDir, Mode: ModeWorkspace as never, Ref: "" });
+    const registry = new Registry();
+    registry.Register(new FileReadProvider(fileReader));
+    registry.Register(new FileReadDiffProvider(new DiffMap(new Map<string, string>())));
+    registry.Register(new CodeSearchProvider(fileReader));
+    registry.Register(new FileFindProvider(fileReader));
+    registry.Freeze();
+
+    const cwd = repoDir;
+    const agentDirEnv = process.env["PI_CODING_AGENT_DIR"];
+    const agentDir = agentDirEnv !== undefined && agentDirEnv !== "" ? agentDirEnv : `${process.env["HOME"] ?? "/tmp"}/.pi/agent`;
+    const transport = await createPiTransportForFile({ cwd, agentDir, tools: [] });
+
+    const allMainToolDefs = mainTaskToolDefs();
+    const mainToolDefs = allMainToolDefs.filter((t) => t.function.name !== "file_read_diff");
+
+    const maxTokensBudget = opts.maxTokensBudget > 0 ? opts.maxTokensBudget : (template.MaxTokensBudget ?? 0);
+
+    const agent = NewScanAgent({
+      repoDir,
+      paths: scanPaths,
+      template,
+      systemRule: ruleResolver.resolve.bind(ruleResolver),
+      fileFilter: scanFileFilter,
+      llmClient: transport as unknown as import("../llmloop/types.js").AnyLlmClient,
+      tools: registry as unknown as import("../llmloop/types.js").ToolRegistryLike,
+      mainToolDefs,
+      commentCollector: collector,
+      commentWorkerPool: workerPool,
+      maxConcurrency: opts.concurrency > 0 ? opts.concurrency : 8,
+      concurrentTaskTimeoutMinutes: opts.perFileTimeout > 0 ? opts.perFileTimeout : 10,
+      model: modelIdFromModel(opts.model),
+      background: opts.background,
+      maxFileSizeBytes: template.MaxFileSizeBytes,
+      maxTokensBudget,
+      skipPlan: opts.noPlan,
+      skipDedup: opts.noDedup,
+      skipSummary: opts.noSummary,
+      resume,
+      session,
+    });
+
+    const startMs = Date.now();
+    let comments: LlmComment[] = [];
+    let runError: Error | null = null;
+    try {
+      comments = await agent.run(effectiveSignal);
+    } catch (err) {
+      runError = err instanceof Error ? err : new Error(String(err));
+    }
+    const durationMs = Date.now() - startMs;
+
+    await session.Finalize();
+
+    await transport.dispose().catch((e) => {
+      const warn = { type: "transport_dispose_error", file: "", message: String((e as Error).message) };
+      void warn;
+    });
+
+    const inputTokens = agent.TotalInputTokens();
+    const outputTokens = agent.TotalOutputTokens();
+    const totalTokens = agent.TotalTokensUsed();
+    const cacheReadTokens = agent.TotalCacheReadTokens();
+    const cacheWriteTokens = agent.TotalCacheWriteTokens();
+    const toolCalls = agent.ToolCalls();
+    const warnings = agent.Warnings();
+
+    const scanRunner: ScanRunner = {
+      run: async (_sig?: AbortSignal): Promise<LlmComment[]> => comments,
+      manifest: null,
+      warnings: warnings as unknown as never,
+      filesReviewed: agent.items.length,
+      inputTokens,
+      outputTokens,
+      totalTokens,
+      cacheReadTokens,
+      cacheWriteTokens,
+      toolCalls,
+      sessionId: session.SessionID,
+      budgetExceeded: false,
+      projectSummary: agent.ProjectSummary(),
+      resumeInfo: agent.ResumeInfo,
+      diffs: [],
+    };
+
+    if (runError) {
+      throw new Error(runError.message);
+    }
+
+    return scanRunner;
+  };
+}
+
+export function createScanPreviewFactory(
+  opts: ScanOptions,
+  _ioCwd: string,
+): (signal?: AbortSignal) => Promise<Preview> {
+  return async (signal?: AbortSignal): Promise<Preview> => {
+    const repoDir = opts.repoDir !== "" ? path.resolve(opts.repoDir) : process.cwd();
+
+    let template = loadDefaultScanTemplate();
+    if (opts.maxTokens > 0) {
+      template = { ...template, MaxTokens: opts.maxTokens };
+    }
+
+    const ruleSet = newResolver(repoDir, opts.rulePath);
+    const scanFileFilter = makeScanFileFilter(ruleSet.filter);
+    const scanPaths = splitPaths(opts.paths);
+
+    const agent = NewScanAgent({
+      repoDir,
+      paths: scanPaths,
+      template,
+      fileFilter: scanFileFilter,
+      maxFileSizeBytes: template.MaxFileSizeBytes,
+      skipPlan: true,
+      skipDedup: true,
+      skipSummary: true,
+    });
+
+    return agent.preview(signal ?? new AbortController().signal);
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Scan helpers
+// ---------------------------------------------------------------------------
+
+function splitPaths(raw: string): string[] {
+  if (raw === "") return [];
+  const parts = raw.split(",");
+  const out: string[] = [];
+  for (const p of parts) {
+    const v = p.trim();
+    if (v !== "") out.push(v);
+  }
+  return out;
+}
+
+function modelIdFromModel(model: string): string {
+  if (model === "") return "test-model";
+  const slash = model.indexOf("/");
+  if (slash >= 0) {
+    const after = model.slice(slash + 1);
+    return after.split(":")[0] ?? "test-model";
+  }
+  return model.split(":")[0] ?? "test-model";
+}
+
+function detectGitBranch(repoDir: string): string {
+  try {
+    const out = spawnSync("git", ["-C", repoDir, "rev-parse", "--abbrev-ref", "HEAD"], {
+      encoding: "utf-8",
+      timeout: 5000,
+    });
+    if (out.status === 0) return out.stdout.trim();
+  } catch {}
+  return "";
+}
+
+function makeScanFileFilter(fileFilter: FileFilter | null): {
+  isUserExcluded(path: string): boolean;
+  isUserIncluded(path: string): boolean;
+  hasInclude(): boolean;
+} | null {
+  if (fileFilter === null || fileFilter === undefined) return null;
+  const include = [...(fileFilter.Include ?? [])];
+  const exclude = [...(fileFilter.Exclude ?? [])];
+  function matchesAny(patterns: readonly string[], p: string): boolean {
+    const lowerPath = p.toLowerCase();
+    for (const raw of patterns) {
+      if (raw === "") continue;
+      const pat = raw.toLowerCase();
+      if (minimatch(lowerPath, pat, { dot: true, partial: true, nocase: false })) return true;
+    }
+    return false;
+  }
+  return {
+    isUserExcluded: (p: string) => matchesAny(exclude, p),
+    isUserIncluded: (p: string) => matchesAny(include, p),
+    hasInclude: () => include.length > 0,
+  };
+}
+
+function jsonlWriterToPersistHandle(writer: JsonlWriter): import("../session/history.js").PersistHandle {
+  return {
+    writeReviewItemDone: (...args) => { writer.WriteReviewItemDone(...args); },
+    writeReviewItemReused: (...args) => { writer.WriteReviewItemReused(...args); },
+    writeReviewItemFailed: (...args) => { writer.WriteReviewItemFailed(...args); },
+    writeResumeLineage: (l: ResumeLineage) => { writer.WriteResumeLineage(l); },
+    writeSessionEnd: (durationMs, filesReviewed, llmFailures, manifest) => writer.WriteSessionEnd(durationMs, filesReviewed, llmFailures, manifest),
   };
 }

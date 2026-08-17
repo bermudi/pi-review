@@ -697,11 +697,41 @@ function createReviewPreviewFactory(repoDir: string, rulePath: string): (opts: O
  * Execute the CLI without calling process.exit. This is the primary test seam;
  * production invocation is the small import.meta.main block at the bottom.
  */
+async function runScanCli(
+	argv: readonly string[],
+	dependencies: CliDependencies,
+	io: CliIo,
+): Promise<number> {
+	const { runCli: runOcrCli } = await import("./ocr-v193/cli/index.js");
+	const { createScanRunnerFactory, createScanPreviewFactory } = await import("./ocr-v193/cli/factory.js");
+	const scanArgv = argv.slice(1);
+	const scanRunnerFactory = (opts: import("./ocr-v193/cli/shared.js").ScanOptions, signal?: AbortSignal): Promise<import("./ocr-v193/cli/scan.js").ScanRunner> =>
+		createScanRunnerFactory(opts, io.cwd())(signal);
+	const scanPreviewFactory = (opts: import("./ocr-v193/cli/shared.js").ScanOptions, signal?: AbortSignal): Promise<Preview> =>
+		createScanPreviewFactory(opts, io.cwd())(signal ?? new AbortController().signal);
+	try {
+		return await runOcrCli(["scan", ...scanArgv], {
+			io: dependencies.io,
+			readFile: dependencies.readFile ?? dependencies.fileReader,
+			scanRunnerFactory,
+			scanPreviewFactory,
+		});
+	} catch (e) {
+		const msg = e instanceof Error ? e.message : String(e);
+		io.stderr(`Error: scan engine failed: ${msg}\n`);
+		return 1;
+	}
+}
+
 export async function runCli(
 	argv: readonly unknown[] = process.argv.slice(2),
 	dependencies: CliDependencies = {},
 ): Promise<number> {
 	const io = makeIo(dependencies.io);
+	const first = argv[0] as string | undefined;
+	if (first === "scan") {
+		return runScanCli(argv as string[], dependencies, io);
+	}
 	let parsed: CliOptions;
 	try {
 		parsed = parseArgs(argv, io.cwd(), io.env());
