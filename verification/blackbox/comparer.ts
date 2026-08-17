@@ -30,6 +30,9 @@ function normalizeTmp(s: string): string {
     .replace(/\/tmp\/[^\s"']+/g, "<TMP>")
     .replace(/127\.0\.0\.1:\d+/g, "127.0.0.1:<PORT>")
     .replace(/\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?Z/g, "<TIMESTAMP>")
+    .replace(/\d{4}-\d{2}-\d{2} \d{2}:\d{2}/g, "<TIMESTAMP>")
+    .replace(/Current time in the real world: \d{4}-\d{2}-\d{2} \d{2}:\d{2}/g, "Current time in the real world: <TIMESTAMP>")
+    .replace(/Current working directory: [^\\"']*\\n/g, "Current working directory: <CWD>\\n")
     .replace(/chatcmpl-[^\s"']+/g, "chatcmpl:<ID>");
 }
 
