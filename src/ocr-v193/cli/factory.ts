@@ -344,7 +344,11 @@ export function createScanRunnerFactory(
     }
 
     let template = loadDefaultScanTemplate();
-    template = applyLanguageScan(template, "English");
+    // OCR's scan command only applies the language directive when AppCfg is
+    // non-nil (scan_cmd.go line 167-169). Without a config file — the common
+    // test and default CLI case — the directive is not applied. Match that
+    // behavior by not calling applyLanguageScan here. The review path is
+    // different: loadLLMRuntime always calls ApplyLanguage (shared.go line 209).
     if (opts.maxTools > 0 && opts.maxTools > (template.MaxToolRequestTimes ?? 0)) {
       template = { ...template, MaxToolRequestTimes: opts.maxTools };
     }
