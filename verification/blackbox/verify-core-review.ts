@@ -218,7 +218,8 @@ async function createPreviewRepo(): Promise<{ dir: string; cleanup: () => Promis
   res = spawnSync("git", ["commit", "-q", "-m", "initial"], { cwd: dir, env, encoding: "utf-8" });
   if (res.status !== 0) throw new Error(`git commit failed: ${res.stderr}`);
   await writeFile(join(dir, "main.go"), "package main\nfunc Add(a int, b int) int {\n  // changed\n  return a + b\n}\n", "utf-8");
-  await writeFile(join(dir, "app.bin"), Buffer.from([0x00, 0x01, 0x02, 0x03]), "utf-8");
+  await writeFile(join(dir, "app.bin"), Buffer.from([0x00, 0x01, 0x02, 0x03]));
+  mkdirSync(join(dir, "docs"), { recursive: true });
   await writeFile(join(dir, "docs/page.md"), "# page\n", "utf-8");
   res = spawnSync("git", ["rm", "-q", "README.md"], { cwd: dir, env, encoding: "utf-8" });
   if (res.status !== 0) throw new Error(`git rm failed: ${res.stderr}`);
