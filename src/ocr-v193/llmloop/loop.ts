@@ -662,6 +662,7 @@ export class Runner {
             console.error(`[DEBUG-RELOC] resolveComment ok=${ok} d.newFileContent=${dbgRepr(d.newFileContent.slice(0, 100))}`);
             if (!ok && reLocationTaskRaw) {
               const msgs = buildReLocationMessagesLocal(cm, d, reLocationTaskRaw as unknown as never);
+              console.error(`[DEBUG-RELOC] buildReLocationMessagesLocal msgs=${msgs ? msgs.length : "null"}`);
               if (msgs && msgs.length > 0) {
                 const req: ChatRequest = {
                   model: this.deps.model,
