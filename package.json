@@ -19,7 +19,7 @@
   "scripts": {
     "check": "tsc --noEmit",
     "test": "bun test",
-    "build": "bun run clean && bun build ./src/cli.ts ./src/index.ts --outdir ./dist --target bun --packages external && tsc -p tsconfig.build.json",
+    "build": "bun run clean && bun build ./src/cli.ts ./src/index.ts --outdir ./dist --target bun --packages external && tsc -p tsconfig.build.json && bun -e 'import { mkdirSync, copyFileSync, cpSync } from \"node:fs\"; import { basename, join } from \"node:path\"; const d = `dist`; const copy = (s, t) => copyFileSync(s, join(d, t)); copy(`src/ocr-v193/template/task-template.json`, `task-template.json`); copy(`src/ocr-v193/template/scan-template.json`, `scan-template.json`); copy(`src/ocr-v193/rules/supported_file_types.json`, `supported_file_types.json`); copy(`src/ocr-v193/rules/default_exclude_patterns.json`, `default_exclude_patterns.json`); copy(`src/ocr-v193/rules/system_rules.json`, `system_rules.json`); cpSync(`src/ocr-v193/template/prompts`, join(d, `prompts`), { recursive: true, filter: (src) => basename(src) !== `PROVENANCE.json` }); cpSync(`src/ocr-v193/rules/rule_docs`, join(d, `rule_docs`), { recursive: true, filter: (src) => basename(src) !== `PROVENANCE.json` }); console.log(`copied runtime data files`)'",
     "start": "bun run src/cli.ts",
     "clean": "bun -e 'import { rm } from \"node:fs/promises\"; await rm(\"dist\", { recursive: true, force: true })'",
     "harness": "bun run test/ocr-v193/harness/index.ts --all",
