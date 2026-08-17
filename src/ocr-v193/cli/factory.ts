@@ -7,7 +7,8 @@ import { randomUUID } from "node:crypto";
 import type { ReviewOptions } from "./shared.js";
 import type { ReviewRunner } from "./review.js";
 import type { LlmComment } from "../model/review.js";
-import { loadDefaultTemplate } from "../template/template.js";
+import { loadDefaultTemplate, applyLanguage } from "../template/template.js";
+import { newResolver } from "../rules/system_rules.js";
 import { mainTaskToolDefs } from "../tool/tools-config.js";
 import { CommentCollector } from "../tool/collector.js";
 import { Runner } from "../llmloop/loop.js";
@@ -40,8 +41,16 @@ export function createReviewRunnerFactory(
     const repoDir = opts.repoDir !== "" ? opts.repoDir : ioCwd;
 
     // Load template and tool defs (verbatim, hash-verified)
-    const template = loadDefaultTemplate();
+    let template = loadDefaultTemplate();
+    // Apply the default language directive (English) so system prompts end with
+    // "Always respond in English.", matching OCR v1.9.3's ApplyLanguage behavior.
+    template = applyLanguage(template, "English");
     const toolDefs = mainTaskToolDefs();
+
+    // Load the composed rule resolver (custom > project > global > system)
+    // so {{system_rule}} can be resolved per file, just like Agent.resolveSystemRule.
+    const ruleSet = newResolver(repoDir, opts.rulePath);
+    const ruleResolver = ruleSet.resolver;
 
     // Comment collector (per-Agent, isolated)
     const collector = new CommentCollector();
@@ -207,7 +216,7 @@ export function createReviewRunnerFactory(
         let content = m.content;
         content = content.replaceAll("{{current_file_path}}", newPath);
         content = content.replaceAll("{{diff}}", diff.diff);
-        content = content.replaceAll("{{system_rule}}", "");
+        content = content.replaceAll("{{system_rule}}", ruleResolver.resolve(newPath.toLowerCase()));
         content = content.replaceAll("{{change_files}}", diffs.filter((d) => d.newPath !== newPath).map((d) => d.newPath).join("\n"));
         content = content.replaceAll("{{requirement_background}}", opts.background ?? "");
         content = content.replaceAll("{{plan_guidance}}", "");
