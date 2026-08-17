@@ -199,6 +199,32 @@ async function createTempRepo(): Promise<{ dir: string; cleanup: () => Promise<v
   return { dir, cleanup };
 }
 
+async function createPreviewRepo(): Promise<{ dir: string; cleanup: () => Promise<void> }> {
+  const dir = await mkdtemp(join(tmpdir(), "ocr-core-preview-"));
+  const cleanup = async (): Promise<void> => {
+    await rm(dir, { recursive: true, force: true }).catch(() => {});
+  };
+  gitSync(dir, ["init", "-q"]);
+  gitSync(dir, ["config", "user.email", "harness@pi-reviewer.test"]);
+  gitSync(dir, ["config", "user.name", "harness"]);
+  gitSync(dir, ["config", "commit.gpgsign", "false"]);
+  const fixedDate = new Date(Date.UTC(2026, 0, 1, 0, 0, 0)).toISOString();
+  const env = { ...process.env, GIT_AUTHOR_DATE: fixedDate, GIT_COMMITTER_DATE: fixedDate };
+  await writeFile(join(dir, "main.go"), "package main\nfunc Add(a int, b int) int { return a + b }\n", "utf-8");
+  await writeFile(join(dir, "README.md"), "# test\n", "utf-8");
+  await writeFile(join(dir, "foo_test.go"), "package main\nfunc TestFoo(t *testing.T) {}\n", "utf-8");
+  let res = spawnSync("git", ["add", "-A"], { cwd: dir, env, encoding: "utf-8" });
+  if (res.status !== 0) throw new Error(`git add failed: ${res.stderr}`);
+  res = spawnSync("git", ["commit", "-q", "-m", "initial"], { cwd: dir, env, encoding: "utf-8" });
+  if (res.status !== 0) throw new Error(`git commit failed: ${res.stderr}`);
+  await writeFile(join(dir, "main.go"), "package main\nfunc Add(a int, b int) int {\n  // changed\n  return a + b\n}\n", "utf-8");
+  await writeFile(join(dir, "app.bin"), Buffer.from([0x00, 0x01, 0x02, 0x03]), "utf-8");
+  await writeFile(join(dir, "docs/page.md"), "# page\n", "utf-8");
+  res = spawnSync("git", ["rm", "-q", "README.md"], { cwd: dir, env, encoding: "utf-8" });
+  if (res.status !== 0) throw new Error(`git rm failed: ${res.stderr}`);
+  return { dir, cleanup };
+}
+
 async function cloneRepo(sourceDir: string, destDir: string): Promise<void> {
   // Preserve workspace (unstaged) changes: git clone would drop them, so we copy the working tree.
   // Create dest then copy everything including .git and modified files.
@@ -324,6 +350,7 @@ async function runOcrSubprocess(opts: {
   repoDir: string;
   serverUrl: string;
   serverPort: number;
+  command?: readonly string[];
   timeoutMs?: number;
 }): Promise<{ stdout: string; stderr: string; exitCode: number | null; signal: string | null }> {
   const homeDir = await mkdtemp(join(tmpdir(), "ocr-vert-home-"));
@@ -339,7 +366,8 @@ async function runOcrSubprocess(opts: {
   };
   // Remove inline PI agent env that might interfere — OCR uses its own.
   delete (env as Record<string, string | undefined>)["PI_CODING_AGENT_DIR"];
-  const args = ["review", "--repo", opts.repoDir, "--format", "json", "--no-filter"];
+  const extra = opts.command ?? ["--format", "json", "--no-filter"];
+  const args = ["review", "--repo", opts.repoDir, ...extra];
   const result = await new Promise<{ stdout: string; stderr: string; exitCode: number | null; signal: string | null }>((resolve) => {
     const child = spawn(opts.binaryPath, args, { cwd: opts.repoDir, env, stdio: ["ignore", "pipe", "pipe"] as unknown as never });
     let stdout = "";
@@ -377,6 +405,7 @@ async function runPiSubprocess(opts: {
   consumerBinPath: string;
   consumerDir: string;
   agentDir: string;
+  command?: readonly string[];
   timeoutMs?: number;
 }): Promise<{ stdout: string; stderr: string; exitCode: number | null; signal: string | null; command: readonly string[] }> {
   const homeDir = await mkdtemp(join(tmpdir(), "pi-vert-home-"));
@@ -392,8 +421,13 @@ async function runPiSubprocess(opts: {
     OCR_LLM_PROTOCOL: "openai",
   };
   // Use packed pi-review bin with --engine ocr-v193 to get parity behavior.
-  // Command: <consumerBinPath> --engine ocr-v193 --repo <repo> --model test-openai/test-model --concurrency 1 --json
-  const args = ["--engine", "ocr-v193", "--repo", opts.repoDir, "--model", "test-openai/test-model", "--concurrency", "1", "--json"];
+  const extra = opts.command ?? ["--no-filter", "--json"];
+  const hasPreview = extra.includes("--preview");
+  const args = ["--engine", "ocr-v193", "--repo", opts.repoDir, "--concurrency", "1", ...extra];
+  if (!hasPreview) {
+    // Preview does not require or accept --model.
+    args.splice(4, 0, "--model", "test-openai/test-model");
+  }
   // consumerBinPath is typically /tmp/consumer/node_modules/.bin/pi-review which is a shell wrapper; spawn via bun? Use that path directly.
   // If it's a JS file (dist/cli.js), run via bun. Detect.
   let bin = opts.consumerBinPath;
@@ -912,6 +946,78 @@ function compareCoreReview(opts: {
   return { equal: mismatches.length === 0, mismatches, notObservable };
 }
 
+function comparePreview(opts: {
+  ocrCommand: readonly string[];
+  piCommand: readonly string[];
+  ocrStdout: string;
+  piStdout: string;
+  ocrExit: number | null;
+  piExit: number | null;
+}): { equal: boolean; mismatches: FieldMismatch[] } {
+  const mismatches: FieldMismatch[] = [];
+  const pushMismatch = (fieldPath: string, ocrValue: unknown, piValue: unknown, message: string): void => {
+    mismatches.push({ fieldPath, ocrValue, piValue, message });
+  };
+
+  if (opts.ocrExit !== 0) pushMismatch("exit.ocr", 0, opts.ocrExit, `OCR preview must exit 0 (got ${String(opts.ocrExit)})`);
+  if (opts.piExit !== 0) pushMismatch("exit.pi", 0, opts.piExit, `Pi preview must exit 0 (got ${String(opts.piExit)})`);
+  if (opts.ocrExit !== opts.piExit) pushMismatch("exit", opts.ocrExit, opts.piExit, "exit codes differ");
+
+  const ocrCmdStr = opts.ocrCommand.join(" ");
+  const piCmdStr = opts.piCommand.join(" ");
+  if (ocrCmdStr === piCmdStr) {
+    pushMismatch("process.identity", opts.ocrCommand, opts.piCommand, "engine identity collision");
+  }
+  if (!ocrCmdStr.includes("review") || !ocrCmdStr.includes("--repo") || !ocrCmdStr.includes("--preview")) {
+    pushMismatch("process.command.ocr", ocrCmdStr, ocrCmdStr, "OCR preview command must contain review --repo --preview");
+  }
+  if (!piCmdStr.includes("--engine ocr-v193") || !piCmdStr.includes("--preview")) {
+    pushMismatch("process.command.pi", piCmdStr, piCmdStr, "Pi preview command must contain --engine ocr-v193 --preview");
+  }
+
+  const parsePreview = (s: string): Record<string, unknown> | null => {
+    const trimmed = s.trim();
+    const start = trimmed.indexOf("{");
+    const jsonStr = start >= 0 ? trimmed.slice(start) : trimmed;
+    try {
+      const parsed: unknown = JSON.parse(jsonStr);
+      return isRecord(parsed) ? parsed : null;
+    } catch {
+      return null;
+    }
+  };
+
+  const ocrParsed = parsePreview(opts.ocrStdout);
+  const piParsed = parsePreview(opts.piStdout);
+  if (!isRecord(ocrParsed)) {
+    pushMismatch("stdout.json.ocr", null, null, "OCR preview stdout is not parseable JSON");
+  }
+  if (!isRecord(piParsed)) {
+    pushMismatch("stdout.json.pi", null, null, "Pi preview stdout is not parseable JSON");
+  }
+  if (!ocrParsed || !piParsed) return { equal: false, mismatches };
+
+  const compareField = (field: string): void => {
+    const o = ocrParsed[field];
+    const p = piParsed[field];
+    if (JSON.stringify(o) !== JSON.stringify(p)) {
+      pushMismatch(`stdout.${field}`, o, p, `preview field ${field} differs`);
+    }
+  };
+
+  for (const field of ["files", "total_insertions", "total_deletions", "total_files", "reviewable_count", "excluded_count"]) {
+    compareField(field);
+  }
+
+  const ocrFiles = Array.isArray(ocrParsed.files) ? (ocrParsed.files as unknown[]).map((e) => isRecord(e) ? JSON.stringify(Object.keys(e).sort().reduce((a: Record<string, unknown>, k) => { a[k] = (e as Record<string, unknown>)[k]; return a; }, {})) : "").sort() : [];
+  const piFiles = Array.isArray(piParsed.files) ? (piParsed.files as unknown[]).map((e) => isRecord(e) ? JSON.stringify(Object.keys(e).sort().reduce((a: Record<string, unknown>, k) => { a[k] = (e as Record<string, unknown>)[k]; return a; }, {})) : "").sort() : [];
+  if (JSON.stringify(ocrFiles) !== JSON.stringify(piFiles)) {
+    pushMismatch("stdout.files.deep", ocrParsed.files, piParsed.files, "preview files entries differ");
+  }
+
+  return { equal: mismatches.length === 0, mismatches };
+}
+
 // ---------------------------------------------------------------------------
 // Main
 // ---------------------------------------------------------------------------
@@ -1129,6 +1235,89 @@ async function main(): Promise<void> {
     }
   }
 
+  async function runPreviewFixture(opts: { id: string; expectEqual: boolean }): Promise<void> {
+    fixtures.push(opts.id);
+    log(`running ${opts.id}...`);
+
+    const fixture = await createPreviewRepo();
+    const ocrRepoDir = await mkdtemp(join(tmpdir(), "ocr-core-preview-clone-"));
+    const piRepoDir = await mkdtemp(join(tmpdir(), "pi-core-preview-clone-"));
+    await rm(ocrRepoDir, { recursive: true, force: true }).catch(() => {});
+    await rm(piRepoDir, { recursive: true, force: true }).catch(() => {});
+    await cloneRepo(fixture.dir, ocrRepoDir);
+    await cloneRepo(fixture.dir, piRepoDir);
+
+    const piAgent = await createPiAgentDir("http://127.0.0.1:0/v1"); // no provider needed
+
+    let ocrResult: { stdout: string; stderr: string; exitCode: number | null; signal: string | null } | null = null;
+    let piResult: { stdout: string; stderr: string; exitCode: number | null; signal: string | null; command: readonly string[] } | null = null;
+
+    try {
+      ocrResult = await runOcrSubprocess({
+        binaryPath: ocrBinary,
+        repoDir: ocrRepoDir,
+        serverUrl: "http://127.0.0.1:0/v1",
+        serverPort: 0,
+        command: ["--preview", "--format", "json"],
+      });
+      assertions++;
+
+      piResult = await runPiSubprocess({
+        repoDir: piRepoDir,
+        serverUrl: "http://127.0.0.1:0/v1",
+        consumerBinPath,
+        consumerDir,
+        agentDir: piAgent.dir,
+        command: ["--preview", "--json"],
+      });
+      assertions++;
+
+      const ocrCmd: readonly string[] = [ocrBinary, "review", "--repo", ocrRepoDir, "--preview", "--format", "json"];
+      const piCmd = piResult.command;
+
+      const compared = comparePreview({
+        ocrCommand: ocrCmd,
+        piCommand: piCmd,
+        ocrStdout: ocrResult.stdout,
+        piStdout: piResult.stdout,
+        ocrExit: ocrResult.exitCode,
+        piExit: piResult.exitCode,
+      });
+
+      const fixtureArtifactDir = join(artifactDir, opts.id);
+      mkdirSync(fixtureArtifactDir, { recursive: true });
+      await writeFile(join(fixtureArtifactDir, "ocr-stdout.txt"), ocrResult.stdout, "utf-8").catch(() => {});
+      await writeFile(join(fixtureArtifactDir, "ocr-stderr.txt"), ocrResult.stderr, "utf-8").catch(() => {});
+      await writeFile(join(fixtureArtifactDir, "pi-stdout.txt"), piResult.stdout, "utf-8").catch(() => {});
+      await writeFile(join(fixtureArtifactDir, "pi-stderr.txt"), piResult.stderr, "utf-8").catch(() => {});
+      await writeFile(join(fixtureArtifactDir, "ocr-command.txt"), ocrCmd.join(" "), "utf-8").catch(() => {});
+      await writeFile(join(fixtureArtifactDir, "pi-command.txt"), piCmd.join(" "), "utf-8").catch(() => {});
+      await writeFile(join(fixtureArtifactDir, "mismatches.json"), JSON.stringify(compared.mismatches, null, 2), "utf-8").catch(() => {});
+
+      if (opts.expectEqual) {
+        assertions++;
+        if (!compared.equal) {
+          const msg = compared.mismatches.map((m) => `${m.fieldPath}: ${m.message}`).join("; ").slice(0, 1200);
+          await writeFile(join(fixtureArtifactDir, "mismatches.txt"), msg, "utf-8").catch(() => {});
+          fail(`Positive fixture ${opts.id} failed: ${msg}`, artifactDir);
+        }
+        assertions += 4;
+        log(`PASS ${opts.id}: preview parity`);
+      } else {
+        assertions++;
+        if (compared.equal) {
+          fail(`Mismatch fixture ${opts.id} did not fail as expected`, artifactDir);
+        }
+        log(`PASS ${opts.id} (mismatch detected)`);
+      }
+    } finally {
+      await piAgent.cleanup().catch(() => {});
+      await rm(ocrRepoDir, { recursive: true, force: true }).catch(() => {});
+      await rm(piRepoDir, { recursive: true, force: true }).catch(() => {});
+      await fixture.cleanup().catch(() => {});
+    }
+  }
+
   // Positive: both get same comment
   await runCoreReviewFixture({
     id: "vertical-workspace-one-file-one-comment",
@@ -1144,6 +1333,12 @@ async function main(): Promise<void> {
     mutatePi: true,
     expectEqual: false,
     expectedMismatchField: "stdout.comments[0].content",
+  });
+
+  // Family 4: selection, rules, binary/deletion/path safety, and limits
+  await runPreviewFixture({
+    id: "core-preview-selection-exclusion",
+    expectEqual: true,
   });
 
   // Cleanup OCR binary

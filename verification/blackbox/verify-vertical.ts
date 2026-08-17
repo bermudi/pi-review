@@ -393,7 +393,7 @@ async function runPiSubprocess(opts: {
   };
   // Use packed pi-review bin with --engine ocr-v193 to get parity behavior.
   // Command: <consumerBinPath> --engine ocr-v193 --repo <repo> --model test-openai/test-model --concurrency 1 --json
-  const args = ["--engine", "ocr-v193", "--repo", opts.repoDir, "--model", "test-openai/test-model", "--concurrency", "1", "--json"];
+  const args = ["--engine", "ocr-v193", "--repo", opts.repoDir, "--model", "test-openai/test-model", "--concurrency", "1", "--no-filter", "--json"];
   // consumerBinPath is typically /tmp/consumer/node_modules/.bin/pi-review which is a shell wrapper; spawn via bun? Use that path directly.
   // If it's a JS file (dist/cli.js), run via bun. Detect.
   let bin = opts.consumerBinPath;

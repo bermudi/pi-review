@@ -4,6 +4,11 @@ import { readFile as readUtf8File } from "node:fs/promises";
 
 import { z } from "zod";
 
+import type { Preview } from "./ocr-v193/model/preview.js";
+import type { ReviewOptions as OcrReviewOptions } from "./ocr-v193/cli/shared.js";
+import { newResolver } from "./ocr-v193/rules/system_rules.js";
+import { previewDiffs } from "./ocr-v193/agent/preview.js";
+
 import type {
 	Finding,
 	ReviewEvent,
@@ -45,6 +50,8 @@ type RawCliValues = {
 	engine?: string;
 	json: boolean;
 	help: boolean;
+	noFilter: boolean;
+	preview: boolean;
 };
 
 const optionValue = z
@@ -75,6 +82,8 @@ const rawCliValuesSchema = z.object({
 	engine: optionValue.optional(),
 	json: z.boolean(),
 	help: z.boolean(),
+	noFilter: z.boolean(),
+	preview: z.boolean(),
 }).strict();
 
 /** Parsed, semantically validated command-line options. */
@@ -99,6 +108,8 @@ export interface CliOptions {
 	readonly resume: string | undefined;
 	readonly engine?: string | undefined;
 	readonly json: boolean;
+	readonly noFilter: boolean;
+	readonly preview: boolean;
 }
 
 /** A controlled error suitable for displaying as command-line usage output. */
@@ -160,6 +171,7 @@ Options:
                               required unless PI_REVIEW_MODEL is set
   --thinking LEVEL            off, minimal, low, medium, high, xhigh, or max
   --base REF [--head REF]    Review the range from REF to REF (head defaults to HEAD)
+  --from REF [--to REF]      Alias for --base/--head
   --commit REF               Review one commit
   --include PATTERN          Include a path pattern (repeatable)
   --exclude PATTERN          Exclude a path pattern (repeatable)
@@ -176,6 +188,8 @@ Options:
   --session-dir PATH         Write per-task session transcripts (.jsonl) under PATH
   --resume PATH              Continue one failed plan/review session transcript
   --engine ENGINE            Review engine: legacy (default) or ocr-v193
+  --no-filter                Keep all review comments without LLM post-filtering
+  -p, --preview              Preview which files will be reviewed without running the LLM
   --json                     Emit the exact ReviewResult as JSON
   --help                     Show this help
 
@@ -188,6 +202,8 @@ const knownValueOptions = new Set([
 	"thinking",
 	"base",
 	"head",
+	"from",
+	"to",
 	"commit",
 	"include",
 	"exclude",
@@ -228,11 +244,19 @@ function setValue(raw: RawCliValues, name: string, value: string): void {
 			raw.thinking = value;
 			return;
 		case "base":
-			if (raw.base !== undefined) optionSyntaxError("Duplicate --base option.");
+			if (raw.base !== undefined) optionSyntaxError("Duplicate --base or --from option.");
 			raw.base = value;
 			return;
 		case "head":
-			if (raw.head !== undefined) optionSyntaxError("Duplicate --head option.");
+			if (raw.head !== undefined) optionSyntaxError("Duplicate --head or --to option.");
+			raw.head = value;
+			return;
+		case "from":
+			if (raw.base !== undefined) optionSyntaxError("Duplicate --base or --from option.");
+			raw.base = value;
+			return;
+		case "to":
+			if (raw.head !== undefined) optionSyntaxError("Duplicate --head or --to option.");
 			raw.head = value;
 			return;
 		case "commit":
@@ -299,12 +323,16 @@ function setValue(raw: RawCliValues, name: string, value: string): void {
 	}
 }
 
+const BOOLEAN_FLAGS = new Set(["help", "json", "no-filter", "preview"]);
+
 function parseRawArgv(argv: readonly string[]): RawCliValues {
 	const raw: RawCliValues = {
 		include: [],
 		exclude: [],
 		json: false,
 		help: false,
+		noFilter: false,
+		preview: false,
 	};
 
 	for (let index = 0; index < argv.length; index += 1) {
@@ -318,15 +346,12 @@ function parseRawArgv(argv: readonly string[]): RawCliValues {
 		const hasInlineValue = equalsIndex !== -1;
 		if (name.length === 0) optionSyntaxError("Empty command-line option.");
 
-		if (name === "help" || name === "json") {
+		if (BOOLEAN_FLAGS.has(name)) {
 			if (hasInlineValue) optionSyntaxError(`--${name} does not take a value.`);
-			if (name === "help") {
-				if (raw.help) optionSyntaxError("Duplicate --help option.");
-				raw.help = true;
-			} else {
-				if (raw.json) optionSyntaxError("Duplicate --json option.");
-				raw.json = true;
-			}
+			const key = name === "no-filter" ? "noFilter" : name;
+			const rawMap = raw as unknown as Record<string, boolean>;
+			if (rawMap[key]) optionSyntaxError(`Duplicate --${name} option.`);
+			rawMap[key] = true;
 			continue;
 		}
 
@@ -359,6 +384,7 @@ function parseRawArgv(argv: readonly string[]): RawCliValues {
 function expandShortOptions(token: string): string {
 	if (token === "-m") return "--model";
 	if (token.startsWith("-m=")) return `--model=${token.slice(3)}`;
+	if (token === "-p") return "--preview";
 	return token;
 }
 
@@ -387,15 +413,17 @@ function validateModel(model: string): void {
 }
 
 function validateMode(values: RawCliValues): ReviewMode {
-	const hasRange = values.base !== undefined || values.head !== undefined;
-	if (hasRange && values.base === undefined) {
-		optionSyntaxError("--base is required when --head is supplied.");
+	const base = values.base;
+	const head = values.head;
+	const hasRange = base !== undefined || head !== undefined;
+	if (hasRange && base === undefined) {
+		optionSyntaxError("--base (or --from) is required when --head (or --to) is supplied.");
 	}
 	if (values.commit !== undefined && hasRange) {
-		optionSyntaxError("--commit cannot be combined with --base or --head.");
+		optionSyntaxError("--commit cannot be combined with --base/--head or --from/--to.");
 	}
 	if (values.commit !== undefined) return { kind: "commit", ref: values.commit };
-	if (hasRange) return { kind: "range", base: values.base as string, head: values.head ?? "HEAD" };
+	if (hasRange) return { kind: "range", base: base as string, head: head ?? "HEAD" };
 	return { kind: "workspace" };
 }
 
@@ -442,15 +470,19 @@ export function parseArgs(
 			resume: values.resume,
 			engine: values.engine,
 			json: values.json,
+			noFilter: values.noFilter,
+			preview: values.preview,
 		};
 	}
 
 	const envModel = env?.PI_REVIEW_MODEL?.trim();
 	const model = values.model ?? (envModel === undefined || envModel.length === 0 ? undefined : envModel);
-	if (model === undefined) {
+	if (model === undefined && !values.preview) {
 		optionSyntaxError("Missing required --model option; pass --model or set PI_REVIEW_MODEL.");
 	}
-	validateModel(model);
+	if (model !== undefined) {
+		validateModel(model);
+	}
 
 	let thinking: ThinkingLevel | undefined;
 	if (values.thinking !== undefined) {
@@ -493,6 +525,8 @@ export function parseArgs(
 		resume: values.resume,
 		engine: values.engine,
 		json: values.json,
+		noFilter: values.noFilter,
+		preview: values.preview,
 	};
 }
 
@@ -649,6 +683,17 @@ function reportUsage(io: CliIo, error: CliUsageError): void {
 }
 
 /**
+ * Build a parity-engine preview factory for --preview delegation.
+ * Mirrors the preview path in src/ocr-v193/cli/factory preview wiring.
+ */
+function createReviewPreviewFactory(repoDir: string, rulePath: string): (opts: OcrReviewOptions, signal?: AbortSignal) => Promise<Preview> {
+	return async (opts: OcrReviewOptions, signal?: AbortSignal): Promise<Preview> => {
+		const ruleSet = newResolver(repoDir, rulePath);
+		return previewDiffs({ repoDir, from: opts.from, to: opts.to, commit: opts.commit, fileFilter: ruleSet.filter ?? null }, signal ?? undefined);
+	};
+}
+
+/**
  * Execute the CLI without calling process.exit. This is the primary test seam;
  * production invocation is the small import.meta.main block at the bottom.
  */
@@ -674,13 +719,18 @@ export async function runCli(
 		return 0;
 	}
 
+	if (parsed.preview && parsed.engine !== "ocr-v193") {
+		io.stderr("Error: --preview requires --engine ocr-v193.\n");
+		return 1;
+	}
+
 	// Engine delegation: --engine ocr-v193 runs the parity engine via its real CLI/domain entrypoint.
 	// No inline harness, no stubs, no any — delegate to src/ocr-v193/cli with a production factory.
 	if (parsed.engine === "ocr-v193") {
 		try {
 			const { runCli: runOcrCli } = await import("./ocr-v193/cli/index.js");
 			const { createReviewRunnerFactory } = await import("./ocr-v193/cli/factory.js");
-			// Translate legacy argv to parity argv: parity expects "review" subcommand and --format json, --no-filter
+			// Translate legacy argv to parity argv: parity expects "review" subcommand and OCR-compatible flags.
 			const parityArgv: string[] = ["review"];
 			parityArgv.push("--repo", parsed.repo);
 			if (parsed.model !== undefined) parityArgv.push("--model", parsed.model);
@@ -689,7 +739,6 @@ export async function runCli(
 			} else if (parsed.mode.kind === "commit") {
 				parityArgv.push("--commit", parsed.mode.ref);
 			}
-			for (const inc of parsed.include) parityArgv.push("--exclude", inc); // legacy include maps to parity exclude handling via filtering? Keep exclude as is
 			for (const exc of parsed.exclude) parityArgv.push("--exclude", exc);
 			if (parsed.background !== undefined) parityArgv.push("--background", parsed.background);
 			if (parsed.backgroundFile !== undefined) parityArgv.push("--background-file", parsed.backgroundFile);
@@ -698,7 +747,8 @@ export async function runCli(
 			if (parsed.maxToolRounds !== undefined) parityArgv.push("--max-tools", String(parsed.maxToolRounds));
 			if (parsed.planThreshold !== undefined) parityArgv.push("--max-tokens", String(parsed.planThreshold)); // plan threshold not directly mapped; keep minimal
 			parityArgv.push("--format", parsed.json ? "json" : "text");
-			parityArgv.push("--no-filter"); // Gate 2 requires no filter for deterministic single comment
+			if (parsed.noFilter) parityArgv.push("--no-filter");
+			if (parsed.preview) parityArgv.push("--preview");
 			const factory = createReviewRunnerFactory(
 				{
 					toolConfigPath: "",
@@ -721,15 +771,17 @@ export async function runCli(
 					maxGitProcs: 16,
 					maxTokens: 0,
 					maxTokensBudget: 0,
-					noFilter: true,
-					preview: false,
+					noFilter: parsed.noFilter,
+					preview: parsed.preview,
 				} as unknown as import("./ocr-v193/cli/shared.js").ReviewOptions,
 				io.cwd(),
 			);
+			const previewFactory = createReviewPreviewFactory(parsed.repo, parsed.rulesFile ?? "");
 			const code = await runOcrCli(parityArgv, {
 				io: dependencies.io,
 				readFile: dependencies.readFile ?? dependencies.fileReader,
 				reviewRunnerFactory: (opts, signal) => factory(signal),
+				reviewPreviewFactory: previewFactory,
 			});
 			return code;
 		} catch (e) {

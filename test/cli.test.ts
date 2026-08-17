@@ -135,6 +135,8 @@ describe("CLI argument parsing", () => {
 			sessionDir: "/tmp/sessions",
 			resume: undefined,
 			json: true,
+			noFilter: false,
+			preview: false,
 		});
 	});
 
@@ -161,7 +163,7 @@ describe("CLI argument parsing", () => {
 			base: "main",
 			head: "HEAD",
 		});
-		expect(() => parseArgs(["--model", "p/m", "--head", "topic"])).toThrow("--base is required");
+		expect(() => parseArgs(["--model", "p/m", "--head", "topic"])).toThrow("--base (or --from)");
 		expect(() => parseArgs(["--model", "p/m", "--commit", "HEAD", "--base", "main", "--head", "topic"])).toThrow("--commit");
 		expect(() => parseArgs(["--model", "p/m", "--background", "one", "--background-file", "two"])).toThrow("mutually exclusive");
 	});
