@@ -303,7 +303,7 @@ function makeScriptedResponses(commentContent: string): readonly unknown[] {
               {
                 id: "call_2",
                 type: "function",
-                function: { name: "task_done", arguments: JSON.stringify({}) },
+                function: { name: "task_done", arguments: JSON.stringify({ state: "DONE" }) },
               },
             ],
           },
