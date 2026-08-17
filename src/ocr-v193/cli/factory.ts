@@ -19,6 +19,7 @@ import { Provider, ModeWorkspace, ModeRange, ModeCommit } from "../diff/git.js";
 import { Runner as GitRunner } from "../diff/runner.js";
 import { ManifestBuilder } from "../session/manifest.js";
 import { reviewItemFingerprint } from "../agent/agent.js";
+import { stripEmptyPlanBlock } from "../agent/util.js";
 import { ItemID } from "../session/manifest.js";
 import type { Diff } from "../model/diff.js";
 
@@ -219,9 +220,11 @@ export function createReviewRunnerFactory(
         content = content.replaceAll("{{system_rule}}", ruleResolver.resolve(newPath.toLowerCase()));
         content = content.replaceAll("{{change_files}}", diffs.filter((d) => d.newPath !== newPath).map((d) => d.newPath).join("\n"));
         content = content.replaceAll("{{requirement_background}}", opts.background ?? "");
+        // No plan phase in the parity CLI yet; strip the empty plan block
+        // (header + placeholder + trailing blank line) before substituting,
+        // matching OCR's Agent.executeSubtask when planResult === "".
+        content = stripEmptyPlanBlock(content);
         content = content.replaceAll("{{plan_guidance}}", "");
-        // Strip empty plan block if no plan
-        if (content.includes("{{plan_guidance}}")) content = content.replaceAll("{{plan_guidance}}", "");
         // Replace timestamp placeholder (mirrors Agent.currentDate format: "YYYY-MM-DD HH:MM")
         content = content.replaceAll("{{current_system_date_time}}", new Date().toISOString().replace("T", " ").slice(0, 16));
         return { role: m.role, content };
