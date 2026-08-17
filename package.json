@@ -25,7 +25,12 @@
     "harness": "bun run test/ocr-v193/harness/index.ts --all",
     "verify:blackbox-integrity": "bun run verification/blackbox/verify-blackbox-integrity.ts",
     "verify:sdk-feasibility": "bun run verification/blackbox/verify-sdk-feasibility.ts",
-    "verify:vertical": "bun run verification/blackbox/verify-vertical.ts"
+    "verify:vertical": "bun run verification/blackbox/verify-vertical.ts",
+    "verify:core-review": "bun run verification/blackbox/verify-core-review.ts",
+    "verify:scan": "bun run verification/blackbox/verify-scan.ts",
+    "verify:sessions": "bun run verification/blackbox/verify-sessions.ts",
+    "verify:outputs": "bun run verification/blackbox/verify-outputs.ts",
+    "verify:cutover": "bun run verification/blackbox/verify-cutover.ts"
   },
   "main": "dist/index.js",
   "engines": {
