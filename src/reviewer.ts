@@ -646,6 +646,14 @@ export class Reviewer {
 		dependenciesOrTargetFactory: ReviewerDependencies | ReviewTargetFactory = {},
 		positionalTaskExecutor?: TaskExecutor | TaskExecutorFactory,
 	) {
+		// Boundary-visible marker: the cutover verifier asserts that the default
+		// command path does not construct the legacy Reviewer.
+		const globalMarker = globalThis as unknown as Record<string, unknown>;
+		if (!globalMarker.LEGACY_CONSTRUCTOR_INVOKED) {
+			process.stderr.write("LEGACY_CONSTRUCTOR_INVOKED\n");
+			globalMarker.LEGACY_CONSTRUCTOR_INVOKED = true;
+		}
+
 		if (typeof dependenciesOrTargetFactory === "function") {
 			this.dependencies = {
 				targetFactory: dependenciesOrTargetFactory,

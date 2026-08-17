@@ -187,7 +187,7 @@ Options:
   --agent-dir PATH           Pi agent directory
   --session-dir PATH         Write per-task session transcripts (.jsonl) under PATH
   --resume PATH              Continue one failed plan/review session transcript
-  --engine ENGINE            Review engine: legacy (default) or ocr-v193
+  --engine ENGINE            Review engine: ocr-v193 (default) or legacy
   --no-filter                Keep all review comments without LLM post-filtering
   -p, --preview              Preview which files will be reviewed without running the LLM
   --json                     Emit the exact ReviewResult as JSON
@@ -749,14 +749,14 @@ export async function runCli(
 		return 0;
 	}
 
-	if (parsed.preview && parsed.engine !== "ocr-v193") {
-		io.stderr("Error: --preview requires --engine ocr-v193.\n");
+	if (parsed.preview && parsed.engine === "legacy") {
+		io.stderr("Error: --preview requires the parity engine.\n");
 		return 1;
 	}
 
-	// Engine delegation: --engine ocr-v193 runs the parity engine via its real CLI/domain entrypoint.
-	// No inline harness, no stubs, no any — delegate to src/ocr-v193/cli with a production factory.
-	if (parsed.engine === "ocr-v193") {
+	// Engine delegation: the default review engine is the parity engine; --engine legacy opts into
+	// the legacy engine. No inline harness, no stubs, no any — delegate to src/ocr-v193/cli with a production factory.
+	if (parsed.engine !== "legacy") {
 		try {
 			const { runCli: runOcrCli } = await import("./ocr-v193/cli/index.js");
 			const { createReviewRunnerFactory } = await import("./ocr-v193/cli/factory.js");
@@ -821,12 +821,13 @@ export async function runCli(
 		}
 	}
 
-	const controller = new AbortController();
-	const onSignal = (): void => {
-		controller.abort();
-	};
-	const registeredSignals: SignalName[] = [];
-	try {
+	if (parsed.engine === "legacy") {
+		const controller = new AbortController();
+		const onSignal = (): void => {
+			controller.abort();
+		};
+		const registeredSignals: SignalName[] = [];
+		try {
 		for (const signal of SIGNALS) {
 			io.onSignal(signal, onSignal);
 			registeredSignals.push(signal);
@@ -909,6 +910,9 @@ export async function runCli(
 	} finally {
 		for (const signal of registeredSignals) io.offSignal(signal, onSignal);
 	}
+	}
+
+	return 1;
 }
 
 /** Production entry point, also useful to hosts that want a named main. */

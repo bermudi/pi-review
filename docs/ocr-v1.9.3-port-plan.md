@@ -17,8 +17,9 @@ Existing `src/ocr-v193` code is **candidate implementation**, not proven
 parity. Do not delete or rewrite it merely because its old verifiers were
 unsound. Reuse it only when a new gate proves its behavior.
 
-All gates begin `unverified`. The shipped CLI still defaults to the legacy
-engine, so cutover is not complete.
+All gates begin `unverified`. Gate 5 verifies that the shipped CLI defaults to
+the parity engine; legacy remains available behind `--engine legacy` and
+suffixed library exports.
 
 ## Why the previous evidence is invalid
 

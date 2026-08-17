@@ -266,6 +266,8 @@ describe("CLI execution seams", () => {
 		const expected = result("complete");
 
 		const exitCode = await runCli([
+			"--engine",
+			"legacy",
 			"--model",
 			"provider/model",
 			"--repo",
@@ -342,7 +344,7 @@ describe("CLI execution seams", () => {
 		const captured = captureIo();
 		const expected = result("partial");
 		let signalWasAborted = false;
-		const exitCode = await runCli(["--model", "provider/model", "--json"], {
+		const exitCode = await runCli(["--engine", "legacy", "--model", "provider/model", "--json"], {
 			io: captured.io,
 			reviewer: {
 				review: async (_input, options) => {
@@ -364,7 +366,7 @@ describe("CLI execution seams", () => {
 	test("uses PI_REVIEW_MODEL when --model is not passed", async () => {
 		const captured = captureIo();
 		let receivedOptions: ReviewOptions | undefined;
-		const exitCode = await runCli(["--repo", "repo"], {
+		const exitCode = await runCli(["--engine", "legacy", "--repo", "repo"], {
 			io: { ...captured.io, env: () => ({ PI_REVIEW_MODEL: "env/provider/model" }) },
 			reviewer: {
 				review: async (_input, options) => {
@@ -382,7 +384,7 @@ describe("CLI execution seams", () => {
 	test("passes --host-evidence through to ReviewInput", async () => {
 		const captured = captureIo();
 		let receivedInput: ReviewInput | undefined;
-		const exitCode = await runCli(["--model", "provider/model", "--host-evidence", "tsc output"], {
+		const exitCode = await runCli(["--engine", "legacy", "--model", "provider/model", "--host-evidence", "tsc output"], {
 			io: captured.io,
 			reviewer: {
 				review: async (input) => {
@@ -399,7 +401,7 @@ describe("CLI execution seams", () => {
 	test("reads --host-evidence-file and passes it to ReviewInput", async () => {
 		const captured = captureIo();
 		let receivedInput: ReviewInput | undefined;
-		const exitCode = await runCli(["--model", "provider/model", "--host-evidence-file", "evidence.txt"], {
+		const exitCode = await runCli(["--engine", "legacy", "--model", "provider/model", "--host-evidence-file", "evidence.txt"], {
 			io: captured.io,
 			readFile: async (path) => {
 				if (path !== "evidence.txt") throw new Error("unexpected file");
@@ -419,7 +421,7 @@ describe("CLI execution seams", () => {
 
 	test("returns exit 1 when --host-evidence-file cannot be read", async () => {
 		const captured = captureIo();
-		const exitCode = await runCli(["--model", "provider/model", "--host-evidence-file", "missing.txt"], {
+		const exitCode = await runCli(["--engine", "legacy", "--model", "provider/model", "--host-evidence-file", "missing.txt"], {
 			io: captured.io,
 			readFile: async () => {
 				throw new Error("ENOENT");
