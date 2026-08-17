@@ -670,7 +670,9 @@ export class Runner {
                   maxTokens: getCompletionTokenLimit(this.deps.template),
                 };
                 try {
+                  console.error(`[DEBUG-RELOC] calling transport for relocation, sig.aborted=${sig.aborted}`);
                   const resp = await this.callTransport(sig, req);
+                  console.error(`[DEBUG-RELOC] relocation resp received, content=${dbgRepr(resp.content ?? "")}`);
                   if (resp.usage) this.recordUsage(resp.usage);
                   const code = extractCodeBlockLocal(resp.content ?? "");
                   if (code !== "") {
