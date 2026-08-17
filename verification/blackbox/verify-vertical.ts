@@ -544,7 +544,6 @@ function normalizeTools(tools: unknown): string[] {
   const out: string[] = [];
   for (const t of tools) {
     if (!isRecord(t)) continue;
-    // OCR capture: {type:"function", function:{name:"code_comment", ...}}
     if (isRecord(t["function"]) && typeof t["function"]["name"] === "string") out.push(t["function"]["name"] as string);
     else if (typeof t["name"] === "string") out.push(t["name"] as string);
   }
@@ -556,6 +555,91 @@ function extractCapturedTools(captured: CapturedHttp): string[] {
   if (!isRecord(body)) return [];
   const tools = body["tools"];
   return normalizeTools(tools);
+}
+
+function stableStringify(value: unknown): string {
+  if (value === null || typeof value !== "object") return JSON.stringify(value);
+  if (Array.isArray(value)) return `[${value.map((v) => stableStringify(v)).join(",")}]`;
+  const rec = value as Record<string, unknown>;
+  const keys = Object.keys(rec).sort();
+  return `{${keys.map((k) => `${JSON.stringify(k)}:${stableStringify(rec[k])}`).join(",")}}`;
+}
+
+function normalizeToolForCompare(tool: unknown): unknown {
+  if (!isRecord(tool)) return tool;
+  const fn = tool["function"];
+  if (!isRecord(fn)) return tool;
+  // Keep name, description, parameters (including required, properties) — deep equality
+  return {
+    type: tool["type"],
+    function: {
+      name: fn["name"],
+      description: fn["description"],
+      parameters: fn["parameters"],
+    },
+  };
+}
+
+function extractCapturedToolsDeep(captured: CapturedHttp): unknown[] {
+  const body = captured.request.body;
+  if (!isRecord(body)) return [];
+  const tools = body["tools"];
+  if (!Array.isArray(tools)) return [];
+  return tools.map((t) => normalizeToolForCompare(t)).sort((a, b) => stableStringify(a).localeCompare(stableStringify(b)));
+}
+
+function extractTextFromContent(content: unknown): string {
+  if (typeof content === "string") return content;
+  if (Array.isArray(content)) {
+    let out = "";
+    for (const block of content as readonly unknown[]) {
+      if (!isRecord(block)) continue;
+      if (typeof block["text"] === "string") out += block["text"] as string;
+      else if (typeof block["content"] === "string") out += block["content"] as string;
+      else if (Array.isArray(block["content"])) {
+        for (const nested of block["content"] as readonly unknown[]) {
+          if (isRecord(nested) && typeof nested["text"] === "string") out += nested["text"] as string;
+        }
+      }
+    }
+    return out;
+  }
+  return "";
+}
+
+function normalizeMessageForCompare(msg: unknown): unknown {
+  if (!isRecord(msg)) return msg;
+  const role = typeof msg["role"] === "string" ? (msg["role"] as string) : "";
+  const content = extractTextFromContent(msg["content"]);
+  const out: Record<string, unknown> = { role, content };
+  // Preserve tool_calls for assistant
+  const tcs = msg["tool_calls"] ?? msg["toolCalls"];
+  if (Array.isArray(tcs)) {
+    out["tool_calls"] = tcs.map((tc) => {
+      if (!isRecord(tc)) return tc;
+      const fn = tc["function"] as Record<string, unknown> | undefined;
+      const id = typeof tc["id"] === "string" ? tc["id"] as string : undefined;
+      const name = isRecord(fn) && typeof fn["name"] === "string" ? (fn["name"] as string) : typeof tc["name"] === "string" ? (tc["name"] as string) : "";
+      let args: unknown = isRecord(fn) ? fn["arguments"] : tc["arguments"];
+      // Parse arguments JSON for deep compare if string
+      if (typeof args === "string") {
+        try { args = JSON.parse(args); } catch {}
+      }
+      return { id, name, arguments: args };
+    }).sort((a, b) => String(a.name).localeCompare(String(b.name)));
+  }
+  // Preserve tool_call_id for tool results
+  if (typeof msg["tool_call_id"] === "string") out["tool_call_id"] = msg["tool_call_id"];
+  if (typeof msg["toolCallId"] === "string") out["tool_call_id"] = msg["toolCallId"];
+  return out;
+}
+
+function extractCapturedMessagesDeep(captured: CapturedHttp): unknown[] {
+  const body = captured.request.body;
+  if (!isRecord(body)) return [];
+  const msgs = body["messages"];
+  if (!Array.isArray(msgs)) return [];
+  return msgs.map((m) => normalizeMessageForCompare(m));
 }
 
 function extractCapturedModel(captured: CapturedHttp): string {
@@ -633,7 +717,7 @@ function compareVertical(opts: {
     }
   } catch {}
 
-  // Compare request ordinals, model, tool names/schemas
+  // Compare request ordinals, model, tool schemas (deep) and messages (normalized deep)
   const countEqual = opts.ocrCaptures.length === opts.piCaptures.length;
   if (!countEqual) {
     pushMismatch("provider_request.count.mismatch", opts.ocrCaptures.length, opts.piCaptures.length, `provider request count differs: OCR ${opts.ocrCaptures.length} vs Pi ${opts.piCaptures.length}`);
@@ -641,25 +725,23 @@ function compareVertical(opts: {
     for (let i = 0; i < opts.ocrCaptures.length; i++) {
       const o = opts.ocrCaptures[i] as CapturedHttp;
       const p = opts.piCaptures[i] as CapturedHttp;
-      const oTools = extractCapturedTools(o);
-      const pTools = extractCapturedTools(p);
-      if (!fieldEqual(oTools, pTools)) {
-        pushMismatch(`provider_request[${i}].tool_schema`, oTools, pTools, `tool schemas for request ${i} differ: OCR ${JSON.stringify(oTools)} vs Pi ${JSON.stringify(pTools)}`);
+      const oToolsDeep = extractCapturedToolsDeep(o);
+      const pToolsDeep = extractCapturedToolsDeep(p);
+      if (stableStringify(oToolsDeep) !== stableStringify(pToolsDeep)) {
+        pushMismatch(`provider_request[${i}].tool_schema`, oToolsDeep, pToolsDeep, `tool schemas for request ${i} differ (deep): OCR ${JSON.stringify(oToolsDeep).slice(0, 800)} vs Pi ${JSON.stringify(pToolsDeep).slice(0, 800)}`);
       }
       const oModel = extractCapturedModel(o);
       const pModel = extractCapturedModel(p);
       if (oModel !== pModel && oModel !== "" && pModel !== "") {
-        // Model names should be same (test-model)
         pushMismatch(`provider_request[${i}].model`, oModel, pModel, `model for request ${i} differs`);
       }
-      // Messages: at least check ordinal and that both have messages array
-      const oBody = isRecord(o.request.body) ? o.request.body : null;
-      const pBody = isRecord(p.request.body) ? p.request.body : null;
-      const oMsgs = oBody && Array.isArray(oBody["messages"]) ? (oBody["messages"] as unknown[]) : [];
-      const pMsgs = pBody && Array.isArray(pBody["messages"]) ? (pBody["messages"] as unknown[]) : [];
-      // We compare message counts loosely — OCR and Pi parity may have slightly different system prompt lengths but must both have at least 2 messages and diff content
-      if (oMsgs.length === 0 || pMsgs.length === 0) {
-        pushMismatch(`provider_request[${i}].messages`, oMsgs.length, pMsgs.length, `messages missing for request ${i}`);
+      const oMsgsDeep = extractCapturedMessagesDeep(o);
+      const pMsgsDeep = extractCapturedMessagesDeep(p);
+      if (oMsgsDeep.length === 0 || pMsgsDeep.length === 0) {
+        pushMismatch(`provider_request[${i}].messages`, oMsgsDeep.length, pMsgsDeep.length, `messages missing for request ${i}`);
+      } else if (stableStringify(oMsgsDeep) !== stableStringify(pMsgsDeep)) {
+        // Allow minor whitespace normalization but require deep equality of role/content/tool_calls
+        pushMismatch(`provider_request[${i}].messages`, oMsgsDeep, pMsgsDeep, `messages for request ${i} differ (normalized deep): OCR ${JSON.stringify(oMsgsDeep).slice(0, 1200)} vs Pi ${JSON.stringify(pMsgsDeep).slice(0, 1200)}`);
       }
     }
   }
