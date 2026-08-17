@@ -648,6 +648,8 @@ export class Runner {
             d = null;
           }
         }
+        const dbgRepr = (s: string): string => JSON.stringify(s.slice(0, 80));
+        console.error(`[DEBUG-RELOC] cm.path=${cm.path} existingCode=${dbgRepr(cm.existingCode ?? "")} d=${d !== null ? "non-null" : "null"} reLocationTaskRaw=${reLocationTaskRaw ? "set" : "null"}`);
         if (d !== null && cm.existingCode && cm.existingCode !== "") {
           const alreadyResolved = (cm.startLine ?? 0) > 0 || (cm.endLine ?? 0) > 0;
           if (!alreadyResolved) {
@@ -657,6 +659,7 @@ export class Runner {
             } catch {
               ok = false;
             }
+            console.error(`[DEBUG-RELOC] resolveComment ok=${ok} d.newFileContent=${dbgRepr(d.newFileContent.slice(0, 100))}`);
             if (!ok && reLocationTaskRaw) {
               const msgs = buildReLocationMessagesLocal(cm, d, reLocationTaskRaw as unknown as never);
               if (msgs && msgs.length > 0) {
