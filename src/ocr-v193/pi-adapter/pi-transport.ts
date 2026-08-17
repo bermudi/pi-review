@@ -424,6 +424,10 @@ export class PiTransport implements TranscriptLlmTransport {
       if (req.messages.length > 0 && typeof sessAny.subscribe === "function" && typeof sessAny.prompt === "function") {
         const last = req.messages[req.messages.length - 1];
         const lastIsUser = last !== undefined && last.role === "user";
+        // For round 1 (lastIsUser): exclude the last user message from history —
+        // it will be sent via prompt(). For round 2+ (last is tool/assistant):
+        // include the full history — agent.continue() will run without adding a
+        // new user message, matching OCR's message array exactly.
         const historySlice: readonly Message[] = lastIsUser ? req.messages.slice(0, -1) : req.messages;
 
         if (historySlice.length === 0) {
@@ -512,20 +516,31 @@ export class PiTransport implements TranscriptLlmTransport {
       try {
         if (signal.aborted) throw createAbortError();
 
-        // Drive Pi via prompt when idle, otherwise followUp.
-        // `steer` is not used for idle empty-round recovery per row 6 gap.
-        const isIdle = sessAny.isIdle !== undefined ? sessAny.isIdle : true;
-        if (isIdle) {
-          await (sessAny.prompt as (t: string) => Promise<void>)(promptText);
-        } else {
-          // While streaming, followUp queues after current turn; this matches
-          // the feasibility note that steer is only for mid-stream.
-          const followUp = sessAny.followUp as ((t: string) => Promise<void>) | undefined;
-          if (typeof followUp === "function") {
-            await followUp(promptText);
-          } else {
+        // Drive Pi: use prompt() for round 1 (last message is user), or
+        // agent.continue() for round 2+ (last message is tool result).
+        // prompt() adds a new user message and runs the loop; continue()
+        // runs the loop from the existing transcript without adding a user
+        // message, matching OCR's message array exactly.
+        const lastReqMsg = req.messages[req.messages.length - 1];
+        const lastIsUser = lastReqMsg !== undefined && lastReqMsg.role === "user";
+        const sessAgent = (this.session as unknown as { agent?: { continue?: () => Promise<void> } }).agent;
+
+        if (lastIsUser || sessAgent === undefined || typeof sessAgent.continue !== "function") {
+          // Round 1 or no agent.continue available: use prompt()
+          const isIdle = sessAny.isIdle !== undefined ? sessAny.isIdle : true;
+          if (isIdle) {
             await (sessAny.prompt as (t: string) => Promise<void>)(promptText);
+          } else {
+            const followUp = sessAny.followUp as ((t: string) => Promise<void>) | undefined;
+            if (typeof followUp === "function") {
+              await followUp(promptText);
+            } else {
+              await (sessAny.prompt as (t: string) => Promise<void>)(promptText);
+            }
           }
+        } else {
+          // Round 2+: continue from the existing transcript (no new user message)
+          await sessAgent.continue();
         }
 
         // Wait until Pi is idle so turn_end accounting is settled before the
