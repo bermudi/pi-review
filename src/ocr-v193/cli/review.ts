@@ -333,13 +333,12 @@ export async function runReviewContext(ctx: ReviewContext): Promise<number> {
 
   if (emitErr) throw emitErr;
 
-  // Partial => 2, otherwise 0
+  // Mirror Go reviewResultError: complete/partial/skipped exit 0, only failed exits non-zero.
   switch (terminal) {
-    case "partial":
-      return 2;
     case "failed":
       return 1;
     case "complete":
+    case "partial":
     case "skipped":
     default:
       return 0;

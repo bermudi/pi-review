@@ -324,12 +324,12 @@ export class PiTransport implements TranscriptLlmTransport {
       this.promptRef.current = ocrSystemTexts;
     }
 
+    const sess = this.session as unknown as {
+      setActiveToolsByName?: (names: string[]) => void;
+      getActiveToolNames?: () => string[];
+    };
     if (req.tools !== undefined) {
       const names = req.tools.map((t) => t.function.name);
-      const sess = this.session as unknown as {
-        setActiveToolsByName?: (names: string[]) => void;
-        getActiveToolNames?: () => string[];
-      };
       if (typeof sess.setActiveToolsByName === "function") {
         try {
           sess.setActiveToolsByName(names);
@@ -344,16 +344,13 @@ export class PiTransport implements TranscriptLlmTransport {
           // Non-fatal — allow request to proceed with previous allowlist
         }
       }
-    } else if (this.promptRef !== undefined && ocrSystemTexts.length > 0) {
-      // No tool change this turn (e.g., compression) but systemPrompt changed — force rebuild
-      const sess = this.session as unknown as {
-        setActiveToolsByName?: (names: string[]) => void;
-        getActiveToolNames?: () => string[];
-      };
-      if (typeof sess.setActiveToolsByName === "function" && typeof sess.getActiveToolNames === "function") {
+    } else {
+      // Filter, compression, and plan turns carry no tool allowlist in OCR.
+      // Clear the allowlist so the provider request matches and the model
+      // returns a plain text response rather than a tool call.
+      if (typeof sess.setActiveToolsByName === "function") {
         try {
-          const current = sess.getActiveToolNames();
-          sess.setActiveToolsByName(current);
+          sess.setActiveToolsByName([]);
         } catch {
           // ignore
         }

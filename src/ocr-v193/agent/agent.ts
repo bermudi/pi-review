@@ -474,17 +474,23 @@ export class Agent {
   }
 
   private buildChangeFilesExcept(excludePath: string): string {
-    const lines: string[] = [];
-    for (const d of this.diffs) {
+    // Mirror Go Agent.buildChangeFilesExcept: write a newline after every
+    // non-excluded entry except the final element of a.diffs (by original index).
+    let out = "";
+    for (let i = 0; i < this.diffs.length; i++) {
+      const d = this.diffs[i]!;
       if (d.isBinary) continue;
       if (d.newPath === excludePath || d.oldPath === excludePath) continue;
       let status = "MODIFIED";
       if (d.isNew) status = "ADDED";
       else if (d.isDeleted) status = "DELETED";
       else if (d.oldPath !== d.newPath) status = "RENAMED";
-      lines.push(`${status}   ${d.newPath}`);
+      out += `${status}   ${d.newPath}`;
+      if (i < this.diffs.length - 1) {
+        out += "\n";
+      }
     }
-    return lines.join("\n");
+    return out;
   }
 
   private async dispatchSubtasks(signal: AbortSignal): Promise<LlmComment[]> {
@@ -933,8 +939,8 @@ function formatToolDefs(toolDefs: readonly ToolDef[]): string {
           Array.isArray(rec["required"]) ? (rec["required"] as unknown[]).filter((x): x is string => typeof x === "string") : [],
         );
         sb += "  Parameters:\n";
-        const keys = Object.keys(props).sort();
-        for (const k of keys) {
+        // Preserve the original property order from tools.json rather than sorting.
+        for (const k of Object.keys(props)) {
           const meta = props[k] as Record<string, unknown> | undefined;
           const desc2 = meta !== undefined && typeof meta["description"] === "string" ? (meta["description"] as string) : "";
           const suffix = required.has(k) ? " (required)" : "";

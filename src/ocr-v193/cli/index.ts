@@ -100,7 +100,7 @@ Scan flags:
   --resume ID                 resume from a previous scan session id
   --tools PATH                path to JSON tools config file (default: embedded)
 
-Exit status: 0 complete or skipped, 2 partial, 1 failed or invalid usage.
+Exit status: 0 complete, partial, or skipped; 1 failed or invalid usage.
 `;
 
 // ---------------------------------------------------------------------------

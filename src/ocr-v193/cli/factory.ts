@@ -3,6 +3,7 @@
 // Factory for the parity review CLI — production wiring with real tools, no stubs, no any.
 
 import { randomUUID } from "node:crypto";
+import { spawnSync } from "node:child_process";
 
 import type { ReviewOptions } from "./shared.js";
 import type { ReviewRunner } from "./review.js";
@@ -59,6 +60,24 @@ export function createReviewRunnerFactory(
     const to = opts.to;
     const commit = opts.commit;
     const reviewMode = reviewModeString(from, to, commit);
+
+    // Mirror Go review_cmd.go: when --commit is used without --background,
+    // default background to the commit message.
+    let background = opts.background;
+    if (commit !== "" && background === "" && opts.backgroundFile === "") {
+      try {
+        const gitOut = spawnSync("git", ["-C", repoDir, "log", "-1", "--format=%B", "--end-of-options", commit], {
+          encoding: "utf-8",
+          timeout: 5000,
+        });
+        if (gitOut.status === 0) {
+          const msg = gitOut.stdout.trim();
+          if (msg !== "") background = msg;
+        }
+      } catch {
+        // best-effort; leave background empty
+      }
+    }
 
     let mode: number;
     let ref = "";
@@ -199,7 +218,7 @@ export function createReviewRunnerFactory(
       commentCollector: collector as unknown as import("../agent/agent.js").CommentCollectorLike,
       maxConcurrency,
       concurrentTaskTimeoutMinutes,
-      background: opts.background,
+      background,
       model: modelId,
       maxTokensBudget: opts.maxTokensBudget > 0 ? opts.maxTokensBudget : undefined,
       skipFilter: opts.noFilter,

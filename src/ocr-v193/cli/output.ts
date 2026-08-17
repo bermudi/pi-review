@@ -6,7 +6,8 @@
 // GPL-3.0-or-later;
 // see LICENSES/Apache-2.0.txt and THIRD_PARTY_NOTICES.md.
 
-import type { LlmComment } from "../model/review.js";
+import type { LlmComment, LlmCommentJson } from "../model/review.js";
+import { llmCommentToJson } from "../model/review.js";
 import type { RunManifest } from "../session/manifest.js";
 import type { Preview } from "../model/preview.js";
 
@@ -341,7 +342,7 @@ export interface JsonOutput {
   message?: string;
   summary?: JsonSummary;
   tool_calls?: JsonToolCalls;
-  comments: LlmComment[];
+  comments: LlmCommentJson[];
   warnings?: AgentWarning[];
   project_summary?: string;
   resume?: unknown;
@@ -412,11 +413,12 @@ export function outputJsonWithWarnings(opts: {
   let total = 0;
   for (const v of Object.values(byTool)) total += v;
 
+  const jsonComments = opts.comments.map(llmCommentToJson);
   const out: JsonOutput = {
     status: "success",
     llm: opts.llmIdentity,
     trace_id: opts.traceId,
-    comments: [...opts.comments] as LlmComment[],
+    comments: jsonComments,
     summary,
     project_summary: opts.projectSummary !== "" ? opts.projectSummary : undefined,
     resume: opts.resumeInfo ?? undefined,

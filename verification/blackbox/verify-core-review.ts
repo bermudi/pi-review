@@ -343,6 +343,244 @@ function makeScriptedResponses(commentContent: string): readonly unknown[] {
 }
 
 // ---------------------------------------------------------------------------
+// Family fixture creators
+// ---------------------------------------------------------------------------
+
+async function createTwoCommitRepo(): Promise<{ dir: string; secondCommit: string; cleanup: () => Promise<void> }> {
+  const dir = await mkdtemp(join(tmpdir(), "ocr-core-two-commit-"));
+  const cleanup = async (): Promise<void> => {
+    await rm(dir, { recursive: true, force: true }).catch(() => {});
+  };
+  gitSync(dir, ["init", "-q"]);
+  gitSync(dir, ["config", "user.email", "harness@pi-reviewer.test"]);
+  gitSync(dir, ["config", "user.name", "harness"]);
+  gitSync(dir, ["config", "commit.gpgsign", "false"]);
+  const fixedDate = new Date(Date.UTC(2026, 0, 1, 0, 0, 0)).toISOString();
+  const env = { ...process.env, GIT_AUTHOR_DATE: fixedDate, GIT_COMMITTER_DATE: fixedDate };
+  await writeFile(join(dir, "main.go"), "package main\nfunc Add(a int, b int) int { return a + b }\n", "utf-8");
+  let res = spawnSync("git", ["add", "-A"], { cwd: dir, env, encoding: "utf-8" });
+  if (res.status !== 0) throw new Error(`git add failed: ${res.stderr}`);
+  res = spawnSync("git", ["commit", "-q", "-m", "initial"], { cwd: dir, env, encoding: "utf-8" });
+  if (res.status !== 0) throw new Error(`git commit failed: ${res.stderr}`);
+  await writeFile(join(dir, "main.go"), "package main\nfunc Add(a int, b int) int {\n  // TODO: handle nil?\n  return a + b\n}\n", "utf-8");
+  res = spawnSync("git", ["add", "-A"], { cwd: dir, env, encoding: "utf-8" });
+  if (res.status !== 0) throw new Error(`git add failed: ${res.stderr}`);
+  res = spawnSync("git", ["commit", "-q", "-m", "add nil guard"], { cwd: dir, env, encoding: "utf-8" });
+  if (res.status !== 0) throw new Error(`git commit failed: ${res.stderr}`);
+  const secondCommit = gitSync(dir, ["rev-parse", "HEAD"]);
+  return { dir, secondCommit, cleanup };
+}
+
+async function createMultiFileRepo(fileNames: readonly string[]): Promise<{ dir: string; files: readonly string[]; cleanup: () => Promise<void> }> {
+  const dir = await mkdtemp(join(tmpdir(), "ocr-core-multi-file-"));
+  const cleanup = async (): Promise<void> => {
+    await rm(dir, { recursive: true, force: true }).catch(() => {});
+  };
+  gitSync(dir, ["init", "-q"]);
+  gitSync(dir, ["config", "user.email", "harness@pi-reviewer.test"]);
+  gitSync(dir, ["config", "user.name", "harness"]);
+  gitSync(dir, ["config", "commit.gpgsign", "false"]);
+  const fixedDate = new Date(Date.UTC(2026, 0, 1, 0, 0, 0)).toISOString();
+  const env = { ...process.env, GIT_AUTHOR_DATE: fixedDate, GIT_COMMITTER_DATE: fixedDate };
+  for (const f of fileNames) {
+    await writeFile(join(dir, f), `package main\nfunc Func${f.replace(/\W/g, "")}() int { return 1 }\n`, "utf-8");
+  }
+  let res = spawnSync("git", ["add", "-A"], { cwd: dir, env, encoding: "utf-8" });
+  if (res.status !== 0) throw new Error(`git add failed: ${res.stderr}`);
+  res = spawnSync("git", ["commit", "-q", "-m", "initial"], { cwd: dir, env, encoding: "utf-8" });
+  if (res.status !== 0) throw new Error(`git commit failed: ${res.stderr}`);
+  for (const f of fileNames) {
+    await writeFile(join(dir, f), `package main\nfunc Func${f.replace(/\W/g, "")}() int {\n  // TODO: handle nil?\n  return 1\n}\n`, "utf-8");
+  }
+  return { dir, files: [...fileNames].sort(), cleanup };
+}
+
+// ---------------------------------------------------------------------------
+// Family response makers
+// ---------------------------------------------------------------------------
+
+function makeCodeCommentResponse(
+  content: string,
+  existingCode: string,
+  path: string,
+  usage: { readonly prompt: number; readonly completion: number; readonly total: number },
+  id: string,
+  created: number,
+): unknown {
+  return {
+    id,
+    object: "chat.completion",
+    created,
+    model: "test-model",
+    choices: [
+      {
+        index: 0,
+        message: {
+          role: "assistant",
+          content: null,
+          tool_calls: [
+            {
+              id: `${id}-cc`,
+              type: "function",
+              function: {
+                name: "code_comment",
+                arguments: JSON.stringify({
+                  path,
+                  comments: [{ content, existing_code: existingCode, category: "bug", severity: "medium" }],
+                }),
+              },
+            },
+          ],
+        },
+        finish_reason: "tool_calls",
+      },
+    ],
+    usage: { prompt_tokens: usage.prompt, completion_tokens: usage.completion, total_tokens: usage.total },
+  };
+}
+
+function makeTaskDoneResponse(
+  state: string,
+  usage: { readonly prompt: number; readonly completion: number; readonly total: number },
+  id: string,
+  created: number,
+): unknown {
+  return {
+    id,
+    object: "chat.completion",
+    created,
+    model: "test-model",
+    choices: [
+      {
+        index: 0,
+        message: {
+          role: "assistant",
+          content: null,
+          tool_calls: [
+            {
+              id: `${id}-td`,
+              type: "function",
+              function: { name: "task_done", arguments: JSON.stringify({ state }) },
+            },
+          ],
+        },
+        finish_reason: "tool_calls",
+      },
+    ],
+    usage: { prompt_tokens: usage.prompt, completion_tokens: usage.completion, total_tokens: usage.total },
+  };
+}
+
+function makeOneCommentResponses(content: string, existingCode: string, path = "main.go"): readonly unknown[] {
+  return [
+    makeCodeCommentResponse(content, existingCode, path, { prompt: 100, completion: 50, total: 150 }, "chatcmpl-main-1", 1),
+    makeTaskDoneResponse("DONE", { prompt: 50, completion: 10, total: 60 }, "chatcmpl-main-2", 2),
+  ];
+}
+
+function makeFilterResponses(
+  content: string,
+  existingCode: string,
+  path: string,
+  judgment: "keep" | "remove",
+): readonly unknown[] {
+  const ids = judgment === "remove" ? ["c-0"] : [];
+  return [
+    makeCodeCommentResponse(content, existingCode, path, { prompt: 100, completion: 50, total: 150 }, "chatcmpl-filter-1", 1),
+    makeTaskDoneResponse("DONE", { prompt: 50, completion: 10, total: 60 }, "chatcmpl-filter-2", 2),
+    {
+      id: "chatcmpl-filter-3",
+      object: "chat.completion",
+      created: 3,
+      model: "test-model",
+      choices: [
+        {
+          index: 0,
+          message: { role: "assistant", content: JSON.stringify(ids), tool_calls: [] },
+          finish_reason: "stop",
+        },
+      ],
+      usage: { prompt_tokens: 30, completion_tokens: 10, total_tokens: 40 },
+    },
+  ];
+}
+
+function makeMultiFileResponses(
+  files: readonly string[],
+  content: string,
+  existingCode: string,
+): readonly unknown[] {
+  const responses: unknown[] = [];
+  let n = 1;
+  for (const f of files) {
+    responses.push(makeCodeCommentResponse(content, existingCode, f, { prompt: 100, completion: 50, total: 150 }, `chatcmpl-mf-${n}`, n));
+    n++;
+    responses.push(makeTaskDoneResponse("DONE", { prompt: 50, completion: 10, total: 60 }, `chatcmpl-mf-${n}`, n));
+    n++;
+  }
+  return responses;
+}
+
+function makeIncompleteResponses(content: string, existingCode: string, path = "main.go", rounds = 30): readonly unknown[] {
+  const responses: unknown[] = [];
+  responses.push({
+    id: "chatcmpl-inc-0",
+    object: "chat.completion",
+    created: 1,
+    model: "test-model",
+    choices: [
+      {
+        index: 0,
+        message: {
+          role: "assistant",
+          content: null,
+          tool_calls: [
+            {
+              id: "call-inc-0-a",
+              type: "function",
+              function: {
+                name: "code_comment",
+                arguments: JSON.stringify({
+                  path,
+                  comments: [{ content, existing_code: existingCode, category: "bug", severity: "medium" }],
+                }),
+              },
+            },
+            {
+              id: "call-inc-0-b",
+              type: "function",
+              function: { name: "task_done", arguments: JSON.stringify({ state: "INCOMPLETE" }) },
+            },
+          ],
+        },
+        finish_reason: "tool_calls",
+      },
+    ],
+    usage: { prompt_tokens: 100, completion_tokens: 50, total_tokens: 150 },
+  });
+  for (let i = 1; i <= rounds + 1; i++) {
+    responses.push(makeTaskDoneResponse("INCOMPLETE", { prompt: 10, completion: 5, total: 15 }, `chatcmpl-inc-${i}`, i + 1));
+  }
+  return responses;
+}
+
+function makePartialResponses(
+  completeFile: string,
+  incompleteFile: string,
+  content: string,
+  existingCode: string,
+  rounds = 30,
+): readonly unknown[] {
+  const responses: unknown[] = [];
+  // File that completes successfully.
+  responses.push(makeCodeCommentResponse(content, existingCode, completeFile, { prompt: 100, completion: 50, total: 150 }, "chatcmpl-partial-0", 1));
+  responses.push(makeTaskDoneResponse("DONE", { prompt: 50, completion: 10, total: 60 }, "chatcmpl-partial-1", 2));
+  // File that maxes out its tool-request budget.
+  responses.push(...makeIncompleteResponses(content, existingCode, incompleteFile, rounds));
+  return responses;
+}
+
+// ---------------------------------------------------------------------------
 // Subprocess runners — capture stdout/stderr + provider traffic
 // ---------------------------------------------------------------------------
 
@@ -368,7 +606,7 @@ async function runOcrSubprocess(opts: {
   // Remove inline PI agent env that might interfere — OCR uses its own.
   delete (env as Record<string, string | undefined>)["PI_CODING_AGENT_DIR"];
   const extra = opts.command ?? ["--format", "json", "--no-filter"];
-  const args = ["review", "--repo", opts.repoDir, ...extra];
+  const args = ["review", "--repo", opts.repoDir, "--concurrency", "1", ...extra];
   const result = await new Promise<{ stdout: string; stderr: string; exitCode: number | null; signal: string | null }>((resolve) => {
     const child = spawn(opts.binaryPath, args, { cwd: opts.repoDir, env, stdio: ["ignore", "pipe", "pipe"] as unknown as never });
     let stdout = "";
@@ -708,7 +946,7 @@ function extractCapturedToolCalls(captured: CapturedHttp): unknown[] {
   return tcs;
 }
 
-function compareCoreReview(opts: {
+interface CompareCoreOptions {
   ocrCommand: readonly string[];
   piCommand: readonly string[];
   ocrCaptures: readonly CapturedHttp[];
@@ -717,7 +955,13 @@ function compareCoreReview(opts: {
   piStdout: string;
   ocrExit: number | null;
   piExit: number | null;
-}): { equal: boolean; mismatches: FieldMismatch[]; notObservable: string[] } {
+  expectedCommentCount?: number;
+  expectedStatus?: string;
+  expectedExit?: number;
+  requireLineNumbers?: boolean;
+}
+
+function compareCoreReview(opts: CompareCoreOptions): { equal: boolean; mismatches: FieldMismatch[]; notObservable: string[] } {
   const mismatches: FieldMismatch[] = [];
   const notObservable: string[] = [];
 
@@ -849,46 +1093,53 @@ function compareCoreReview(opts: {
   if (!ocrHasJson) pushMismatch("stdout.json.ocr", ocrParsed.raw, ocrParsed.raw, "OCR stdout must be parseable JSON (actual output parsing)");
   if (!piHasJson) pushMismatch("stdout.json.pi", piParsed.raw, piParsed.raw, "Pi stdout must be parseable JSON (actual output parsing)");
 
-  // Comments: expect exactly 1
+  // Comments: expect configured count (default 1)
+  const expectedCommentCount = opts.expectedCommentCount ?? 1;
   const ocrComments = ocrParsed.comments;
   const piComments = piParsed.findings;
-  if (ocrComments.length !== 1) {
-    pushMismatch("stdout.comments.count", 1, ocrComments.length, `OCR must produce exactly 1 code_comment (workspace one-file fixture)`);
+  if (ocrComments.length !== expectedCommentCount) {
+    pushMismatch("stdout.comments.count", expectedCommentCount, ocrComments.length, `OCR must produce ${expectedCommentCount} code_comment(s)`);
   }
-  if (piComments.length !== 1) {
-    pushMismatch("stdout.comments.count", 1, piComments.length, `Pi must produce exactly 1 code_comment`);
+  if (piComments.length !== expectedCommentCount) {
+    pushMismatch("stdout.comments.count", expectedCommentCount, piComments.length, `Pi must produce ${expectedCommentCount} code_comment(s)`);
   }
-  if (ocrComments.length === 1 && piComments.length === 1) {
-    const oC = ocrComments[0] as Record<string, unknown>;
-    const pC = piComments[0] as Record<string, unknown>;
-    // Normalize field names: OCR uses path/content/existing_code etc, Pi parity also uses same; legacy uses path/content/existingCode but we normalized via parsePiJson to parity shape.
-    // For parity, both should have same keys: path, content, existing_code / existingCode etc. We compare content and path and category/severity.
-    const oPath = (oC["path"] ?? oC["file"] ?? "") as string;
-    const pPath = (pC["path"] ?? pC["file"] ?? "") as string;
-    if (oPath !== pPath) pushMismatch("stdout.comments[0].path", oPath, pPath, "comment path differs");
-    const oContent = (oC["content"] ?? oC["message"] ?? "") as string;
-    const pContent = (pC["content"] ?? pC["message"] ?? "") as string;
-    if (oContent !== pContent) pushMismatch("stdout.comments[0].content", oContent, pContent, "comment content differs");
-    const oExisting = ((oC["existing_code"] ?? oC["existingCode"] ?? "") as string);
-    const pExisting = ((pC["existing_code"] ?? pC["existingCode"] ?? "") as string);
-    if (oExisting !== pExisting) pushMismatch("stdout.comments[0].existing_code", oExisting, pExisting, "comment existing_code differs");
-    const oCat = (oC["category"] ?? "") as string;
-    const pCat = (pC["category"] ?? "") as string;
-    if (oCat !== pCat) pushMismatch("stdout.comments[0].category", oCat, pCat, "comment category differs");
-    const oSev = (oC["severity"] ?? "") as string;
-    const pSev = (pC["severity"] ?? "") as string;
-    if (oSev !== pSev) pushMismatch("stdout.comments[0].severity", oSev, pSev, "comment severity differs");
-    // Also check tool results observed in subsequent messages: second request's messages should contain tool result
-    // We already verify provider requests include messages; for vertical we also ensure second request's messages contain the code_comment result
-    // That's covered by provider_request messages check, but we add explicit check that Pi's second capture contains tool result for code_comment
+  if (ocrComments.length === expectedCommentCount && piComments.length === expectedCommentCount) {
+    for (let idx = 0; idx < expectedCommentCount; idx++) {
+      const oC = ocrComments[idx] as Record<string, unknown>;
+      const pC = piComments[idx] as Record<string, unknown>;
+      const prefix = `stdout.comments[${idx}]`;
+      // Normalize field names: OCR uses path/content/existing_code etc, Pi parity also uses same; legacy uses path/content/existingCode but we normalized via parsePiJson to parity shape.
+      const oPath = (oC["path"] ?? oC["file"] ?? "") as string;
+      const pPath = (pC["path"] ?? pC["file"] ?? "") as string;
+      if (oPath !== pPath) pushMismatch(`${prefix}.path`, oPath, pPath, `comment path differs at index ${idx}`);
+      const oContent = (oC["content"] ?? oC["message"] ?? "") as string;
+      const pContent = (pC["content"] ?? pC["message"] ?? "") as string;
+      if (oContent !== pContent) pushMismatch(`${prefix}.content`, oContent, pContent, `comment content differs at index ${idx}`);
+      const oExisting = ((oC["existing_code"] ?? oC["existingCode"] ?? "") as string);
+      const pExisting = ((pC["existing_code"] ?? pC["existingCode"] ?? "") as string);
+      if (oExisting !== pExisting) pushMismatch(`${prefix}.existing_code`, oExisting, pExisting, `comment existing_code differs at index ${idx}`);
+      const oCat = (oC["category"] ?? "") as string;
+      const pCat = (pC["category"] ?? "") as string;
+      if (oCat !== pCat) pushMismatch(`${prefix}.category`, oCat, pCat, `comment category differs at index ${idx}`);
+      const oSev = (oC["severity"] ?? "") as string;
+      const pSev = (pC["severity"] ?? "") as string;
+      if (oSev !== pSev) pushMismatch(`${prefix}.severity`, oSev, pSev, `comment severity differs at index ${idx}`);
+      const oStartLine = typeof oC["start_line"] === "number" ? (oC["start_line"] as number) : typeof oC["startLine"] === "number" ? (oC["startLine"] as number) : 0;
+      const pStartLine = typeof pC["start_line"] === "number" ? (pC["start_line"] as number) : typeof pC["startLine"] === "number" ? (pC["startLine"] as number) : 0;
+      if (oStartLine !== pStartLine) pushMismatch(`${prefix}.start_line`, oStartLine, pStartLine, `comment start_line differs at index ${idx}`);
+      const oEndLine = typeof oC["end_line"] === "number" ? (oC["end_line"] as number) : typeof oC["endLine"] === "number" ? (oC["endLine"] as number) : 0;
+      const pEndLine = typeof pC["end_line"] === "number" ? (pC["end_line"] as number) : typeof pC["endLine"] === "number" ? (pC["endLine"] as number) : 0;
+      if (oEndLine !== pEndLine) pushMismatch(`${prefix}.end_line`, oEndLine, pEndLine, `comment end_line differs at index ${idx}`);
+      if (opts.requireLineNumbers && (oStartLine <= 0 || pStartLine <= 0)) {
+        pushMismatch(`${prefix}.start_line.resolved`, oStartLine, pStartLine, `expected resolved start_line > 0 at index ${idx}`);
+      }
+    }
     if (opts.piCaptures.length >= 2) {
       const second = opts.piCaptures[1] as CapturedHttp;
       const body = isRecord(second.request.body) ? second.request.body : null;
       const msgs = body && Array.isArray(body["messages"]) ? (body["messages"] as unknown[]) : [];
       const hasToolResult = msgs.some((m) => isRecord(m) && (m["role"] === "tool" || m["role"] === "toolResult" || JSON.stringify(m).includes("code_comment")));
-      // Not strict; if missing, mark mismatch but don't fail if both miss? For now just check existence where observable.
       if (!hasToolResult && msgs.length > 0) {
-        // It's okay — OCR may encode tool results differently; we don't fail, just note notObservable for this field
         notObservable.push("tool_results[1].messages");
       }
     }
@@ -928,9 +1179,10 @@ function compareCoreReview(opts: {
   }
 
   // 7. Completion state and exit code
-  // OCR and Pi should both be complete (exit 0) for this fixture
-  if (opts.ocrExit !== 0) pushMismatch("exit.ocr", 0, opts.ocrExit, `OCR must exit 0 for complete fixture (got ${String(opts.ocrExit)})`);
-  if (opts.piExit !== 0) pushMismatch("exit.pi", 0, opts.piExit, `Pi must exit 0 for complete fixture (got ${String(opts.piExit)})`);
+  const expectedExit = opts.expectedExit ?? 0;
+  const expectedStatus = opts.expectedStatus ?? "complete";
+  if (opts.ocrExit !== expectedExit) pushMismatch("exit.ocr", expectedExit, opts.ocrExit, `OCR must exit ${expectedExit} for this fixture (got ${String(opts.ocrExit)})`);
+  if (opts.piExit !== expectedExit) pushMismatch("exit.pi", expectedExit, opts.piExit, `Pi must exit ${expectedExit} for this fixture (got ${String(opts.piExit)})`);
   if (opts.ocrExit !== opts.piExit) pushMismatch("exit", opts.ocrExit, opts.piExit, "exit codes differ");
 
   // Terminal manifest: OCR json status should be complete/skipped etc — Pi parity should match
@@ -942,6 +1194,10 @@ function compareCoreReview(opts: {
   const piStatus = normalizeStatus(piStatusRaw);
   if (ocrStatus && piStatus && ocrStatus !== piStatus) {
     pushMismatch("completion.status", ocrStatusRaw, piStatusRaw, `completion status differs: OCR ${JSON.stringify(ocrStatusRaw)} vs Pi ${JSON.stringify(piStatusRaw)}`);
+  } else if (ocrStatus && ocrStatus !== expectedStatus && opts.expectedStatus !== undefined) {
+    pushMismatch("completion.status.ocr", expectedStatus, ocrStatus, `OCR status ${JSON.stringify(ocrStatus)} does not match expected ${JSON.stringify(expectedStatus)}`);
+  } else if (piStatus && piStatus !== expectedStatus && opts.expectedStatus !== undefined) {
+    pushMismatch("completion.status.pi", expectedStatus, piStatus, `Pi status ${JSON.stringify(piStatus)} does not match expected ${JSON.stringify(expectedStatus)}`);
   }
 
   return { equal: mismatches.length === 0, mismatches, notObservable };
@@ -1017,6 +1273,404 @@ function comparePreview(opts: {
   }
 
   return { equal: mismatches.length === 0, mismatches };
+}
+
+// ---------------------------------------------------------------------------
+// Family runner helpers
+// ---------------------------------------------------------------------------
+
+interface FixtureContext {
+  artifactDir: string;
+  ocrBinary: string;
+  consumerBinPath: string;
+  consumerDir: string;
+}
+
+interface FamilyResult {
+  fixtureId: string;
+  equal: boolean;
+  assertions: number;
+  notObservable: readonly string[];
+  mismatches?: readonly FieldMismatch[];
+}
+
+async function runFamilyFixture(opts: {
+  id: string;
+  context: FixtureContext;
+  makeRepo: () => Promise<{ dir: string; cleanup: () => Promise<void>; meta?: unknown }>;
+  ocrCommandExtra?: readonly string[];
+  piCommandExtra?: readonly string[];
+  ocrResponses: readonly unknown[];
+  piResponses: readonly unknown[];
+  timeoutMs?: number;
+}): Promise<{
+  ocrResult: { stdout: string; stderr: string; exitCode: number | null; signal: string | null };
+  piResult: { stdout: string; stderr: string; exitCode: number | null; signal: string | null; command: readonly string[] };
+  ocrCaptures: readonly CapturedHttp[];
+  piCaptures: readonly CapturedHttp[];
+  ocrRepoDir: string;
+  piRepoDir: string;
+  meta: unknown;
+}> {
+  const fixture = await opts.makeRepo();
+  const ocrRepoDir = await mkdtemp(join(tmpdir(), "ocr-family-clone-"));
+  const piRepoDir = await mkdtemp(join(tmpdir(), "pi-family-clone-"));
+  await rm(ocrRepoDir, { recursive: true, force: true }).catch(() => {});
+  await rm(piRepoDir, { recursive: true, force: true }).catch(() => {});
+  await cloneRepo(fixture.dir, ocrRepoDir);
+  await cloneRepo(fixture.dir, piRepoDir);
+
+  const serverOcr = createCaptureServer({ responses: structuredClone(opts.ocrResponses) as unknown[] });
+  const serverPi = createCaptureServer({ responses: structuredClone(opts.piResponses) as unknown[] });
+  const piAgent = await createPiAgentDir(serverPi.url);
+
+  const ocrExtra = opts.ocrCommandExtra ?? ["--format", "json", "--no-filter"];
+  const piExtra = opts.piCommandExtra ?? ["--no-filter", "--json"];
+
+  let ocrResult: { stdout: string; stderr: string; exitCode: number | null; signal: string | null } | null = null;
+  let piResult: { stdout: string; stderr: string; exitCode: number | null; signal: string | null; command: readonly string[] } | null = null;
+
+  try {
+    ocrResult = await runOcrSubprocess({
+      binaryPath: opts.context.ocrBinary,
+      repoDir: ocrRepoDir,
+      serverUrl: serverOcr.url,
+      serverPort: serverOcr.port,
+      command: ocrExtra,
+      timeoutMs: opts.timeoutMs ?? 60000,
+    });
+    piResult = await runPiSubprocess({
+      repoDir: piRepoDir,
+      serverUrl: serverPi.url,
+      consumerBinPath: opts.context.consumerBinPath,
+      consumerDir: opts.context.consumerDir,
+      agentDir: piAgent.dir,
+      command: piExtra,
+      timeoutMs: opts.timeoutMs ?? 60000,
+    });
+
+    const ocrCmd: readonly string[] = [opts.context.ocrBinary, "review", "--repo", ocrRepoDir, ...ocrExtra];
+    const piCmd = piResult.command;
+    const ocrCaptures = serverOcr.getSanitizedCaptures() as unknown as CapturedHttp[];
+    const piCaptures = serverPi.getSanitizedCaptures() as unknown as CapturedHttp[];
+
+    const fixtureArtifactDir = join(opts.context.artifactDir, opts.id);
+    mkdirSync(fixtureArtifactDir, { recursive: true });
+    await writeFile(join(fixtureArtifactDir, "ocr-stdout.txt"), ocrResult.stdout, "utf-8").catch(() => {});
+    await writeFile(join(fixtureArtifactDir, "ocr-stderr.txt"), ocrResult.stderr, "utf-8").catch(() => {});
+    await writeFile(join(fixtureArtifactDir, "pi-stdout.txt"), piResult.stdout, "utf-8").catch(() => {});
+    await writeFile(join(fixtureArtifactDir, "pi-stderr.txt"), piResult.stderr, "utf-8").catch(() => {});
+    await writeFile(join(fixtureArtifactDir, "ocr-captures.json"), JSON.stringify(ocrCaptures, null, 2), "utf-8").catch(() => {});
+    await writeFile(join(fixtureArtifactDir, "pi-captures.json"), JSON.stringify(piCaptures, null, 2), "utf-8").catch(() => {});
+    await writeFile(join(fixtureArtifactDir, "ocr-command.txt"), ocrCmd.join(" "), "utf-8").catch(() => {});
+    await writeFile(join(fixtureArtifactDir, "pi-command.txt"), piCmd.join(" "), "utf-8").catch(() => {});
+
+    return { ocrResult, piResult, ocrCaptures, piCaptures, ocrRepoDir, piRepoDir, meta: fixture.meta };
+  } finally {
+    serverOcr.stop();
+    serverPi.stop();
+    await piAgent.cleanup().catch(() => {});
+    await rm(ocrRepoDir, { recursive: true, force: true }).catch(() => {});
+    await rm(piRepoDir, { recursive: true, force: true }).catch(() => {});
+    await fixture.cleanup().catch(() => {});
+  }
+}
+
+function familyAssertionCount(commentCount: number): number {
+  // provider count, request/response parity, usage, exit, status, comment count, per-comment fields
+  return 12 + commentCount * 7;
+}
+
+async function runFamily2(context: FixtureContext): Promise<FamilyResult> {
+  const fixtureId = "core-relocation-line";
+  const content = "Consider nil guard for Add";
+  const existingCode = "// TODO: handle nil?";
+  const responses = makeOneCommentResponses(content, existingCode, "main.go");
+  const { ocrResult, piResult, ocrCaptures, piCaptures } = await runFamilyFixture({
+    id: fixtureId,
+    context,
+    makeRepo: createTempRepo,
+    ocrResponses: responses,
+    piResponses: responses,
+  });
+  const ocrCmd: readonly string[] = [context.ocrBinary, "review", "--repo", "<REPO>", "--format", "json", "--no-filter"];
+  const piCmd = piResult.command;
+  const compared = compareCoreReview({
+    ocrCommand: ocrCmd,
+    piCommand: piCmd,
+    ocrCaptures,
+    piCaptures,
+    ocrStdout: ocrResult.stdout,
+    piStdout: piResult.stdout,
+    ocrExit: ocrResult.exitCode,
+    piExit: piResult.exitCode,
+    requireLineNumbers: true,
+  });
+  return { fixtureId, equal: compared.equal, assertions: familyAssertionCount(1), notObservable: compared.notObservable, mismatches: compared.mismatches };
+}
+
+async function runFamily3(context: FixtureContext, judgment: "keep" | "remove", fixtureId: string): Promise<FamilyResult> {
+  const content = "Consider nil guard";
+  const existingCode = "// TODO: handle nil?";
+  const responses = makeFilterResponses(content, existingCode, "main.go", judgment);
+  const { ocrResult, piResult, ocrCaptures, piCaptures } = await runFamilyFixture({
+    id: fixtureId,
+    context,
+    makeRepo: createTempRepo,
+    ocrCommandExtra: ["--format", "json"],
+    piCommandExtra: ["--json"],
+    ocrResponses: responses,
+    piResponses: responses,
+  });
+  const ocrCmd: readonly string[] = [context.ocrBinary, "review", "--repo", "<REPO>", "--format", "json"];
+  const piCmd = piResult.command;
+  const expectedCommentCount = judgment === "remove" ? 0 : 1;
+  const compared = compareCoreReview({
+    ocrCommand: ocrCmd,
+    piCommand: piCmd,
+    ocrCaptures,
+    piCaptures,
+    ocrStdout: ocrResult.stdout,
+    piStdout: piResult.stdout,
+    ocrExit: ocrResult.exitCode,
+    piExit: piResult.exitCode,
+    expectedCommentCount,
+  });
+  const expectedRequestCount = 3;
+  if (ocrCaptures.length !== expectedRequestCount) {
+    compared.mismatches.push({ fieldPath: "provider_request.count.ocr", ocrValue: ocrCaptures.length, piValue: expectedRequestCount, message: `OCR filter fixture expected ${expectedRequestCount} requests, got ${ocrCaptures.length}` });
+  }
+  if (piCaptures.length !== expectedRequestCount) {
+    compared.mismatches.push({ fieldPath: "provider_request.count.pi", ocrValue: expectedRequestCount, piValue: piCaptures.length, message: `Pi filter fixture expected ${expectedRequestCount} requests, got ${piCaptures.length}` });
+  }
+  return { fixtureId, equal: compared.mismatches.length === 0, assertions: familyAssertionCount(expectedCommentCount) + 2, notObservable: compared.notObservable, mismatches: compared.mismatches };
+}
+
+async function runFamily5(context: FixtureContext): Promise<FamilyResult> {
+  const fixtureId = "core-range-two-commits";
+  const content = "Consider nil guard for Add";
+  const existingCode = "// TODO: handle nil?";
+  const repo = await createTwoCommitRepo();
+  const responses = makeOneCommentResponses(content, existingCode, "main.go");
+  const { ocrResult, piResult, ocrCaptures, piCaptures } = await runFamilyFixture({
+    id: fixtureId,
+    context,
+    makeRepo: async () => repo,
+    ocrCommandExtra: ["--from", "HEAD~1", "--to", "HEAD", "--format", "json", "--no-filter"],
+    piCommandExtra: ["--no-filter", "--json", "--from", "HEAD~1", "--to", "HEAD"],
+    ocrResponses: responses,
+    piResponses: responses,
+  });
+  const ocrCmd: readonly string[] = [context.ocrBinary, "review", "--repo", "<REPO>", "--from", "HEAD~1", "--to", "HEAD", "--format", "json", "--no-filter"];
+  const piCmd = piResult.command;
+  const compared = compareCoreReview({
+    ocrCommand: ocrCmd,
+    piCommand: piCmd,
+    ocrCaptures,
+    piCaptures,
+    ocrStdout: ocrResult.stdout,
+    piStdout: piResult.stdout,
+    ocrExit: ocrResult.exitCode,
+    piExit: piResult.exitCode,
+    requireLineNumbers: true,
+  });
+  return { fixtureId, equal: compared.equal, assertions: familyAssertionCount(1), notObservable: compared.notObservable, mismatches: compared.mismatches };
+}
+
+async function runFamily6(context: FixtureContext): Promise<FamilyResult> {
+  const fixtureId = "core-commit-sha";
+  const repo = await createTwoCommitRepo();
+  const commit = repo.secondCommit;
+  const content = "Consider nil guard for Add";
+  const existingCode = "// TODO: handle nil?";
+  const responses = makeOneCommentResponses(content, existingCode, "main.go");
+  const { ocrResult, piResult, ocrCaptures, piCaptures } = await runFamilyFixture({
+    id: fixtureId,
+    context,
+    makeRepo: async () => repo,
+    ocrCommandExtra: ["--commit", commit, "--format", "json", "--no-filter"],
+    piCommandExtra: ["--no-filter", "--json", "--commit", commit],
+    ocrResponses: responses,
+    piResponses: responses,
+  });
+  const ocrCmd: readonly string[] = [context.ocrBinary, "review", "--repo", "<REPO>", "--commit", commit, "--format", "json", "--no-filter"];
+  const piCmd = piResult.command;
+  const compared = compareCoreReview({
+    ocrCommand: ocrCmd,
+    piCommand: piCmd,
+    ocrCaptures,
+    piCaptures,
+    ocrStdout: ocrResult.stdout,
+    piStdout: piResult.stdout,
+    ocrExit: ocrResult.exitCode,
+    piExit: piResult.exitCode,
+    requireLineNumbers: true,
+  });
+  return { fixtureId, equal: compared.equal, assertions: familyAssertionCount(1), notObservable: compared.notObservable, mismatches: compared.mismatches };
+}
+
+function makeMultiFileLargeContent(name: string): string {
+  let body = `package main\nfunc Func${name.replace(/\W/g, "")}() int {\n  // TODO: handle nil?\n`;
+  for (let i = 0; i < 52; i++) {
+    body += `  _ = ${i}\n`;
+  }
+  body += "  return 1\n}\n";
+  return body;
+}
+
+async function createMultiFileRepoLarge(fileNames: readonly string[]): Promise<{ dir: string; files: readonly string[]; cleanup: () => Promise<void> }> {
+  const dir = await mkdtemp(join(tmpdir(), "ocr-core-multi-plan-"));
+  const cleanup = async (): Promise<void> => {
+    await rm(dir, { recursive: true, force: true }).catch(() => {});
+  };
+  gitSync(dir, ["init", "-q"]);
+  gitSync(dir, ["config", "user.email", "harness@pi-reviewer.test"]);
+  gitSync(dir, ["config", "user.name", "harness"]);
+  gitSync(dir, ["config", "commit.gpgsign", "false"]);
+  const fixedDate = new Date(Date.UTC(2026, 0, 1, 0, 0, 0)).toISOString();
+  const env = { ...process.env, GIT_AUTHOR_DATE: fixedDate, GIT_COMMITTER_DATE: fixedDate };
+  for (const f of fileNames) {
+    await writeFile(join(dir, f), `package main\nfunc Func${f.replace(/\W/g, "")}() int { return 1 }\n`, "utf-8");
+  }
+  let res = spawnSync("git", ["add", "-A"], { cwd: dir, env, encoding: "utf-8" });
+  if (res.status !== 0) throw new Error(`git add failed: ${res.stderr}`);
+  res = spawnSync("git", ["commit", "-q", "-m", "initial"], { cwd: dir, env, encoding: "utf-8" });
+  if (res.status !== 0) throw new Error(`git commit failed: ${res.stderr}`);
+  for (const f of fileNames) {
+    await writeFile(join(dir, f), makeMultiFileLargeContent(f), "utf-8");
+  }
+  return { dir, files: [...fileNames].sort(), cleanup };
+}
+
+function makePlanResponse(content: string, id: string, created: number): unknown {
+  return {
+    id,
+    object: "chat.completion",
+    created,
+    model: "test-model",
+    choices: [
+      {
+        index: 0,
+        message: { role: "assistant", content, tool_calls: [] },
+        finish_reason: "stop",
+      },
+    ],
+    usage: { prompt_tokens: 80, completion_tokens: 20, total_tokens: 100 },
+  };
+}
+
+function makeMultiFileWithPlanResponses(files: readonly string[], content: string, existingCode: string, planContent = "Focus on nil handling."): readonly unknown[] {
+  const responses: unknown[] = [];
+  let n = 1;
+  for (const f of files) {
+    responses.push(makePlanResponse(planContent, `chatcmpl-plan-${n}`, n));
+    n++;
+    responses.push(makeCodeCommentResponse(content, existingCode, f, { prompt: 100, completion: 50, total: 150 }, `chatcmpl-mf-${n}`, n));
+    n++;
+    responses.push(makeTaskDoneResponse("DONE", { prompt: 50, completion: 10, total: 60 }, `chatcmpl-mf-${n}`, n));
+    n++;
+  }
+  return responses;
+}
+
+async function runFamily7(context: FixtureContext): Promise<FamilyResult> {
+  const fixtureId = "core-multi-file-orchestration";
+  const fileNames = ["alpha.go", "beta.go"];
+  const repoSmall = await createMultiFileRepo(fileNames);
+  const content = "Consider nil guard";
+  const existingCode = "// TODO: handle nil?";
+  const responsesSmall = makeMultiFileResponses(fileNames, content, existingCode);
+  const { ocrResult, piResult, ocrCaptures, piCaptures } = await runFamilyFixture({
+    id: fixtureId,
+    context,
+    makeRepo: async () => repoSmall,
+    ocrResponses: responsesSmall,
+    piResponses: responsesSmall,
+  });
+  const ocrCmd: readonly string[] = [context.ocrBinary, "review", "--repo", "<REPO>", "--format", "json", "--no-filter"];
+  const piCmd = piResult.command;
+  const compared = compareCoreReview({
+    ocrCommand: ocrCmd,
+    piCommand: piCmd,
+    ocrCaptures,
+    piCaptures,
+    ocrStdout: ocrResult.stdout,
+    piStdout: piResult.stdout,
+    ocrExit: ocrResult.exitCode,
+    piExit: piResult.exitCode,
+    expectedCommentCount: fileNames.length,
+    requireLineNumbers: true,
+  });
+
+  // Planning is not triggered here because diffs are below the 50-line threshold.
+  const notObservable = [...compared.notObservable, "planning:not_triggered_below_threshold"];
+
+  // Planning fixture with files large enough to trigger plan phase
+  const fixtureIdPlan = "core-multi-file-planning";
+  const planFiles = ["large.go"];
+  const repoPlan = await createMultiFileRepoLarge(planFiles);
+  const responsesPlan = makeMultiFileWithPlanResponses(planFiles, content, existingCode);
+  const planResult = await runFamilyFixture({
+    id: fixtureIdPlan,
+    context,
+    makeRepo: async () => repoPlan,
+    ocrResponses: responsesPlan,
+    piResponses: responsesPlan,
+  });
+  const comparedPlan = compareCoreReview({
+    ocrCommand: ocrCmd,
+    piCommand: planResult.piResult.command,
+    ocrCaptures: planResult.ocrCaptures,
+    piCaptures: planResult.piCaptures,
+    ocrStdout: planResult.ocrResult.stdout,
+    piStdout: planResult.piResult.stdout,
+    ocrExit: planResult.ocrResult.exitCode,
+    piExit: planResult.piResult.exitCode,
+    expectedCommentCount: planFiles.length,
+    requireLineNumbers: true,
+  });
+
+  const allEqual = compared.equal && comparedPlan.equal;
+  const allMismatches = [...compared.mismatches, ...comparedPlan.mismatches];
+  const allNotObservable = notObservable.filter((v, i, a) => a.indexOf(v) === i);
+  return { fixtureId, equal: allEqual, assertions: familyAssertionCount(fileNames.length) + familyAssertionCount(planFiles.length), notObservable: allNotObservable, mismatches: allMismatches };
+}
+
+async function runFamily8(context: FixtureContext): Promise<FamilyResult> {
+  const fixtureId = "core-incomplete-partial";
+  const content = "Consider nil guard";
+  const existingCode = "// TODO: handle nil?";
+  const files = ["alpha.go", "beta.go"];
+  // alpha completes; beta exhausts the 30-round tool budget and is marked failed(budget).
+  const repo = await createMultiFileRepo(files);
+  const [completeFile, incompleteFile] = [files[0]!, files[1]!];
+  const responses = makePartialResponses(completeFile, incompleteFile, content, existingCode, 30);
+  const { ocrResult, piResult, ocrCaptures, piCaptures } = await runFamilyFixture({
+    id: fixtureId,
+    context,
+    makeRepo: async () => repo,
+    ocrCommandExtra: ["--format", "json", "--no-filter", "--timeout", "120"],
+    piCommandExtra: ["--no-filter", "--json"],
+    ocrResponses: responses,
+    piResponses: responses,
+    timeoutMs: 240000,
+  });
+  const ocrCmd: readonly string[] = [context.ocrBinary, "review", "--repo", "<REPO>", "--format", "json", "--no-filter", "--timeout", "120"];
+  const piCmd = piResult.command;
+  const compared = compareCoreReview({
+    ocrCommand: ocrCmd,
+    piCommand: piCmd,
+    ocrCaptures,
+    piCaptures,
+    ocrStdout: ocrResult.stdout,
+    piStdout: piResult.stdout,
+    ocrExit: ocrResult.exitCode,
+    piExit: piResult.exitCode,
+    expectedCommentCount: 2,
+    expectedStatus: "partial",
+    expectedExit: 0,
+  });
+  return { fixtureId, equal: compared.equal, assertions: familyAssertionCount(2) + 2, notObservable: compared.notObservable, mismatches: compared.mismatches };
 }
 
 // ---------------------------------------------------------------------------
@@ -1341,6 +1995,32 @@ async function main(): Promise<void> {
     id: "core-preview-selection-exclusion",
     expectEqual: true,
   });
+
+  // Families 2-8: differential black-box coverage
+  const context: FixtureContext = { artifactDir, ocrBinary, consumerBinPath, consumerDir };
+
+  const familyResults: FamilyResult[] = [];
+  familyResults.push(await runFamily2(context));
+  familyResults.push(await runFamily3(context, "keep", "core-filter-keep"));
+  familyResults.push(await runFamily3(context, "remove", "core-filter-remove"));
+  familyResults.push(await runFamily5(context));
+  familyResults.push(await runFamily6(context));
+  familyResults.push(await runFamily7(context));
+  familyResults.push(await runFamily8(context));
+
+  for (const r of familyResults) {
+    fixtures.push(r.fixtureId);
+    assertions += r.assertions;
+    for (const n of r.notObservable) notObservable.push(n);
+    if (!r.equal) {
+      const msg = (r.mismatches ?? []).map((m) => `${m.fieldPath}: ${m.message}`).join("; ").slice(0, 1200);
+      const fixtureArtifactDir = join(artifactDir, r.fixtureId);
+      mkdirSync(fixtureArtifactDir, { recursive: true });
+      await writeFile(join(fixtureArtifactDir, "mismatches.txt"), msg, "utf-8").catch(() => {});
+      fail(`Family fixture ${r.fixtureId} failed: ${msg}`, artifactDir);
+    }
+    log(`PASS ${r.fixtureId}`);
+  }
 
   // Cleanup OCR binary
   await cleanupOcrBinary().catch(() => {});
