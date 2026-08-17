@@ -276,6 +276,7 @@ export interface CreatePiTransportForFileOptions {
 export class PiTransport implements TranscriptLlmTransport {
   private readonly session: PiSession;
   private readonly promptRef: { current: string | undefined } | undefined;
+  private completeChain: Promise<unknown> = Promise.resolve();
 
   constructor(session: PiSession, promptRef?: { current: string | undefined }) {
     this.session = session;
@@ -309,6 +310,21 @@ export class PiTransport implements TranscriptLlmTransport {
     const { req, signal } = normalizeCompleteArgs(a, b);
 
     if (signal.aborted) throw createAbortError();
+
+    // Serialize concurrent complete() calls — the Pi session is stateful
+    // and cannot handle overlapping prompt/continue/abort sequences.
+    // The CommentWorkerPool may run relocation async while the main loop
+    // continues; this chain ensures calls execute one at a time.
+    const runComplete = (): Promise<ChatResponse> => this.doComplete(req, signal);
+    const chained = this.completeChain.then(runComplete, runComplete);
+    this.completeChain = chained.then(
+      () => undefined,
+      () => undefined,
+    );
+    return chained;
+  }
+
+  private async doComplete(req: ChatRequest, signal: AbortSignal): Promise<ChatResponse> {
 
     // -----------------------------------------------------------------
     // 1) Dynamic allowlist — sync req.tools via setActiveToolsByName

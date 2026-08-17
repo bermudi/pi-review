@@ -648,8 +648,6 @@ export class Runner {
             d = null;
           }
         }
-        const dbgRepr = (s: string): string => JSON.stringify(s.slice(0, 80));
-        console.error(`[DEBUG-RELOC] cm.path=${cm.path} existingCode=${dbgRepr(cm.existingCode ?? "")} d=${d !== null ? "non-null" : "null"} reLocationTaskRaw=${reLocationTaskRaw ? "set" : "null"}`);
         if (d !== null && cm.existingCode && cm.existingCode !== "") {
           const alreadyResolved = (cm.startLine ?? 0) > 0 || (cm.endLine ?? 0) > 0;
           if (!alreadyResolved) {
@@ -659,10 +657,8 @@ export class Runner {
             } catch {
               ok = false;
             }
-            console.error(`[DEBUG-RELOC] resolveComment ok=${ok} d.newFileContent=${dbgRepr(d.newFileContent.slice(0, 100))}`);
             if (!ok && reLocationTaskRaw) {
               const msgs = buildReLocationMessagesLocal(cm, d, reLocationTaskRaw as unknown as never);
-              console.error(`[DEBUG-RELOC] buildReLocationMessagesLocal msgs=${msgs ? msgs.length : "null"}`);
               if (msgs && msgs.length > 0) {
                 const req: ChatRequest = {
                   model: this.deps.model,
@@ -670,9 +666,7 @@ export class Runner {
                   maxTokens: getCompletionTokenLimit(this.deps.template),
                 };
                 try {
-                  console.error(`[DEBUG-RELOC] calling transport for relocation, sig.aborted=${sig.aborted}`);
                   const resp = await this.callTransport(sig, req);
-                  console.error(`[DEBUG-RELOC] relocation resp received, content=${dbgRepr(resp.content ?? "")}`);
                   if (resp.usage) this.recordUsage(resp.usage);
                   const code = extractCodeBlockLocal(resp.content ?? "");
                   if (code !== "") {
