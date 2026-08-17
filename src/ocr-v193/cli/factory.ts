@@ -140,7 +140,7 @@ export function createReviewRunnerFactory(
     }
 
     // One Pi transport per review invocation; concurrency=1 serialises per-file use.
-    const transport = await createPiTransportForFile({ cwd, agentDir, tools: mainToolDefs, model: modelId });
+    const transport = await createPiTransportForFile({ cwd, agentDir, tools: mainToolDefs });
 
     const runId = randomUUID();
     const builder = new ManifestBuilder(runId, "review");
