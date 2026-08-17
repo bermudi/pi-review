@@ -401,10 +401,10 @@ export function createScanRunnerFactory(
     const cwd = repoDir;
     const agentDirEnv = process.env["PI_CODING_AGENT_DIR"];
     const agentDir = agentDirEnv !== undefined && agentDirEnv !== "" ? agentDirEnv : `${process.env["HOME"] ?? "/tmp"}/.pi/agent`;
-    const transport = await createPiTransportForFile({ cwd, agentDir, tools: [] });
-
     const allMainToolDefs = mainTaskToolDefs();
     const mainToolDefs = allMainToolDefs.filter((t) => t.function.name !== "file_read_diff");
+
+    const transport = await createPiTransportForFile({ cwd, agentDir, tools: mainToolDefs });
 
     const maxTokensBudget = opts.maxTokensBudget > 0 ? opts.maxTokensBudget : (template.MaxTokensBudget ?? 0);
 
