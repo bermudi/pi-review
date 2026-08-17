@@ -192,6 +192,7 @@ export class Agent {
   private inputResolution: InputResolution = { resolvedBase: "", resolvedHead: "", exactRange: "" };
   private repoRemoteIdentity = "";
   private warnings: Array<{ type: string; file: string; message: string }> = [];
+  private subtaskOutcomes: Map<string, { completed: boolean; stop?: string; error?: string }> = new Map();
 
   // Public for test harness to observe pool draining behavior if needed
   public readonly commentWorkerPool: CommentWorkerPool;
@@ -262,6 +263,34 @@ export class Agent {
 
   totalTokensUsed(): number {
     return this.runner.TotalTokensUsed();
+  }
+
+  totalInputTokens(): number {
+    return this.runner.TotalInputTokens();
+  }
+
+  totalOutputTokens(): number {
+    return this.runner.TotalOutputTokens();
+  }
+
+  totalCacheReadTokens(): number {
+    return this.runner.TotalCacheReadTokens();
+  }
+
+  totalCacheWriteTokens(): number {
+    return this.runner.TotalCacheWriteTokens();
+  }
+
+  toolCalls(): Record<string, number> {
+    return this.runner.toolCallsObject();
+  }
+
+  completedPaths(): readonly string[] {
+    return this.diffs.filter((d) => !d.isDeleted).map((d) => d.newPath);
+  }
+
+  subtaskOutcomesMap(): ReadonlyMap<string, { completed: boolean; stop?: string; error?: string }> {
+    return this.subtaskOutcomes;
   }
 
   // -- lifecycle
@@ -539,6 +568,7 @@ export class Agent {
           };
           try {
             const result = await this.executeSubtask(taskSignal, diff);
+            this.subtaskOutcomes.set(diff.newPath, { completed: result.completed, stop: result.stop, error: result.error?.message });
             cleanup();
             if (!result.completed && result.error !== null) {
               failed++;
@@ -554,6 +584,7 @@ export class Agent {
             cleanup();
             failed++;
             const msg = err instanceof Error ? err.message : String(err);
+            this.subtaskOutcomes.set(diff.newPath, { completed: false, error: msg });
             this.warnings.push({ type: "subtask_error", file: diff.newPath, message: msg });
             console.error(`[ocr] Subtask panic for ${diff.newPath}: ${msg}`);
           } finally {
@@ -564,6 +595,7 @@ export class Agent {
 
         try {
           const result = await this.executeSubtask(taskSignal, diff);
+          this.subtaskOutcomes.set(diff.newPath, { completed: result.completed, stop: result.stop, error: result.error?.message });
           if (!result.completed && result.error !== null) {
             failed++;
             this.warnings.push({ type: "subtask_error", file: diff.newPath, message: result.error.message });
@@ -572,6 +604,7 @@ export class Agent {
         } catch (err) {
           failed++;
           const msg = err instanceof Error ? err.message : String(err);
+          this.subtaskOutcomes.set(diff.newPath, { completed: false, error: msg });
           this.warnings.push({ type: "subtask_error", file: diff.newPath, message: msg });
           console.error(`[ocr] Subtask panic for ${diff.newPath}: ${msg}`);
         } finally {

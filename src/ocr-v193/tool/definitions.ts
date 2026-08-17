@@ -20,7 +20,7 @@ export interface Provider {
   Tool(): ToolType;
   Execute(ctx: unknown, args: Record<string, unknown>): Promise<string> | string;
   // Allow calling with just args for TS convenience — mirrors Execute with context.Background.
-  execute?(args: Record<string, unknown>, signal?: AbortSignal): Promise<string> | string;
+  execute(args: Record<string, unknown>, signal?: AbortSignal): Promise<string> | string;
 }
 
 // Alias for llmloop compatibility: ToolProvider shape
@@ -140,6 +140,10 @@ export class StubProvider implements Provider {
     return this.tool;
   }
 
+  execute(_args: Record<string, unknown>, _signal?: AbortSignal): Promise<string> | string {
+    return this.Execute(undefined, _args);
+  }
+
   async Execute(_ctx: unknown, _args: Record<string, unknown>): Promise<string> {
     return NotAvailableMsg;
   }
@@ -160,6 +164,10 @@ export class BuiltinToolProvider implements Provider {
 
   Tool(): ToolType {
     return this.tool;
+  }
+
+  execute(args: Record<string, unknown>, signal?: AbortSignal): Promise<string> | string {
+    return this.fn(signal ?? undefined, args);
   }
 
   async Execute(ctx: unknown, args: Record<string, unknown>): Promise<string> {

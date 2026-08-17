@@ -8,6 +8,7 @@
 
 import { isAllowedExt, isExcludedPath } from "../rules/allowed_ext.js";
 import type { FileFilter } from "../rules/system_rules.js";
+import { minimatch } from "minimatch";
 import type { Diff } from "../model/diff.js";
 import type { Preview, PreviewEntry, ExcludeReason } from "../model/preview.js";
 import { ExcludeBinary, ExcludeUserRule, ExcludeExtension, ExcludeDefaultPath, ExcludeDeleted, ExcludeNone } from "../model/preview.js";
@@ -65,38 +66,55 @@ export function whyExcluded(
   const f: unknown = fileFilter as unknown;
   if (f !== null && f !== undefined && typeof f === "object") {
     const rec = f as Record<string, unknown>;
+
+    const arrays = {
+      include: [] as unknown[],
+      exclude: [] as unknown[],
+    };
+    const incArr = rec["include"] as unknown;
+    if (Array.isArray(incArr)) arrays.include = incArr;
+    const incAlt = rec["Include"] as unknown;
+    if (Array.isArray(incAlt)) arrays.include = arrays.include.concat(incAlt);
+    const excArr = rec["exclude"] as unknown;
+    if (Array.isArray(excArr)) arrays.exclude = excArr;
+    const excAlt = rec["Exclude"] as unknown;
+    if (Array.isArray(excAlt)) arrays.exclude = arrays.exclude.concat(excAlt);
+
+    const matchesAny = (patterns: readonly unknown[], p: string): boolean => {
+      const lowerPath = p.toLowerCase();
+      for (const raw of patterns) {
+        if (typeof raw !== "string" || raw === "") continue;
+        const pat = raw.toLowerCase();
+        if (minimatch(lowerPath, pat, { dot: true, partial: true, nocase: false })) return true;
+      }
+      return false;
+    };
+
     // Method style
     const isUserExcludedFn = rec["isUserExcluded"] as ((p: string) => boolean) | undefined;
     const hasIncludeFn = rec["hasInclude"] as (() => boolean) | undefined;
     const isUserIncludedFn = rec["isUserIncluded"] as ((p: string) => boolean) | undefined;
-    // Alternate naming (IsUserExcluded)
     const isUserExcludedAlt = rec["IsUserExcluded"] as ((p: string) => boolean) | undefined;
     const hasIncludeAlt = rec["HasInclude"] as (() => boolean) | undefined;
     const isUserIncludedAlt = rec["IsUserIncluded"] as ((p: string) => boolean) | undefined;
 
-    const checkExcluded =
+    const isExcludedMethod =
       (typeof isUserExcludedFn === "function" && isUserExcludedFn(path)) ||
-      (typeof isUserExcludedAlt === "function" && isUserExcludedAlt(path));
-    if (checkExcluded) return ExcludeUserRule;
+      (typeof isUserExcludedAlt === "function" && isUserExcludedAlt(path)) ||
+      matchesAny(arrays.exclude, path);
+    if (isExcludedMethod) return ExcludeUserRule;
 
     const hasInc =
       (typeof hasIncludeFn === "function" && hasIncludeFn()) ||
-      (typeof hasIncludeAlt === "function" && hasIncludeAlt());
-    // Also support plain array inspection
-    let hasIncludeViaArrays = false;
-    if (!hasInc) {
-      const incArr = rec["include"] as unknown;
-      if (Array.isArray(incArr) && incArr.length > 0) hasIncludeViaArrays = true;
-      const incAlt = rec["Include"] as unknown;
-      if (Array.isArray(incAlt) && incAlt.length > 0) hasIncludeViaArrays = true;
-    }
-    const effectiveHasInclude = hasInc || hasIncludeViaArrays;
+      (typeof hasIncludeAlt === "function" && hasIncludeAlt()) ||
+      arrays.include.length > 0;
 
-    if (effectiveHasInclude) {
+    if (hasInc) {
       const included =
         (typeof isUserIncludedFn === "function" && isUserIncludedFn(path)) ||
-        (typeof isUserIncludedAlt === "function" && isUserIncludedAlt(path));
-      if (included) return ExcludeNone;
+        (typeof isUserIncludedAlt === "function" && isUserIncludedAlt(path)) ||
+        matchesAny(arrays.include, path);
+      if (!included) return ExcludeUserRule;
     }
   }
 

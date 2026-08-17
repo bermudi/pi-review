@@ -402,6 +402,10 @@ export class FileReadProvider {
     return FileRead;
   }
 
+  execute(args: Record<string, unknown>, signal?: AbortSignal): Promise<string> | string {
+    return this.Execute(signal ?? undefined, args);
+  }
+
   async Execute(ctx: unknown, args: Record<string, unknown>): Promise<string> {
     const a = (args ?? (ctx as Record<string, unknown>)) as Record<string, unknown>;
     // Support both (signal, args) and (args) calling conventions
@@ -518,6 +522,10 @@ export class FileReadDiffProvider {
     this.SetDiffMap(dm);
   }
 
+  execute(args: Record<string, unknown>, _signal?: AbortSignal): Promise<string> | string {
+    return this.Execute(undefined, args);
+  }
+
   async Execute(_ctx: unknown, args: Record<string, unknown>): Promise<string> {
     const pathArray = Array.isArray(args["path_array"]) ? (args["path_array"] as unknown[]) : [];
     if (pathArray.length === 0) return "Error: no files found";
@@ -561,6 +569,10 @@ export class CodeSearchProvider {
 
   Tool(): Tool {
     return CodeSearch;
+  }
+
+  execute(args: Record<string, unknown>, signal?: AbortSignal): Promise<string> | string {
+    return this.Execute(signal ?? undefined, args);
   }
 
   async Execute(ctx: unknown, args: Record<string, unknown>): Promise<string> {
@@ -773,6 +785,10 @@ export class FileFindProvider {
 
   Tool(): Tool {
     return FileFind;
+  }
+
+  execute(args: Record<string, unknown>, signal?: AbortSignal): Promise<string> | string {
+    return this.Execute(signal ?? undefined, args);
   }
 
   async Execute(ctx: unknown, args: Record<string, unknown>): Promise<string> {

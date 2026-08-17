@@ -9,18 +9,16 @@ import type { ReviewRunner } from "./review.js";
 import type { LlmComment } from "../model/review.js";
 import { loadDefaultTemplate, applyLanguage } from "../template/template.js";
 import { newResolver } from "../rules/system_rules.js";
-import { mainTaskToolDefs } from "../tool/tools-config.js";
+import { mainTaskToolDefs, planTaskToolDefs } from "../tool/tools-config.js";
 import { CommentCollector } from "../tool/collector.js";
-import { Runner } from "../llmloop/loop.js";
+import { Agent, newAgent, reviewItemFingerprint } from "../agent/agent.js";
+import { reviewModeString } from "../agent/util.js";
 import { createPiTransportForFile } from "../pi-adapter/pi-transport.js";
 import { FileReader, FileReadProvider, DiffMap, FileReadDiffProvider, CodeSearchProvider, FileFindProvider } from "../tool/filereader.js";
 import { Registry } from "../tool/definitions.js";
 import { Provider, ModeWorkspace, ModeRange, ModeCommit } from "../diff/git.js";
 import { Runner as GitRunner } from "../diff/runner.js";
-import { ManifestBuilder } from "../session/manifest.js";
-import { reviewItemFingerprint } from "../agent/agent.js";
-import { stripEmptyPlanBlock } from "../agent/util.js";
-import { ItemID } from "../session/manifest.js";
+import { ManifestBuilder, ItemID, StatePartial, StateFailed, StateSkipped, FailureBudget, FailureTimeout, FailureUnknown } from "../session/manifest.js";
 import type { Diff } from "../model/diff.js";
 
 /**
@@ -28,8 +26,8 @@ import type { Diff } from "../model/diff.js";
  * This is the factory injected into the parity CLI (src/ocr-v193/cli/index.ts)
  * when --engine ocr-v193 delegates from the legacy CLI.
  *
- * It uses only public Pi SDK APIs (createPiTransportForFile) and real OCR
- * tool providers (FileReader-based). No stubs, no any, failures are not swallowed.
+ * Uses the v1.9.3 Agent orchestrator so per-file loops, planning, filtering,
+ * relocation, concurrency, and budget behaviour are all exercised.
  */
 export function createReviewRunnerFactory(
   opts: ReviewOptions,
@@ -37,31 +35,33 @@ export function createReviewRunnerFactory(
 ): (signal?: AbortSignal) => Promise<ReviewRunner> {
   return async (signal?: AbortSignal): Promise<ReviewRunner> => {
     const effectiveSignal = signal ?? new AbortController().signal;
-
-    // Resolve repo dir: opts.repoDir may be empty (means cwd)
     const repoDir = opts.repoDir !== "" ? opts.repoDir : ioCwd;
 
-    // Load template and tool defs (verbatim, hash-verified)
     let template = loadDefaultTemplate();
-    // Apply the default language directive (English) so system prompts end with
-    // "Always respond in English.", matching OCR v1.9.3's ApplyLanguage behavior.
     template = applyLanguage(template, "English");
-    const toolDefs = mainTaskToolDefs();
+    if (opts.maxTools > 0) {
+      template = { ...template, MaxToolRequestTimes: opts.maxTools };
+    }
+    if (opts.maxTokens > 0) {
+      template = { ...template, MaxTokens: opts.maxTokens };
+    }
 
-    // Load the composed rule resolver (custom > project > global > system)
-    // so {{system_rule}} can be resolved per file, just like Agent.resolveSystemRule.
+    const mainToolDefs = mainTaskToolDefs();
+    const planToolDefs = planTaskToolDefs();
+
     const ruleSet = newResolver(repoDir, opts.rulePath);
     const ruleResolver = ruleSet.resolver;
+    const fileFilter = ruleSet.filter;
 
-    // Comment collector (per-Agent, isolated)
     const collector = new CommentCollector();
 
-    // Determine diff mode from opts (from/to/commit)
     const from = opts.from;
     const to = opts.to;
     const commit = opts.commit;
+    const reviewMode = reviewModeString(from, to, commit);
+
     let mode: number;
-    let ref: string;
+    let ref = "";
     if (commit !== "") {
       mode = ModeCommit;
       ref = commit;
@@ -70,10 +70,8 @@ export function createReviewRunnerFactory(
       ref = to !== "" ? to : "HEAD";
     } else {
       mode = ModeWorkspace;
-      ref = "";
     }
 
-    // FileReader for tool execution (real, not stub)
     const fileReader = new FileReader({ RepoDir: repoDir, Mode: mode as never, Ref: ref });
     const diffMap = new DiffMap(new Map<string, string>());
     const registry = new Registry();
@@ -83,18 +81,10 @@ export function createReviewRunnerFactory(
     registry.Register(new FileFindProvider(fileReader));
     registry.Freeze();
 
-    // Pi transport — one session per factory invocation, reused per file via Runner's per-file transport?
-    // For Runner we need one transport that will be reused per file? But PiTransport is per-file session.
-    // Instead we create a transport per file inside RunPerFile loop via factory.
-    // However Runner expects a single llmClient. We follow pi-real-runner pattern: create one transport
-    // and wrap it, but for true per-file isolation we create a new transport per file inside loop.
-    // Simpler: create a transport factory and let Runner use it per file via a wrapper that creates new session per file.
-    // For now, we create a single transport and reuse it; PiTransport's history sync handles per-file messages.
     const cwd = repoDir;
     const agentDirEnv = process.env["PI_CODING_AGENT_DIR"];
     const agentDir = agentDirEnv !== undefined && agentDirEnv !== "" ? agentDirEnv : `${process.env["HOME"] ?? "/tmp"}/.pi/agent`;
 
-    // Model resolution: opts.model may be "provider/model" or "model"
     let modelId = "test-model";
     if (opts.model !== "") {
       const slash = opts.model.indexOf("/");
@@ -106,14 +96,15 @@ export function createReviewRunnerFactory(
       }
     }
 
-    const singleTransport = await createPiTransportForFile({ cwd, agentDir, tools: toolDefs });
+    const gitRunner = new GitRunner(opts.maxGitProcs > 0 ? opts.maxGitProcs : 16);
 
-    // Provider for diffs
-    const gitRunner = new GitRunner(16);
+    // Load diffs and input resolution ourselves so we can build a manifest before
+    // running the agent, matching the original factory flow.
     let diffs: Diff[] = [];
     let inputMode = "workspace";
     let resolvedBase = "";
     let resolvedHead = "";
+    let remoteIdentity = "";
     try {
       let provider: Provider;
       if (mode === ModeCommit) {
@@ -127,12 +118,13 @@ export function createReviewRunnerFactory(
         inputMode = "workspace";
       }
       diffs = (await provider.getDiff(effectiveSignal)) as unknown as Diff[];
+      const res = (await (provider as unknown as { resolveInput: (s?: AbortSignal) => Promise<{ resolvedBase: string; resolvedHead: string }> }).resolveInput(effectiveSignal)) as { resolvedBase: string; resolvedHead: string };
+      resolvedBase = res.resolvedBase ?? "";
+      resolvedHead = res.resolvedHead ?? "";
       try {
-        const res = (await (provider as unknown as { resolveInput: (s?: AbortSignal) => Promise<{ resolvedBase: string; resolvedHead: string }> }).resolveInput(effectiveSignal)) as { resolvedBase: string; resolvedHead: string };
-        resolvedBase = res.resolvedBase ?? "";
-        resolvedHead = res.resolvedHead ?? "";
+        remoteIdentity = await (provider as unknown as { remoteIdentity: (s?: AbortSignal) => Promise<string> }).remoteIdentity(effectiveSignal);
       } catch {
-        // ignore
+        remoteIdentity = "";
       }
       // Inject diffMap for file_read_diff tool
       const mapInternal = new Map<string, string>();
@@ -140,37 +132,16 @@ export function createReviewRunnerFactory(
         if (d.newPath !== "/dev/null") mapInternal.set(d.newPath, d.diff);
       }
       const newDiffMap = new DiffMap(mapInternal);
-      // Replace diffMap in registry's provider (best-effort)
-      try {
-        const prov = registry.Get("file_read_diff") as unknown as { setDiffMap?: (m: DiffMap) => void; SetDiffMap?: (m: DiffMap) => void };
-        if (prov !== undefined && typeof prov.setDiffMap === "function") prov.setDiffMap(newDiffMap);
-        else if (prov !== undefined && typeof prov.SetDiffMap === "function") prov.SetDiffMap(newDiffMap);
-      } catch {
-        // ignore
-      }
+      const prov = registry.Get("file_read_diff") as unknown as { setDiffMap?: (m: DiffMap) => void; SetDiffMap?: (m: DiffMap) => void };
+      if (prov !== undefined && typeof prov.setDiffMap === "function") prov.setDiffMap(newDiffMap);
+      else if (prov !== undefined && typeof prov.SetDiffMap === "function") prov.SetDiffMap(newDiffMap);
     } catch (e) {
-      // Do not swallow — propagate as failure that runReviewContext will handle
-      await singleTransport.dispose().catch(() => {});
       throw new Error(`load diffs: ${String((e as Error).message)}`);
     }
 
-    // Runner — per Agent wiring, but we use Runner directly for the loop
-    const runner = new Runner({
-      model: modelId,
-      template: template as unknown as never,
-      llmClient: singleTransport as unknown as never,
-      mainToolDefs: toolDefs as unknown as never,
-      commentCollector: collector as unknown as never,
-      toolRegistry: registry as unknown as never,
-      diffLookup: ((path: string): Diff | null => {
-        for (const dd of diffs) {
-          if (dd.newPath === path || dd.oldPath === path) return dd;
-        }
-        return null;
-      }) as unknown as never,
-    });
+    // One Pi transport per review invocation; concurrency=1 serialises per-file use.
+    const transport = await createPiTransportForFile({ cwd, agentDir, tools: mainToolDefs, model: modelId });
 
-    // Manifest builder
     const runId = randomUUID();
     const builder = new ManifestBuilder(runId, "review");
     builder.SetInput({
@@ -185,7 +156,11 @@ export function createReviewRunnerFactory(
       model: modelId,
       configuredConcurrency: opts.concurrency,
     });
-    // Register selected
+    if (remoteIdentity !== "") {
+      builder.SetRepository({ identitySha256: remoteIdentity });
+    }
+
+    const selectedPaths: string[] = [];
     for (const d of diffs) {
       if (d.isDeleted) continue;
       const oldPath = d.oldPath === "/dev/null" ? "" : d.oldPath;
@@ -194,117 +169,112 @@ export function createReviewRunnerFactory(
       const fingerprint = reviewItemFingerprint(inputMode, d);
       const err = builder.RegisterSelected({ itemId, path: newPath, oldPath, fingerprint });
       if (err) {
-        await singleTransport.dispose().catch(() => {});
+        await transport.dispose().catch(() => {});
         throw err;
       }
+      selectedPaths.push(newPath);
     }
     const sealErr = builder.SealSelected();
     if (sealErr) {
-      await singleTransport.dispose().catch(() => {});
+      await transport.dispose().catch(() => {});
       throw sealErr;
     }
 
-    let filesReviewed = 0;
-    let toolCalls: Record<string, number> = {};
-    const perFileCompleted: string[] = [];
-    const warnings: Array<{ type: string; file: string; message: string }> = [];
+    const maxConcurrency = opts.concurrency > 0 ? opts.concurrency : 8;
+    const concurrentTaskTimeoutMinutes = opts.perFileTimeout > 0 ? opts.perFileTimeout : 10;
 
-    // Build base messages from template.MainTask (mirrors Agent.executeSubtask)
-    const buildMessages = (diff: Diff): Array<{ role: string; content: string }> => {
-      const newPath = diff.newPath;
-      // Use template.MainTask messages and replace placeholders
-      return template.MainTask.messages.map((m) => {
-        let content = m.content;
-        content = content.replaceAll("{{current_file_path}}", newPath);
-        content = content.replaceAll("{{diff}}", diff.diff);
-        content = content.replaceAll("{{system_rule}}", ruleResolver.resolve(newPath.toLowerCase()));
-        content = content.replaceAll("{{change_files}}", diffs.filter((d) => d.newPath !== newPath).map((d) => d.newPath).join("\n"));
-        content = content.replaceAll("{{requirement_background}}", opts.background ?? "");
-        // No plan phase in the parity CLI yet; strip the empty plan block
-        // (header + placeholder + trailing blank line) before substituting,
-        // matching OCR's Agent.executeSubtask when planResult === "".
-        content = stripEmptyPlanBlock(content);
-        content = content.replaceAll("{{plan_guidance}}", "");
-        // Replace timestamp placeholder (mirrors Agent.currentDate format: "YYYY-MM-DD HH:MM")
-        content = content.replaceAll("{{current_system_date_time}}", new Date().toISOString().replace("T", " ").slice(0, 16));
-        return { role: m.role, content };
-      });
-    };
+    const agent = newAgent({
+      repoDir,
+      from: from || undefined,
+      to: to || undefined,
+      commit: commit || undefined,
+      reviewMode,
+      template,
+      systemRule: ruleResolver,
+      fileFilter: fileFilter ?? null,
+      llmClient: transport as unknown as import("../llmloop/types.js").AnyLlmClient,
+      tools: registry as unknown as import("../agent/agent.js").ToolRegistryLike,
+      planToolDefs,
+      mainToolDefs,
+      commentCollector: collector as unknown as import("../agent/agent.js").CommentCollectorLike,
+      maxConcurrency,
+      concurrentTaskTimeoutMinutes,
+      background: opts.background,
+      model: modelId,
+      maxTokensBudget: opts.maxTokensBudget > 0 ? opts.maxTokensBudget : undefined,
+      skipFilter: opts.noFilter,
+      runtimeConfig: { protocol: "openai", endpointHost: "", language: "English", timeoutMs: 30000 },
+    });
 
     const startMs = Date.now();
+    let comments: LlmComment[] = [];
+    let runError: Error | null = null;
+    try {
+      comments = await agent.run(effectiveSignal);
+    } catch (err) {
+      runError = err instanceof Error ? err : new Error(String(err));
+    }
+    const elapsedMs = Date.now() - startMs;
 
-    // Run per file
+    // Mark manifest items from agent outcomes.
+    const outcomes = agent.subtaskOutcomesMap();
     for (const d of diffs) {
       if (d.isDeleted) continue;
-      if (effectiveSignal.aborted) {
-        const abortErr = effectiveSignal.reason instanceof Error ? effectiveSignal.reason : new Error(String(effectiveSignal.reason ?? "aborted"));
-        throw abortErr;
-      }
-      const pathForFile = d.newPath;
-      const messages = buildMessages(d);
-      try {
-        const res = await runner.RunPerFile(effectiveSignal as never, messages as never, pathForFile);
-        filesReviewed++;
-        if (res.completed) perFileCompleted.push(pathForFile);
-        const cErr = builder.MarkCompleted(ItemID("review", inputMode, d.oldPath === "/dev/null" ? "" : d.oldPath, d.newPath === "/dev/null" ? "" : d.newPath));
-        if (cErr) warnings.push({ type: "manifest_mark_error", file: pathForFile, message: cErr.message });
-        // Collect tool calls from runner
-        try {
-          const tc = (runner as unknown as { toolCalls?: () => Record<string, number> }).toolCalls?.();
-          if (tc) {
-            for (const [k, v] of Object.entries(tc)) toolCalls[k] = (toolCalls[k] ?? 0) + v;
-          }
-        } catch {
-          // ignore
+      const itemId = ItemID("review", inputMode, d.oldPath === "/dev/null" ? "" : d.oldPath, d.newPath === "/dev/null" ? "" : d.newPath);
+      const outcome = outcomes.get(d.newPath);
+      if (outcome === undefined) {
+        // Never reached (e.g. filtered out or budget pre-check skipped). Mark failed.
+        if (!agent.budgetExceededFlag()) {
+          builder.MarkFailed(itemId, FailureUnknown, "no terminal outcome recorded");
+        } else {
+          builder.MarkFailed(itemId, FailureBudget, "stopped by token budget");
         }
-        if (!res.completed && res.error) {
-          warnings.push({ type: "subtask_error", file: pathForFile, message: res.error.message });
-          builder.MarkFailed(ItemID("review", inputMode, d.oldPath === "/dev/null" ? "" : d.oldPath, d.newPath === "/dev/null" ? "" : d.newPath), "unknown", res.error.message);
-        }
-      } catch (e) {
-        const err = e instanceof Error ? e : new Error(String(e));
-        warnings.push({ type: "subtask_error", file: pathForFile, message: err.message });
-        builder.MarkFailed(ItemID("review", inputMode, d.oldPath === "/dev/null" ? "" : d.oldPath, d.newPath === "/dev/null" ? "" : d.newPath), "unknown", err.message);
-        // Do not swallow — if all fail, runReviewContext will handle
-        if (diffs.length === 1) {
-          await singleTransport.dispose().catch(() => {});
-          throw err;
-        }
+      } else if (outcome.completed) {
+        builder.MarkCompleted(itemId);
+      } else if (outcome.stop === "budget_exceeded") {
+        builder.MarkFailed(itemId, FailureBudget, outcome.error ?? "budget exceeded");
+      } else if (outcome.stop === "empty_rounds") {
+        builder.MarkFailed(itemId, FailureUnknown, "empty rounds");
+      } else if (outcome.error) {
+        builder.MarkFailed(itemId, FailureUnknown, outcome.error);
+      } else {
+        builder.MarkFailed(itemId, FailureUnknown, outcome.stop ?? "unknown");
       }
     }
 
-    // If no diffs, mark skipped
-    if (diffs.length === 0 || diffs.every((d) => d.isDeleted)) {
-      // No selected, manifest will be skipped
+    // If the agent threw before any dispatch, sweep selected -> failed.
+    if (runError !== null) {
+      builder.SetRunFailure("internal", runError.message);
     }
 
-    const elapsedMs = Date.now() - startMs;
     const finalized = builder.Finalize(elapsedMs);
-    const manifest = finalized.manifest ?? null;
+    if (finalized.error) {
+      // Mark partial so the CLI treats it as a real failure path.
+      builder.SetRunFailure("internal", finalized.error.message);
+    }
+    // Re-finalize after possible run failure mutation.
+    const finalManifest = builder.Finalize(elapsedMs);
+    const manifest = finalManifest.manifest ?? null;
+
+    const warnings = agent.warningsList();
     if (finalized.error) {
       warnings.push({ type: "manifest_finalize_error", file: "", message: finalized.error.message });
     }
 
-    const comments = collector.Comments() as unknown as LlmComment[];
+    const filesReviewed = [...outcomes.values()].filter((o) => o.completed).length;
+    const toolCalls = agent.toolCalls();
+    const inputTokens = agent.totalInputTokens();
+    const outputTokens = agent.totalOutputTokens();
+    const totalTokens = agent.totalTokensUsed();
+    const cacheReadTokens = agent.totalCacheReadTokens();
+    const cacheWriteTokens = agent.totalCacheWriteTokens();
 
-    // Capture transport metrics before dispose
-    const inputTokens = (runner as unknown as { totalInputTokens: () => number }).totalInputTokens();
-    const outputTokens = (runner as unknown as { totalOutputTokens: () => number }).totalOutputTokens();
-    const totalTokens = (runner as unknown as { totalTokensUsed: () => number }).totalTokensUsed();
-    const cacheReadTokens = (runner as unknown as { totalCacheReadTokens: () => number }).totalCacheReadTokens();
-    const cacheWriteTokens = (runner as unknown as { totalCacheWriteTokens: () => number }).totalCacheWriteTokens();
-
-    // Dispose transport after collecting metrics
-    await singleTransport.dispose().catch((e) => {
+    await transport.dispose().catch((e) => {
       warnings.push({ type: "transport_dispose_error", file: "", message: String((e as Error).message) });
     });
 
-    // Build ReviewRunner object
     const reviewRunner: ReviewRunner = {
-      run: async (sig?: AbortSignal): Promise<LlmComment[]> => {
-        if (sig?.aborted) throw sig.reason instanceof Error ? sig.reason : new Error(String(sig.reason ?? "aborted"));
-        return comments;
-      },
+      run: async (_sig?: AbortSignal): Promise<LlmComment[]> => comments,
       manifest: manifest ?? undefined,
       warnings: warnings as unknown as never,
       filesReviewed,
@@ -315,7 +285,7 @@ export function createReviewRunnerFactory(
       cacheWriteTokens,
       toolCalls,
       sessionId: runId,
-      budgetExceeded: false,
+      budgetExceeded: agent.budgetExceededFlag(),
       projectSummary: "",
       resumeInfo: undefined,
       diffs: diffs as unknown as never,
