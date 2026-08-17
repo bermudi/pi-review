@@ -113,7 +113,7 @@ function emitScanResult(
   }
 
   if (outputFormat === "sarif") {
-    io.stdout(outputSarifText([...comments], llmIdentity?.model ?? "dev", provider.Warnings(), manifest));
+    io.stdout(outputSarifText([...comments], "dev", provider.Warnings(), manifest));
     return;
   }
 
@@ -130,8 +130,19 @@ function emitScanResult(
 // Main scan entry
 // ---------------------------------------------------------------------------
 
+function modelIdFromScanModel(model: string): string {
+  if (model === "") return "test-model";
+  const slash = model.indexOf("/");
+  if (slash >= 0) {
+    const after = model.slice(slash + 1);
+    return after.split(":")[0] ?? "test-model";
+  }
+  return model.split(":")[0] ?? "test-model";
+}
+
 export async function runScanContext(ctx: ScanContext): Promise<number> {
   const { opts, io, traceId, llmIdentity, retryReport } = ctx;
+  const effectiveLlmIdentity = llmIdentity ?? { model: modelIdFromScanModel(opts.model) };
 
   if (opts.preview && opts.resume !== "") throw new CliUsageError("--preview and --resume cannot be used together");
 
@@ -183,7 +194,7 @@ export async function runScanContext(ctx: ScanContext): Promise<number> {
       ResumeInfo: () => runner!.resumeInfo,
     };
     try {
-      emitScanResult(provider, comments, durationMs, opts.outputFormat, traceId, llmIdentity, retryReport ?? null, io);
+      emitScanResult(provider, comments, durationMs, opts.outputFormat, traceId, effectiveLlmIdentity, retryReport ?? null, io);
     } catch (err) {
       emitErr = err instanceof Error ? err : new Error(String(err));
     }
@@ -218,7 +229,7 @@ export async function runScanContext(ctx: ScanContext): Promise<number> {
         `${JSON.stringify(
           {
             status: "failed",
-            llm: llmIdentity,
+            llm: effectiveLlmIdentity,
             summary: {
               files_reviewed: fallback.filesReviewed,
               total_tokens: fallback.totalTokens,

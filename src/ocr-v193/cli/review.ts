@@ -146,8 +146,7 @@ export function emitRunResult(
   }
 
   if (outputFormat === "sarif") {
-    const version = llmIdentity?.model ?? "dev";
-    io.stdout(outputSarifText([...comments], version, provider.Warnings(), manifest));
+    io.stdout(outputSarifText([...comments], "dev", provider.Warnings(), manifest));
     return;
   }
 
@@ -174,8 +173,19 @@ function requireValidRef(flag: string, value: string): void {
 // Public entry point for review — testable seam
 // ---------------------------------------------------------------------------
 
+function modelIdFromReviewModel(model: string): string {
+  if (model === "") return "test-model";
+  const slash = model.indexOf("/");
+  if (slash >= 0) {
+    const after = model.slice(slash + 1);
+    return after.split(":")[0] ?? "test-model";
+  }
+  return model.split(":")[0] ?? "test-model";
+}
+
 export async function runReviewContext(ctx: ReviewContext): Promise<number> {
   const { opts, io, version, traceId, llmIdentity, retryReport } = ctx;
+  const effectiveLlmIdentity = llmIdentity ?? { model: modelIdFromReviewModel(opts.model) };
 
   // Validate mutually exclusive mode before git
   if (opts.preview && opts.resume !== "") throw new CliUsageError("--preview and --resume cannot be used together");
@@ -243,7 +253,7 @@ export async function runReviewContext(ctx: ReviewContext): Promise<number> {
       ResumeInfo: () => runner!.resumeInfo,
     };
     try {
-      emitRunResult(provider, comments, durationMs, opts.outputFormat, opts.audience, traceId, llmIdentity, retryReport ?? null, io);
+      emitRunResult(provider, comments, durationMs, opts.outputFormat, opts.audience, traceId, effectiveLlmIdentity, retryReport ?? null, io);
     } catch (err) {
       emitErr = err instanceof Error ? err : new Error(String(err));
     }
@@ -296,7 +306,7 @@ export async function runReviewContext(ctx: ReviewContext): Promise<number> {
         `${JSON.stringify(
           {
             status: "failed",
-            llm: llmIdentity,
+            llm: effectiveLlmIdentity,
             summary: {
               files_reviewed: failedProvider.FilesReviewed(),
               total_tokens: failedProvider.TotalTokensUsed(),

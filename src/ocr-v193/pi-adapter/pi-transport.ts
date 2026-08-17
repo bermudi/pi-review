@@ -333,13 +333,6 @@ export class PiTransport implements TranscriptLlmTransport {
       if (typeof sess.setActiveToolsByName === "function") {
         try {
           sess.setActiveToolsByName(names);
-          // Verify allowlist took effect when getter available (feasibility row 3)
-          if (typeof sess.getActiveToolNames === "function") {
-            const active = sess.getActiveToolNames();
-            if (active.length !== names.length || !names.every((n) => active.includes(n))) {
-              console.warn(`[pi-adapter] allowlist mismatch: expected ${names.join(",")} got ${active.join(",")}`);
-            }
-          }
         } catch {
           // Non-fatal — allow request to proceed with previous allowlist
         }
