@@ -582,9 +582,9 @@ export async function main(argv: readonly unknown[] = process.argv.slice(2), dep
 
 if (import.meta.main) {
   void main().then((code) => {
-    process.exitCode = code;
+    process.exit(code);
   }).catch(() => {
-    process.exitCode = 1;
+    process.exit(1);
   });
 }
 

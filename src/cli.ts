@@ -921,8 +921,8 @@ export async function main(
 
 if (import.meta.main) {
 	void main().then((exitCode) => {
-		process.exitCode = exitCode;
+		process.exit(exitCode);
 	}).catch(() => {
-		process.exitCode = 1;
+		process.exit(1);
 	});
 }
