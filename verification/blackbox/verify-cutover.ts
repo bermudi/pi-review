@@ -273,7 +273,7 @@ async function main(): Promise<void> {
   expectCondition(disallowed.length === 0, `docs/comments identify legacy as default:\n${disallowed.join("\n")}`);
   fixtures.push("source-defaults");
 
-  const libraryScript = join(artifactDir, "library-default.ts");
+  const libraryScript = join(pack.consumerDir, "library-default.ts");
   await writeFile(
     libraryScript,
     `import { review, Reviewer, reviewLegacy, ReviewerLegacy } from "pi-reviewer";\n` +
