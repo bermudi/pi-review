@@ -117,6 +117,7 @@ describe("CLI argument parsing", () => {
 
 		expect(options).toEqual({
 			help: false,
+			version: false,
 			repo: "/tmp/repo",
 			model: "anthropic/claude-sonnet:high",
 			thinking: "medium",

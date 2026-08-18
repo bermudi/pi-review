@@ -50,6 +50,7 @@ type RawCliValues = {
 	engine?: string;
 	json: boolean;
 	help: boolean;
+	version: boolean;
 	noFilter: boolean;
 	preview: boolean;
 };
@@ -82,6 +83,7 @@ const rawCliValuesSchema = z.object({
 	engine: optionValue.optional(),
 	json: z.boolean(),
 	help: z.boolean(),
+	version: z.boolean(),
 	noFilter: z.boolean(),
 	preview: z.boolean(),
 }).strict();
@@ -89,6 +91,7 @@ const rawCliValuesSchema = z.object({
 /** Parsed, semantically validated command-line options. */
 export interface CliOptions {
 	readonly help: boolean;
+	readonly version: boolean;
 	readonly repo: string;
 	readonly model: string | undefined;
 	readonly thinking: ThinkingLevel | undefined;
@@ -191,6 +194,7 @@ Options:
   --no-filter                Keep all review comments without LLM post-filtering
   -p, --preview              Preview which files will be reviewed without running the LLM
   --json                     Emit the exact ReviewResult as JSON
+  --version, -V              Print version and exit
   --help                     Show this help
 
 Exit status: 0 complete or skipped, 2 partial, 1 failed or invalid usage.
@@ -323,7 +327,7 @@ function setValue(raw: RawCliValues, name: string, value: string): void {
 	}
 }
 
-const BOOLEAN_FLAGS = new Set(["help", "json", "no-filter", "preview"]);
+const BOOLEAN_FLAGS = new Set(["help", "json", "no-filter", "preview", "version"]);
 
 function parseRawArgv(argv: readonly string[]): RawCliValues {
 	const raw: RawCliValues = {
@@ -331,6 +335,7 @@ function parseRawArgv(argv: readonly string[]): RawCliValues {
 		exclude: [],
 		json: false,
 		help: false,
+		version: false,
 		noFilter: false,
 		preview: false,
 	};
@@ -385,6 +390,7 @@ function expandShortOptions(token: string): string {
 	if (token === "-m") return "--model";
 	if (token.startsWith("-m=")) return `--model=${token.slice(3)}`;
 	if (token === "-p") return "--preview";
+	if (token === "-V") return "--version";
 	return token;
 }
 
@@ -451,6 +457,7 @@ export function parseArgs(
 	if (values.help) {
 		return {
 			help: true,
+			version: false,
 			repo: values.repo ?? cwd,
 			model: values.model,
 			thinking: undefined,
@@ -477,7 +484,7 @@ export function parseArgs(
 
 	const envModel = env?.PI_REVIEW_MODEL?.trim();
 	const model = values.model ?? (envModel === undefined || envModel.length === 0 ? undefined : envModel);
-	if (model === undefined && !values.preview) {
+	if (model === undefined && !values.preview && !values.version) {
 		optionSyntaxError("Missing required --model option; pass --model or set PI_REVIEW_MODEL.");
 	}
 	if (model !== undefined) {
@@ -505,6 +512,7 @@ export function parseArgs(
 
 	return {
 		help: false,
+		version: values.version,
 		repo: values.repo ?? cwd,
 		model,
 		thinking,
@@ -752,6 +760,12 @@ export async function runCli(
 
 	if (parsed.help) {
 		io.stdout(HELP_TEXT);
+		return 0;
+	}
+
+	if (parsed.version) {
+		const { versionString } = await import("./ocr-v193/cli/index.js");
+		io.stdout(versionString());
 		return 0;
 	}
 
