@@ -732,6 +732,12 @@ export async function runCli(
 	if (first === "scan") {
 		return runScanCli(argv as string[], dependencies, io);
 	}
+	// `review` is an optional subcommand alias; strip it and continue with
+	// the review argument parser. This matches the parity CLI's subcommand
+	// interface so consumers can use `pi-review review` or `pi-review` interchangeably.
+	if (first === "review") {
+		argv = argv.slice(1);
+	}
 	let parsed: CliOptions;
 	try {
 		parsed = parseArgs(argv, io.cwd(), io.env());
