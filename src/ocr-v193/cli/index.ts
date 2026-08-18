@@ -42,15 +42,15 @@ export function versionString(): string {
   return s;
 }
 
-export const HELP_TEXT = `OpenCodeReview - AI-Powered Code Review CLI
+export const HELP_TEXT = `pi-review - AI-Powered Code Review CLI
 
 An AI-powered code review tool that reads git diffs, sends them to a
 configurable LLM service, and generates review comments.
 
 Usage:
-  ocr review [flags]
-  ocr scan [flags]
-  ocr version
+  pi-review review [flags]
+  pi-review scan [flags]
+  pi-review version
 
 Review flags:
   --repo PATH                 root directory of the git repository (default: current dir)
@@ -404,7 +404,7 @@ export async function runCli(
 
   const first = args[0] ?? "";
   if (first === "--version" || first === "-V" || first === "version") {
-    // Allow `ocr version` or `ocr --version` or `ocr -V`
+    // Allow `pi-review version` or `pi-review --version` or `pi-review -V`
     if (first === "version" && args.length > 1) {
       io.stderr(`Error: version takes no arguments\n\n${HELP_TEXT}`);
       return 1;
