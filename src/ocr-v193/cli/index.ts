@@ -35,9 +35,9 @@ export const GIT_COMMIT = "";
 export const BUILD_DATE = "";
 
 export function versionString(): string {
-  let s = `open-code-review ${VERSION}`;
+  let s = `pi-review ${VERSION}`;
   if (GIT_COMMIT !== "") s += ` (${GIT_COMMIT})`;
-  s += "\nhttps://github.com/alibaba/open-code-review\n";
+  s += "\nhttps://github.com/bermudi/pi-reviewer\n";
   if (BUILD_DATE !== "") s += `built at: ${BUILD_DATE}\n`;
   return s;
 }
