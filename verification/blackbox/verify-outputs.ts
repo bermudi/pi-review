@@ -104,6 +104,13 @@ const ELAPSED_RE = /(?:\d+m\d+s|\d+s)(?= elapsed)/g;
 const TMP_RE = /\/tmp\/[a-zA-Z0-9_\-\/\.]+/g;
 const TIMESTAMP_RE = /\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:?\d{2})?/g;
 const PORT_RE = /\b127\.0\.0\.1:\d{4,5}\b|\b:\d{4,5}\b/g;
+// User-approved deviation (2026-08-19): the port brands its progress prefix
+// as [pi-review] where OCR v1.9.3 hardcodes [ocr] (stdout trace summary and
+// stderr diagnostics). Canonicalize both to [engine] so text fixtures compare
+// semantics, not branding. Mirrors comparer.ts normalizeStderr. Recorded in
+// docs/ocr-v193-reference-manifest.md (CLI row). SARIF driver name stays
+// "OpenCodeReview" on both sides and is compared literally.
+const PREFIX_RE = /\[(?:ocr|pi-review)\]/g;
 
 function normalizeTextOutput(s: string): string {
   return s
@@ -111,7 +118,8 @@ function normalizeTextOutput(s: string): string {
     .replace(ELAPSED_RE, "<ELAPSED>")
     .replace(TMP_RE, "<TMP>")
     .replace(TIMESTAMP_RE, "<TIMESTAMP>")
-    .replace(PORT_RE, "<PORT>");
+    .replace(PORT_RE, "<PORT>")
+    .replace(PREFIX_RE, "[engine]");
 }
 
 function compareText(ocr: string, pi: string, id: string): { equal: boolean; mismatches: FieldMismatch[] } {
