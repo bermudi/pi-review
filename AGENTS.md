@@ -98,6 +98,16 @@ bun run build
 
 During iteration, run the narrowest affected test file before the full suite. Use `bun add`, `bun remove`, and `bun pm pkg` for dependency metadata; do not hand-edit dependency declarations.
 
+Blackbox packed-install checks must use `runPackedInstallSmoke()`. It owns one
+workspace beside Bun's package cache (same filesystem, so Bun can hardlink or
+reflink dependencies) containing both the archive and consumer install. The
+install pins Bun's `hardlink` backend so user configuration cannot silently
+restore full copies. The helper
+removes it on failure/process exit/signals, and sweeps PID-marked abandoned
+runs. Never put these installs in `/tmp`: `/tmp` may be tmpfs or a different
+filesystem, forcing a full dependency copy. Do not add independent
+`blackbox-pack-*` or `blackbox-consumer-*` directories.
+
 ## Constraints & Red Lines
 
 - Ported OCR source, prompts, templates, schemas, and fixtures must identify
