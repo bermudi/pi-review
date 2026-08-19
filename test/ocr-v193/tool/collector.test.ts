@@ -11,6 +11,7 @@ function cm(path: string, content: string): LlmComment {
 }
 
 describe("ocr-v193 CommentCollector (ported)", () => {
+  // OCR v1.9.3: TestCommentCollector_AddAndComments
   test("Add and Comments", () => {
     const c = NewCommentCollector();
     c.Add(cm("a.go", "issue 1"));
@@ -21,6 +22,7 @@ describe("ocr-v193 CommentCollector (ported)", () => {
     expect(got[1]!.path).toBe("b.go");
   });
 
+  // OCR v1.9.3: TestCommentCollector_CommentsReturnsDefensiveCopy
   test("Comments returns defensive copy", () => {
     const c = NewCommentCollector();
     c.Add(cm("a.go", "x"));
@@ -29,6 +31,7 @@ describe("ocr-v193 CommentCollector (ported)", () => {
     expect(c.Comments()[0]!.content).toBe("x");
   });
 
+  // OCR v1.9.3: TestCommentCollector_CommentsForPath
   test("CommentsForPath", () => {
     const c = NewCommentCollector();
     c.Add(cm("a.go", "1"));
@@ -53,6 +56,7 @@ describe("ocr-v193 CommentCollector (ported)", () => {
     expect(since![0]!.path).toBe("b.go");
   });
 
+  // OCR v1.9.3: TestCommentCollector_SinceEdgeCases
   test("Since edge cases", () => {
     const c = NewCommentCollector();
     c.Add(cm("a.go", "x"));
@@ -60,6 +64,7 @@ describe("ocr-v193 CommentCollector (ported)", () => {
     expect(c.Since(100)).toBeNull();
   });
 
+  // OCR v1.9.3: TestCommentCollector_ReplaceSince
   test("ReplaceSince", () => {
     const c = NewCommentCollector();
     c.Add(cm("a.go", "keep"));
@@ -73,6 +78,7 @@ describe("ocr-v193 CommentCollector (ported)", () => {
     expect(got[1]!.path).toBe("merged.go");
   });
 
+  // OCR v1.9.3: TestCommentCollector_ReplaceSinceOutOfBounds
   test("ReplaceSince out of bounds no-op", () => {
     const c = NewCommentCollector();
     c.Add(cm("a.go", "x"));
@@ -80,6 +86,7 @@ describe("ocr-v193 CommentCollector (ported)", () => {
     expect(c.Comments().length).toBe(1);
   });
 
+  // OCR v1.9.3: TestCommentCollector_RemoveByPathAndIndices
   test("RemoveByPathAndIndices", () => {
     const c = NewCommentCollector();
     c.Add(cm("a.go", "a0"));

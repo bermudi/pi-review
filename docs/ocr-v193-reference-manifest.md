@@ -90,7 +90,15 @@ results; their old uses of “verified” are not current gate status.
 
 Hash discipline: every imported prompt/template/tool-schema/default-rule/output-schema/fixture gets a sha256 in this table; `bun test` fails if file bytes diverge.
 
-## Upstream test coverage index
+## Historical translated-test examples
+
+This table predates the exhaustive inventory and is retained only as useful
+translation detail. It is **not** the coverage authority and must not be used
+to claim completion. The machine-checked authority is
+`docs/ocr-v193-upstream-test-inventory.json`; regenerate it with
+`bun run scripts/generate-ocr-v193-test-inventory.ts`, check it with
+`bun run check:ocr-test-inventory`, and require a finished rewrite with
+`bun run verify:ocr-test-port`.
 
 | Port test file | OCR test names represented | Status |
 |---|---|---|

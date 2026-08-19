@@ -383,19 +383,22 @@ export class CompressionState {
    *                   (snapshot, filePath, signal) => Promise<rebuilt>
    *                   On success should return rebuilt messages.
    *                   On failure should reject; failure keeps original per Go.
+   * @returns the worker completion promise, or null when a job is already pending.
+   *          Unlike `done`, this does not resolve early when cancellation is requested,
+   *          so Runner.WaitBackground can join the actual request boundary.
    */
   triggerAsyncCompression(
     messages: readonly Message[],
     filePath: string,
     compressor: (snapshot: readonly Message[], filePath: string, signal: AbortSignal) => Promise<Message[]>,
-  ): void {
-    if (this.pendingJob !== null) return;
+  ): Promise<void> | null {
+    if (this.pendingJob !== null) return null;
 
     const snapshot = copyMessages(messages);
     const job = createJob(messages.length, 5 * 60 * 1000);
     this.pendingJob = job;
 
-    void (async () => {
+    const worker = (async () => {
       let rebuilt: Message[] | null = null;
       let err: unknown = null;
       try {
@@ -422,6 +425,7 @@ export class CompressionState {
       job.doneResolved = true;
       job.resolveDone();
     })();
+    return worker;
   }
 
   /**

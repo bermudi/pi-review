@@ -1,147 +1,91 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 //
-// The neighboring OCR checkout supplies only a Git object database. Every
-// upstream source byte read here is addressed by the fixed v1.9.3 commit.
+// Exhaustive inventory guard for the pinned OCR v1.9.3 test tree. Unlike the
+// former five-row Markdown check, this compares every upstream test file,
+// blob, and top-level Test name through the generator's --check mode.
 
 import { describe, expect, test } from "bun:test";
-import { execFileSync, spawnSync } from "node:child_process";
+import { spawnSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 
-const repoRoot = process.cwd();
-const upstreamGitDir = resolve(repoRoot, "../open-code-review");
-const manifestPath = resolve(repoRoot, "docs/ocr-v193-reference-manifest.md");
-const pinnedTagObject = "4d796ae54cabdcf4e22b69ef502ed8871456a909";
-const pinnedCommit = "c35ddd7223f2b5540ce03aa43c9a25ef643fca27";
-
-interface CoverageRow {
-  readonly localPath: string;
-  readonly upstreamPaths: readonly string[];
+interface InventoryTest {
+  readonly name: string;
+  readonly disposition: "covered" | "pending" | "pending_scope" | "out_of_scope";
+  readonly evidence?: readonly { readonly kind: string; readonly path: string; readonly title: string }[];
+  readonly reason?: string;
 }
 
-const coverageRows: readonly CoverageRow[] = [
-  { localPath: "test/ocr-v193/llmloop/loop.test.ts", upstreamPaths: ["internal/llmloop/loop_test.go"] },
-  { localPath: "test/ocr-v193/llmloop/compression.test.ts", upstreamPaths: ["internal/llmloop/compression_test.go"] },
-  { localPath: "test/ocr-v193/llmloop/pool.test.ts", upstreamPaths: ["internal/llmloop/pool_test.go"] },
-  {
-    localPath: "test/ocr-v193/llmloop/loop-phase5.test.ts",
-    upstreamPaths: [
-      "internal/llmloop/loop_test.go",
-      "internal/llmloop/loop_execute_test.go",
-      "internal/llmloop/loop_execute_more_test.go",
-    ],
-  },
-  { localPath: "test/ocr-v193/diff/parser.test.ts", upstreamPaths: ["internal/diff/parser_test.go"] },
-];
-
-function git(...args: readonly string[]): string {
-  return execFileSync("git", ["-C", upstreamGitDir, ...args], { encoding: "utf8" });
-}
-
-function sourceAtPin(path: string): string {
-  return git("show", `${pinnedCommit}:${path}`);
-}
-
-function testNamesInSources(paths: readonly string[]): Set<string> {
-  const names = new Set<string>();
-  for (const path of paths) {
-    for (const match of sourceAtPin(path).matchAll(/^func (Test[A-Za-z0-9_]+)\(t \*testing\.T\)/gm)) {
-      names.add(match[1] as string);
-    }
-  }
-  return names;
-}
-
-function manifestRow(manifest: string, localPath: string): { readonly names: readonly string[]; readonly mapped: number; readonly additional: number } {
-  const escapedPath = localPath.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  const match = manifest.match(new RegExp(`^\\| \`${escapedPath}\` \\| (.+) \\| (.+) \\|$`, "m"));
-  const namesColumn = match?.[1];
-  const status = match?.[2];
-  if (namesColumn === undefined || status === undefined) throw new Error(`coverage manifest row missing for ${localPath}`);
-
-  const counts = status.match(/^(\d+) pinned tests mapped; (\d+) additional local regressions?$/);
-  if (counts === null) throw new Error(`coverage status must declare mapped/additional counts for ${localPath}: ${status}`);
-  return {
-    names: [...namesColumn.matchAll(/`(Test[A-Za-z0-9_]+)`/g)].map((entry) => entry[1] as string),
-    mapped: Number(counts[1]),
-    additional: Number(counts[2]),
+interface InventoryFile {
+  readonly path: string;
+  readonly blob: string;
+  readonly scope: {
+    readonly kind: "in_scope" | "out_of_scope" | "needs_decision";
+    readonly area: string;
+    readonly reason?: string;
   };
+  readonly tests: readonly InventoryTest[];
 }
 
-interface LocalAnnotations {
-  readonly upstreamNames: readonly string[];
-  readonly localRegressionTests: number;
+interface Inventory {
+  readonly schemaVersion: number;
+  readonly reference: {
+    readonly tag: string;
+    readonly tagObject: string;
+    readonly commit: string;
+  };
+  readonly files: readonly InventoryFile[];
 }
 
-function localAnnotations(localPath: string): LocalAnnotations {
-  const source = readFileSync(resolve(repoRoot, localPath), "utf8");
-  const upstreamNames: string[] = [];
-  let localRegressionTests = 0;
-  let pendingUpstream: string[] = [];
-  let pendingLocal = false;
+const repoRoot = process.cwd();
+const inventoryPath = resolve(repoRoot, "docs/ocr-v193-upstream-test-inventory.json");
 
-  for (const line of source.split("\n")) {
-    const upstream = line.match(/^\s*\/\/ OCR v1\.9\.3: (Test[A-Za-z0-9_]+)\s*$/);
-    if (upstream !== null) {
-      pendingUpstream.push(upstream[1] as string);
-      continue;
-    }
-    if (/^\s*\/\/ (?:Additional )?Local regression:/i.test(line)) {
-      pendingLocal = true;
-      continue;
-    }
-    if (/^\s*test\(/.test(line)) {
-      if (pendingUpstream.length === 0 && !pendingLocal) {
-        throw new Error(`unannotated local test in ${localPath}: ${line.trim()}`);
-      }
-      if (pendingUpstream.length > 0 && pendingLocal) {
-        throw new Error(`test cannot be both OCR-mapped and local-only in ${localPath}: ${line.trim()}`);
-      }
-      upstreamNames.push(...pendingUpstream);
-      if (pendingLocal) localRegressionTests++;
-      pendingUpstream = [];
-      pendingLocal = false;
-    }
-  }
-  return { upstreamNames, localRegressionTests };
-}
-
-describe("OCR v1.9.3 coverage manifest", () => {
-  test("addresses the signed tag object and peeled commit", () => {
-    expect(git("rev-parse", "v1.9.3^{tag}").trim()).toBe(pinnedTagObject);
-    expect(git("cat-file", "-t", pinnedTagObject).trim()).toBe("tag");
-    expect(git("rev-parse", "v1.9.3^{commit}").trim()).toBe(pinnedCommit);
-    expect(git("cat-file", "-t", pinnedCommit).trim()).toBe("commit");
-    expect(git("cat-file", "tag", pinnedTagObject)).toContain("-----BEGIN SSH SIGNATURE-----");
-
-    // The local trust policy may reject the signer principal even though Git
-    // verified its signature. Require Git's cryptographic "Good" result, not
-    // a machine-specific zero exit code.
-    const verification = spawnSync("git", ["-C", upstreamGitDir, "verify-tag", "v1.9.3"], { encoding: "utf8" });
-    expect(`${verification.stdout}${verification.stderr}`).toContain("Good");
+describe("OCR v1.9.3 exhaustive upstream-test inventory", () => {
+  test("exactly matches the pinned Git tree and local coverage annotations", () => {
+    const check = spawnSync(
+      "bun",
+      ["run", "scripts/generate-ocr-v193-test-inventory.ts", "--check"],
+      { cwd: repoRoot, encoding: "utf8" },
+    );
+    expect(check.status, `${check.stdout}${check.stderr}`).toBe(0);
   });
 
-  test("uses exact pinned sources and structured local annotations", () => {
-    const manifest = readFileSync(manifestPath, "utf8");
-    const allPinnedTestPaths = git("ls-tree", "-r", "--name-only", pinnedCommit, "--", "internal")
-      .split("\n")
-      .filter((path) => path.endsWith("_test.go"));
-    const allPinnedNames = testNamesInSources(allPinnedTestPaths);
+  test("uses closed, internally consistent dispositions", () => {
+    const inventory = JSON.parse(readFileSync(inventoryPath, "utf8")) as Inventory;
+    expect(inventory.schemaVersion).toBe(1);
+    expect(inventory.reference).toEqual({
+      tag: "v1.9.3",
+      tagObject: "4d796ae54cabdcf4e22b69ef502ed8871456a909",
+      commit: "c35ddd7223f2b5540ce03aa43c9a25ef643fca27",
+    });
 
-    for (const name of [...manifest.matchAll(/\b(Test[A-Za-z0-9_]+)\b/g)].map((entry) => entry[1] as string)) {
-      expect(allPinnedNames.has(name)).toBe(true);
-    }
+    const paths = inventory.files.map((file) => file.path);
+    expect(new Set(paths).size).toBe(paths.length);
+    expect(paths).toEqual([...paths].sort((left, right) => left.localeCompare(right)));
 
-    for (const row of coverageRows) {
-      const documented = manifestRow(manifest, row.localPath);
-      const annotated = localAnnotations(row.localPath);
-      const validForRow = testNamesInSources(row.upstreamPaths);
+    for (const file of inventory.files) {
+      expect(file.path.endsWith("_test.go")).toBe(true);
+      expect(file.blob).toMatch(/^[0-9a-f]{40}$/);
+      expect(file.scope.area.length).toBeGreaterThan(0);
+      const names = file.tests.map((entry) => entry.name);
+      expect(new Set(names).size).toBe(names.length);
 
-      expect(new Set(documented.names).size).toBe(documented.names.length);
-      expect(documented.mapped).toBe(documented.names.length);
-      expect(documented.additional).toBe(annotated.localRegressionTests);
-      expect(new Set(annotated.upstreamNames)).toEqual(new Set(documented.names));
-      for (const name of annotated.upstreamNames) expect(validForRow.has(name)).toBe(true);
+      for (const entry of file.tests) {
+        if (entry.disposition === "covered") {
+          expect(entry.evidence?.length ?? 0).toBeGreaterThan(0);
+          for (const evidence of entry.evidence ?? []) {
+            expect(evidence.kind).toBe("bun-test-annotation");
+            const localSource = readFileSync(resolve(repoRoot, evidence.path), "utf8");
+            expect(localSource).toContain(`// OCR v1.9.3: ${entry.name}`);
+            expect(localSource).toContain(`"${evidence.title}"`);
+          }
+        } else {
+          expect(entry.reason?.length ?? 0).toBeGreaterThan(0);
+        }
+
+        if (file.scope.kind === "out_of_scope") expect(entry.disposition).toBe("out_of_scope");
+        if (file.scope.kind === "needs_decision") expect(entry.disposition).toBe("pending_scope");
+      }
     }
   });
 });

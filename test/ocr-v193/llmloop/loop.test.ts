@@ -641,7 +641,6 @@ describe("ocr-v193 llmloop Runner (ported)", () => {
     expect(transport.requests).toHaveLength(2);
   });
 
-  // OCR v1.9.3: TestRunPerFile_GraceRoundSubmitsComment
   // Budget 1 exhausted -> one grace request with only code_comment+task_done,
   // usage counted, stops with StopMaxRounds
   // OCR v1.9.3: TestRunPerFile_GraceRoundSubmitsComment

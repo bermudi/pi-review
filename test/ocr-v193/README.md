@@ -24,3 +24,19 @@ verified:
 
 The black-box verifiers are acceptance evidence, not the place to rediscover
 the review engine's internal behavior.
+
+## Exhaustive inventory
+
+`docs/ocr-v193-upstream-test-inventory.json` records every `*_test.go` file,
+blob, and top-level `Test*` declaration in the pinned OCR tree. It includes
+ported behavior, tests awaiting translation, explicit scope decisions, and
+deferred shells; omitted files cannot pass the inventory check.
+
+```bash
+# Prove the checked-in inventory still matches the pinned Git objects and
+# adjacent local OCR annotations.
+bun run check:ocr-test-inventory
+
+# Completion gate: also fail while any test is pending translation or scope.
+bun run verify:ocr-test-port
+```

@@ -835,13 +835,7 @@ export class Runner {
       maxTokens: getCompletionTokenLimit(this.deps.template),
     };
 
-    let resp: ChatResponse;
-    try {
-      resp = await this.callTransport(signal, req);
-    } catch (err) {
-      console.error(`[pi-review] Memory compression failed: ${String(err)}`);
-      return msgs;
-    }
+    const resp = await this.callTransport(signal, req);
     if (resp.usage) this.recordUsage(resp.usage);
 
     const rawSummary = StripMarkdownFences(resp.content ?? "");
@@ -924,19 +918,20 @@ export class Runner {
 
     if (finalCount > softLimit && finalCount < warnLimit) {
       // Trigger async compression for next round — mirror Go triggerAsyncCompression
-      st.triggerAsyncCompression(messages, filePath, async (snapshot, fp, sig) => {
-        const rebuilt = await this.runCompression(sig, [...snapshot] as Message[], fp);
-        return rebuilt;
-      });
-      const pending = st.getPendingDone();
-      if (pending) {
-        this._bg.add(pending);
-        void pending.finally(() => {
-          this._bg.delete(pending);
-        });
-      }
+      this.triggerAsyncCompression(st, messages, filePath);
     }
 
     return finalCount < warnLimit;
+  }
+
+  private triggerAsyncCompression(st: CompressionState, messages: readonly Message[], filePath: string): void {
+    const worker = st.triggerAsyncCompression(messages, filePath, async (snapshot, fp, sig) => {
+      return this.runCompression(sig, [...snapshot], fp);
+    });
+    if (worker === null) return;
+    this._bg.add(worker);
+    void worker.finally(() => {
+      this._bg.delete(worker);
+    });
   }
 }

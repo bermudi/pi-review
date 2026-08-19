@@ -3,9 +3,9 @@
 Pinned reference: tag `v1.9.3`, signed tag object `4d796ae54cabdcf4e22b69ef502ed8871456a909`, commit `c35ddd7223f2b5540ce03aa43c9a25ef643fca27` in `../open-code-review`.
 Verified: `git -C ../open-code-review rev-parse v1.9.3^{commit}` == `c35ddd7223f2b5540ce03aa43c9a25ef643fca27`, `git -C ../open-code-review tag --verify v1.9.3` is good signature.
 
-This map is the Phase 2 contract from `docs/ocr-v1.9.3-port-plan.md`. Each row is a checked-in inventory of OCR production files + upstream tests, whether Pi code is reused/wrapped/replaced, and where the TypeScript home lives. No parity engine may import `src/{reviewer,pi-runner,prompts,tools,phase-tools,resolver,change-map}` policy — reuse only after OCR-derived tests prove parity.
+This map is the Phase 2 contract from `docs/ocr-v1.9.3-port-plan.md`. Each row identifies OCR production and test scope, whether Pi code is reused/wrapped/replaced, and where the TypeScript home lives. It is not a completion ledger. The exhaustive, path-qualified disposition of every pinned upstream test is `docs/ocr-v193-upstream-test-inventory.json`, checked by `test/ocr-v193/manifest-coverage.test.ts`. No parity engine may import `src/{reviewer,pi-runner,prompts,tools,phase-tools,resolver,change-map}` policy — reuse only after OCR-derived tests prove parity.
 
-| OCR v1.9.3 source | Pi port home | Production files (Go) | Upstream tests translated | Reuse policy |
+| OCR v1.9.3 source | Pi port home | Production files (Go) | Upstream test scope | Reuse policy |
 |---|---|---|---|---|
 | `internal/model` | `src/ocr-v193/model` | `diff.go`, `preview.go`, `review.go`, `scan.go` | `model_test.go` | Replace — port domain contracts (`Diff`, `ReviewItem`, `ScanItem`) |
 | `internal/config/template` | `src/ocr-v193/template` | `template.go`, `scan_template.json`, `task_template.json`, `prompts/*.md` | `template_test.go` | Import templates verbatim with provenance + hash freeze; port loader/substitution/validation |

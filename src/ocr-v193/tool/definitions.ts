@@ -19,8 +19,6 @@ export type { Tool } from "./types.js";
 export interface Provider {
   Tool(): ToolType;
   Execute(ctx: unknown, args: Record<string, unknown>): Promise<string> | string;
-  // Allow calling with just args for TS convenience — mirrors Execute with context.Background.
-  execute(args: Record<string, unknown>, signal?: AbortSignal): Promise<string> | string;
 }
 
 // Alias for llmloop compatibility: ToolProvider shape
