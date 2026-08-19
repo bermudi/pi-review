@@ -151,6 +151,8 @@ function parseComments(args: Record<string, unknown>): { comments: LlmComment[];
     const cm: LlmComment = {
       path: pathFromArgs,
       content,
+      // Go's LlmComment.Thinking is a string zero value, not an absent field.
+      thinking: "",
     };
     if (typeof obj["suggestion_code"] === "string") cm.suggestionCode = obj["suggestion_code"] as string;
     if (typeof obj["existing_code"] === "string") cm.existingCode = obj["existing_code"] as string;

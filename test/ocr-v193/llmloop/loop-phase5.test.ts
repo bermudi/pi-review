@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright 2026 alibaba/open-code-review Contributors
-// Ported from internal/llmloop/loop_execute_more_test.go and cover Phase 5 pipeline:
+// Ported from internal/llmloop/loop_execute_test.go and loop_execute_more_test.go
+// at c35ddd7223f2b5540ce03aa43c9a25ef643fca27; covers the Phase 5 pipeline:
 // - code_comment parse/validation
 // - tracking via DiffLookup + resolver
 // - relocation retry (ReLocationTask)
@@ -29,6 +30,7 @@ function makeRunner(opts: {
   diffLookup?: (path: string) => Diff | null;
   reLocationTask?: { messages: readonly { role: string; content: string }[] } | null;
   templateOverrides?: Record<string, unknown>;
+  mainToolDefs?: readonly ToolDef[];
 }): { runner: Runner; transport: ScriptedTransport; collector: CommentCollector } {
   const collector = opts.collector ?? makeCollector();
   const transport = new ScriptedTransport(opts.responses as unknown as never);
@@ -50,10 +52,10 @@ function makeRunner(opts: {
     model: "test-model",
     template: template as unknown as never,
     llmClient: adapter,
-    mainToolDefs: [
+    mainToolDefs: opts.mainToolDefs ?? [
       { type: "function", function: { name: "code_comment" } },
       { type: "function", function: { name: "task_done" } },
-    ] as unknown as readonly ToolDef[],
+    ],
     commentCollector: collector as unknown as never,
     commentWorkerPool: opts.pool as unknown as never,
     diffLookup: opts.diffLookup as unknown as never,
@@ -62,6 +64,7 @@ function makeRunner(opts: {
 }
 
 describe("ocr-v193 loop Phase 5 — comment processing", () => {
+  // OCR v1.9.3: TestExecuteToolCall_CodeCommentDiffResolved
   test("code_comment diff resolved sync → startLine populated", async () => {
     const collector = makeCollector();
     const diffLookup = (path: string): Diff | null => {
@@ -101,6 +104,7 @@ describe("ocr-v193 loop Phase 5 — comment processing", () => {
     expect(comments[0]!.content).toBe("issue");
   });
 
+  // Local regression: relocation retry succeeds with an LLM-provided code block.
   test("code_comment relocation retry success", async () => {
     const collector = makeCollector();
     const diffForA: Diff = {
@@ -153,6 +157,7 @@ describe("ocr-v193 loop Phase 5 — comment processing", () => {
     expect(comments[0]!.startLine).toBeGreaterThan(0);
   });
 
+  // Local regression: failed relocation preserves the original existing_code.
   test("code_comment relocation still unresolvable → original preserved", async () => {
     const collector = makeCollector();
     const diffForA: Diff = {
@@ -193,6 +198,7 @@ describe("ocr-v193 loop Phase 5 — comment processing", () => {
     expect(comments[0]!.startLine ?? 0).toBe(0);
   });
 
+  // Local regression: absent relocation task does not make an extra model request.
   test("code_comment without reLocationTask does not call relocation LLM", async () => {
     const collector = makeCollector();
     const diffLookup = (): Diff => ({
@@ -223,6 +229,8 @@ describe("ocr-v193 loop Phase 5 — comment processing", () => {
     expect(collector.Comments()[0]!.existingCode).toBe("WRONG");
   });
 
+  // OCR v1.9.3: TestRunPerFile_BackfillsThinkingFromReasoningContent
+  // OCR v1.9.3: TestExecuteToolCall_CodeCommentThinkingBackfill
   test("thinking backfill: reasoningContent propagated", async () => {
     const collector = makeCollector();
     const { runner } = makeRunner({
@@ -243,6 +251,62 @@ describe("ocr-v193 loop Phase 5 — comment processing", () => {
     expect(cs[1]!.thinking).toBe("explicit");
   });
 
+  // OCR v1.9.3: TestRunPerFile_NoFallbackToContent
+  test("assistant content does not backfill comment thinking", async () => {
+    const collector = makeCollector();
+    const { runner } = makeRunner({
+      collector,
+      responses: [
+        {
+          content: "I'll now leave a comment on this file",
+          toolCalls: [
+            {
+              id: "comment-1",
+              name: "code_comment",
+              arguments: JSON.stringify({ comments: [{ content: "issue", existing_code: "x" }] }),
+            },
+          ],
+        },
+        { toolCalls: [{ id: "done-1", name: "task_done", arguments: JSON.stringify({ state: "DONE" }) }] },
+      ],
+    });
+
+    const result = await runner.RunPerFile(
+      new AbortController().signal,
+      [newTextMessage("user", "review")],
+      "file.go",
+    );
+
+    expect(result.completed).toBe(true);
+    expect(collector.Comments()).toHaveLength(1);
+    expect(collector.Comments()[0]!.thinking).toBe("");
+  });
+
+  // OCR v1.9.3: TestExecuteToolCall_CodeCommentNoReasoning
+  test("code_comment keeps thinking empty without reasoning content", async () => {
+    const collector = makeCollector();
+    const { runner } = makeRunner({ collector, responses: [] });
+
+    const result = await runner.executeToolCall(
+      new AbortController().signal,
+      "file.go",
+      {
+        id: "comment-1",
+        type: "function",
+        function: {
+          name: "code_comment",
+          arguments: JSON.stringify({ comments: [{ content: "issue", existing_code: "x" }] }),
+        },
+      } as never,
+      "",
+    );
+
+    expect(result.data).toBe("Successfully commented.");
+    expect(collector.Comments()).toHaveLength(1);
+    expect(collector.Comments()[0]!.thinking).toBe("");
+  });
+
+  // Local regression: multiline suggestion_code survives comment collection.
   test("suggestion_code preserved and multiline", async () => {
     const collector = makeCollector();
     const { runner } = makeRunner({
@@ -269,6 +333,7 @@ describe("ocr-v193 loop Phase 5 — comment processing", () => {
     expect(c.content).toBe("fix");
   });
 
+  // OCR v1.9.3: TestExecuteToolCall_CodeCommentAsyncPool
   test("async per-file draining via CommentWorkerPool: comments visible after AwaitKey", async () => {
     const collector = makeCollector();
     const pool = new CommentWorkerPool(2);
@@ -297,6 +362,7 @@ describe("ocr-v193 loop Phase 5 — comment processing", () => {
     expect(pool.workerCount).toBe(2);
   });
 
+  // Local regression: per-file worker drains stay isolated under concurrent submissions.
   test("concurrent isolation: two files each have own AwaitKey", async () => {
     const collectorA = makeCollector();
     const collectorB = makeCollector();
@@ -318,6 +384,7 @@ describe("ocr-v193 loop Phase 5 — comment processing", () => {
     expect(collectorB.Comments()[0]!.path).toBe("b.go");
   });
 
+  // Local regression: same-file asynchronous comments retain submission order.
   test("deterministic ordering preserved for same file multiple comments", async () => {
     const collector = makeCollector();
     const { runner } = makeRunner({
@@ -338,6 +405,7 @@ describe("ocr-v193 loop Phase 5 — comment processing", () => {
     expect(cs[1]!.content).toBe("second");
   });
 
+  // Local regression: code_comment processing accepts old-side resolver matches.
   test("deleted/context lines: resolver matches deleted line via old-side", async () => {
     // This tests resolver's ability to match context + deleted lines (old-side fallback not tested directly here, but via resolveLineNumbers we already did)
     // Here we just ensure loop doesn't break on such diff
@@ -373,6 +441,7 @@ describe("ocr-v193 loop Phase 5 — comment processing", () => {
   });
 
   // ---- Ported from internal/llmloop/loop_execute_test.go ----
+  // OCR v1.9.3: TestExecuteToolCall_DynamicNotRegistered
   test("ExecuteToolCall_DynamicNotRegistered", async () => {
     const { runner, transport } = makeRunner({
       responses: [{ toolCalls: [{ id: "1", name: "unknown_tool", arguments: "{}" }] }, { toolCalls: [{ id: "2", name: "task_done", arguments: JSON.stringify({ state: "DONE" }) }] }],
@@ -382,6 +451,7 @@ describe("ocr-v193 loop Phase 5 — comment processing", () => {
     expect(transport.requests.length).toBe(0);
   });
 
+  // OCR v1.9.3: TestExecuteToolCall_DynamicExecuteError
   test("ExecuteToolCall_DynamicExecuteError", async () => {
     const collector = makeCollector();
     // Create a runner with a tool that throws
@@ -400,6 +470,7 @@ describe("ocr-v193 loop Phase 5 — comment processing", () => {
     expect(res.data).toContain("Error executing tool file_read");
   });
 
+  // OCR v1.9.3: TestExecuteToolCall_DynamicSuccessRecordsResult
   test("ExecuteToolCall_DynamicSuccessRecordsResult", async () => {
     const collector = makeCollector();
     const transport = new ScriptedTransport([] as unknown as never);
@@ -417,12 +488,43 @@ describe("ocr-v193 loop Phase 5 — comment processing", () => {
     expect(res.data).toBe("file content");
   });
 
+  // OCR v1.9.3: TestExecuteToolCall_KnownToolNotRegistered
+  test("known but unregistered tools return the unavailable result", async () => {
+    const { runner } = makeRunner({
+      mainToolDefs: [
+        { type: "function", function: { name: "code_comment" } },
+        { type: "function", function: { name: "task_done" } },
+        { type: "function", function: { name: "file_read" } },
+      ],
+      responses: [],
+    });
+
+    const result = await runner.executeToolCall(
+      new AbortController().signal,
+      "file.go",
+      {
+        id: "read-1",
+        type: "function",
+        function: { name: "file_read", arguments: JSON.stringify({ path: "x" }) },
+      } as never,
+      "",
+    );
+
+    expect(result).toEqual({
+      data: "Error: Tool not found. The tool you attempted to call does not exist or is not available. Please check the tool name and try again with a valid tool.",
+      completed: false,
+      failed: false,
+    });
+  });
+
+  // OCR v1.9.3: TestExecuteToolCall_DynamicParseError
   test("ExecuteToolCall_DynamicParseError", async () => {
     const { runner } = makeRunner({ responses: [] });
     const res = await runner.executeToolCall(new AbortController().signal, "a.go", { id: "1", type: "function", function: { name: "code_comment", arguments: "not-json" } } as unknown as never, "");
     expect(res.data).toContain("Error parsing tool arguments");
   });
 
+  // OCR v1.9.3: TestCollectPendingComments_AwaitsPool
   test("CollectPendingComments_AwaitsPool", async () => {
     const collector = makeCollector();
     const pool = new CommentWorkerPool(1);
@@ -434,6 +536,7 @@ describe("ocr-v193 loop Phase 5 — comment processing", () => {
     await pool.Await();
   });
 
+  // OCR v1.9.3: TestExecuteToolCall_CodeCommentOverridesHallucinatedPath
   test("ExecuteToolCall_CodeCommentOverridesHallucinatedPath", async () => {
     const collector = makeCollector();
     const { runner } = makeRunner({
@@ -445,6 +548,7 @@ describe("ocr-v193 loop Phase 5 — comment processing", () => {
     expect(cs[0]!.path).toBe("real.go");
   });
 
+  // OCR v1.9.3: TestExecuteToolCall_TaskDone
   test("ExecuteToolCall_TaskDone handling", async () => {
     const { runner } = makeRunner({ responses: [] });
     const ok = await runner.executeToolCall(new AbortController().signal, "a.go", { id: "1", type: "function", function: { name: "task_done", arguments: JSON.stringify({ state: "DONE" }) } } as unknown as never, "");

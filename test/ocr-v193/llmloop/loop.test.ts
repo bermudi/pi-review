@@ -592,7 +592,7 @@ describe("ocr-v193 llmloop Runner (ported)", () => {
   });
 
   // OCR v1.9.3: TestRunPerFile_EmptyToolResultsStopWithEmptyRounds
-  // Also verifies TestRunPerFile_GraceRoundNotTriggeredOnEmptyRoundsStop.
+  // OCR v1.9.3: TestRunPerFile_GraceRoundNotTriggeredOnEmptyRoundsStop
   test("three consecutive empty results stops", async () => {
     const { runner, transport } = makeRunner({
       toolRegistry: fileReadRegistry(""),
@@ -644,6 +644,7 @@ describe("ocr-v193 llmloop Runner (ported)", () => {
   // OCR v1.9.3: TestRunPerFile_GraceRoundSubmitsComment
   // Budget 1 exhausted -> one grace request with only code_comment+task_done,
   // usage counted, stops with StopMaxRounds
+  // OCR v1.9.3: TestRunPerFile_GraceRoundSubmitsComment
   test("max rounds triggers grace with filtered tools", async () => {
     const collector = createCollector();
     const { runner, transport } = makeRunner({
@@ -769,7 +770,7 @@ describe("ocr-v193 llmloop Runner (ported)", () => {
     expect(collector.comments()).toHaveLength(0);
   });
 
-  // Ported from TestRunPerFile_UncompressibleContextStopsWithCompression in loop_test.go
+  // OCR v1.9.3: TestRunPerFile_UncompressibleContextStopsWithCompression
   test("uncompressible context stops after the compression request", async () => {
     const { runner, transport } = makeRunner({
       toolRegistry: fileReadRegistry("package main\n"),
