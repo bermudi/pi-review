@@ -31,6 +31,7 @@ import {
   type TaskCheckpoint,
   lookupRegistry,
 } from "./types.js";
+import { createHash } from "node:crypto";
 import type { LlmComment } from "../model/types.js";
 import type { Diff } from "../model/diff.js";
 import { resolveComment } from "../diff/resolver.js";
@@ -55,12 +56,23 @@ function getMaxToolRequestTimes(template: RunnerDeps["template"]): number {
 }
 
 /**
+ * Mirrors OCR's llm.SessionTaskKey. The readable session/task prefix keeps
+ * provider logs useful while the scope hash keeps paths header-safe.
+ */
+export function sessionTaskKey(sessionKey: string, taskType: string, scope: string): string {
+  if (taskType === "" && scope === "") return sessionKey;
+  if (scope === "") return `${sessionKey}-${taskType}`;
+  const scopeHash = createHash("sha256").update(scope, "utf8").digest("hex").slice(0, 16);
+  return `${sessionKey}-${taskType}-${scopeHash}`;
+}
+
+/**
  * parseToolArgs unmarshals a tool call's raw JSON arguments, always
  * returning a non-nil map on success. Mirrors Go parseToolArgs guard
  * against null.
  */
 export function parseToolArgs(raw: string): Record<string, unknown> {
-  if (raw === "" || raw === "null") {
+  if (raw === "null") {
     return {};
   }
   const parsed: unknown = JSON.parse(raw);
@@ -306,9 +318,12 @@ export class Runner {
     let toolReqCount = getMaxToolRequestTimes(this.deps.template);
     const maxConsecutiveEmptyRounds = 3;
     let consecutiveEmptyRounds = 0;
-    const sessionId = typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
-      ? crypto.randomUUID()
-      : Math.random().toString(36).slice(2) + Date.now().toString(36);
+    const baseSessionId = this.deps.sessionId !== undefined && this.deps.sessionId !== ""
+      ? this.deps.sessionId
+      : typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
+        ? crypto.randomUUID()
+        : Math.random().toString(36).slice(2) + Date.now().toString(36);
+    const sessionId = sessionTaskKey(baseSessionId, "main_task", filePath);
 
     const st = new CompressionState();
     let stop: MainLoopStop = MainLoopStop.StopMaxRounds;
@@ -345,7 +360,7 @@ export class Runner {
         const calls = (resp.toolCalls ?? []) as readonly ToolCall[];
 
         if (calls.length === 0) {
-          console.log(`[ocr] No tool calls parsed for ${filePath}, retrying...`);
+          console.log(`[pi-review] No tool calls parsed for ${filePath}, retrying...`);
           // Mirror Go exactly: append synthetic user retry, preserve assistant content if any. Do not count toward empty rounds.
           messages.push(newTextMessage("user", "You did not successfully call any tools. Please try again or use task_done if finished."));
           if (content !== "") {
@@ -396,25 +411,25 @@ export class Runner {
         if (!hasValidResult) {
           consecutiveEmptyRounds++;
           if (consecutiveEmptyRounds >= maxConsecutiveEmptyRounds) {
-            console.log(`[ocr] Too many empty retries for ${filePath}, stopping.`);
+            console.log(`[pi-review] Too many empty retries for ${filePath}, stopping.`);
             stop = MainLoopStop.StopEmptyRounds;
             break;
           }
-          console.log(`[ocr] No valid tool results for ${filePath}, retrying...`);
+          console.log(`[pi-review] No valid tool results for ${filePath}, retrying...`);
         } else {
           consecutiveEmptyRounds = 0;
         }
 
         const succeed = await this.addNextMessage(signal, content, calls as ToolCall[], results, messages, filePath, st);
         if (!succeed) {
-          console.log(`[ocr] Context compression exceeded threshold for ${filePath}, stopping.`);
+          console.log(`[pi-review] Context compression exceeded threshold for ${filePath}, stopping.`);
           stop = MainLoopStop.StopCompression;
           break;
         }
       }
 
       if (stop === MainLoopStop.StopMaxRounds) {
-        console.log(`[ocr] Max tool requests reached for ${filePath}.`);
+        console.log(`[pi-review] Max tool requests reached for ${filePath}.`);
         await this.runGraceRound(signal, messages, filePath, sessionId);
       }
 
@@ -446,7 +461,7 @@ export class Runner {
     );
 
     if (signal.aborted) {
-      console.log(`[ocr] Grace round skipped for ${filePath}: context cancelled`);
+      console.log(`[pi-review] Grace round skipped for ${filePath}: context cancelled`);
       return;
     }
 
@@ -462,7 +477,7 @@ export class Runner {
     try {
       resp = await this.callTransport(signal, req);
     } catch (err) {
-      console.log(`[ocr] Grace round LLM error for ${filePath}: ${String(err)}`);
+      console.log(`[pi-review] Grace round LLM error for ${filePath}: ${String(err)}`);
       return;
     }
 
@@ -683,7 +698,7 @@ export class Runner {
                     }
                   }
                 } catch (err) {
-                  console.error(`[ocr] Re-location LLM call failed for ${cm.path}: ${String((err as Error).message)}`);
+                  console.error(`[pi-review] Re-location LLM call failed for ${cm.path}: ${String((err as Error).message)}`);
                 }
               }
             }
@@ -714,7 +729,7 @@ export class Runner {
             await processAll(snapshot, detachedSignal);
           } catch (err) {
             const msg = err instanceof Error ? err.message : String(err);
-            console.warn(`[ocr] CommentWorkerPool panic: ${msg}`);
+            console.warn(`[pi-review] CommentWorkerPool panic: ${msg}`);
           }
           return [] as LlmComment[];
         });
@@ -822,7 +837,7 @@ export class Runner {
     try {
       resp = await this.callTransport(signal, req);
     } catch (err) {
-      console.error(`[ocr] Memory compression failed: ${String(err)}`);
+      console.error(`[pi-review] Memory compression failed: ${String(err)}`);
       return msgs;
     }
     if (resp.usage) this.recordUsage(resp.usage);
@@ -867,7 +882,7 @@ export class Runner {
           messages.splice(0, messages.length, ...rebuilt);
         }
       } catch (err) {
-        console.log(`[ocr] Memory compression failed: ${String(err)}`);
+        console.log(`[pi-review] Memory compression failed: ${String(err)}`);
       }
     }
 
@@ -900,7 +915,7 @@ export class Runner {
           messages.splice(0, messages.length, ...rebuilt);
         }
       } catch (err) {
-        console.log(`[ocr] Memory compression failed: ${String(err)}`);
+        console.log(`[pi-review] Memory compression failed: ${String(err)}`);
       }
       finalCount = CountMessagesTokens(messages);
     }

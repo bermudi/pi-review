@@ -262,10 +262,10 @@ export async function runScanContext(ctx: ScanContext): Promise<number> {
       );
     } else {
       io.stderr(
-        `[ocr] usage on failure: ${String(fallback.filesReviewed)} file(s), ${String(fallback.inputTokens)} input + ${String(fallback.outputTokens)} output = ${String(fallback.totalTokens)} total tokens, ${String(Object.values(fallback.toolCalls).reduce((a, b) => a + b, 0))} tool calls, elapsed ${String(Math.round(durationMs / 1000))}s, budget_exceeded=${String(fallback.budgetExceeded)}\n`,
+        `[pi-review] usage on failure: ${String(fallback.filesReviewed)} file(s), ${String(fallback.inputTokens)} input + ${String(fallback.outputTokens)} output = ${String(fallback.totalTokens)} total tokens, ${String(Object.values(fallback.toolCalls).reduce((a, b) => a + b, 0))} tool calls, elapsed ${String(Math.round(durationMs / 1000))}s, budget_exceeded=${String(fallback.budgetExceeded)}\n`,
       );
     }
-    if (fallback.sessionId) io.stderr(`[ocr] Session: ${fallback.sessionId} (retry with: --resume ${fallback.sessionId})\n`);
+    if (fallback.sessionId) io.stderr(`[pi-review] Session: ${fallback.sessionId} (retry with: --resume ${fallback.sessionId})\n`);
     const combined = [runErr, emitErr].filter((e): e is Error => e !== null);
     if (combined.length > 0) throw new Error(combined.map((e) => e.message).join(": "));
     return 1;

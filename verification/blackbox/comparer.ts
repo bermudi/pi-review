@@ -36,6 +36,10 @@ function normalizeTmp(s: string): string {
     .replace(/chatcmpl-[^\s"']+/g, "chatcmpl:<ID>");
 }
 
+function normalizeStderr(s: string): string {
+  return normalizeTmp(s).replace(/\[(?:ocr|pi-review)\]/g, "[engine]");
+}
+
 function stableStringify(v: unknown): string {
   return JSON.stringify(v, (_, val) => {
     if (val && typeof val === "object" && !Array.isArray(val)) {
@@ -286,7 +290,7 @@ export function compareCaptures(ocr: ProcessCapture | null, pi: ProcessCapture |
   }
 
   // Stderr and exit
-  check("stderr", provenance("stderr"), normalizeTmp(ocr.stderr) === normalizeTmp(pi.stderr), ocr.stderr, pi.stderr, "stderr mismatch");
+  check("stderr", provenance("stderr"), normalizeStderr(ocr.stderr) === normalizeStderr(pi.stderr), ocr.stderr, pi.stderr, "stderr mismatch");
   check("exit", provenance("exit"), ocr.exitCode === pi.exitCode, ocr.exitCode, pi.exitCode, `exit code ${ocr.exitCode} vs ${pi.exitCode}`);
 
   return {

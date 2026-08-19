@@ -451,7 +451,7 @@ export async function runCli(
     if (rawMaxTools !== undefined) {
       const n = Number(rawMaxTools);
       if (Number.isSafeInteger(n) && n > 0 && n < 10) {
-        io.stderr(`[ocr] --max-tools ${String(n)} is below minimum 10, using 10\n`);
+        io.stderr(`[pi-review] --max-tools ${String(n)} is below minimum 10, using 10\n`);
       }
     }
 
@@ -532,7 +532,7 @@ export async function runCli(
     if (rawScanMaxTools !== undefined) {
       const n = Number(rawScanMaxTools);
       if (Number.isSafeInteger(n) && n > 0 && n < 10) {
-        io.stderr(`[ocr] --max-tools ${String(n)} is below minimum 10, using 10\n`);
+        io.stderr(`[pi-review] --max-tools ${String(n)} is below minimum 10, using 10\n`);
       }
     }
 

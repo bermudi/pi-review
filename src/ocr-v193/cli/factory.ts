@@ -217,6 +217,7 @@ export function createReviewRunnerFactory(
 
     const agent = newAgent({
       repoDir,
+      sessionId: runId,
       from: from || undefined,
       to: to || undefined,
       commit: commit || undefined,

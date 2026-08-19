@@ -200,7 +200,7 @@ export class CommentWorkerPool {
     void p.catch((err: unknown) => {
       const msg = err instanceof Error ? err.message : String(err);
       const stack = err instanceof Error ? (err.stack ?? "") : "";
-      console.warn(`[ocr] CommentWorkerPool panic: ${msg}\n${stack}`);
+      console.warn(`[pi-review] CommentWorkerPool panic: ${msg}\n${stack}`);
     });
   }
 
@@ -216,7 +216,7 @@ export class CommentWorkerPool {
         // matching Go's defer recover() block.
         const msg = err instanceof Error ? err.message : String(err);
         const stack = err instanceof Error ? (err.stack ?? "") : "";
-        console.warn(`[ocr] CommentWorkerPool panic: ${msg}\n${stack}`);
+        console.warn(`[pi-review] CommentWorkerPool panic: ${msg}\n${stack}`);
         comments = undefined;
       }
 

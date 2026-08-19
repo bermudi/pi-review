@@ -187,29 +187,56 @@ function ocrMessagesToPiMessages(messages: readonly Message[]): unknown[] {
   return out;
 }
 
-function extractPiAssistantText(msg: unknown): string {
-  const m = msg as { content?: unknown };
-  const c = m.content;
-  if (typeof c === "string") return c;
-  if (Array.isArray(c)) {
-    let out = "";
-    for (const block of c as readonly { type?: string; text?: string }[]) {
-      if (block.type === "text" && typeof block.text === "string") out += block.text;
-    }
-    return out;
-  }
-  return "";
+interface PiAssistantObservation {
+  readonly text: string;
+  readonly toolCalls: ToolCall[];
+  readonly toolBlocks: number;
+  readonly invalidToolBlocks: number;
+  readonly stopReason: string;
 }
 
-function extractPiToolCalls(msg: unknown): ToolCall[] {
+function safeStopReason(value: unknown): string {
+  switch (value) {
+    case "stop":
+    case "length":
+    case "toolUse":
+    case "error":
+    case "aborted":
+      return value;
+    default:
+      return value === undefined ? "missing" : "other";
+  }
+}
+
+/**
+ * Inspect only the structural assistant fields needed by the OCR adapter.
+ * Diagnostics deliberately expose counts and booleans, never model text,
+ * reasoning, tool names/arguments, prompts, errors, or provider payloads.
+ */
+function inspectPiAssistant(msg: unknown): PiAssistantObservation {
   const m = msg as { content?: unknown };
   const c = m.content;
-  if (!Array.isArray(c)) return [];
+  let text = "";
   const out: ToolCall[] = [];
-  for (const block of c as readonly { type?: string; id?: string; name?: string; arguments?: unknown }[]) {
-    if (block.type === "toolCall" && typeof block.id === "string" && typeof block.name === "string") {
+  let toolBlocks = 0;
+  let invalidToolBlocks = 0;
+
+  if (typeof c === "string") {
+    text = c;
+  } else if (Array.isArray(c)) {
+    for (const block of c as readonly { type?: string; text?: string; id?: string; name?: string; arguments?: unknown }[]) {
+      if (block.type === "text" && typeof block.text === "string") {
+        text += block.text;
+        continue;
+      }
+      if (block.type !== "toolCall") continue;
+      toolBlocks++;
+      if (typeof block.id !== "string" || typeof block.name !== "string") {
+        invalidToolBlocks++;
+        continue;
+      }
       let argsStr: string;
-      const args = (block as { arguments?: unknown }).arguments;
+      const args = block.arguments;
       if (typeof args === "string") argsStr = args;
       else if (args !== undefined) {
         try {
@@ -221,7 +248,14 @@ function extractPiToolCalls(msg: unknown): ToolCall[] {
       out.push({ id: block.id, type: "function", function: { name: block.name, arguments: argsStr } });
     }
   }
-  return out;
+
+  return {
+    text,
+    toolCalls: out,
+    toolBlocks,
+    invalidToolBlocks,
+    stopReason: safeStopReason((msg as Record<string, unknown>)["stopReason"]),
+  };
 }
 
 function mapPiUsage(usage: unknown): UsageInfo | undefined {
@@ -325,6 +359,7 @@ export class PiTransport implements TranscriptLlmTransport {
   }
 
   private async doComplete(req: ChatRequest, signal: AbortSignal): Promise<ChatResponse> {
+    const expectsToolCall = req.tools !== undefined && req.tools.length > 0;
 
     // -----------------------------------------------------------------
     // 1) Dynamic allowlist — sync req.tools via setActiveToolsByName
@@ -351,6 +386,7 @@ export class PiTransport implements TranscriptLlmTransport {
           sess.setActiveToolsByName(names);
         } catch {
           // Non-fatal — allow request to proceed with previous allowlist
+          console.warn("[pi-adapter] tool allowlist sync failed stage=set_active_tools");
         }
       }
     } else {
@@ -373,8 +409,8 @@ export class PiTransport implements TranscriptLlmTransport {
     const sessForAbort = this.session as unknown as { abort?: () => Promise<void> };
     const abortHandler = (): void => {
       if (typeof sessForAbort.abort === "function") {
-        void sessForAbort.abort().catch((e) => {
-          console.warn(`[pi-adapter] abort failed: ${String(e)}`);
+        void sessForAbort.abort().catch(() => {
+          console.warn("[pi-adapter] session abort failed stage=abort_signal");
         });
       }
     };
@@ -483,6 +519,9 @@ export class PiTransport implements TranscriptLlmTransport {
         // Stub fallback — preserve prior stub behavior for tests that inject
         // a minimal fake session.
         void promptText;
+        if (expectsToolCall) {
+          console.warn("[pi-adapter] no tool calls kind=session_error source=none stage=api_unavailable");
+        }
         const placeholder: ChatResponse = { content: "", toolCalls: [], usage: undefined };
         return placeholder;
       }
@@ -490,7 +529,23 @@ export class PiTransport implements TranscriptLlmTransport {
       let capturedContent = "";
       let capturedToolCalls: ToolCall[] = [];
       let capturedUsage: UsageInfo | undefined = undefined;
+      let assistantObservation: PiAssistantObservation | undefined;
+      let assistantSource: "turn_end" | "agent_end" | "state" | "none" = "none";
+      let invocationFailureStage: "prompt" | "follow_up" | "continue" | "wait_for_idle" | undefined;
       let turnEnded = false;
+      const stateMessageCountBeforeDrive = getStateMessages().length;
+
+      const captureAssistant = (
+        message: unknown,
+        source: "turn_end" | "agent_end" | "state",
+      ): void => {
+        const observation = inspectPiAssistant(message);
+        assistantObservation = observation;
+        assistantSource = source;
+        capturedContent = observation.text;
+        capturedToolCalls = observation.toolCalls;
+        capturedUsage = mapPiUsage((message as Record<string, unknown>)["usage"]);
+      };
 
       const abortSession = (): void => {
         try {
@@ -512,9 +567,7 @@ export class PiTransport implements TranscriptLlmTransport {
           turnEnded = true;
           const msg = e["message"];
           if (msg !== undefined) {
-            capturedContent = extractPiAssistantText(msg);
-            capturedToolCalls = extractPiToolCalls(msg);
-            capturedUsage = mapPiUsage((msg as Record<string, unknown>)["usage"]);
+            captureAssistant(msg, "turn_end");
           }
           // Fenced round accounting: one complete() call = one provider request.
           // The SDK's internal tool loop is halted after the assistant message is
@@ -524,12 +577,10 @@ export class PiTransport implements TranscriptLlmTransport {
         } else if (e["type"] === "agent_end") {
           const msgs = e["messages"] as unknown[] | undefined;
           if (!turnEnded && Array.isArray(msgs)) {
-            const lastAssistant = [...msgs].reverse().find((m) => (m as Record<string, unknown>)["role"] === "assistant");
+            const newMessages = msgs.slice(stateMessageCountBeforeDrive);
+            const lastAssistant = [...newMessages].reverse().find((m) => (m as Record<string, unknown>)["role"] === "assistant");
             if (lastAssistant !== undefined) {
-              capturedContent = extractPiAssistantText(lastAssistant);
-              capturedToolCalls = extractPiToolCalls(lastAssistant);
-              const usage = (lastAssistant as Record<string, unknown>)["usage"];
-              if (usage !== undefined) capturedUsage = mapPiUsage(usage);
+              captureAssistant(lastAssistant, "agent_end");
             }
           }
           // If still no usage but we captured content, try last assistant usage from messages
@@ -556,25 +607,35 @@ export class PiTransport implements TranscriptLlmTransport {
           // Round 1 or no agent.continue available: use prompt()
           const isIdle = sessAny.isIdle !== undefined ? sessAny.isIdle : true;
           if (isIdle) {
-            await (sessAny.prompt as (t: string) => Promise<void>)(promptText).catch(() => {});
+            await (sessAny.prompt as (t: string) => Promise<void>)(promptText).catch(() => {
+              if (!turnEnded) invocationFailureStage = "prompt";
+            });
           } else {
             const followUp = sessAny.followUp as ((t: string) => Promise<void>) | undefined;
             if (typeof followUp === "function") {
-              await followUp(promptText).catch(() => {});
+              await followUp(promptText).catch(() => {
+                if (!turnEnded) invocationFailureStage = "follow_up";
+              });
             } else {
-              await (sessAny.prompt as (t: string) => Promise<void>)(promptText).catch(() => {});
+              await (sessAny.prompt as (t: string) => Promise<void>)(promptText).catch(() => {
+                if (!turnEnded) invocationFailureStage = "prompt";
+              });
             }
           }
         } else {
           // Round 2+: continue from the existing transcript (no new user message)
-          await sessAgent.continue().catch(() => {});
+          await sessAgent.continue().catch(() => {
+            if (!turnEnded) invocationFailureStage = "continue";
+          });
         }
 
         // Wait until Pi is idle so turn_end accounting is settled before the
         // next complete() call (row 1). Abort after turn_end will cause prompt/
         // continue to reject; catch so we can use the captured assistant message.
         if (typeof sessAny.waitForIdle === "function") {
-          await sessAny.waitForIdle().catch(() => {});
+          await sessAny.waitForIdle().catch(() => {
+            if (!turnEnded) invocationFailureStage = "wait_for_idle";
+          });
         }
 
         if (signal.aborted) throw createAbortError();
@@ -582,13 +643,36 @@ export class PiTransport implements TranscriptLlmTransport {
         // Fallback: if no turn_end was observed (e.g., empty history path),
         // derive response from current state messages.
         if (!turnEnded) {
-          const msgs = getStateMessages();
-          const lastAssistant = [...msgs].reverse().find((m) => (m as Record<string, unknown>)["role"] === "assistant");
+          const newMessages = getStateMessages().slice(stateMessageCountBeforeDrive);
+          const lastAssistant = [...newMessages].reverse().find((m) => (m as Record<string, unknown>)["role"] === "assistant");
           if (lastAssistant !== undefined) {
-            capturedContent = extractPiAssistantText(lastAssistant);
-            capturedToolCalls = extractPiToolCalls(lastAssistant);
-            const usage = (lastAssistant as Record<string, unknown>)["usage"];
-            if (usage !== undefined) capturedUsage = mapPiUsage(usage);
+            captureAssistant(lastAssistant, "state");
+          }
+        }
+
+        if (expectsToolCall && capturedToolCalls.length === 0) {
+          if (invocationFailureStage !== undefined) {
+            console.warn(
+              `[pi-adapter] no tool calls kind=session_error source=${assistantSource} stage=${invocationFailureStage}`,
+            );
+          } else if (assistantObservation === undefined) {
+            console.warn("[pi-adapter] no tool calls kind=missing_assistant_event source=none");
+          } else {
+            const kind =
+              assistantObservation.invalidToolBlocks > 0
+                ? "tool_call_extraction_failed"
+                : assistantObservation.stopReason === "error" || assistantObservation.stopReason === "aborted"
+                  ? "session_error"
+                  : assistantObservation.text.length > 0
+                    ? "assistant_text_only"
+                    : "assistant_empty";
+            console.warn(
+              `[pi-adapter] no tool calls kind=${kind} source=${assistantSource}` +
+                ` stop_reason=${assistantObservation.stopReason}` +
+                ` text=${assistantObservation.text.length > 0 ? "present" : "empty"}` +
+                ` tool_blocks=${assistantObservation.toolBlocks}` +
+                ` invalid_tool_blocks=${assistantObservation.invalidToolBlocks}`,
+            );
           }
         }
 

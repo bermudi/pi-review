@@ -407,7 +407,7 @@ export class CompressionState {
       if (this.pendingJob !== job) return;
 
       if (err !== null) {
-        console.error(`[ocr] Memory compression failed: ${String(err)}`);
+        console.error(`[pi-review] Memory compression failed: ${String(err)}`);
         job.doneResolved = true;
         job.resolveDone();
         if (this.pendingJob === job) this.pendingJob = null;

@@ -158,8 +158,8 @@ async function finalizeDiff(
       }
       d.newFileContent = output.toString("utf-8");
     } catch (err) {
-      // Mirror Go's fmt.Fprintf(os.Stderr, "[ocr] WARNING: ...")
-      console.error(`[ocr] WARNING: cannot read file ${d.newPath} at ref ${ref}: ${String((err as Error).message)}`);
+      // Mirror Go's fmt.Fprintf(os.Stderr, "[pi-review] WARNING: ...")
+      console.error(`[pi-review] WARNING: cannot read file ${d.newPath} at ref ${ref}: ${String((err as Error).message)}`);
     }
     return;
   }
@@ -168,6 +168,6 @@ async function finalizeDiff(
     const content = await readWorkspaceFileForDiff(repoDir, d.newPath);
     d.newFileContent = content.toString("utf-8");
   } catch (err) {
-    console.error(`[ocr] WARNING: cannot read file ${d.newPath} for review: ${String((err as Error).message)}`);
+    console.error(`[pi-review] WARNING: cannot read file ${d.newPath} for review: ${String((err as Error).message)}`);
   }
 }

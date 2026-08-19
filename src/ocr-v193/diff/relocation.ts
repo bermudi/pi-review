@@ -142,7 +142,7 @@ export async function reLocateComment(
     }
   } catch (err) {
     // Mirrors Go's telemetry + stdout Writer logging. Use stderr in TS.
-    console.error(`[ocr] Re-location LLM call failed for ${cm.path}: ${String((err as Error).message)}`);
+    console.error(`[pi-review] Re-location LLM call failed for ${cm.path}: ${String((err as Error).message)}`);
     return [false, null];
   }
 

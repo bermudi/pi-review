@@ -69,6 +69,7 @@ export interface CommentCollectorLike {
 
 export interface Args {
   readonly repoDir: string;
+  readonly sessionId?: string;
   readonly from?: string;
   readonly to?: string;
   readonly commit?: string;
@@ -232,6 +233,7 @@ export class Agent {
 
     this.runner = new Runner({
       model: args.model,
+      sessionId: args.sessionId,
       template: templateForRunner as unknown as import("../llmloop/types.js").Template,
       llmClient: args.llmClient,
       mainToolDefs: mainToolDefs as unknown as readonly ToolDef[],
@@ -309,7 +311,7 @@ export class Agent {
     const totalChanged = this.diffs.length;
     const reviewCount = this.countReviewable(this.diffs);
     // Emit progress to stderr so stdout stays machine-readable.
-    console.error(`[ocr] ${totalChanged} file(s) changed, reviewing ${reviewCount} in ${this.args.repoDir}`);
+    console.error(`[pi-review] ${totalChanged} file(s) changed, reviewing ${reviewCount} in ${this.args.repoDir}`);
 
     // Build diff map for file_read_diff tool if present (best-effort, no error if absent)
     this.injectDiffMap();
@@ -317,7 +319,7 @@ export class Agent {
     this.diffs = this.filterDiffs(this.diffs);
 
     if (this.diffs.length === 0) {
-      console.error("[ocr] No supported files changed. Skipping review.");
+      console.error("[pi-review] No supported files changed. Skipping review.");
       return [];
     }
 
@@ -325,10 +327,10 @@ export class Agent {
 
     if ((this.args.maxTokensBudget ?? 0) > 0) {
       const est = estimateDiffCost(this.diffs);
-      console.error(`[ocr] estimated cost: ${est.totalTokens} tokens`);
-      console.error(`[ocr] token budget: ${humanTokens(this.args.maxTokensBudget!)} (dispatch stops once exceeded)`);
+      console.error(`[pi-review] estimated cost: ${est.totalTokens} tokens`);
+      console.error(`[pi-review] token budget: ${humanTokens(this.args.maxTokensBudget!)} (dispatch stops once exceeded)`);
       if (est.totalTokens > (this.args.maxTokensBudget ?? 0)) {
-        console.error(`[ocr] WARNING: estimate (${humanTokens(est.totalTokens)}) exceeds token budget (${humanTokens(this.args.maxTokensBudget!)})`);
+        console.error(`[pi-review] WARNING: estimate (${humanTokens(est.totalTokens)}) exceeds token budget (${humanTokens(this.args.maxTokensBudget!)})`);
       }
     }
 
@@ -435,14 +437,14 @@ export class Agent {
     for (const d of diffs) {
       const path = effectivePath(d);
       if (!this.shouldReview(d)) {
-        if (d.isBinary) console.error(`[ocr] Skipping ${path} — binary file`);
-        else console.error(`[ocr] Skipping ${path} — filtered by path/extension rules`);
+        if (d.isBinary) console.error(`[pi-review] Skipping ${path} — binary file`);
+        else console.error(`[pi-review] Skipping ${path} — filtered by path/extension rules`);
         skipped++;
         continue;
       }
       kept.push(d);
     }
-    if (skipped > 0) console.error(`[ocr] Filtered ${skipped} file(s) by include/exclude rules`);
+    if (skipped > 0) console.error(`[pi-review] Filtered ${skipped} file(s) by include/exclude rules`);
     return kept;
   }
 
@@ -454,13 +456,13 @@ export class Agent {
     for (const d of diffs) {
       const tokens = countTokens(d.diff);
       if (tokens > limit) {
-        console.error(`[ocr] Skipping ${d.newPath} (~${tokens} tokens exceeds 80% of max_tokens(${this.args.template.MaxTokens}))`);
+        console.error(`[pi-review] Skipping ${d.newPath} (~${tokens} tokens exceeds 80% of max_tokens(${this.args.template.MaxTokens}))`);
         skipped++;
         continue;
       }
       kept.push(d);
     }
-    if (skipped > 0) console.error(`[ocr] Pre-filtered ${skipped} file(s) exceeding 80% of max_tokens`);
+    if (skipped > 0) console.error(`[pi-review] Pre-filtered ${skipped} file(s) exceeding 80% of max_tokens`);
     return kept;
   }
 
@@ -497,7 +499,7 @@ export class Agent {
     // Pre-filter large diffs
     this.diffs = this.filterLargeDiffs(this.diffs);
     if (this.diffs.length === 0) {
-      console.error("[ocr] All changed files exceeded the token size limit. Skipping review.");
+      console.error("[pi-review] All changed files exceeded the token size limit. Skipping review.");
       return [];
     }
 
@@ -527,7 +529,7 @@ export class Agent {
         const projected = used + nextEst;
         if (projected > maxBudget) {
           console.error(
-            `[ocr] token budget reached (used ${humanTokens(used)} + next-file est ${humanTokens(nextEst)} = projected ${humanTokens(projected)} > budget ${humanTokens(maxBudget)}) — skipping ${d.newPath} and remaining files`,
+            `[pi-review] token budget reached (used ${humanTokens(used)} + next-file est ${humanTokens(nextEst)} = projected ${humanTokens(projected)} > budget ${humanTokens(maxBudget)}) — skipping ${d.newPath} and remaining files`,
           );
           this.warnings.push({
             type: "token_budget_reached",
@@ -579,7 +581,7 @@ export class Agent {
             if (!result.completed && result.error !== null) {
               failed++;
               this.warnings.push({ type: "subtask_error", file: diff.newPath, message: result.error.message });
-              console.error(`[ocr] Subtask error for ${diff.newPath}: ${result.error.message}`);
+              console.error(`[pi-review] Subtask error for ${diff.newPath}: ${result.error.message}`);
             } else if (!result.completed && result.stop !== undefined) {
               // Non-error stop — still record as budget/unknown but not necessarily error
               if (result.stop === "budget_exceeded") {
@@ -592,7 +594,7 @@ export class Agent {
             const msg = err instanceof Error ? err.message : String(err);
             this.subtaskOutcomes.set(diff.newPath, { completed: false, error: msg });
             this.warnings.push({ type: "subtask_error", file: diff.newPath, message: msg });
-            console.error(`[ocr] Subtask panic for ${diff.newPath}: ${msg}`);
+            console.error(`[pi-review] Subtask panic for ${diff.newPath}: ${msg}`);
           } finally {
             sem.release();
           }
@@ -605,14 +607,14 @@ export class Agent {
           if (!result.completed && result.error !== null) {
             failed++;
             this.warnings.push({ type: "subtask_error", file: diff.newPath, message: result.error.message });
-            console.error(`[ocr] Subtask error for ${diff.newPath}: ${result.error.message}`);
+            console.error(`[pi-review] Subtask error for ${diff.newPath}: ${result.error.message}`);
           }
         } catch (err) {
           failed++;
           const msg = err instanceof Error ? err.message : String(err);
           this.subtaskOutcomes.set(diff.newPath, { completed: false, error: msg });
           this.warnings.push({ type: "subtask_error", file: diff.newPath, message: msg });
-          console.error(`[ocr] Subtask panic for ${diff.newPath}: ${msg}`);
+          console.error(`[pi-review] Subtask panic for ${diff.newPath}: ${msg}`);
         } finally {
           if (timeoutId !== null) clearTimeout(timeoutId);
           sem.release();
@@ -662,13 +664,13 @@ export class Agent {
     const hasPlan = planTask !== undefined && planTask.messages.length > 0;
     const shouldSkipPlan = hasPlan && threshold > 0 && changeLines < threshold;
     if (shouldSkipPlan) {
-      console.error(`[ocr] Skipping plan phase for ${newPath} (${changeLines} lines < threshold ${threshold})`);
+      console.error(`[pi-review] Skipping plan phase for ${newPath} (${changeLines} lines < threshold ${threshold})`);
     } else if (hasPlan) {
       try {
         planResult = await this.executePlanPhase(signal, newPath, d.diff, changeFilesExcludingCurrent, rule);
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);
-        console.error(`[ocr] Plan phase failed for ${newPath}: ${msg} (continuing without plan)`);
+        console.error(`[pi-review] Plan phase failed for ${newPath}: ${msg} (continuing without plan)`);
         planResult = "";
       }
     }
@@ -702,7 +704,7 @@ export class Agent {
     for (const msg of messages) tokenCount += countTokens(msg.content);
     if (tokenCount > tokenLimit) {
       const msg = `prompt tokens (${tokenCount}) exceed 80% of max_tokens(${maxAllowed})`;
-      console.error(`[ocr] WARNING: ${msg} for ${newPath}`);
+      console.error(`[pi-review] WARNING: ${msg} for ${newPath}`);
       this.warnings.push({ type: "token_threshold_exceeded", file: newPath, message: msg });
       return { completed: false, stop: "budget_exceeded", error: null };
     }
@@ -798,7 +800,7 @@ export class Agent {
       this.runner.RecordUsage(usage as unknown as never);
     }
 
-    console.error(`[ocr] Plan completed for ${newPath}`);
+    console.error(`[pi-review] Plan completed for ${newPath}`);
     return resp.content ?? "";
   }
 
@@ -812,7 +814,7 @@ export class Agent {
     const ft = this.args.template.ReviewFilterTask;
     if (!ft || ft.messages.length === 0) return;
     if (this.args.skipFilter) {
-      console.error(`[ocr] Review filter skipped for ${newPath} (--no-filter)`);
+      console.error(`[pi-review] Review filter skipped for ${newPath} (--no-filter)`);
       return;
     }
     const collector = this.args.commentCollector;
@@ -848,7 +850,7 @@ export class Agent {
         throw new Error("llmClient must provide complete(signal, req) or CompletionsWithCtx(signal, req)");
       }
     } catch (err) {
-      console.error(`[ocr] Review filter failed for ${newPath}: ${String((err as Error).message)}`);
+      console.error(`[pi-review] Review filter failed for ${newPath}: ${String((err as Error).message)}`);
       return;
     }
     if (!resp) return;
@@ -868,9 +870,9 @@ export class Agent {
         const anyC = collector as unknown as { RemoveByPathAndIndices?: (path: string, indices: Map<number, unknown>) => void };
         if (typeof anyC.RemoveByPathAndIndices === "function") anyC.RemoveByPathAndIndices(newPath, indices);
       }
-      console.error(`[ocr] Review filter removed ${indices.size} comment(s) for ${newPath}`);
+      console.error(`[pi-review] Review filter removed ${indices.size} comment(s) for ${newPath}`);
     } catch (err) {
-      console.error(`[ocr] Review filter removal failed for ${newPath}: ${String((err as Error).message)}`);
+      console.error(`[pi-review] Review filter removal failed for ${newPath}: ${String((err as Error).message)}`);
     }
   }
 
@@ -897,12 +899,12 @@ function parseFilterResponse(raw: string, total: number): Map<number, unknown> |
     ids = JSON.parse(cleaned);
   } catch (err) {
     const preview = cleaned.length > 200 ? cleaned.slice(0, 200) + "..." : cleaned;
-    console.error(`[ocr] Review filter: failed to parse LLM response: ${String((err as Error).message)}, raw: ${preview}`);
+    console.error(`[pi-review] Review filter: failed to parse LLM response: ${String((err as Error).message)}, raw: ${preview}`);
     return null;
   }
   if (!Array.isArray(ids)) {
     const preview = cleaned.length > 200 ? cleaned.slice(0, 200) + "..." : cleaned;
-    console.error(`[ocr] Review filter: failed to parse LLM response: expected array, raw: ${preview}`);
+    console.error(`[pi-review] Review filter: failed to parse LLM response: expected array, raw: ${preview}`);
     return null;
   }
   const indices = new Map<number, unknown>();

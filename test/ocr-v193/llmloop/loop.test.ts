@@ -64,6 +64,7 @@ function emptyRegistry(): Map<string, ToolProviderStub> {
 
 interface MakeRunnerOpts {
   readonly responses: readonly ScriptedResponse[];
+  readonly sessionId?: string;
   readonly toolRegistry?: Map<string, ToolProviderStub>;
   readonly template?: unknown;
   readonly mainToolDefs?: readonly ToolDef[];
@@ -111,11 +112,13 @@ function makeRunner(opts: MakeRunnerOpts): {
     MaxCompletionTokens = fn();
   }
   if (MaxCompletionTokens === undefined) MaxCompletionTokens = 1000;
+  const memoryCompressionTask = rawTemplate["MemoryCompressionTask"] as Template["MemoryCompressionTask"] | undefined;
 
   const template: Template = {
     MaxTokens,
     MaxToolRequestTimes,
     MaxCompletionTokens,
+    MemoryCompressionTask: memoryCompressionTask,
   } as Template;
 
   let collector: StubCollector | null;
@@ -137,6 +140,7 @@ function makeRunner(opts: MakeRunnerOpts): {
 
   const deps = {
     model: opts.model ?? "fake",
+    sessionId: opts.sessionId,
     template,
     llmClient: adapter as unknown,
     mainToolDefs,
@@ -153,7 +157,7 @@ function makeRunner(opts: MakeRunnerOpts): {
 // ---------------------------------------------------------------------------
 
 describe("ocr-v193 llmloop Runner (ported)", () => {
-  // Ported from TestRunPerFile_TaskDoneSuccess in loop_test.go
+  // OCR v1.9.3: TestRunPerFile_TaskDoneExplicitDone
   // Upstream invariant: task_done DONE completes the loop.
   test("completes on task_done DONE", async () => {
     const { runner, transport } = makeRunner({
@@ -174,6 +178,154 @@ describe("ocr-v193 llmloop Runner (ported)", () => {
     expect(transport.requests).toHaveLength(1);
     expect(runner.totalInputTokens()).toBe(10);
     expect(runner.totalOutputTokens()).toBe(5);
+  });
+
+  // OCR v1.9.3: TestRunPerFile_TaskDoneImmediately
+  test("task_done immediately completes after one request", async () => {
+    const { runner, transport } = makeRunner({
+      responses: [
+        {
+          toolCalls: [{ id: "done-1", name: "task_done", arguments: JSON.stringify({ state: "DONE" }) }],
+          usage: { PromptTokens: 10, CompletionTokens: 5, CacheReadTokens: 0, CacheWriteTokens: 0 },
+        },
+      ],
+    });
+
+    const result = await runner.RunPerFile(
+      new AbortController().signal,
+      [newTextMessage("user", "review this file")],
+      "main.go",
+    );
+
+    expect(result.completed).toBe(true);
+    expect(transport.requests).toHaveLength(1);
+    expect(runner.totalInputTokens()).toBe(10);
+    expect(runner.totalOutputTokens()).toBe(5);
+  });
+
+  // OCR v1.9.3: TestRunPerFile_UsesCompletionTokenLimit
+  test("uses the configured completion token limit", async () => {
+    const { runner, transport } = makeRunner({
+      template: { MaxTokens: 200000, MaxToolRequestTimes: 10, MaxCompletionTokens: 58888 },
+      responses: [
+        {
+          toolCalls: [{ id: "done-1", name: "task_done", arguments: JSON.stringify({ state: "DONE" }) }],
+        },
+      ],
+    });
+
+    await runner.RunPerFile(
+      new AbortController().signal,
+      [newTextMessage("user", "review")],
+      "main.go",
+    );
+
+    expect(transport.requests[0]?.maxTokens).toBe(58888);
+  });
+
+  // OCR v1.9.3: TestRunPerFile_TaskDoneFailed
+  test("task_done FAILED terminates with an error", async () => {
+    const { runner, transport } = makeRunner({
+      responses: [
+        {
+          toolCalls: [{ id: "failed-1", name: "task_done", arguments: JSON.stringify({ state: "FAILED" }) }],
+        },
+      ],
+    });
+
+    const result = await runner.RunPerFile(
+      new AbortController().signal,
+      [newTextMessage("user", "review this file")],
+      "main.go",
+    );
+
+    expect(result.completed).toBe(false);
+    expect(result.error?.message).toContain("task_done reported FAILED");
+    expect(transport.requests).toHaveLength(1);
+  });
+
+  // OCR v1.9.3: TestRunPerFile_InvalidTaskDoneStateRetries
+  test("invalid task_done states are retried before DONE", async () => {
+    const invalidArguments = [
+      JSON.stringify({ state: "UNKNOWN" }),
+      JSON.stringify({ state: "" }),
+      JSON.stringify({ state: 1 }),
+      '{"state":',
+    ];
+
+    for (const arguments_ of invalidArguments) {
+      const { runner, transport } = makeRunner({
+        responses: [
+          { toolCalls: [{ id: "invalid-1", name: "task_done", arguments: arguments_ }] },
+          { toolCalls: [{ id: "done-1", name: "task_done", arguments: JSON.stringify({ state: "DONE" }) }] },
+        ],
+      });
+
+      const result = await runner.RunPerFile(
+        new AbortController().signal,
+        [newTextMessage("user", "review this file")],
+        "main.go",
+      );
+
+      expect(result.completed).toBe(true);
+      expect(result.error).toBeUndefined();
+      expect(transport.requests).toHaveLength(2);
+    }
+  });
+
+  // OCR v1.9.3: TestRunPerFile_TagsRequestsWithTaskSessionKey
+  test("tags every request in one file run with one session key", async () => {
+    const { runner, transport } = makeRunner({
+      sessionId: "sess",
+      responses: [
+        { toolCalls: [{ id: "read-1", name: "file_read", arguments: JSON.stringify({ path: "main.go" }) }] },
+        { toolCalls: [{ id: "done-1", name: "task_done", arguments: JSON.stringify({ state: "DONE" }) }] },
+      ],
+      toolRegistry: fileReadRegistry("package main\n"),
+    });
+
+    await runner.RunPerFile(
+      new AbortController().signal,
+      [newTextMessage("user", "review this file")],
+      "main.go",
+    );
+
+    expect(transport.requests).toHaveLength(2);
+    const sessionIds = transport.requests.map((request) => request.sessionId);
+    const expected = "sess-main_task-2873f79a86c0d8b3";
+    expect(sessionIds).toEqual([expected, expected]);
+  });
+
+  // OCR v1.9.3: TestRunner_RecordWarning
+  test("records warnings in insertion order", () => {
+    const { runner } = makeRunner({ responses: [] });
+
+    runner.RecordWarning("token_limit", "a.go", "approaching token limit");
+    runner.RecordWarning("parse_error", "b.go", "invalid JSON");
+
+    expect(runner.Warnings()).toEqual([
+      { type: "token_limit", file: "a.go", message: "approaching token limit" },
+      { type: "parse_error", file: "b.go", message: "invalid JSON" },
+    ]);
+  });
+
+  // OCR v1.9.3: TestRunner_RecordUsage
+  test("records usage and ignores a missing usage record", () => {
+    const { runner } = makeRunner({ responses: [] });
+
+    runner.RecordUsage({
+      PromptTokens: 100,
+      CompletionTokens: 50,
+      CacheReadTokens: 20,
+      CacheWriteTokens: 10,
+    });
+    runner.RecordUsage(undefined);
+
+    expect(runner.totalInputTokens()).toBe(100);
+    expect(runner.totalOutputTokens()).toBe(50);
+    expect(runner.totalCacheReadTokens()).toBe(20);
+    expect(runner.totalCacheWriteTokens()).toBe(10);
+    expect(runner.totalTokensUsed()).toBe(150);
   });
 
   // Ported from TestRunPerFile_MultiToolTurnIsOneRound in loop_test.go
@@ -237,6 +389,147 @@ describe("ocr-v193 llmloop Runner (ported)", () => {
     // Verify total usage counted across both rounds
     expect(runner.totalInputTokens()).toBe(25);
     expect(runner.totalOutputTokens()).toBe(15);
+  });
+
+  // OCR v1.9.3: TestRunPerFile_ContextCancelled
+  test("an already-cancelled context does not make a request", async () => {
+    const { runner, transport } = makeRunner({
+      responses: [
+        { toolCalls: [{ id: "done-1", name: "task_done", arguments: JSON.stringify({ state: "DONE" }) }] },
+      ],
+    });
+    const controller = new AbortController();
+    controller.abort(new Error("cancelled for test"));
+
+    const result = await runner.RunPerFile(
+      controller.signal,
+      [newTextMessage("user", "review")],
+      "main.go",
+    );
+
+    expect(result.completed).toBe(false);
+    expect(result.error).toBeDefined();
+    expect(transport.requests).toHaveLength(0);
+  });
+
+  // OCR v1.9.3: TestRunPerFile_UnknownTool
+  test("unknown tools produce a result and allow the model to continue", async () => {
+    const { runner, transport } = makeRunner({
+      responses: [
+        { toolCalls: [{ id: "unknown-1", name: "nonexistent_tool", arguments: "{}" }] },
+        { toolCalls: [{ id: "done-1", name: "task_done", arguments: JSON.stringify({ state: "DONE" }) }] },
+      ],
+    });
+
+    const result = await runner.RunPerFile(
+      new AbortController().signal,
+      [newTextMessage("user", "review")],
+      "main.go",
+    );
+
+    expect(result.completed).toBe(true);
+    expect(result.error).toBeUndefined();
+    expect(transport.requests).toHaveLength(2);
+    const toolMessages = (transport.requests[1]?.messages ?? []).filter((message) => message.role === "tool");
+    expect(toolMessages).toHaveLength(1);
+    expect(extractText(toolMessages[0] as Message)).toContain("Tool not found");
+  });
+
+  // OCR v1.9.3: TestExecuteToolCall_ArgumentsEdgeCases
+  test("tool argument edge cases fail safely and never pass null dynamic args", async () => {
+    const cases: readonly {
+      readonly name: string;
+      readonly toolName: string;
+      readonly arguments: string;
+      readonly wantError?: string;
+      readonly wantCommentPath?: string;
+      readonly wantNonNullDynamicArgs?: boolean;
+    }[] = [
+      {
+        name: "null args on code_comment",
+        toolName: "code_comment",
+        arguments: "null",
+        wantError: "'comments' array is required",
+      },
+      {
+        name: "empty object on code_comment",
+        toolName: "code_comment",
+        arguments: "{}",
+        wantError: "'comments' array is required",
+      },
+      {
+        name: "valid args keeps path override",
+        toolName: "code_comment",
+        arguments: JSON.stringify({
+          path: "hallucinated.go",
+          comments: [{ content: "issue", existing_code: "foo" }],
+        }),
+        wantCommentPath: "file.go",
+      },
+      {
+        name: "empty string args",
+        toolName: "code_comment",
+        arguments: "",
+        wantError: "Error parsing tool arguments",
+      },
+      {
+        name: "malformed JSON args",
+        toolName: "code_comment",
+        arguments: '{"comments":',
+        wantError: "Error parsing tool arguments",
+      },
+      {
+        name: "null args on dynamic tool",
+        toolName: "dyn_echo",
+        arguments: "null",
+        wantNonNullDynamicArgs: true,
+      },
+    ];
+
+    for (const testCase of cases) {
+      const captured: Array<Record<string, unknown>> = [];
+      const collector = createCollector();
+      const registry = new Map<string, ToolProviderStub>([
+        [
+          "dyn_echo",
+          {
+            name: "dyn_echo",
+            execute: (args) => {
+              captured.push(args);
+              return "ok";
+            },
+          },
+        ],
+      ]);
+      const { runner } = makeRunner({
+        collector,
+        toolRegistry: registry,
+        responses: [],
+      });
+
+      const checkpoint = await runner.executeToolCall(
+        new AbortController().signal,
+        "file.go",
+        {
+          id: `args-${testCase.name}`,
+          type: "function",
+          function: { name: testCase.toolName, arguments: testCase.arguments },
+        },
+        "",
+      );
+
+      if (testCase.wantError !== undefined) {
+        expect(checkpoint.data).toContain(testCase.wantError);
+      }
+      if (testCase.wantCommentPath !== undefined) {
+        expect(collector.comments()).toHaveLength(1);
+        expect(collector.comments()[0]?.path).toBe(testCase.wantCommentPath);
+      }
+      if (testCase.wantNonNullDynamicArgs) {
+        expect(captured).toHaveLength(1);
+        expect(captured[0]).toEqual({});
+      }
+    }
   });
 
   // Ported from TestRunPerFile_EmptyToolCallsRetry in loop_test.go
@@ -304,6 +597,24 @@ describe("ocr-v193 llmloop Runner (ported)", () => {
     expect(transport.requests).toHaveLength(3);
     // Grace should NOT be triggered on empty-rounds stop
     // So no extra request beyond the 3 empties
+  });
+
+  // OCR v1.9.3: TestRunPerFile_MaxToolRequestsWithoutTaskDoneDoesNotComplete
+  test("max tool requests without task_done do not complete", async () => {
+    const { runner, transport } = makeRunner({
+      template: { MaxTokens: 100000, MaxToolRequestTimes: 1, MaxCompletionTokens: 1000 },
+      responses: [{ content: "", toolCalls: [] }, { content: "", toolCalls: [] }],
+    });
+
+    const result = await runner.RunPerFile(
+      new AbortController().signal,
+      [newTextMessage("user", "review")],
+      "main.go",
+    );
+
+    expect(result.completed).toBe(false);
+    expect(result.stop).toBe(MainLoopStop.StopMaxRounds);
+    expect(transport.requests).toHaveLength(2);
   });
 
   // Ported from TestRunPerFile_MaxRoundsTriggersGrace in loop_test.go
@@ -435,38 +746,38 @@ describe("ocr-v193 llmloop Runner (ported)", () => {
     expect(collector.comments()).toHaveLength(0);
   });
 
-  // Ported from TestRunPerFile_CompressionThreshold in loop_test.go
-  // Large messages trigger tryApply/compression path (or at least not crash)
-  test("large messages trigger compression path without crash", async () => {
+  // Ported from TestRunPerFile_UncompressibleContextStopsWithCompression in loop_test.go
+  test("uncompressible context stops after the compression request", async () => {
     const { runner, transport } = makeRunner({
       toolRegistry: fileReadRegistry("package main\n"),
-      template: { MaxTokens: 20, MaxToolRequestTimes: 10, MaxCompletionTokens: 1000 } as unknown as Record<string, unknown>,
+      template: {
+        MaxTokens: 20,
+        MaxToolRequestTimes: 10,
+        MaxCompletionTokens: 1000,
+        MemoryCompressionTask: {
+          Messages: [newTextMessage("user", "Summarize: {{context}}")],
+        },
+      },
       responses: [
         {
           toolCalls: [{ id: "c1", name: "file_read", arguments: JSON.stringify({ path: "main.go" }) }],
           usage: { PromptTokens: 5, CompletionTokens: 5, CacheReadTokens: 0, CacheWriteTokens: 0 },
         },
-        // Repeat same to keep loop running if not stopped by compression
         {
-          toolCalls: [{ id: "c2", name: "file_read", arguments: JSON.stringify({ path: "main.go" }) }],
+          content: "",
           usage: { PromptTokens: 5, CompletionTokens: 5, CacheReadTokens: 0, CacheWriteTokens: 0 },
         },
       ],
     });
 
-    // Create 2 initial messages that exceed 80% threshold for MaxTokens=20.
-    // CountMessagesTokens uses byte length /4, so 100 words ~125 tokens.
     const big = "word ".repeat(100);
-    const msgs: Message[] = [newTextMessage("user", big), newTextMessage("assistant", big)];
+    const msgs: Message[] = [newTextMessage("user", big)];
 
     const result = await runner.RunPerFile(new AbortController().signal, msgs, "main.go");
 
-    // Should not throw; behavior is either StopCompression or continues.
-    // At minimum we assert no crash and some stop classification.
-    expect([MainLoopStop.StopCompression, MainLoopStop.StopEmptyRounds, MainLoopStop.StopMaxRounds, MainLoopStop.StopNone]).toContain(result.stop);
-    // At least one request should have been made.
-    expect(transport.requests.length).toBeGreaterThanOrEqual(1);
-    // Ensure runner didn't throw and background cleanup completed.
+    expect(result.completed).toBe(false);
+    expect(result.stop).toBe(MainLoopStop.StopCompression);
+    expect(transport.requests).toHaveLength(2);
     await runner.waitBackground();
   });
 

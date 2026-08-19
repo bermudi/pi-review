@@ -295,7 +295,7 @@ export interface TraceSummaryOpts {
 
 export function traceSummaryText(opts: TraceSummaryOpts): string {
   const elapsed = formatDurationMs(opts.durationMs);
-  let base = `[ocr] Summary: ${opts.filesReviewed} file(s) reviewed, ${opts.comments} comment(s), ~${opts.totalTokens} token(s) used`;
+  let base = `[pi-review] Summary: ${opts.filesReviewed} file(s) reviewed, ${opts.comments} comment(s), ~${opts.totalTokens} token(s) used`;
   if (opts.inputTokens > 0 || opts.outputTokens > 0) {
     base += ` (input: ~${opts.inputTokens}, output: ~${opts.outputTokens})`;
   }
@@ -304,7 +304,7 @@ export function traceSummaryText(opts: TraceSummaryOpts): string {
   }
   base += `, ${elapsed} elapsed\n`;
   if (opts.sessionId && opts.sessionId !== "") {
-    base += `[ocr] Session: ${opts.sessionId}\n`;
+    base += `[pi-review] Session: ${opts.sessionId}\n`;
   }
   return base;
 }
@@ -332,7 +332,7 @@ export function outputTextWithWarnings(
 
   for (const w of warnings) {
     if (isSubtaskErrorType(w.type)) continue;
-    stderr += `[ocr] WARNING [${w.type}] ${sanitizeTerminal(w.file)}: ${sanitizeTerminal(w.message)}\n`;
+    stderr += `[pi-review] WARNING [${w.type}] ${sanitizeTerminal(w.file)}: ${sanitizeTerminal(w.message)}\n`;
   }
   return { stdout, stderr };
 }
@@ -587,7 +587,7 @@ export function emitFailureUsageText(
     if (!out.retry_report) delete out.retry_report;
     return { stdout: "", stderr: `${JSON.stringify(out, null, 2)}\n` };
   }
-  let line = `[ocr] usage on failure: ${String(filesReviewed)} file(s), ${String(inputTokens)} input + ${String(outputTokens)} output = ${String(totalTokens)} total tokens, ${String(Object.values(toolCalls).reduce((a, b) => a + b, 0))} tool calls, elapsed ${formatDurationMs(elapsedMs)}, budget_exceeded=${String(budgetExceeded)}`;
+  let line = `[pi-review] usage on failure: ${String(filesReviewed)} file(s), ${String(inputTokens)} input + ${String(outputTokens)} output = ${String(totalTokens)} total tokens, ${String(Object.values(toolCalls).reduce((a, b) => a + b, 0))} tool calls, elapsed ${formatDurationMs(elapsedMs)}, budget_exceeded=${String(budgetExceeded)}`;
   if (sessionId !== "") line += `, session ${sessionId}`;
   let stderr = `${line}\n`;
   stderr += outputRetryReportText(retryReport);

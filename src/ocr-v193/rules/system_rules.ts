@@ -448,7 +448,7 @@ function readRuleFileSafe(filePath: string): string {
 function tryReadRuleFile(rule: string, repoDir: string): string | null {
   if (repoDir === "") {
     if (!path.isAbsolute(rule)) {
-      console.error(`[ocr] WARNING: cannot resolve relative rule path ${JSON.stringify(rule)} without a repo dir`);
+      console.error(`[pi-review] WARNING: cannot resolve relative rule path ${JSON.stringify(rule)} without a repo dir`);
       return null;
     }
   }
@@ -457,8 +457,8 @@ function tryReadRuleFile(rule: string, repoDir: string): string | null {
       return readRuleFileSafe(rule);
     } catch (e) {
       const err = e as NodeJS.ErrnoException;
-      if (err.code === "ENOENT") console.error(`[ocr] WARNING: rule file not found: ${rule}`);
-      else console.error(`[ocr] WARNING: cannot read rule file ${rule}: ${String(err.message ?? err)}`);
+      if (err.code === "ENOENT") console.error(`[pi-review] WARNING: rule file not found: ${rule}`);
+      else console.error(`[pi-review] WARNING: cannot read rule file ${rule}: ${String(err.message ?? err)}`);
       return null;
     }
   }
@@ -466,15 +466,15 @@ function tryReadRuleFile(rule: string, repoDir: string): string | null {
   const cleanRepo = path.resolve(repoDir);
   const sep = path.sep;
   if (resolved !== cleanRepo && !resolved.startsWith(cleanRepo + sep)) {
-    console.error(`[ocr] WARNING: rule file path escapes repo dir: ${rule}`);
+    console.error(`[pi-review] WARNING: rule file path escapes repo dir: ${rule}`);
     return null;
   }
   try {
     return readRuleFileSafe(resolved);
   } catch (e) {
     const err = e as NodeJS.ErrnoException;
-    if (err.code === "ENOENT") console.error(`[ocr] WARNING: rule file not found: ${rule}`);
-    else console.error(`[ocr] WARNING: cannot read rule file ${resolved}: ${String(err.message ?? err)}`);
+    if (err.code === "ENOENT") console.error(`[pi-review] WARNING: rule file not found: ${rule}`);
+    else console.error(`[pi-review] WARNING: cannot read rule file ${resolved}: ${String(err.message ?? err)}`);
     return null;
   }
 }

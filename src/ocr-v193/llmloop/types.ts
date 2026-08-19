@@ -172,6 +172,8 @@ export type DiffLookup = (path: string) => DiffLike | null | undefined;
 
 export interface RunnerDeps {
   readonly model: string;
+  /** OCR session identity used to derive per-task prompt-cache keys. */
+  readonly sessionId?: string;
   readonly template: Template;
   /** LLM transport — accepts either `complete` or `CompletionsWithCtx` shape. */
   readonly llmClient: AnyLlmClient;

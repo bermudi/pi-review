@@ -117,7 +117,7 @@ export function emitRunResult(
   // Telemetry summary emulation: progress to stderr when not machine-readable
   if (!isMachine) {
     // Mirrors telemetry.PrintTraceSummary — simple placeholder
-    if (showTrace) io.stderr(`[ocr] TraceID: ${traceId}\n`);
+    if (showTrace) io.stderr(`[pi-review] TraceID: ${traceId}\n`);
   }
 
   if (outputFormat === "json") {
@@ -337,13 +337,13 @@ export async function runReviewContext(ctx: ReviewContext): Promise<number> {
       );
     } else {
       io.stderr(
-        `[ocr] usage on failure: ${String(failedProvider.FilesReviewed())} file(s), ${String(failedProvider.TotalInputTokens())} input + ${String(failedProvider.TotalOutputTokens())} output = ${String(failedProvider.TotalTokensUsed())} total tokens, ${String(Object.values(failedProvider.ToolCalls()).reduce((a, b) => a + b, 0))} tool calls, elapsed ${String(Math.round(durationMs / 1000))}s, budget_exceeded=${String(failedProvider.BudgetExceeded())}` +
+        `[pi-review] usage on failure: ${String(failedProvider.FilesReviewed())} file(s), ${String(failedProvider.TotalInputTokens())} input + ${String(failedProvider.TotalOutputTokens())} output = ${String(failedProvider.TotalTokensUsed())} total tokens, ${String(Object.values(failedProvider.ToolCalls()).reduce((a, b) => a + b, 0))} tool calls, elapsed ${String(Math.round(durationMs / 1000))}s, budget_exceeded=${String(failedProvider.BudgetExceeded())}` +
           (failedProvider.SessionID() ? `, session ${failedProvider.SessionID()}` : "") +
           "\n",
       );
       if (failureReport) io.stderr(outputRetryReportText(failureReport as RetryReport));
     }
-    if (failedProvider.SessionID()) io.stderr(`[ocr] Session: ${failedProvider.SessionID()} (retry with: --resume ${failedProvider.SessionID()})\n`);
+    if (failedProvider.SessionID()) io.stderr(`[pi-review] Session: ${failedProvider.SessionID()} (retry with: --resume ${failedProvider.SessionID()})\n`);
 
     const combined = [runErr, emitErr].filter((e): e is Error => e !== null);
     if (combined.length > 0) {
