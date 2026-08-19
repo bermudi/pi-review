@@ -185,7 +185,7 @@ describe("ocr-v193 llmloop Runner (ported)", () => {
     const { runner, transport } = makeRunner({
       responses: [
         {
-          toolCalls: [{ id: "done-1", name: "task_done", arguments: JSON.stringify({ state: "DONE" }) }],
+          toolCalls: [{ id: "done-1", name: "task_done", arguments: "{}" }],
           usage: { PromptTokens: 10, CompletionTokens: 5, CacheReadTokens: 0, CacheWriteTokens: 0 },
         },
       ],
@@ -328,9 +328,7 @@ describe("ocr-v193 llmloop Runner (ported)", () => {
     expect(runner.totalTokensUsed()).toBe(150);
   });
 
-  // Ported from TestRunPerFile_MultiToolTurnIsOneRound in loop_test.go
-  // One response with 2 code_comment calls counts as 1 round, both executed,
-  // next request contains tool results.
+  // Additional local regression: one response may contain multiple tool calls.
   test("multi-tool turn counts as one round", async () => {
     const collector = createCollector();
     const { runner, transport } = makeRunner({
@@ -389,6 +387,34 @@ describe("ocr-v193 llmloop Runner (ported)", () => {
     // Verify total usage counted across both rounds
     expect(runner.totalInputTokens()).toBe(25);
     expect(runner.totalOutputTokens()).toBe(15);
+  });
+
+  // OCR v1.9.3: TestRunPerFile_ToolCallThenDone
+  test("a tool call followed by task_done completes", async () => {
+    const { runner, transport } = makeRunner({
+      toolRegistry: fileReadRegistry("package main\n"),
+      responses: [
+        {
+          toolCalls: [{ id: "read-1", name: "file_read", arguments: JSON.stringify({ path: "main.go" }) }],
+          usage: { PromptTokens: 20, CompletionTokens: 10, CacheReadTokens: 0, CacheWriteTokens: 0 },
+        },
+        {
+          toolCalls: [{ id: "done-1", name: "task_done", arguments: "{}" }],
+          usage: { PromptTokens: 10, CompletionTokens: 5, CacheReadTokens: 0, CacheWriteTokens: 0 },
+        },
+      ],
+    });
+
+    const result = await runner.RunPerFile(
+      new AbortController().signal,
+      [newTextMessage("user", "review")],
+      "main.go",
+    );
+
+    expect(result.completed).toBe(true);
+    expect(transport.requests).toHaveLength(2);
+    expect(runner.toolCalls().get("file_read")).toBe(1);
+    expect(runner.totalInputTokens()).toBe(30);
   });
 
   // OCR v1.9.3: TestRunPerFile_ContextCancelled
@@ -532,9 +558,7 @@ describe("ocr-v193 llmloop Runner (ported)", () => {
     }
   });
 
-  // Ported from TestRunPerFile_EmptyToolCallsRetry in loop_test.go
-  // Response with no tool_calls inserts retry user message and continues,
-  // not counting toward empty.
+  // Additional local regression: a text-only response gets the OCR retry prompt.
   test("empty tool_calls triggers retry insertion", async () => {
     const { runner, transport } = makeRunner({
       responses: [
@@ -567,8 +591,8 @@ describe("ocr-v193 llmloop Runner (ported)", () => {
     expect(hasAssistantHello).toBe(true);
   });
 
-  // Ported from TestRunPerFile_ThreeConsecutiveEmptyResultsStops in loop_test.go
-  // 3 rounds with empty data -> StopEmptyRounds
+  // OCR v1.9.3: TestRunPerFile_EmptyToolResultsStopWithEmptyRounds
+  // Also verifies TestRunPerFile_GraceRoundNotTriggeredOnEmptyRoundsStop.
   test("three consecutive empty results stops", async () => {
     const { runner, transport } = makeRunner({
       toolRegistry: fileReadRegistry(""),
@@ -617,7 +641,7 @@ describe("ocr-v193 llmloop Runner (ported)", () => {
     expect(transport.requests).toHaveLength(2);
   });
 
-  // Ported from TestRunPerFile_MaxRoundsTriggersGrace in loop_test.go
+  // OCR v1.9.3: TestRunPerFile_GraceRoundSubmitsComment
   // Budget 1 exhausted -> one grace request with only code_comment+task_done,
   // usage counted, stops with StopMaxRounds
   test("max rounds triggers grace with filtered tools", async () => {
@@ -673,8 +697,7 @@ describe("ocr-v193 llmloop Runner (ported)", () => {
     expect(runner.totalOutputTokens()).toBe(30);
   });
 
-  // Ported from TestRunPerFile_CancelPreventsGrace in loop_test.go
-  // Abort signal prevents grace call
+  // OCR v1.9.3: TestRunPerFile_GraceRoundSkippedWhenContextCancelled
   test("abort prevents grace call", async () => {
     const controller = new AbortController();
 
@@ -781,7 +804,7 @@ describe("ocr-v193 llmloop Runner (ported)", () => {
     await runner.waitBackground();
   });
 
-  // Ported from TestGraceRoundToolDefs_Filters in loop_test.go
+  // Additional local regression: grace tools remain restricted to review tools.
   test("grace tool defs filters to code_comment and task_done only", () => {
     const defs: ToolDef[] = [
       { type: "function", function: { name: "code_comment" } },
