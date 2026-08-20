@@ -120,6 +120,7 @@ export class Agent {
 
   private runner: Runner;
   private subtaskFailed = 0;
+  private budgetExceeded = false;
   private commentCollector: CommentCollector;
   private commentWorkerPool: CommentWorkerPool;
 
@@ -166,7 +167,7 @@ export class Agent {
   TotalCacheWriteTokens(): number { return this.runner.TotalCacheWriteTokens(); }
   Warnings(): AgentWarning[] { return this.runner.Warnings(); }
   ToolCalls(): Record<string, number> { return this.runner.toolCallsObject(); }
-  BudgetExceeded(): boolean { return false; }
+  BudgetExceeded(): boolean { return this.budgetExceeded; }
   ResumeInfo(): { resumedFrom: string; reusedFiles: number; rerunFiles: number; previousModel?: string; currentModel?: string } | null {
     if (!this || this.resumeInfo === null) return this.resumeInfo;
     return { ...this.resumeInfo };
@@ -342,6 +343,7 @@ export class Agent {
     if (this.items.length === 0) return [];
 
     this.subtaskFailed = 0;
+    this.budgetExceeded = false;
     this.initScanFingerprints(this.items);
     this.initResumeInfo(this.items);
 
@@ -364,7 +366,10 @@ export class Agent {
 
       await this.maybeRunDedup(bi, batchStart);
 
-      if (budgetHit) break;
+      if (budgetHit) {
+        this.budgetExceeded = true;
+        break;
+      }
     }
 
     const failed = this.subtaskFailed;
@@ -412,6 +417,7 @@ export class Agent {
           console.error(`[pi-review] token budget reached (used ${humanTokens(used)} + next-file est ≈ ${humanTokens(projected)} > budget ${humanTokens(this.args.maxTokensBudget)}) — skipping ${it.path} and remaining files`);
           this.runner.RecordWarning("token_budget_reached", it.path, `stopped in batch #${batchIdx}: used ${used} tokens + next-file estimate exceeds budget ${this.args.maxTokensBudget}`);
           budgetHit = true;
+          this.budgetExceeded = true;
           break;
         }
       }

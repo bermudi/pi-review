@@ -212,7 +212,9 @@ export async function runScanContext(ctx: ScanContext): Promise<number> {
     }
   }
 
-  const terminal: string = (manifest?.terminalState as string | undefined) ?? (runErr ? "failed" : comments.length === 0 ? "skipped" : "complete");
+  let terminal: string = (manifest?.terminalState as string | undefined) ?? (runErr ? "failed" : comments.length === 0 ? "skipped" : "complete");
+  // Budget-truncated or otherwise incomplete scan must not be clean: partial/failed never complete/skipped (black-box contract).
+  if (runner?.budgetExceeded && terminal !== "failed") terminal = "partial";
 
   if (runErr || terminal === "failed") {
     const fallback = runner

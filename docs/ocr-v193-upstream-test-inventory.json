@@ -10180,8 +10180,14 @@
       "tests": [
         {
           "name": "TestScanRequestsCarryNoIdentity",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/scan/retry-identity.test.ts",
+              "title": "TestScanRequestsCarryNoIdentity"
+            }
+          ]
         }
       ]
     },
