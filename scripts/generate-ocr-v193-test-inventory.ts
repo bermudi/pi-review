@@ -294,6 +294,10 @@ const localCoverage: readonly LocalCoverage[] = [
     localPath: "test/ocr-v193/gitcmd/runner.test.ts",
     upstreamPaths: ["internal/gitcmd/runner_test.go"],
   },
+  {
+    localPath: "test/ocr-v193/diff/workspace-file.test.ts",
+    upstreamPaths: ["internal/diff/workspace_file_test.go"],
+  },
 ];
 
 function git(...args: readonly string[]): string {

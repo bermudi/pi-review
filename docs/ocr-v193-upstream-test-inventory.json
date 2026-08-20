@@ -6206,43 +6206,91 @@
       "tests": [
         {
           "name": "TestReadWorkspaceFileForDiffReadsInternalSymlink",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/diff/workspace-file.test.ts",
+              "title": "TestReadWorkspaceFileForDiffReadsInternalSymlink"
+            }
+          ]
         },
         {
           "name": "TestReadWorkspaceFileForDiffReadsRegularFile",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/diff/workspace-file.test.ts",
+              "title": "TestReadWorkspaceFileForDiffReadsRegularFile"
+            }
+          ]
         },
         {
           "name": "TestReadWorkspaceFileForDiffRejectsAbsolutePath",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/diff/workspace-file.test.ts",
+              "title": "TestReadWorkspaceFileForDiffRejectsAbsolutePath"
+            }
+          ]
         },
         {
           "name": "TestReadWorkspaceFileForDiffRejectsDirectory",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/diff/workspace-file.test.ts",
+              "title": "TestReadWorkspaceFileForDiffRejectsDirectory"
+            }
+          ]
         },
         {
           "name": "TestReadWorkspaceFileForDiffRejectsNonexistentFile",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/diff/workspace-file.test.ts",
+              "title": "TestReadWorkspaceFileForDiffRejectsNonexistentFile"
+            }
+          ]
         },
         {
           "name": "TestReadWorkspaceFileForDiffRejectsParentSymlinkEscape",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/diff/workspace-file.test.ts",
+              "title": "TestReadWorkspaceFileForDiffRejectsParentSymlinkEscape"
+            }
+          ]
         },
         {
           "name": "TestReadWorkspaceFileForDiffRejectsPathTraversal",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/diff/workspace-file.test.ts",
+              "title": "TestReadWorkspaceFileForDiffRejectsPathTraversal"
+            }
+          ]
         },
         {
           "name": "TestReadWorkspaceFileForDiffReturnsSymlinkTarget",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/diff/workspace-file.test.ts",
+              "title": "TestReadWorkspaceFileForDiffReturnsSymlinkTarget"
+            }
+          ]
         }
       ]
     },
