@@ -9,6 +9,7 @@
 import { createHash } from "node:crypto";
 import { Provider } from "../diff/git.js";
 import type { Diff } from "../model/diff.js";
+import { loadDefaultTemplate } from "../template/template.js";
 
 function hashFields(...fields: string[]): string {
   const h = createHash("sha256");
@@ -152,7 +153,6 @@ export interface ResolveIdentityArgs {
   readonly fileFilter?: unknown;
   readonly systemRule?: unknown;
   readonly template?: unknown;
-  readonly Template?: unknown;
 }
 
 export async function resolveIdentity(
@@ -166,32 +166,35 @@ export async function resolveIdentity(
     throw err;
   }
   // Build a minimal Agent to reuse its selection and identity logic exactly.
+  // Use the real canonical template so source/rule identity matches the run path.
   const { Agent } = await import("./agent.js");
   const dummyClient = { complete: async () => ({ content: "" }), CompletionsWithCtx: async () => ({ content: "" }) } as unknown as never;
-  let maxTokens = 4000;
-  const tmplRaw = (args as unknown as Record<string, unknown>)["template"] ?? (args as unknown as Record<string, unknown>)["Template"];
+  const canonical = loadDefaultTemplate();
+  let maxTokens = canonical.MaxTokens;
+  const tmplRaw = args.template as unknown;
   if (tmplRaw !== null && typeof tmplRaw === "object") {
-    const mt = (tmplRaw as Record<string, unknown>)["MaxTokens"] ?? (tmplRaw as Record<string, unknown>)["maxTokens"];
+    const rec = tmplRaw as Record<string, unknown>;
+    const mt = rec["MaxTokens"] as unknown;
     if (typeof mt === "number") maxTokens = mt;
+    else {
+      const mt2 = rec["maxTokens"] as unknown;
+      if (typeof mt2 === "number") maxTokens = mt2;
+    }
   }
-  const explicitMax = (args as unknown as Record<string, unknown>)["maxTokens"] as number | undefined;
-  if (typeof explicitMax === "number") maxTokens = explicitMax;
+  const template = { ...canonical, MaxTokens: maxTokens };
   const agentArgs: Record<string, unknown> = {
     repoDir: args.repoDir,
     from: args.from,
     to: args.to,
     commit: args.commit,
     sealedInput: sealed,
-    fileFilter: (args as unknown as Record<string, unknown>)["fileFilter"] ?? null,
-    systemRule: (args as unknown as Record<string, unknown>)["systemRule"] ?? null,
-    template: { MaxTokens: maxTokens, MaxToolRequestTimes: 5, MainTask: { messages: [{ role: "user", content: "t" }] }, MemoryCompressionTask: { messages: [{ role: "system", content: "c" }] } },
+    fileFilter: args.fileFilter ?? null,
+    systemRule: args.systemRule ?? null,
+    template,
     model: "test",
     llmClient: dummyClient,
     mainToolDefs: [],
   };
-  // Propagate explicit fileFilter/systemRule lower case variants
-  if ((args as unknown as Record<string, unknown>)["FileFilter"] !== undefined) agentArgs["fileFilter"] = (args as unknown as Record<string, unknown>)["FileFilter"];
-  if ((args as unknown as Record<string, unknown>)["SystemRule"] !== undefined) agentArgs["systemRule"] = (args as unknown as Record<string, unknown>)["SystemRule"];
   const agent = new Agent(agentArgs as unknown as never);
   await (agent as unknown as { loadDiffs: (s?: AbortSignal) => Promise<void> }).loadDiffs(signal);
   // Apply same two filter passes as the run
