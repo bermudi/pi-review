@@ -1,4 +1,3 @@
-// @ts-nocheck
 // SPDX-License-Identifier: Apache-2.0
 // Copyright 2026 alibaba/open-code-review Contributors
 // Ported from internal/session/manifest_test.go at c35ddd7223f2b5540ce03aa43c9a25ef643fca27; modifications under GPL-3.0-or-later.
@@ -37,6 +36,13 @@ import {
   type CoverageItem,
   type ManifestInput,
 } from "../../../src/ocr-v193/session/manifest.ts";
+
+function asFailureClass(v: unknown): FailureClass {
+  return v as FailureClass;
+}
+function asRunFailureClass(v: unknown): RunFailureClass {
+  return v as RunFailureClass;
+}
 
 function sel(id: string): CoverageItem {
   return { itemId: id, path: id + ".go", fingerprint: "fp-" + id };
@@ -124,22 +130,22 @@ describe("ocr-v193 session manifest", () => {
 
   // OCR v1.9.3: TestRunFailureSweepsPendingToMatchingClass
   test("run failure sweeps pending to matching item class", () => {
-    const cases: Array<{ name: string; runClass: typeof RunFailureCancelled; wantItem: typeof FailureCancelled }> = [
+    const cases: Array<{ name: string; runClass: RunFailureClass; wantItem: FailureClass }> = [
       { name: "cancelled", runClass: RunFailureCancelled, wantItem: FailureCancelled },
       { name: "budget", runClass: RunFailureBudget, wantItem: FailureBudget },
       { name: "timeout", runClass: RunFailureTimeout, wantItem: FailureTimeout },
       { name: "configuration", runClass: RunFailureConfiguration, wantItem: FailureConfiguration },
-      { name: "internal", runClass: RunFailureInternal as unknown as typeof RunFailureCancelled, wantItem: FailureUnknown as unknown as typeof FailureCancelled },
+      { name: "internal", runClass: RunFailureInternal, wantItem: FailureUnknown },
     ];
     for (const tc of cases) {
       const b = newBuilderWith("a", "b");
       b.MarkCompleted("a");
-      expect(b.SetRunFailure(tc.runClass as unknown as RunFailureClass, "stopped")).toBeNull();
+      expect(b.SetRunFailure(tc.runClass, "stopped")).toBeNull();
       const m = mustFinalize(b);
       expect(m.terminalState, tc.name).toBe(StateFailed);
       expect(m.coverage.completed.length, tc.name).toBe(1);
       expect(m.coverage.failed.length, tc.name).toBe(1);
-      expect(m.coverage.failed[0]?.classification, tc.name).toBe(tc.wantItem as unknown as string);
+      expect(m.coverage.failed[0]?.classification, tc.name).toBe(tc.wantItem);
     }
   });
 
@@ -183,7 +189,7 @@ describe("ocr-v193 session manifest", () => {
   // OCR v1.9.3: TestSetPendingFailureCauseValidation
   test("SetPendingFailureCause validation and idempotence", () => {
     const b = newBuilderWith("a");
-    expect(b.SetPendingFailureCause("not-a-class" as unknown as FailureClass, "x")).not.toBeNull();
+    expect(b.SetPendingFailureCause(asFailureClass("not-a-class"), "x")).not.toBeNull();
     expect(b.SetPendingFailureCause(FailureBudget, "first")).toBeNull();
     expect(b.SetPendingFailureCause(FailureBudget, "again")).toBeNull();
     expect(b.SetPendingFailureCause(FailureTimeout, "different")).not.toBeNull();
@@ -264,8 +270,8 @@ describe("ocr-v193 session manifest", () => {
   // OCR v1.9.3: TestInvalidFailureClassRejected
   test("invalid failure class rejected", () => {
     const b = newBuilderWith("a");
-    expect(b.MarkFailed("a", "bogus" as unknown as FailureClass, "r")).not.toBeNull();
-    expect(b.MarkFailed("a", "" as unknown as FailureClass, "r")).not.toBeNull();
+    expect(b.MarkFailed("a", asFailureClass("bogus"), "r")).not.toBeNull();
+    expect(b.MarkFailed("a", asFailureClass(""), "r")).not.toBeNull();
   });
 
   // OCR v1.9.3: TestMarkUnknownItemErrors
@@ -427,7 +433,7 @@ describe("ocr-v193 session manifest", () => {
   // OCR v1.9.3: TestSetRunFailureValidation
   test("SetRunFailure validation", () => {
     const b = newBuilderWith("a");
-    expect(b.SetRunFailure("bogus" as unknown as RunFailureClass, "x")).not.toBeNull();
+    expect(b.SetRunFailure(asRunFailureClass("bogus"), "x")).not.toBeNull();
     expect(b.SetRunFailure(RunFailureTimeout, "deadline")).toBeNull();
     expect(b.SetRunFailure(RunFailureTimeout, "again")).toBeNull();
     expect(b.SetRunFailure(RunFailureCancelled, "conflict")).not.toBeNull();
