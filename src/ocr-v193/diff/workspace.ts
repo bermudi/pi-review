@@ -16,37 +16,9 @@
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { constants as fsConstants } from "node:fs";
+import { canonicalPath, withinBase } from "../pathutil.js";
 
-// ---------------------------------------------------------------------------
-// Path utilities — mirrors internal/pathutil/path.go
-// ---------------------------------------------------------------------------
-
-/**
- * CanonicalPath returns an absolute path with symlinks resolved.
- * Mirrors Go `pathutil.CanonicalPath`.
- */
-export async function canonicalPath(p: string): Promise<string> {
-  const abs = path.resolve(p);
-  // fs.realpath resolves symlinks; throws if path does not exist (like Go's EvalSymlinks).
-  return await fs.realpath(abs);
-}
-
-/**
- * WithinBase reports whether target is base itself or contained under base.
- * Mirrors Go `pathutil.WithinBase` using path.relative semantics.
- */
-export function withinBase(base: string, target: string): boolean {
-  const rel = path.relative(base, target);
-  if (rel === "") return true; // same path (Go's rel == ".")
-  // Go: rel == "." || (rel != ".." && !HasPrefix(rel, ".."+sep))
-  // In Node, path.relative returns "" for same, not ".", but we handled.
-  if (rel === "..") return false;
-  if (rel.startsWith(`..${path.sep}`)) return false;
-  // Mixed abs/rel produces a relative like "../..." or absolute — also captured.
-  // For safety, if rel is absolute (different roots on Windows), it is not within base.
-  if (path.isAbsolute(rel)) return false;
-  return true;
-}
+export { canonicalPath, withinBase };
 
 // ---------------------------------------------------------------------------
 // Public API

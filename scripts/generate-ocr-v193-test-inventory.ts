@@ -97,6 +97,14 @@ const notApplicableTests: ReadonlyMap<string, string> = new Map<string, string>(
 // Each entry must state kind/area/reason; generator validates completeness.
 // Empty initially — every needs_decision file will be flagged until triaged.
 const scopeOverrides: ReadonlyMap<string, Scope> = new Map<string, Scope>([
+  [
+    "internal/pathutil/path_test.go",
+    {
+      kind: "in_scope",
+      area: "diff",
+      reason: "path traversal and symlink containment is core repository boundary for diff workspace and tool file access",
+    },
+  ],
 ]);
 
 const localCoverage: readonly LocalCoverage[] = [
@@ -277,6 +285,10 @@ const localCoverage: readonly LocalCoverage[] = [
   {
     localPath: "test/ocr-v193/scan/retry-identity.test.ts",
     upstreamPaths: ["internal/scan/retry_identity_test.go"],
+  },
+  {
+    localPath: "test/ocr-v193/pathutil/path.test.ts",
+    upstreamPaths: ["internal/pathutil/path_test.go"],
   },
 ];
 

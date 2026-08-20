@@ -9158,40 +9158,76 @@
       "path": "internal/pathutil/path_test.go",
       "blob": "1c3210c054b11fb6bba9f838864bfbe74104a09b",
       "scope": {
-        "kind": "needs_decision",
-        "area": "internal/pathutil",
-        "reason": "not yet classified by the OCR v1.9.3 core-port source map"
+        "kind": "in_scope",
+        "area": "diff",
+        "reason": "path traversal and symlink containment is core repository boundary for diff workspace and tool file access"
       },
       "tests": [
         {
           "name": "TestCanonicalPath_NestedSymlink",
-          "disposition": "pending_scope",
-          "reason": "not yet classified by the OCR v1.9.3 core-port source map"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/pathutil/path.test.ts",
+              "title": "TestCanonicalPath_NestedSymlink"
+            }
+          ]
         },
         {
           "name": "TestCanonicalPath_NonExistentPath",
-          "disposition": "pending_scope",
-          "reason": "not yet classified by the OCR v1.9.3 core-port source map"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/pathutil/path.test.ts",
+              "title": "TestCanonicalPath_NonExistentPath"
+            }
+          ]
         },
         {
           "name": "TestCanonicalPath_RelativePath",
-          "disposition": "pending_scope",
-          "reason": "not yet classified by the OCR v1.9.3 core-port source map"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/pathutil/path.test.ts",
+              "title": "TestCanonicalPath_RelativePath"
+            }
+          ]
         },
         {
           "name": "TestCanonicalPathResolvesSymlink",
-          "disposition": "pending_scope",
-          "reason": "not yet classified by the OCR v1.9.3 core-port source map"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/pathutil/path.test.ts",
+              "title": "TestCanonicalPathResolvesSymlink"
+            }
+          ]
         },
         {
           "name": "TestWithinBase",
-          "disposition": "pending_scope",
-          "reason": "not yet classified by the OCR v1.9.3 core-port source map"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/pathutil/path.test.ts",
+              "title": "TestWithinBase"
+            }
+          ]
         },
         {
           "name": "TestWithinBase_AdditionalCases",
-          "disposition": "pending_scope",
-          "reason": "not yet classified by the OCR v1.9.3 core-port source map"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/pathutil/path.test.ts",
+              "title": "TestWithinBase_AdditionalCases"
+            }
+          ]
         }
       ]
     },

@@ -14,6 +14,7 @@ import * as path from "node:path";
 import { spawn } from "node:child_process";
 
 import { CodeSearch, FileFind, FileRead, FileReadDiff, type Tool } from "./types.js";
+import { canonicalPath, withinBase } from "../pathutil.js";
 
 // ---------------------------------------------------------------------------
 // ReviewMode — mirrors Go `type ReviewMode int`
@@ -55,31 +56,8 @@ export function RefValue(mode: ReviewMode, toRef: string, commit: string): [stri
 }
 
 // ---------------------------------------------------------------------------
-// Path helpers — mirrors internal/pathutil
+// Path helpers — delegates to src/ocr-v193/pathutil.ts (single source of truth)
 // ---------------------------------------------------------------------------
-
-async function canonicalPath(p: string): Promise<string> {
-  const abs = path.resolve(p);
-  try {
-    return await fs.realpath(abs);
-  } catch (e) {
-    // Go's CanonicalPath would error if the path does not exist.
-    // For repo root that must exist, propagate error.
-    // For full file path that may not exist yet, fallback to abs.
-    const code = (e as NodeJS.ErrnoException).code;
-    if (code === "ENOENT") {
-      // Only fallback for workspace file that doesn't exist yet — caller handles.
-      // But for repo root, it should exist; still return abs to allow check.
-      throw e;
-    }
-    throw e;
-  }
-}
-
-function withinBase(base: string, target: string): boolean {
-  const rel = path.relative(base, target);
-  return rel === "" || (rel !== ".." && !rel.startsWith(`..${path.sep}`));
-}
 
 // ---------------------------------------------------------------------------
 // Git runner minimal surface — mirrors internal/gitcmd.Runner
