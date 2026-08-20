@@ -8,6 +8,8 @@
 import type { Message, ToolCall } from "./compression.js";
 import type { CommentWorkerPool } from "./pool.js";
 import type { LlmComment } from "../model/types.js";
+import type { SessionHistory } from "../session/history.js";
+import type { TaskType } from "../session/history.js";
 
 // ---------------------------------------------------------------------------
 // Stop classification — mirrors Go MainLoopStop
@@ -64,12 +66,21 @@ export interface UsageInfo {
 // Chat transport — mirrors llm.LLMClient / ChatRequest / ChatResponse
 // ---------------------------------------------------------------------------
 
+export interface RequestMeta {
+  readonly provider: string;
+  readonly model: string;
+  readonly filePath: string;
+  readonly taskType: string;
+  readonly requestNo: number;
+}
+
 export interface ChatRequest {
   readonly model: string;
   readonly messages: readonly Message[];
   readonly tools?: readonly ToolDef[];
   readonly maxTokens?: number;
   readonly sessionId?: string;
+  readonly requestMeta?: RequestMeta;
 }
 
 export interface ChatResponse {
@@ -191,6 +202,14 @@ export interface RunnerDeps {
   readonly diffLookup?: DiffLookup;
   /** Legacy alias for diffLookup (Go field name). */
   readonly DiffLookup?: DiffLookup;
+  /** Session history for TaskRecord creation (mirrors Go Deps.Session). */
+  readonly session?: SessionHistory;
+  /** Legacy alias for session (Go field name Session). */
+  readonly Session?: SessionHistory;
+  /** Identity factory for retry-report / request lineage (mirrors Go Deps.NewRequestMeta). */
+  readonly newRequestMeta?: (filePath: string, taskType: TaskType, requestNo: number) => RequestMeta;
+  /** Legacy alias (Go field name). */
+  readonly NewRequestMeta?: (filePath: string, taskType: TaskType, requestNo: number) => RequestMeta;
 }
 
 // ---------------------------------------------------------------------------

@@ -8409,8 +8409,14 @@
       "tests": [
         {
           "name": "TestReLocation_Identity",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/llmloop/identity.test.ts",
+              "title": "relocation request identity follows comment path"
+            }
+          ]
         },
         {
           "name": "TestReLocation_NoRequestWithoutTemplate",
@@ -8425,23 +8431,47 @@
         },
         {
           "name": "TestRunCompression_Identity",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/llmloop/identity.test.ts",
+              "title": "compression request carries memory_compression identity"
+            }
+          ]
         },
         {
           "name": "TestRunCompression_NoIdentityWhenFactoryNil",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/llmloop/identity.test.ts",
+              "title": "scan compression carries no identity when factory is nil"
+            }
+          ]
         },
         {
           "name": "TestRunPerFile_MainTaskIdentity",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/llmloop/identity.test.ts",
+              "title": "main task rounds carry per-round RequestNo identity"
+            }
+          ]
         },
         {
           "name": "TestRunPerFile_NoIdentityWhenFactoryNil",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/llmloop/identity.test.ts",
+              "title": "scan mode carries no identity when factory is nil"
+            }
+          ]
         }
       ]
     },

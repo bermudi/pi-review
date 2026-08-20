@@ -29,12 +29,14 @@ import {
   type RunnerDeps,
   type ToolCallResult,
   type TaskCheckpoint,
+  type RequestMeta,
   lookupRegistry,
 } from "./types.js";
 import { createHash } from "node:crypto";
 import type { LlmComment } from "../model/types.js";
 import type { Diff } from "../model/diff.js";
 import { resolveComment } from "../diff/resolver.js";
+import type { SessionHistory, TaskRecord, TaskType } from "../session/history.js";
 
 // Re-export for external consumers
 export { MainLoopStop } from "./types.js";
@@ -186,6 +188,27 @@ export class Runner {
 
   constructor(private readonly deps: RunnerDeps) {}
 
+  private getSession(): SessionHistory | undefined {
+    const anyDeps = this.deps as unknown as Record<string, unknown>;
+    return (this.deps.session as SessionHistory | undefined) ?? (anyDeps["Session"] as SessionHistory | undefined);
+  }
+
+  private getRequestMetaFactory(): ((filePath: string, taskType: TaskType, requestNo: number) => RequestMeta) | undefined {
+    const anyDeps = this.deps as unknown as Record<string, unknown>;
+    return (this.deps.newRequestMeta as unknown as (filePath: string, taskType: TaskType, requestNo: number) => RequestMeta)
+      ?? (anyDeps["NewRequestMeta"] as (filePath: string, taskType: TaskType, requestNo: number) => RequestMeta);
+  }
+
+  private makeRequestMeta(filePath: string, taskType: TaskType, requestNo: number): RequestMeta | undefined {
+    const factory = this.getRequestMetaFactory();
+    if (!factory) return undefined;
+    try {
+      return factory(filePath, taskType, requestNo);
+    } catch {
+      return undefined;
+    }
+  }
+
   // -- background ---------------------------------------------------------
 
   waitBackground(): Promise<void> {
@@ -320,11 +343,13 @@ export class Runner {
     let toolReqCount = getMaxToolRequestTimes(this.deps.template);
     const maxConsecutiveEmptyRounds = 3;
     let consecutiveEmptyRounds = 0;
-    const baseSessionId = this.deps.sessionId !== undefined && this.deps.sessionId !== ""
-      ? this.deps.sessionId
-      : typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
-        ? crypto.randomUUID()
-        : Math.random().toString(36).slice(2) + Date.now().toString(36);
+    const sess = this.getSession();
+    const baseSessionId = sess?.sessionId
+      ?? (this.deps.sessionId !== undefined && this.deps.sessionId !== ""
+        ? this.deps.sessionId
+        : typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
+          ? crypto.randomUUID()
+          : Math.random().toString(36).slice(2) + Date.now().toString(36));
     const sessionId = sessionTaskKey(baseSessionId, "main_task", filePath);
 
     const st = new CompressionState();
@@ -340,12 +365,22 @@ export class Runner {
 
         toolReqCount--;
 
+        // Mirror Go: create TaskRecord before request so RequestNo exists for identity.
+        let rec: TaskRecord | undefined;
+        let startTime = 0;
+        if (sess) {
+          const fs = sess.GetOrCreateFileSession(filePath);
+          rec = fs.AppendTaskRecord("main_task" as TaskType, [...messages] as unknown as import("../session/history.js").Message[]);
+          startTime = Date.now();
+        }
+        const requestMeta = rec ? this.makeRequestMeta(filePath, "main_task" as TaskType, rec.requestNo) : undefined;
         const req: ChatRequest = {
           model: this.deps.model,
           messages: [...messages],
           tools: [...this.deps.mainToolDefs],
           maxTokens: getCompletionTokenLimit(this.deps.template),
           sessionId,
+          ...(requestMeta ? { requestMeta } : {}),
         };
 
         let resp: ChatResponse;
@@ -353,9 +388,16 @@ export class Runner {
           resp = await this.callTransport(signal, req);
         } catch (err) {
           const e = err instanceof Error ? err : new Error(String(err));
+          if (rec) rec.SetError(e, Date.now() - startTime);
           return { completed: false, stop: MainLoopStop.StopNone, error: new Error(`LLM completion error: ${e.message}`) };
         }
 
+        if (rec) {
+          rec.SetResponse(
+            { content: resp.content ?? "", toolCalls: (resp.toolCalls ?? []).map((tc) => ({ id: tc.id, function: { name: tc.function.name, arguments: tc.function.arguments } })), model: resp.content ? this.deps.model : this.deps.model, usage: resp.usage ? { promptTokens: resp.usage.PromptTokens, completionTokens: resp.usage.CompletionTokens, cacheReadTokens: resp.usage.CacheReadTokens, cacheWriteTokens: resp.usage.CacheWriteTokens } : undefined },
+            Date.now() - startTime,
+          );
+        }
         if (resp.usage) this.recordUsage(resp.usage);
 
         const content = resp.content ?? "";
@@ -380,7 +422,7 @@ export class Runner {
         const thinking = resp.reasoningContent ?? "";
 
         for (const call of calls) {
-          const cp = await this.executeToolCall(signal, filePath, call as ToolCall, thinking);
+          const cp = await this.executeToolCall(signal, filePath, call as ToolCall, thinking, rec);
           if (cp.failed) {
             return { completed: false, stop: MainLoopStop.StopNone, error: new Error(`task failed: ${cp.data}`) };
           } else if (cp.completed) {
@@ -488,10 +530,18 @@ export class Runner {
     const calls = resp.toolCalls ?? [];
     if (calls.length === 0) return;
 
+    // Grace round also creates a TaskRecord for session history (mirrors Go runGraceRound).
+    let graceRec: TaskRecord | undefined;
+    const sessGrace = this.getSession();
+    if (sessGrace) {
+      const fs = sessGrace.GetOrCreateFileSession(filePath);
+      graceRec = fs.AppendTaskRecord("main_task" as TaskType, [...messages] as unknown as import("../session/history.js").Message[]);
+      graceRec.SetResponse({ content: resp.content ?? "", toolCalls: calls.map((tc) => ({ id: tc.id, function: { name: tc.function.name, arguments: tc.function.arguments } })), model: this.deps.model, usage: resp.usage ? { promptTokens: resp.usage.PromptTokens, completionTokens: resp.usage.CompletionTokens } : undefined }, 0);
+    }
     const thinking = resp.reasoningContent ?? "";
     for (const call of calls) {
       // Ignore return — grace round does not affect completed flag
-      await this.executeToolCall(signal, filePath, call as ToolCall, thinking);
+      await this.executeToolCall(signal, filePath, call as ToolCall, thinking, graceRec);
     }
   }
 
@@ -502,6 +552,7 @@ export class Runner {
     filePath: string,
     toolCall: ToolCall,
     thinking: string,
+    rec?: TaskRecord | null,
   ): Promise<TaskCheckpoint> {
     const name = toolCall.function.name;
 
@@ -677,13 +728,31 @@ export class Runner {
             if (!ok && reLocationTaskRaw) {
               const msgs = buildReLocationMessagesLocal(cm, d, reLocationTaskRaw as unknown as never);
               if (msgs && msgs.length > 0) {
+                const sessRel = this.getSession();
+                let rlRec: TaskRecord | undefined;
+                let rlStart = Date.now();
+                let requestMetaRel: RequestMeta | undefined;
+                if (sessRel) {
+                  const fsRel = sessRel.GetOrCreateFileSession(cm.path);
+                  rlRec = fsRel.AppendTaskRecord("re_location_task" as TaskType, [...msgs] as unknown as import("../session/history.js").Message[]);
+                  rlStart = Date.now();
+                  requestMetaRel = this.makeRequestMeta(cm.path, "re_location_task" as TaskType, rlRec.requestNo);
+                }
                 const req: ChatRequest = {
                   model: this.deps.model,
                   messages: msgs,
                   maxTokens: getCompletionTokenLimit(this.deps.template),
+                  ...(sessRel ? { sessionId: sessionTaskKey(sessRel.sessionId, "re_location_task", cm.path) } : {}),
+                  ...(requestMetaRel ? { requestMeta: requestMetaRel } : {}),
                 };
                 try {
                   const resp = await this.callTransport(sig, req);
+                  if (rlRec) {
+                    rlRec.SetResponse(
+                      { content: resp.content ?? "", toolCalls: (resp.toolCalls ?? []).map((tc) => ({ id: tc.id, function: { name: tc.function.name, arguments: tc.function.arguments } })), model: this.deps.model, usage: resp.usage ? { promptTokens: resp.usage.PromptTokens, completionTokens: resp.usage.CompletionTokens, cacheReadTokens: resp.usage.CacheReadTokens, cacheWriteTokens: resp.usage.CacheWriteTokens } : undefined },
+                      Date.now() - rlStart,
+                    );
+                  }
                   if (resp.usage) this.recordUsage(resp.usage);
                   const code = extractCodeBlockLocal(resp.content ?? "");
                   if (code !== "") {
@@ -700,6 +769,7 @@ export class Runner {
                     }
                   }
                 } catch (err) {
+                  if (rlRec) rlRec.SetError(err instanceof Error ? err : new Error(String(err)), Date.now() - rlStart);
                   console.error(`[pi-review] Re-location LLM call failed for ${cm.path}: ${String((err as Error).message)}`);
                 }
               }
@@ -724,6 +794,7 @@ export class Runner {
       const pool: CommentWorkerPool | undefined = this.deps.commentWorkerPool;
 
       if (pool) {
+        if (rec) rec.AddToolResult(name, toolCall.function.arguments, "(async)");
         const snapshot = comments.map((c) => ({ ...c }));
         const detachedSignal = new AbortController().signal;
         pool.SubmitFor(filePath, async () => {
@@ -744,6 +815,7 @@ export class Runner {
         const msg = err instanceof Error ? err.message : String(err);
         return { data: `Error: ${msg}`, completed: false, failed: false };
       }
+      if (rec) rec.AddToolResult(name, toolCall.function.arguments, "Successfully commented.");
       return { data: "Successfully commented.", completed: false, failed: false };
     }
 
@@ -770,6 +842,7 @@ export class Runner {
 
     try {
       const result = await provider.execute(dynArgs, signal);
+      if (rec) rec.AddToolResult(name, toolCall.function.arguments, result);
       return { data: result, completed: false, failed: false };
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
@@ -829,13 +902,37 @@ export class Runner {
       return newTextMessage(m.role, txt.replaceAll("{{context}}", contextXML));
     });
 
+    const sessComp = this.getSession();
+    let compRec: TaskRecord | undefined;
+    let compStart = Date.now();
+    let compMeta: RequestMeta | undefined;
+    if (sessComp) {
+      const fsComp = sessComp.GetOrCreateFileSession(_filePath);
+      compRec = fsComp.AppendTaskRecord("memory_compression_task" as TaskType, [...compressionMsgs] as unknown as import("../session/history.js").Message[]);
+      compStart = Date.now();
+      compMeta = this.makeRequestMeta(_filePath, "memory_compression_task" as TaskType, compRec.requestNo);
+    }
     const req: ChatRequest = {
       model: this.deps.model,
       messages: compressionMsgs,
       maxTokens: getCompletionTokenLimit(this.deps.template),
+      ...(sessComp ? { sessionId: sessionTaskKey(sessComp.sessionId, "memory_compression_task", _filePath) } : {}),
+      ...(compMeta ? { requestMeta: compMeta } : {}),
     };
 
-    const resp = await this.callTransport(signal, req);
+    let resp: ChatResponse;
+    try {
+      resp = await this.callTransport(signal, req);
+    } catch (err) {
+      if (compRec) compRec.SetError(err instanceof Error ? err : new Error(String(err)), Date.now() - compStart);
+      throw err;
+    }
+    if (compRec) {
+      compRec.SetResponse(
+        { content: resp.content ?? "", toolCalls: (resp.toolCalls ?? []).map((tc) => ({ id: tc.id, function: { name: tc.function.name, arguments: tc.function.arguments } })), model: this.deps.model, usage: resp.usage ? { promptTokens: resp.usage.PromptTokens, completionTokens: resp.usage.CompletionTokens, cacheReadTokens: resp.usage.CacheReadTokens, cacheWriteTokens: resp.usage.CacheWriteTokens } : undefined },
+        Date.now() - compStart,
+      );
+    }
     if (resp.usage) this.recordUsage(resp.usage);
 
     const rawSummary = StripMarkdownFences(resp.content ?? "");

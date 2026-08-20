@@ -135,6 +135,10 @@ const localCoverage: readonly LocalCoverage[] = [
     ],
   },
   {
+    localPath: "test/ocr-v193/llmloop/identity.test.ts",
+    upstreamPaths: ["internal/llmloop/retry_identity_test.go"],
+  },
+  {
     localPath: "test/ocr-v193/diff/parser.test.ts",
     upstreamPaths: ["internal/diff/parser_test.go"],
   },
