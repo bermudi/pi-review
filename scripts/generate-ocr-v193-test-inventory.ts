@@ -323,6 +323,10 @@ const localCoverage: readonly LocalCoverage[] = [
     upstreamPaths: ["internal/agent/retry_identity_test.go"],
   },
   {
+    localPath: "test/ocr-v193/agent/manifest-integration.test.ts",
+    upstreamPaths: ["internal/agent/manifest_integration_test.go"],
+  },
+  {
     localPath: "test/ocr-v193/scan/provider.test.ts",
     upstreamPaths: ["internal/scan/provider_test.go", "internal/scan/provider_more_test.go"],
   },

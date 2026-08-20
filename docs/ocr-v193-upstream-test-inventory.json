@@ -4682,58 +4682,124 @@
       "tests": [
         {
           "name": "TestManifestFlowAllFailedTimeoutAndPanic",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/agent/manifest-integration.test.ts",
+              "title": "TestManifestFlowAllFailedTimeoutAndPanic"
+            }
+          ]
         },
         {
           "name": "TestManifestFlowBudgetAndSkipped",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/agent/manifest-integration.test.ts",
+              "title": "TestManifestFlowBudgetAndSkipped"
+            }
+          ]
         },
         {
           "name": "TestManifestFlowCompleteAndPartial",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/agent/manifest-integration.test.ts",
+              "title": "TestManifestFlowCompleteAndPartial"
+            }
+          ]
         },
         {
           "name": "TestManifestFlowMixedFailureIsIsolatedToPartial",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/agent/manifest-integration.test.ts",
+              "title": "TestManifestFlowMixedFailureIsIsolatedToPartial"
+            }
+          ]
         },
         {
           "name": "TestManifestFlowResumeIgnoresCheckpointTheParentManifestDoesNotVouchFor",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/agent/manifest-integration.test.ts",
+              "title": "TestManifestFlowResumeIgnoresCheckpointTheParentManifestDoesNotVouchFor"
+            }
+          ]
         },
         {
           "name": "TestManifestFlowResumeOfFullyFailedParentRedispatchesEverything",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/agent/manifest-integration.test.ts",
+              "title": "TestManifestFlowResumeOfFullyFailedParentRedispatchesEverything"
+            }
+          ]
         },
         {
           "name": "TestManifestFlowResumeRecordsParentAndReusedItem",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/agent/manifest-integration.test.ts",
+              "title": "TestManifestFlowResumeRecordsParentAndReusedItem"
+            }
+          ]
         },
         {
           "name": "TestManifestFlowResumeWithProviderTransition",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/agent/manifest-integration.test.ts",
+              "title": "TestManifestFlowResumeWithProviderTransition"
+            }
+          ]
         },
         {
           "name": "TestManifestFlowResumeWithReusedAndAllRerunsFailedIsPartial",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/agent/manifest-integration.test.ts",
+              "title": "TestManifestFlowResumeWithReusedAndAllRerunsFailedIsPartial"
+            }
+          ]
         },
         {
           "name": "TestManifestFlowReusedCommentsStayOutOfPrompts",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/agent/manifest-integration.test.ts",
+              "title": "TestManifestFlowReusedCommentsStayOutOfPrompts"
+            }
+          ]
         },
         {
           "name": "TestManifestFlowRunInputFailureIsPersisted",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/agent/manifest-integration.test.ts",
+              "title": "TestManifestFlowRunInputFailureIsPersisted"
+            }
+          ]
         }
       ]
     },

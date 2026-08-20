@@ -29,6 +29,7 @@ import {
   FailureCancelled,
   FailureConfiguration,
   FailureProvider,
+  FailurePanic,
   FailureUnknown,
   type CoverageItem,
   type RunManifest,
@@ -303,6 +304,9 @@ export function classifyItemError(err: unknown): [FailureClass, string] {
   if (isWrappedError(err, errMainTaskEmpty) || errorContains(err, "main_task.messages is empty")) {
     return [FailureConfiguration, "review template main_task is empty"];
   }
+  if (errorContains(err, "panic") || errorContains(err, "Panic")) {
+    return [FailurePanic, "file review panicked"];
+  }
   return [FailureProvider, "provider or subtask request failed"];
 }
 
@@ -434,6 +438,7 @@ export class Agent {
     const manifestMode = this.reviewModeForManifest();
     this.manifestBuilder.SetInput({ mode: manifestMode });
     this.manifestStartTime = Date.now();
+    this.initManifest();
     // Create a lightweight SessionHistory for compat with a.session.Finalize() / a.session.Manifest()
     if (this.sessionHistory === null) {
       this.sessionHistory = new SessionHistory(resolvedArgs.repoDir ?? "/tmp", "", resolvedArgs.model ?? "", { reviewMode: manifestMode }, runId);
@@ -802,6 +807,64 @@ export class Agent {
     return { mode, sourceArtifactSHA256: source, ruleConfigSHA256: rule, repositorySHA256: repo };
   }
 
+  private manifestInput(): import("../session/manifest.js").ManifestInput {
+    const mode = this.manifestMode();
+    const anyArgs = this.args as unknown as Record<string, unknown>;
+    const from = (anyArgs["from"] ?? anyArgs["From"] ?? "") as string;
+    const to = (anyArgs["to"] ?? anyArgs["To"] ?? "") as string;
+    const commit = (anyArgs["commit"] ?? anyArgs["Commit"] ?? "") as string;
+    const input: import("../session/manifest.js").ManifestInput = { mode };
+    if (mode === "range") {
+      input.requestedFrom = from;
+      input.requestedHead = to;
+    } else if (mode === "commit") {
+      input.requestedHead = commit;
+    }
+    return input;
+  }
+
+  private applyInputIdentity(): void {
+    const b = this.manifestBuilder;
+    if (!b) return;
+    const input = this.manifestInput();
+    const anyThis = this as unknown as { inputResolution?: InputResolution };
+    const res = anyThis.inputResolution ?? { resolvedBase: "", resolvedHead: "", exactRange: "" };
+    input.resolvedBase = res.resolvedBase;
+    input.resolvedHead = res.resolvedHead;
+    input.exactRange = res.exactRange;
+    (input as unknown as Record<string, unknown>)["sourceArtifactSHA256"] = this.sourceArtifactSHA256();
+    (input as unknown as Record<string, unknown>)["sourceArtifactSha256"] = this.sourceArtifactSHA256();
+    b.SetInput(input as unknown as import("../session/manifest.js").ManifestInput);
+    const raw = (this as unknown as { repoRemoteIdentity?: string }).repoRemoteIdentity ?? "";
+    if (raw !== "") {
+      const hash = createHash("sha256").update(raw, "utf-8").digest("hex");
+      b.SetRepository({ identitySha256: hash } as unknown as import("../session/manifest.js").ManifestRepository);
+    }
+  }
+
+  private initManifest(): void {
+    const b = this.manifestBuilder;
+    if (!b) return;
+    const anyArgs = this.args as unknown as Record<string, unknown>;
+    const resume = (anyArgs["resume"] ?? anyArgs["Resume"]) as { sessionId?: string; SessionID?: string } | null | undefined;
+    const parent = resume ? ((resume as Record<string, unknown>)["sessionId"] as string ?? (resume as Record<string, unknown>)["SessionID"] as string ?? "") : "";
+    if (parent !== "") b.SetParentRunID(parent);
+    const input = this.manifestInput();
+    b.SetInput(input);
+    const provider = (anyArgs["provider"] ?? anyArgs["Provider"] ?? "") as string;
+    const model = (anyArgs["model"] ?? anyArgs["Model"] ?? "") as string;
+    const maxConcurrency = (anyArgs["maxConcurrency"] ?? anyArgs["MaxConcurrency"] ?? 0) as number;
+    b.SetExecution({
+      provider,
+      model,
+      configuredConcurrency: maxConcurrency,
+      ruleConfigSha256: this.ruleConfigSHA256(),
+      runtimeConfigSha256: this.runtimeConfigSHA256(),
+      // Also set SHA variants for test compatibility
+      ...( { ruleConfigSHA256: this.ruleConfigSHA256(), runtimeConfigSHA256: this.runtimeConfigSHA256() } as unknown as Record<string, unknown>),
+    } as unknown as import("../session/manifest.js").ManifestExecution);
+  }
+
   private newRequestMeta(filePath: string, taskType: string, requestNo: number): import("../llmloop/types.js").RequestMeta {
     const anyArgs = this.args as unknown as Record<string, unknown>;
     const provider = (anyArgs["provider"] ?? anyArgs["Provider"] ?? "") as string;
@@ -856,6 +919,7 @@ export class Agent {
   finalizeManifest(): Error | null {
     const b = this.manifestBuilder;
     if (!b) return null;
+    this.applyInputIdentity();
     const elapsed = Date.now() - (this.manifestStartTime ?? Date.now());
     const { manifest, error } = b.Finalize(elapsed);
     if (error) {
@@ -940,6 +1004,11 @@ export class Agent {
       await this.loadDiffs(sig);
     } catch (err) {
       const e = err instanceof Error ? err : new Error(String(err));
+      try {
+        this.manifestBuilder.SetRunFailure("input" as never, e.message);
+        this.finalizeManifest();
+        this.sessionHistory?.Finalize();
+      } catch {}
       throw new Error(`load diffs: ${e.message}`);
     }
 
@@ -1278,7 +1347,8 @@ export class Agent {
             const msg = err instanceof Error ? err.message : String(err);
             this.subtaskOutcomes.set(diff.newPath, { completed: false, error: msg });
             this.warnings.push({ type: "subtask_error", file: diff.newPath, message: msg });
-            this.markFailed(diff, FailureProvider, msg);
+            const [cls, reason] = classifyItemError(err);
+            this.markFailed(diff, cls, reason);
             console.error(`[pi-review] Subtask panic for ${diff.newPath}: ${msg}`);
           } finally {
             sem.release();
@@ -1314,7 +1384,8 @@ export class Agent {
           const msg = err instanceof Error ? err.message : String(err);
           this.subtaskOutcomes.set(diff.newPath, { completed: false, error: msg });
           this.warnings.push({ type: "subtask_error", file: diff.newPath, message: msg });
-          this.markFailed(diff, FailureProvider, msg);
+          const [cls, reason] = classifyItemError(err);
+          this.markFailed(diff, cls, reason);
           console.error(`[pi-review] Subtask panic for ${diff.newPath}: ${msg}`);
         } finally {
           if (timeoutId !== null) clearTimeout(timeoutId);
@@ -1337,7 +1408,10 @@ export class Agent {
       return collector !== null ? collector.comments() : [];
     }
     if (failed > 0 && failed === dispatched) {
-      throw new Error(`all ${dispatched} file review(s) failed — check your LLM configuration and API key`);
+      const reused = this.resumeInfo?.reusedFiles ?? 0;
+      if (reused === 0) {
+        throw new Error(`all ${dispatched} file review(s) failed — check your LLM configuration and API key`);
+      }
     }
 
     if (collector !== null) return collector.comments();
