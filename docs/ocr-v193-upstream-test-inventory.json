@@ -9551,43 +9551,91 @@
         },
         {
           "name": "TestDispatchSubtasks_AllFailed",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/scan/coverage.test.ts",
+              "title": "TestDispatchSubtasks_AllFailed"
+            }
+          ]
         },
         {
           "name": "TestDispatchSubtasks_ResumeMultiBatchAndChained",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/scan/coverage.test.ts",
+              "title": "TestDispatchSubtasks_ResumeMultiBatchAndChained"
+            }
+          ]
         },
         {
           "name": "TestDispatchSubtasks_ResumeRerunsChangedContent",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/scan/coverage.test.ts",
+              "title": "TestDispatchSubtasks_ResumeRerunsChangedContent"
+            }
+          ]
         },
         {
           "name": "TestDispatchSubtasks_ResumeSkipsCompletedFiles",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/scan/coverage.test.ts",
+              "title": "TestDispatchSubtasks_ResumeSkipsCompletedFiles"
+            }
+          ]
         },
         {
           "name": "TestDispatchSubtasks_WithoutTaskDoneIsAllFailed",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/scan/coverage.test.ts",
+              "title": "TestDispatchSubtasks_WithoutTaskDoneIsAllFailed"
+            }
+          ]
         },
         {
           "name": "TestExecuteSubtask_ContextCancelled",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/scan/coverage.test.ts",
+              "title": "TestExecuteSubtask_ContextCancelled"
+            }
+          ]
         },
         {
           "name": "TestExecuteSubtask_Success",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/scan/coverage.test.ts",
+              "title": "TestExecuteSubtask_Success"
+            }
+          ]
         },
         {
           "name": "TestExecuteSubtask_WithPlan",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/scan/coverage.test.ts",
+              "title": "TestExecuteSubtask_WithPlan"
+            }
+          ]
         },
         {
           "name": "TestExtFromPath",
@@ -9624,18 +9672,36 @@
         },
         {
           "name": "TestMaybeRunDedup_SkipWhenDisabled",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/scan/coverage.test.ts",
+              "title": "TestMaybeRunDedup_SkipWhenDisabled"
+            }
+          ]
         },
         {
           "name": "TestMaybeRunDedup_SkipWhenTooFewComments",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/scan/coverage.test.ts",
+              "title": "TestMaybeRunDedup_SkipWhenTooFewComments"
+            }
+          ]
         },
         {
           "name": "TestMaybeRunDedup_Success",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/scan/coverage.test.ts",
+              "title": "TestMaybeRunDedup_Success"
+            }
+          ]
         },
         {
           "name": "TestMaybeRunPlan_Success",
@@ -9683,23 +9749,47 @@
         },
         {
           "name": "TestPhaseEnabled",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/scan/coverage.test.ts",
+              "title": "TestPhaseEnabled"
+            }
+          ]
         },
         {
           "name": "TestRun_EmptyTemplate",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/scan/coverage.test.ts",
+              "title": "TestRun_EmptyTemplate"
+            }
+          ]
         },
         {
           "name": "TestRun_FullPipeline",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/scan/coverage.test.ts",
+              "title": "TestRun_FullPipeline"
+            }
+          ]
         },
         {
           "name": "TestRun_NoReviewableFiles",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/scan/coverage.test.ts",
+              "title": "TestRun_NoReviewableFiles"
+            }
+          ]
         },
         {
           "name": "TestWhyExcluded_AllBranches",
@@ -9789,33 +9879,69 @@
       "tests": [
         {
           "name": "TestEstimate_StringMentionsTokens",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/scan/estimate.test.ts",
+              "title": "TestEstimate_StringMentionsTokens"
+            }
+          ]
         },
         {
           "name": "TestEstimateCost_EmptyItems",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/scan/estimate.test.ts",
+              "title": "TestEstimateCost_EmptyItems"
+            }
+          ]
         },
         {
           "name": "TestEstimateCost_ScalesWithContentAndPhases",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/scan/estimate.test.ts",
+              "title": "TestEstimateCost_ScalesWithContentAndPhases"
+            }
+          ]
         },
         {
           "name": "TestEstimateFileTokens",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/scan/estimate.test.ts",
+              "title": "TestEstimateFileTokens"
+            }
+          ]
         },
         {
           "name": "TestHumanTokens",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/scan/estimate.test.ts",
+              "title": "TestHumanTokens"
+            }
+          ]
         },
         {
           "name": "TestPhaseEnabled_GatedByTemplateAndFlag",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/scan/estimate.test.ts",
+              "title": "TestPhaseEnabled_GatedByTemplateAndFlag"
+            }
+          ]
         }
       ]
     },
@@ -9829,23 +9955,47 @@
       "tests": [
         {
           "name": "TestResumedFromSession",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/scan/getters.test.ts",
+              "title": "TestResumedFromSession"
+            }
+          ]
         },
         {
           "name": "TestScanAgent_Fingerprints",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/scan/getters.test.ts",
+              "title": "TestScanAgent_Fingerprints"
+            }
+          ]
         },
         {
           "name": "TestScanAgent_ResumeInfo",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/scan/getters.test.ts",
+              "title": "TestScanAgent_ResumeInfo"
+            }
+          ]
         },
         {
           "name": "TestScanAgent_SessionID_Persistent",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/scan/getters.test.ts",
+              "title": "TestScanAgent_SessionID_Persistent"
+            }
+          ]
         }
       ]
     },
@@ -9859,8 +10009,14 @@
       "tests": [
         {
           "name": "TestScanGettersOnEmptyAgent",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/scan/getters.test.ts",
+              "title": "TestScanGettersOnEmptyAgent"
+            }
+          ]
         }
       ]
     },
@@ -9883,23 +10039,47 @@
       "tests": [
         {
           "name": "TestIsBinaryFile",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/scan/provider.test.ts",
+              "title": "TestIsBinaryFile"
+            }
+          ]
         },
         {
           "name": "TestProvider_Enumerate_NonRegularSkip",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/scan/provider.test.ts",
+              "title": "TestProvider_Enumerate_NonRegularSkip"
+            }
+          ]
         },
         {
           "name": "TestProvider_Enumerate_OversizeSkip",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/scan/provider.test.ts",
+              "title": "TestProvider_Enumerate_OversizeSkip"
+            }
+          ]
         },
         {
           "name": "TestProvider_Enumerate_SniffError",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/scan/provider.test.ts",
+              "title": "TestProvider_Enumerate_SniffError"
+            }
+          ]
         }
       ]
     },

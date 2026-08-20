@@ -147,7 +147,8 @@ export class Agent {
   }
 
   SessionID(): string {
-    return this.args.session?.sessionId ?? "";
+    if (!this || !(this as unknown as { args?: unknown }).args) return "";
+    return (this as unknown as { args: ScanArgs }).args.session?.sessionId ?? "";
   }
 
   FilesReviewed(): number {
@@ -166,7 +167,10 @@ export class Agent {
   Warnings(): AgentWarning[] { return this.runner.Warnings(); }
   ToolCalls(): Record<string, number> { return this.runner.toolCallsObject(); }
   BudgetExceeded(): boolean { return false; }
-  ResumeInfo(): { resumedFrom: string; reusedFiles: number; rerunFiles: number } | null { return this.resumeInfo; }
+  ResumeInfo(): { resumedFrom: string; reusedFiles: number; rerunFiles: number; previousModel?: string; currentModel?: string } | null {
+    if (!this || this.resumeInfo === null) return this.resumeInfo;
+    return { ...this.resumeInfo };
+  }
   RunManifest(): null { return null; }
 
   // -- Phase toggles ----------------------------------------------------------
@@ -311,8 +315,8 @@ export class Agent {
     return this.items.find((it) => it.path === p) ? scanItemAsDiff(this.items.find((it) => it.path === p)!) : null;
   }
 
-  private initScanFingerprints(items: readonly ScanItem[]): void {
-    if (items.length === 0) return;
+  private initScanFingerprints(items: readonly ScanItem[] | null | undefined): void {
+    if (!items || items.length === 0) return;
     for (const it of items) this.scanFingerprints.set(it.path, scanItemFingerprint(it));
   }
 
@@ -469,8 +473,9 @@ export class Agent {
       this.runner.RecordWarning("scan_subtask_error", it.path, result.error.message);
     } else if (result.stop) {
       this.subtaskFailed++;
-      this.args.session?.RecordReviewItemFailed(it.path, it.path, it.path, fingerprint, result.stop);
-      this.runner.RecordWarning("scan_subtask_error", it.path, result.stop);
+      const checkpoint = result.stop === "token_threshold_exceeded" ? `prompt tokens exceed 80% of max_tokens(${this.args.template.MaxTokens})` : "main_task did not complete before stopping";
+      this.args.session?.RecordReviewItemFailed(it.path, it.path, it.path, fingerprint, checkpoint);
+      this.runner.RecordWarning("scan_subtask_error", it.path, checkpoint);
     }
   }
 

@@ -165,4 +165,72 @@ describe("ocr-v193 scan provider (ported from internal/scan/provider_test.go)", 
       expect(paths).toEqual(["pkg/b.go", "pkg/sub/c.go"].sort());
     } finally { await repo.cleanup(); }
   });
+
+  // OCR v1.9.3: TestProvider_Enumerate_OversizeSkip
+  test("TestProvider_Enumerate_OversizeSkip", async () => {
+    const repo = await initTestRepo();
+    try {
+      await writeFileEnsure(repo.dir, "small.go", "package s\n");
+      await writeFileEnsure(repo.dir, "big.go", "package big // " + "x".repeat(200) + "\n");
+      gitCommit(repo.dir, "init");
+      const got = await NewProvider(repo.dir, undefined, undefined, 32).Enumerate(new AbortController().signal);
+      const paths = got.map((it) => it.path);
+      expect(paths.includes("big.go")).toBe(false);
+      expect(paths.includes("small.go")).toBe(true);
+    } finally { await repo.cleanup(); }
+  });
+
+  // OCR v1.9.3: TestProvider_Enumerate_NonRegularSkip
+  test("TestProvider_Enumerate_NonRegularSkip", async () => {
+    const repo = await initTestRepo();
+    try {
+      await writeFileEnsure(repo.dir, "real.go", "package r\n");
+      const linkPath = join(repo.dir, "link.go");
+      try { await import("node:fs/promises").then((m) => m.symlink("real.go", linkPath)); } catch { return; }
+      gitCommit(repo.dir, "init");
+      const got = await NewProvider(repo.dir, undefined, undefined, 0).Enumerate(new AbortController().signal);
+      const paths = got.map((it) => it.path);
+      expect(paths.includes("link.go")).toBe(false);
+      expect(paths.includes("real.go")).toBe(true);
+    } finally { await repo.cleanup(); }
+  });
+
+  // OCR v1.9.3: TestProvider_Enumerate_SniffError
+  test("TestProvider_Enumerate_SniffError", async () => {
+    // Skip on root (permission bypass)
+    if (typeof process.getuid === "function" && process.getuid() === 0) return;
+    const repo = await initTestRepo();
+    try {
+      await writeFileEnsure(repo.dir, "ok.go", "package ok\n");
+      await writeFileEnsure(repo.dir, "locked.go", "package locked\n");
+      gitCommit(repo.dir, "init");
+      const lockedPath = join(repo.dir, "locked.go");
+      try { await import("node:fs/promises").then((m) => m.chmod(lockedPath, 0o000)); } catch { return; }
+      const got = await NewProvider(repo.dir, undefined, undefined, 0).Enumerate(new AbortController().signal);
+      const paths = got.map((it) => it.path);
+      expect(paths.includes("locked.go")).toBe(false);
+      expect(paths.includes("ok.go")).toBe(true);
+      try { await import("node:fs/promises").then((m) => m.chmod(lockedPath, 0o644)); } catch {}
+    } finally { await repo.cleanup(); }
+  });
+
+  // OCR v1.9.3: TestIsBinaryFile
+  test("TestIsBinaryFile", async () => {
+    const dir = await mkdtemp(join(tmpdir(), "isbin-"));
+    try {
+      const textPath = join(dir, "text.txt");
+      await writeFile(textPath, "hello world\n");
+      const binPath = join(dir, "bin.dat");
+      await writeFile(binPath, Buffer.from([97, 0, 98]) as unknown as string);
+      const emptyPath = join(dir, "empty.txt");
+      await writeFile(emptyPath, "");
+      const isBinaryFile = (providerTest as unknown as { isBinaryFile: (p: string) => Promise<boolean> }).isBinaryFile;
+      expect(await isBinaryFile(textPath)).toBe(false);
+      expect(await isBinaryFile(binPath)).toBe(true);
+      expect(await isBinaryFile(emptyPath)).toBe(false);
+      let threw = false;
+      try { await isBinaryFile(join(dir, "nope")); } catch { threw = true; }
+      expect(threw).toBe(true);
+    } finally { await rm(dir, { recursive: true, force: true }).catch(() => {}); }
+  });
 });

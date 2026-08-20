@@ -69,7 +69,7 @@ export function estimateFileTokens(it: ScanItem, planEnabled: boolean): number {
 // ---------------------------------------------------------------------------
 
 export function estimateCost(
-  items: readonly ScanItem[],
+  items: readonly ScanItem[] | null | undefined,
   planEnabled: boolean,
   dedupEnabled: boolean,
   summaryEnabled: boolean,
@@ -79,7 +79,7 @@ export function estimateCost(
   let outputTokens = 0;
   let allCommentsApprox = 0;
 
-  for (const it of items) {
+  for (const it of (items ?? [])) {
     if (it.isBinary === true || it.content === "") continue;
     files++;
     const fileTokens = countTokensApprox(it.content);

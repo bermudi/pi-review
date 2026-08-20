@@ -10,6 +10,7 @@ import { join } from "node:path";
 import { spawnSync } from "node:child_process";
 
 import { Agent, NewAgent, scanItemFingerprint } from "../../../src/ocr-v193/scan/scan.js";
+import { ResumeState } from "../../../src/ocr-v193/session/resume.js";
 import type { ScanItem } from "../../../src/ocr-v193/model/scan.js";
 import type { ScanTemplate } from "../../../src/ocr-v193/template/template.js";
 import { SessionHistory } from "../../../src/ocr-v193/session/history.js";
@@ -304,5 +305,393 @@ describe("ocr-v193 scan coverage (ported from internal/scan/coverage_test.go)", 
     const priv = a as unknown as ScanPrivate;
     await priv.maybeRunProjectSummary([]);
     expect(a.ProjectSummary()).toBe("");
+  });
+
+  // OCR v1.9.3: TestMaybeRunDedup_Success
+  test("TestMaybeRunDedup_Success", async () => {
+    const dedupResp = `{"groups":[{"members":["c-0","c-1"],"merged_content":"combined finding"},{"members":["c-2"]}]}`;
+    const client = new FakeScanClient([{ content: dedupResp, usage: { PromptTokens: 80, CompletionTokens: 30 } }]);
+    const tpl = makeTemplateWithFullScan();
+    (tpl as unknown as { DedupTask?: unknown }).DedupTask = { messages: [{ role: "user", content: "Dedup: {{batch_comments}}" }] };
+    const collector = new CommentCollector();
+    collector.add({ path: "a.go", content: "duplicate finding 1" } as unknown as import("../../../src/ocr-v193/model/review.js").LlmComment);
+    collector.add({ path: "a.go", content: "duplicate finding 2" } as unknown as import("../../../src/ocr-v193/model/review.js").LlmComment);
+    collector.add({ path: "b.go", content: "unique finding" } as unknown as import("../../../src/ocr-v193/model/review.js").LlmComment);
+    const a = NewAgent({
+      template: tpl as unknown as ScanTemplate,
+      llmClient: client as unknown as AnyLlmClient,
+      model: "test",
+      commentCollector: collector as unknown as never,
+      tools: { get: () => undefined, freeze: () => {} } as unknown as never,
+      session: new SessionHistory(mkdtempSyncFallback(), "main", "test", { reviewMode: "full_scan" }) as unknown as never,
+    } as unknown as never);
+    const priv = a as unknown as ScanPrivate;
+    // Simulate batchStart snapshot
+    const batchStart = (collector as unknown as { snapshot?: () => number }).snapshot ? (collector as unknown as { snapshot: () => number }).snapshot() : 0;
+    // Need to populate collector's internal snapshot logic: our collector.snapshot not exists, use length
+    const start = 0;
+    await priv.maybeRunDedup(0, start);
+    const comments = collector.comments();
+    // Dedup should have merged first two
+    expect(comments.length).toBe(2);
+    expect(comments[0]?.content).toBe("combined finding");
+    expect(comments[1]?.content).toBe("unique finding");
+  });
+
+  // OCR v1.9.3: TestMaybeRunDedup_SkipWhenDisabled
+  test("TestMaybeRunDedup_SkipWhenDisabled", async () => {
+    const collector = new CommentCollector();
+    collector.add({ path: "a.go", content: "c1" } as unknown as import("../../../src/ocr-v193/model/review.js").LlmComment);
+    collector.add({ path: "a.go", content: "c2" } as unknown as import("../../../src/ocr-v193/model/review.js").LlmComment);
+    collector.add({ path: "a.go", content: "c3" } as unknown as import("../../../src/ocr-v193/model/review.js").LlmComment);
+    const a = NewAgent({
+      template: makeTemplateWithFullScan(),
+      commentCollector: collector as unknown as never,
+      tools: { get: () => undefined, freeze: () => {} } as unknown as never,
+      session: new SessionHistory(mkdtempSyncFallback(), "main", "test", { reviewMode: "full_scan" }) as unknown as never,
+    } as unknown as never);
+    const priv = a as unknown as ScanPrivate;
+    await priv.maybeRunDedup(0, 0);
+    expect(collector.comments().length).toBe(3);
+  });
+
+  // OCR v1.9.3: TestMaybeRunDedup_SkipWhenTooFewComments
+  test("TestMaybeRunDedup_SkipWhenTooFewComments", async () => {
+    const tpl = makeTemplateWithFullScan();
+    (tpl as unknown as { DedupTask?: unknown }).DedupTask = { messages: [{ role: "user", content: "{{batch_comments}}" }] };
+    (tpl as unknown as { DedupMinComments?: number }).DedupMinComments = 5;
+    const collector = new CommentCollector();
+    collector.add({ path: "a.go", content: "only one" } as unknown as import("../../../src/ocr-v193/model/review.js").LlmComment);
+    const a = NewAgent({
+      template: tpl as unknown as ScanTemplate,
+      llmClient: new FakeScanClient([]) as unknown as AnyLlmClient,
+      model: "test",
+      commentCollector: collector as unknown as never,
+      tools: { get: () => undefined, freeze: () => {} } as unknown as never,
+      session: new SessionHistory(mkdtempSyncFallback(), "main", "test", { reviewMode: "full_scan" }) as unknown as never,
+    } as unknown as never);
+    const priv = a as unknown as ScanPrivate;
+    await priv.maybeRunDedup(0, 0);
+    expect(collector.comments().length).toBe(1);
+  });
+
+  // OCR v1.9.3: TestExecuteSubtask_Success
+  test("TestExecuteSubtask_Success", async () => {
+    const client = new FakeScanClient([{ content: "", toolCalls: [{ id: "c1", type: "function", function: { name: "task_done", arguments: "{}" } }], usage: { PromptTokens: 50, CompletionTokens: 20 } }]);
+    const tpl = makeTemplateWithFullScan();
+    (tpl as unknown as { MaxTokens: number }).MaxTokens = 100000;
+    const a = NewAgent({
+      template: tpl as unknown as ScanTemplate,
+      llmClient: client as unknown as AnyLlmClient,
+      model: "test",
+      commentCollector: new CommentCollector() as unknown as never,
+      tools: { get: () => undefined, freeze: () => {} } as unknown as never,
+      session: new SessionHistory(mkdtempSyncFallback(), "main", "test", { reviewMode: "full_scan" }) as unknown as never,
+      skipPlan: true,
+    } as unknown as never);
+    (a as unknown as { currentDate: string }).currentDate = "2026-06-26 10:00";
+    const priv = a as unknown as ScanPrivate;
+    const res = await priv.executeSubtask(new AbortController().signal, { path: "main.go", content: "package main\n", lineCount: 1 });
+    expect(res.error).toBeNull();
+    expect(res.completed).toBe(true);
+    expect(a.TotalTokensUsed()).toBe(70);
+  });
+
+  // OCR v1.9.3: TestExecuteSubtask_WithPlan
+  test("TestExecuteSubtask_WithPlan", async () => {
+    const planJSON = `{"summary":"focus on error paths","checkpoints":[]}`;
+    const client = new FakeScanClient([
+      { content: planJSON, usage: { PromptTokens: 30, CompletionTokens: 20 } },
+      { content: "", toolCalls: [{ id: "c1", type: "function", function: { name: "task_done", arguments: "{}" } }], usage: { PromptTokens: 60, CompletionTokens: 30 } },
+    ]);
+    const tpl = makeTemplateWithFullScan();
+    (tpl as unknown as { MaxTokens: number }).MaxTokens = 100000;
+    (tpl as unknown as { PlanTask?: unknown }).PlanTask = { messages: [{ role: "user", content: "Plan {{current_file_path}}: {{file_content}}" }] };
+    const a = NewAgent({
+      template: tpl as unknown as ScanTemplate,
+      llmClient: client as unknown as AnyLlmClient,
+      model: "test",
+      commentCollector: new CommentCollector() as unknown as never,
+      tools: { get: () => undefined, freeze: () => {} } as unknown as never,
+      session: new SessionHistory(mkdtempSyncFallback(), "main", "test", { reviewMode: "full_scan" }) as unknown as never,
+    } as unknown as never);
+    (a as unknown as { currentDate: string }).currentDate = "2026-06-26 10:00";
+    const priv = a as unknown as ScanPrivate;
+    const res = await priv.executeSubtask(new AbortController().signal, { path: "handler.go", content: "package h\nfunc Handle() error { return nil }\n", lineCount: 2 });
+    expect(res.error).toBeNull();
+    expect(res.completed).toBe(true);
+  });
+
+  // OCR v1.9.3: TestExecuteSubtask_ContextCancelled
+  test("TestExecuteSubtask_ContextCancelled", async () => {
+    const tpl = makeTemplateWithFullScan();
+    const a = NewAgent({
+      template: tpl,
+      session: new SessionHistory(mkdtempSyncFallback(), "main", "test", { reviewMode: "full_scan" }) as unknown as never,
+    } as unknown as never);
+    (a as unknown as { currentDate: string }).currentDate = "2026-06-26";
+    const ctrl = new AbortController();
+    ctrl.abort();
+    const priv = a as unknown as ScanPrivate;
+    const res = await priv.executeSubtask(ctrl.signal, { path: "a.go", content: "x", lineCount: 1 });
+    expect(res.error).not.toBeNull();
+  });
+
+  // OCR v1.9.3: TestRun_EmptyTemplate
+  test("TestRun_EmptyTemplate", async () => {
+    const a = NewAgent({
+      template: {} as ScanTemplate,
+      session: new SessionHistory(mkdtempSyncFallback(), "main", "test", { reviewMode: "full_scan" }) as unknown as never,
+    } as unknown as never);
+    let threw = false;
+    try { await (a as unknown as { run: (s?: AbortSignal) => Promise<unknown> }).run(new AbortController().signal); } catch (e) { threw = true; expect(String((e as Error).message).includes("MAIN_TASK")).toBe(true); }
+    expect(threw).toBe(true);
+  });
+
+  // OCR v1.9.3: TestPhaseEnabled
+  test("TestPhaseEnabled", () => {
+    const tpl = makeTemplateWithFullScan();
+    const a = NewAgent({ template: tpl, session: new SessionHistory(mkdtempSyncFallback(), "main", "test", { reviewMode: "full_scan" }) as unknown as never } as unknown as never);
+    expect((a as unknown as ScanPrivate).planEnabled()).toBe(false);
+    expect((a as unknown as ScanPrivate).dedupEnabled()).toBe(false);
+    expect((a as unknown as ScanPrivate).summaryEnabled()).toBe(false);
+    (tpl as unknown as { PlanTask?: unknown }).PlanTask = { messages: [{ role: "user", content: "plan" }] };
+    (tpl as unknown as { DedupTask?: unknown }).DedupTask = { messages: [{ role: "user", content: "dedup" }] };
+    (tpl as unknown as { ProjectSummaryTask?: unknown }).ProjectSummaryTask = { messages: [{ role: "user", content: "summary" }] };
+    const a2 = NewAgent({ template: tpl as unknown as ScanTemplate, commentCollector: new CommentCollector() as unknown as never, tools: { get: () => undefined, freeze: () => {} } as unknown as never, session: new SessionHistory(mkdtempSyncFallback(), "main", "test", { reviewMode: "full_scan" }) as unknown as never } as unknown as never);
+    expect((a2 as unknown as ScanPrivate).planEnabled()).toBe(true);
+    expect((a2 as unknown as ScanPrivate).dedupEnabled()).toBe(true);
+    expect((a2 as unknown as ScanPrivate).summaryEnabled()).toBe(true);
+    const a3 = NewAgent({ template: tpl as unknown as ScanTemplate, commentCollector: new CommentCollector() as unknown as never, tools: { get: () => undefined, freeze: () => {} } as unknown as never, session: new SessionHistory(mkdtempSyncFallback(), "main", "test", { reviewMode: "full_scan" }) as unknown as never, skipPlan: true, skipDedup: true, skipSummary: true } as unknown as never);
+    expect((a3 as unknown as ScanPrivate).planEnabled()).toBe(false);
+    expect((a3 as unknown as ScanPrivate).dedupEnabled()).toBe(false);
+    expect((a3 as unknown as ScanPrivate).summaryEnabled()).toBe(false);
+  });
+
+  // OCR v1.9.3: TestRun_NoReviewableFiles
+  test("TestRun_NoReviewableFiles", async () => {
+    const repo = await initTestRepo();
+    try {
+      await writeFileEnsure(repo.dir, "img.png", new Uint8Array([0x89, 0x50, 0x4e, 0x47]) as unknown as string);
+      gitCommit(repo.dir, "binary");
+      const a = NewAgent({
+        repoDir: repo.dir,
+        template: makeTemplateWithFullScan(),
+        llmClient: new FakeScanClient([]) as unknown as AnyLlmClient,
+        commentCollector: new CommentCollector() as unknown as never,
+        tools: { get: () => undefined, freeze: () => {} } as unknown as never,
+        session: new SessionHistory(await mkdtemp(join(tmpdir(), "sess-")), "main", "test", { reviewMode: "full_scan" }) as unknown as never,
+        skipPlan: true,
+        skipDedup: true,
+        skipSummary: true,
+      } as unknown as never);
+      const comments = await (a as unknown as { run: (s?: AbortSignal) => Promise<import("../../../src/ocr-v193/model/review.js").LlmComment[]> }).run(new AbortController().signal);
+      expect(comments.length).toBe(0);
+    } finally { await repo.cleanup(); }
+  });
+
+  // OCR v1.9.3: TestRun_FullPipeline
+  test("TestRun_FullPipeline", async () => {
+    const repo = await initTestRepo();
+    try {
+      await writeFileEnsure(repo.dir, "main.go", "package main\nfunc main() {}\n");
+      gitCommit(repo.dir, "init");
+      const client = new FakeScanClient([{ content: "", toolCalls: [{ id: "c1", type: "function", function: { name: "task_done", arguments: "{}" } }], usage: { PromptTokens: 100, CompletionTokens: 50 } }]);
+      const tpl = makeTemplateWithFullScan();
+      (tpl as unknown as { MaxTokens: number }).MaxTokens = 100000;
+      const a = NewAgent({
+        repoDir: repo.dir,
+        template: tpl as unknown as ScanTemplate,
+        llmClient: client as unknown as AnyLlmClient,
+        model: "test",
+        commentCollector: new CommentCollector() as unknown as never,
+        tools: { get: () => undefined, freeze: () => {} } as unknown as never,
+        maxConcurrency: 1,
+        skipPlan: true,
+        skipDedup: true,
+        skipSummary: true,
+        session: new SessionHistory(await mkdtemp(join(tmpdir(), "sess-")), "main", "test", { reviewMode: "full_scan" }) as unknown as never,
+      } as unknown as never);
+      const comments = await (a as unknown as { run: (s?: AbortSignal) => Promise<import("../../../src/ocr-v193/model/review.js").LlmComment[]> }).run(new AbortController().signal);
+      expect(Array.isArray(comments)).toBe(true);
+      expect(a.FilesReviewed()).toBe(1);
+      expect(a.TotalTokensUsed()).toBeGreaterThan(0);
+    } finally { await repo.cleanup(); }
+  });
+
+  // OCR v1.9.3: TestDispatchSubtasks_AllFailed
+  test("TestDispatchSubtasks_AllFailed", async () => {
+    const client = new ErrorScanClient(new Error("context deadline exceeded"));
+    const tpl = makeTemplateWithFullScan();
+    (tpl as unknown as { MaxTokens: number }).MaxTokens = 100000;
+    const a = NewAgent({
+      template: tpl as unknown as ScanTemplate,
+      llmClient: client as unknown as AnyLlmClient,
+      model: "test",
+      commentCollector: new CommentCollector() as unknown as never,
+      tools: { get: () => undefined, freeze: () => {} } as unknown as never,
+      maxConcurrency: 1,
+      skipPlan: true,
+      skipDedup: true,
+      skipSummary: true,
+      session: new SessionHistory(await mkdtemp(join(tmpdir(), "sess-")), "main", "test", { reviewMode: "full_scan" }) as unknown as never,
+    } as unknown as never);
+    (a as unknown as { items: ScanItem[] }).items = [{ path: "a.go", content: "x", lineCount: 1 }];
+    (a as unknown as { currentDate: string }).currentDate = "2026-06-26";
+    let threw = false;
+    try { await (a as unknown as ScanPrivate).dispatchSubtasks(new AbortController().signal); } catch (e) { threw = true; expect(String((e as Error).message).includes("failed")).toBe(true); }
+    expect(threw).toBe(true);
+  });
+
+  // OCR v1.9.3: TestDispatchSubtasks_WithoutTaskDoneIsAllFailed
+  test("TestDispatchSubtasks_WithoutTaskDoneIsAllFailed", async () => {
+    const client = new FakeScanClient([{ content: "", usage: { PromptTokens: 10, CompletionTokens: 1 } }]);
+    const tpl = makeTemplateWithFullScan();
+    (tpl as unknown as { MaxTokens: number }).MaxTokens = 100000;
+    (tpl as unknown as { MaxToolRequestTimes: number }).MaxToolRequestTimes = 1;
+    const a = NewAgent({
+      template: tpl as unknown as ScanTemplate,
+      llmClient: client as unknown as AnyLlmClient,
+      model: "test",
+      commentCollector: new CommentCollector() as unknown as never,
+      tools: { get: () => undefined, freeze: () => {} } as unknown as never,
+      maxConcurrency: 1,
+      skipPlan: true,
+      skipDedup: true,
+      skipSummary: true,
+      session: new SessionHistory(await mkdtemp(join(tmpdir(), "sess-")), "main", "test", { reviewMode: "full_scan" }) as unknown as never,
+    } as unknown as never);
+    (a as unknown as { items: ScanItem[] }).items = [{ path: "a.go", content: "x", lineCount: 1 }];
+    (a as unknown as { currentDate: string }).currentDate = "2026-06-26";
+    let threw = false;
+    let msg = "";
+    try { await (a as unknown as ScanPrivate).dispatchSubtasks(new AbortController().signal); } catch (e) { threw = true; msg = String((e as Error).message); }
+    expect(threw).toBe(true);
+    expect(msg.includes("all 1 file scan(s) failed")).toBe(true);
+    const warnings = a.Warnings();
+    expect(warnings.length).toBe(1);
+    expect(warnings[0]?.type).toBe("scan_subtask_error");
+    expect(String(warnings[0]?.message).includes("main_task did not complete")).toBe(true);
+  });
+
+  // OCR v1.9.3: TestDispatchSubtasks_ResumeSkipsCompletedFiles
+  test("TestDispatchSubtasks_ResumeSkipsCompletedFiles", async () => {
+    const client = new FakeScanClient([{ content: "", toolCalls: [{ id: "done", type: "function", function: { name: "task_done", arguments: "{}" } }], usage: { PromptTokens: 10, CompletionTokens: 5 } }]);
+    const cachedItem: ScanItem = { path: "cached.go", content: "package cached\n", lineCount: 1 };
+    const freshItem: ScanItem = { path: "fresh.go", content: "package fresh\n", lineCount: 1 };
+    const cachedComment = { path: "cached.go", content: "cached finding" } as unknown as import("../../../src/ocr-v193/model/review.js").LlmComment;
+    const fp = scanItemFingerprint(cachedItem);
+    const resume = new ResumeState("prior-session", "/tmp");
+    (resume as unknown as { model: string }).model = "old-model";
+    (resume as unknown as { reviewMode: string }).reviewMode = "full_scan";
+    (resume.items as Map<string, unknown>).set(fp, { filePath: cachedItem.path, oldPath: cachedItem.path, newPath: cachedItem.path, fingerprint: fp, comments: [cachedComment] });
+    const sess = new SessionHistory(await mkdtemp(join(tmpdir(), "sess-")), "main", "new-model", { reviewMode: "full_scan", resumedFrom: resume.sessionId } as unknown as never);
+    const collector = new CommentCollector();
+    const a = NewAgent({
+      template: makeTemplateWithFullScan(),
+      llmClient: client as unknown as AnyLlmClient,
+      model: "new-model",
+      commentCollector: collector as unknown as never,
+      tools: { get: () => undefined, freeze: () => {} } as unknown as never,
+      maxConcurrency: 1,
+      skipPlan: true,
+      skipDedup: true,
+      skipSummary: true,
+      resume: resume as unknown as never,
+      session: sess as unknown as never,
+    } as unknown as never);
+    (a as unknown as { items: ScanItem[] }).items = [cachedItem, freshItem];
+    (a as unknown as { currentDate: string }).currentDate = "2026-06-26";
+    const comments = await (a as unknown as ScanPrivate).dispatchSubtasks(new AbortController().signal) as unknown as import("../../../src/ocr-v193/model/review.js").LlmComment[];
+    expect((client as unknown as { idx: number }).idx).toBe(1);
+    expect(comments.length).toBe(1);
+    expect(comments[0]?.content).toBe(cachedComment.content);
+    const info = (a as unknown as { resumeInfo: { resumedFrom: string; reusedFiles: number; rerunFiles: number; previousModel?: string; currentModel?: string } | null }).resumeInfo;
+    expect(info).not.toBeNull();
+    expect(info?.resumedFrom).toBe(resume.sessionId);
+    expect(info?.reusedFiles).toBe(1);
+    expect(info?.rerunFiles).toBe(1);
+  });
+
+  // OCR v1.9.3: TestDispatchSubtasks_ResumeRerunsChangedContent
+  test("TestDispatchSubtasks_ResumeRerunsChangedContent", async () => {
+    const oldItem: ScanItem = { path: "changed.go", content: "package changed\nconst v = 1\n", lineCount: 2 };
+    const newItem: ScanItem = { path: "changed.go", content: "package changed\nconst v = 2\n", lineCount: 2 };
+    const fpOld = scanItemFingerprint(oldItem);
+    const resume = new ResumeState("prior-session", "/tmp");
+    (resume as unknown as { model: string }).model = "old-model";
+    (resume as unknown as { reviewMode: string }).reviewMode = "full_scan";
+    (resume.items as Map<string, unknown>).set(fpOld, { filePath: oldItem.path, oldPath: oldItem.path, newPath: oldItem.path, fingerprint: fpOld, comments: [{ path: oldItem.path, content: "old finding" } as unknown as import("../../../src/ocr-v193/model/review.js").LlmComment] });
+    const client = new FakeScanClient([{ content: "", toolCalls: [{ id: "done", type: "function", function: { name: "task_done", arguments: "{}" } }], usage: { PromptTokens: 10, CompletionTokens: 5 } }]);
+    const sess = new SessionHistory(await mkdtemp(join(tmpdir(), "sess-")), "main", "new-model", { reviewMode: "full_scan", resumedFrom: resume.sessionId } as unknown as never);
+    const a = NewAgent({
+      template: makeTemplateWithFullScan(),
+      llmClient: client as unknown as AnyLlmClient,
+      model: "new-model",
+      commentCollector: new CommentCollector() as unknown as never,
+      tools: { get: () => undefined, freeze: () => {} } as unknown as never,
+      maxConcurrency: 1,
+      skipPlan: true,
+      skipDedup: true,
+      skipSummary: true,
+      resume: resume as unknown as never,
+      session: sess as unknown as never,
+    } as unknown as never);
+    (a as unknown as { items: ScanItem[] }).items = [newItem];
+    (a as unknown as { currentDate: string }).currentDate = "2026-06-26";
+    await (a as unknown as ScanPrivate).dispatchSubtasks(new AbortController().signal);
+    expect((client as unknown as { idx: number }).idx).toBe(1);
+    const info = (a as unknown as { resumeInfo: { reusedFiles: number; rerunFiles: number } | null }).resumeInfo;
+    expect(info?.reusedFiles).toBe(0);
+    expect(info?.rerunFiles).toBe(1);
+  });
+
+  // OCR v1.9.3: TestDispatchSubtasks_ResumeMultiBatchAndChained
+  test("TestDispatchSubtasks_ResumeMultiBatchAndChained", async () => {
+    const items: ScanItem[] = [
+      { path: "a.go", content: "package p\nconst A = 1\n", lineCount: 2 },
+      { path: "b.go", content: "package p\nconst B = 1\n", lineCount: 2 },
+      { path: "c.go", content: "package p\nconst C = 1\n", lineCount: 2 },
+      { path: "d.go", content: "package p\nconst D = 1\n", lineCount: 2 },
+      { path: "e.go", content: "package p\nconst E = 1\n", lineCount: 2 },
+    ];
+    const resume = new ResumeState("resume-of-resume", "/tmp");
+    (resume as unknown as { model: string }).model = "old-model";
+    (resume as unknown as { reviewMode: string }).reviewMode = "full_scan";
+    for (const idx of [0, 1, 3]) {
+      const it = items[idx]!;
+      const fp = scanItemFingerprint(it);
+      (resume.items as Map<string, unknown>).set(fp, { filePath: it.path, oldPath: it.path, newPath: it.path, fingerprint: fp, comments: [{ path: it.path, content: "cached " + it.path } as unknown as import("../../../src/ocr-v193/model/review.js").LlmComment] });
+    }
+    const tpl = makeTemplateWithFullScan();
+    (tpl as unknown as { BatchStrategy?: string }).BatchStrategy = "by-language";
+    (tpl as unknown as { BatchSize?: number }).BatchSize = 2;
+    const client = new FakeScanClient([
+      { content: "", toolCalls: [{ id: "done", type: "function", function: { name: "task_done", arguments: "{}" } }], usage: { PromptTokens: 10, CompletionTokens: 5 } },
+      { content: "", toolCalls: [{ id: "done", type: "function", function: { name: "task_done", arguments: "{}" } }], usage: { PromptTokens: 10, CompletionTokens: 5 } },
+    ]);
+    const collector = new CommentCollector();
+    const sess = new SessionHistory(await mkdtemp(join(tmpdir(), "sess-")), "main", "new-model", { reviewMode: "full_scan", resumedFrom: resume.sessionId } as unknown as never);
+    const a = NewAgent({
+      template: tpl as unknown as ScanTemplate,
+      llmClient: client as unknown as AnyLlmClient,
+      model: "new-model",
+      commentCollector: collector as unknown as never,
+      tools: { get: () => undefined, freeze: () => {} } as unknown as never,
+      maxConcurrency: 1,
+      skipPlan: true,
+      skipDedup: true,
+      skipSummary: true,
+      resume: resume as unknown as never,
+      session: sess as unknown as never,
+    } as unknown as never);
+    (a as unknown as { items: ScanItem[] }).items = items;
+    (a as unknown as { currentDate: string }).currentDate = "2026-06-26";
+    const comments = await (a as unknown as ScanPrivate).dispatchSubtasks(new AbortController().signal) as unknown as import("../../../src/ocr-v193/model/review.js").LlmComment[];
+    expect((client as unknown as { idx: number }).idx).toBe(2);
+    expect(comments.length).toBe(3);
+    const info = (a as unknown as { resumeInfo: { reusedFiles: number; rerunFiles: number } | null }).resumeInfo;
+    expect(info?.reusedFiles).toBe(3);
+    expect(info?.rerunFiles).toBe(2);
   });
 });

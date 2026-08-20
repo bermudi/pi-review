@@ -289,4 +289,4 @@ function isIgnored(rel: string, patterns: string[]): boolean {
 }
 
 // Exposed for tests
-export const __test = { filterByPaths, countLines };
+export const __test = { filterByPaths, countLines, isBinaryFile };
