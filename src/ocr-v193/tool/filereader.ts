@@ -64,9 +64,50 @@ export function RefValue(mode: ReviewMode, toRef: string, commit: string): [stri
 // ---------------------------------------------------------------------------
 
 export interface GitRunner {
-  Output(signal: AbortSignal | undefined, repoDir: string, ...args: string[]): Promise<Buffer>;
+  Output?(signal: AbortSignal | undefined, repoDir: string, ...args: string[]): Promise<Buffer>;
+  output?(repoDir: string, args: string[], signal?: AbortSignal): Promise<Buffer>;
   RunSplit?(signal: AbortSignal | undefined, repoDir: string, ...args: string[]): Promise<{ stdout: string; stderr: string }>;
+  runSplit?(repoDir: string, args: string[], signal?: AbortSignal): Promise<{ stdout: string; stderr: string }>;
   Stream?(signal: AbortSignal | undefined, repoDir: string, onStdout: (r: NodeJS.ReadableStream) => Promise<void> | void, ...args: string[]): Promise<void>;
+  stream?(repoDir: string, onStdout: (r: NodeJS.ReadableStream) => Promise<void> | void, args: string[], signal?: AbortSignal): Promise<void>;
+}
+
+async function runnerOutput(runner: GitRunner, repoDir: string, args: string[], signal?: AbortSignal): Promise<Buffer> {
+  const r = runner as unknown as Record<string, unknown>;
+  if (typeof r["output"] === "function") {
+    return await (r["output"] as (repoDir: string, args: string[], signal?: AbortSignal) => Promise<Buffer>)(repoDir, args, signal);
+  }
+  if (typeof r["Output"] === "function") {
+    return await (r["Output"] as (signal: AbortSignal | undefined, repoDir: string, ...args: string[]) => Promise<Buffer>)(signal, repoDir, ...args);
+  }
+  throw new Error("runner missing Output/output");
+}
+
+async function runnerStream(
+  runner: GitRunner,
+  repoDir: string,
+  args: string[],
+  signal: AbortSignal | undefined,
+  onStdout: (r: NodeJS.ReadableStream) => Promise<void> | void,
+): Promise<void> {
+  const r = runner as unknown as Record<string, unknown>;
+  if (typeof r["stream"] === "function") {
+    return await (r["stream"] as (repoDir: string, consume: (r: NodeJS.ReadableStream) => Promise<void> | void, args: string[], signal?: AbortSignal) => Promise<void>)(
+      repoDir,
+      onStdout,
+      args,
+      signal,
+    );
+  }
+  if (typeof r["Stream"] === "function") {
+    return await (r["Stream"] as (signal: AbortSignal | undefined, repoDir: string, onStdout: (r: NodeJS.ReadableStream) => Promise<void> | void, ...args: string[]) => Promise<void>)(
+      signal,
+      repoDir,
+      onStdout,
+      ...args,
+    );
+  }
+  throw new Error("runner missing Stream/stream");
 }
 
 async function execGit(
@@ -292,8 +333,8 @@ export class FileReader {
   private async readFromGitShow(signal: AbortSignal | undefined, p: string): Promise<string> {
     const args = ["-c", "core.quotepath=false", "show", "--end-of-options", `${this.Ref}:${p}`];
     try {
-      if (this.Runner?.Output) {
-        const out = await this.Runner.Output(signal, this.RepoDir, ...args);
+      if (this.Runner) {
+        const out = await runnerOutput(this.Runner, this.RepoDir, args, signal);
         return out.toString();
       }
       const out = await execGit(this.RepoDir, args, signal);
@@ -325,23 +366,18 @@ export class FileReader {
     const args = ["-c", "core.quotepath=false", "show", "--end-of-options", `${this.Ref}:${p}`];
 
     // Prefer Runner.Stream if available for streaming
-    if (this.Runner?.Stream) {
+    if (this.Runner && ((this.Runner as unknown as Record<string, unknown>)["stream"] || (this.Runner as unknown as Record<string, unknown>)["Stream"])) {
       let result: { lines: string[]; total: number } | undefined;
       let streamErr: unknown;
       try {
-        await this.Runner.Stream(
-          signal,
-          this.RepoDir,
-          async (stdout) => {
-            const chunks: Buffer[] = [];
-            for await (const chunk of stdout as AsyncIterable<Buffer>) {
-              chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk as unknown as string));
-            }
-            const content = Buffer.concat(chunks).toString();
-            result = scanLines(content, startLine, maxLines);
-          },
-          ...args,
-        );
+        await runnerStream(this.Runner, this.RepoDir, args, signal, async (stdout) => {
+          const chunks: Buffer[] = [];
+          for await (const chunk of stdout as AsyncIterable<Buffer>) {
+            chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk as unknown as string));
+          }
+          const content = Buffer.concat(chunks).toString();
+          result = scanLines(content, startLine, maxLines);
+        });
       } catch (e) {
         streamErr = e;
       }
@@ -353,8 +389,8 @@ export class FileReader {
     // Fallback: use Runner.Output or direct exec and then scan
     try {
       let content: string;
-      if (this.Runner?.Output) {
-        const out = await this.Runner.Output(signal, this.RepoDir, ...args);
+      if (this.Runner) {
+        const out = await runnerOutput(this.Runner, this.RepoDir, args, signal);
         content = out.toString();
       } else {
         const out = await execGit(this.RepoDir, args, signal);

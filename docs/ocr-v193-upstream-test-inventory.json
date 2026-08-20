@@ -13152,113 +13152,245 @@
       "tests": [
         {
           "name": "TestExecute_CommitMode",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/tool/file-read.test.ts",
+              "title": "TestExecute_CommitMode"
+            }
+          ]
         },
         {
           "name": "TestExecute_DefaultStartLine",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/tool/file-read.test.ts",
+              "title": "TestExecute_DefaultStartLine"
+            }
+          ]
         },
         {
           "name": "TestExecute_EmptyFilePath",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/tool/file-read.test.ts",
+              "title": "TestExecute_EmptyFilePath"
+            }
+          ]
         },
         {
           "name": "TestExecute_InvalidLineRange",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/tool/file-read.test.ts",
+              "title": "TestExecute_InvalidLineRange"
+            }
+          ]
         },
         {
           "name": "TestExecute_MissingFile",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/tool/file-read.test.ts",
+              "title": "TestExecute_MissingFile"
+            }
+          ]
         },
         {
           "name": "TestExecute_StartBeyondTotalLines",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/tool/file-read.test.ts",
+              "title": "TestExecute_StartBeyondTotalLines"
+            }
+          ]
         },
         {
           "name": "TestExecute_Truncation",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/tool/file-read.test.ts",
+              "title": "TestExecute_Truncation"
+            }
+          ]
         },
         {
           "name": "TestExecute_WithEndLine",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/tool/file-read.test.ts",
+              "title": "TestExecute_WithEndLine"
+            }
+          ]
         },
         {
           "name": "TestFileReadProvider_Tool",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/tool/file-read.test.ts",
+              "title": "TestFileReadProvider_Tool"
+            }
+          ]
         },
         {
           "name": "TestReadLines_Disk_AbsolutePathStaysUnderRepo",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/tool/file-read.test.ts",
+              "title": "TestReadLines_Disk_AbsolutePathStaysUnderRepo"
+            }
+          ]
         },
         {
           "name": "TestReadLines_Disk_AllowsParentSegmentWithinRepo",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/tool/file-read.test.ts",
+              "title": "TestReadLines_Disk_AllowsParentSegmentWithinRepo"
+            }
+          ]
         },
         {
           "name": "TestReadLines_Disk_AllowsSymlinkInsideRepo",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/tool/file-read.test.ts",
+              "title": "TestReadLines_Disk_AllowsSymlinkInsideRepo"
+            }
+          ]
         },
         {
           "name": "TestReadLines_Disk_EmptyFile",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/tool/file-read.test.ts",
+              "title": "TestReadLines_Disk_EmptyFile"
+            }
+          ]
         },
         {
           "name": "TestReadLines_Disk_FullFile",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/tool/file-read.test.ts",
+              "title": "TestReadLines_Disk_FullFile"
+            }
+          ]
         },
         {
           "name": "TestReadLines_Disk_MissingFilePreservesReadError",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/tool/file-read.test.ts",
+              "title": "TestReadLines_Disk_MissingFilePreservesReadError"
+            }
+          ]
         },
         {
           "name": "TestReadLines_Disk_NoTrailingNewline",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/tool/file-read.test.ts",
+              "title": "TestReadLines_Disk_NoTrailingNewline"
+            }
+          ]
         },
         {
           "name": "TestReadLines_Disk_RejectsParentTraversal",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/tool/file-read.test.ts",
+              "title": "TestReadLines_Disk_RejectsParentTraversal"
+            }
+          ]
         },
         {
           "name": "TestReadLines_Disk_RejectsSymlinkOutsideRepo",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/tool/file-read.test.ts",
+              "title": "TestReadLines_Disk_RejectsSymlinkOutsideRepo"
+            }
+          ]
         },
         {
           "name": "TestReadLines_Disk_StartBeyondEOF",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/tool/file-read.test.ts",
+              "title": "TestReadLines_Disk_StartBeyondEOF"
+            }
+          ]
         },
         {
           "name": "TestReadLines_Disk_TrailingNewline",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/tool/file-read.test.ts",
+              "title": "TestReadLines_Disk_TrailingNewline"
+            }
+          ]
         },
         {
           "name": "TestReadLines_Disk_Window",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/tool/file-read.test.ts",
+              "title": "TestReadLines_Disk_Window"
+            }
+          ]
         },
         {
           "name": "TestReadLines_GitShow_Window",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/tool/file-read.test.ts",
+              "title": "TestReadLines_GitShow_Window"
+            }
+          ]
         }
       ]
     },
@@ -13272,68 +13404,146 @@
       "tests": [
         {
           "name": "TestFileReader_Read_CommitMode",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/tool/filereader-read.test.ts",
+              "title": "TestFileReader_Read_CommitMode"
+            }
+          ]
         },
         {
           "name": "TestFileReader_Read_CommitMode_MissingFile",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/tool/filereader-read.test.ts",
+              "title": "TestFileReader_Read_CommitMode_MissingFile"
+            }
+          ]
         },
         {
           "name": "TestFileReader_Read_CommitMode_MonorepoSubdirPath",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/tool/filereader-read.test.ts",
+              "title": "TestFileReader_Read_CommitMode_MonorepoSubdirPath"
+            }
+          ]
         },
         {
           "name": "TestFileReader_Read_CommitMode_WithRunner",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/tool/filereader-read.test.ts",
+              "title": "TestFileReader_Read_CommitMode_WithRunner"
+            }
+          ]
         },
         {
           "name": "TestFileReader_Read_CommitMode_WithRunner_MissingFile",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/tool/filereader-read.test.ts",
+              "title": "TestFileReader_Read_CommitMode_WithRunner_MissingFile"
+            }
+          ]
         },
         {
           "name": "TestFileReader_Read_PathTraversal",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/tool/filereader-read.test.ts",
+              "title": "TestFileReader_Read_PathTraversal"
+            }
+          ]
         },
         {
           "name": "TestFileReader_Read_SubdirectoryFile",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/tool/filereader-read.test.ts",
+              "title": "TestFileReader_Read_SubdirectoryFile"
+            }
+          ]
         },
         {
           "name": "TestFileReader_Read_SymlinkOutsideRepo",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/tool/filereader-read.test.ts",
+              "title": "TestFileReader_Read_SymlinkOutsideRepo"
+            }
+          ]
         },
         {
           "name": "TestFileReader_Read_Workspace",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/tool/filereader-read.test.ts",
+              "title": "TestFileReader_Read_Workspace"
+            }
+          ]
         },
         {
           "name": "TestFileReader_Read_WorkspaceNotFound",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/tool/filereader-read.test.ts",
+              "title": "TestFileReader_Read_WorkspaceNotFound"
+            }
+          ]
         },
         {
           "name": "TestFileReader_ReadLines_CommitMode_MissingFile",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/tool/filereader-read.test.ts",
+              "title": "TestFileReader_ReadLines_CommitMode_MissingFile"
+            }
+          ]
         },
         {
           "name": "TestFileReader_ReadLines_CommitMode_WithRunner",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/tool/filereader-read.test.ts",
+              "title": "TestFileReader_ReadLines_CommitMode_WithRunner"
+            }
+          ]
         },
         {
           "name": "TestFileReader_ReadLines_Workspace",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/tool/filereader-read.test.ts",
+              "title": "TestFileReader_ReadLines_Workspace"
+            }
+          ]
         }
       ]
     },
