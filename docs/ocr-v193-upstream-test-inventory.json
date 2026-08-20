@@ -6256,43 +6256,91 @@
       "tests": [
         {
           "name": "TestRunner_AcquireTimeout",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/gitcmd/runner.test.ts",
+              "title": "TestRunner_AcquireTimeout"
+            }
+          ]
         },
         {
           "name": "TestRunner_ContextCancelled",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/gitcmd/runner.test.ts",
+              "title": "TestRunner_ContextCancelled"
+            }
+          ]
         },
         {
           "name": "TestRunner_New",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/gitcmd/runner.test.ts",
+              "title": "TestRunner_New"
+            }
+          ]
         },
         {
           "name": "TestRunner_Output",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/gitcmd/runner.test.ts",
+              "title": "TestRunner_Output"
+            }
+          ]
         },
         {
           "name": "TestRunner_Run",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/gitcmd/runner.test.ts",
+              "title": "TestRunner_Run"
+            }
+          ]
         },
         {
           "name": "TestRunner_Run_InvalidCommand",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/gitcmd/runner.test.ts",
+              "title": "TestRunner_Run_InvalidCommand"
+            }
+          ]
         },
         {
           "name": "TestRunner_RunSplit",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/gitcmd/runner.test.ts",
+              "title": "TestRunner_RunSplit"
+            }
+          ]
         },
         {
           "name": "TestRunner_Stream",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/gitcmd/runner.test.ts",
+              "title": "TestRunner_Stream"
+            }
+          ]
         }
       ]
     },
