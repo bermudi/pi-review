@@ -198,6 +198,18 @@ const localCoverage: readonly LocalCoverage[] = [
     localPath: "test/ocr-v193/rules/canonical_config.test.ts",
     upstreamPaths: ["internal/config/rules/canonical_config_test.go"],
   },
+  {
+    localPath: "test/ocr-v193/session/history.test.ts",
+    upstreamPaths: ["internal/session/history_test.go"],
+  },
+  {
+    localPath: "test/ocr-v193/session/persist.test.ts",
+    upstreamPaths: ["internal/session/persist_test.go"],
+  },
+  {
+    localPath: "test/ocr-v193/session/resume-identity.test.ts",
+    upstreamPaths: ["internal/session/resume_identity_test.go"],
+  },
 ];
 
 function git(...args: readonly string[]): string {

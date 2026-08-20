@@ -9629,48 +9629,102 @@
       "tests": [
         {
           "name": "TestAddToolResult",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/session/history.test.ts",
+              "title": "AddToolResult appends tool result record"
+            }
+          ]
         },
         {
           "name": "TestAppendTaskRecord",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/session/history.test.ts",
+              "title": "AppendTaskRecord increments per-task counters"
+            }
+          ]
         },
         {
           "name": "TestAppendTaskRecord_DefensiveCopy",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/session/history.test.ts",
+              "title": "AppendTaskRecord stores a defensive copy of messages"
+            }
+          ]
         },
         {
           "name": "TestGetOrCreateFileSession",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/session/history.test.ts",
+              "title": "GetOrCreateFileSession returns same instance for same path"
+            }
+          ]
         },
         {
           "name": "TestLLMFailures",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/session/history.test.ts",
+              "title": "LLMFailures counts SetError calls"
+            }
+          ]
         },
         {
           "name": "TestNew",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/session/history.test.ts",
+              "title": "creates session history with expected fields"
+            }
+          ]
         },
         {
           "name": "TestSetError",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/session/history.test.ts",
+              "title": "SetError records message and duration"
+            }
+          ]
         },
         {
           "name": "TestSetResponse",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/session/history.test.ts",
+              "title": "SetResponse records content, model, usage and duration"
+            }
+          ]
         },
         {
           "name": "TestSetResponse_EmptyResponse",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/session/history.test.ts",
+              "title": "SetResponse with null records an error"
+            }
+          ]
         }
       ]
     },
@@ -10029,8 +10083,14 @@
       "tests": [
         {
           "name": "TestEncodeRepoPath",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/session/persist.test.ts",
+              "title": "encodeRepoPath handles empty, relative and platform paths"
+            }
+          ]
         },
         {
           "name": "TestFinalizeReplaysWriteErrorOnEveryCall",
@@ -10084,8 +10144,14 @@
         },
         {
           "name": "TestSetErrorIncrementsCounter",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/session/persist.test.ts",
+              "title": "SetError increments LLMFailures counter"
+            }
+          ]
         },
         {
           "name": "TestSetErrorWritesJSONL",
@@ -10109,38 +10175,80 @@
       "tests": [
         {
           "name": "TestNewResumeLineage",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/session/resume-identity.test.ts",
+              "title": "NewResumeLineage handles nil, missing manifest, transition and non-transition"
+            }
+          ]
         },
         {
           "name": "TestResumeLineageReachesDiskBeforeFinalize",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/session/resume-identity.test.ts",
+              "title": "resume lineage reaches disk before finalize"
+            }
+          ]
         },
         {
           "name": "TestResumeLineageRoundTripsThroughSessionFile",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/session/resume-identity.test.ts",
+              "title": "resume lineage round-trips through session file"
+            }
+          ]
         },
         {
           "name": "TestTransitionRejectionStaysActionableWithNoName",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/session/resume-identity.test.ts",
+              "title": "transition rejection with empty provider/model still hints flag"
+            }
+          ]
         },
         {
           "name": "TestUnknownLineageSchemaIsIgnored",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/session/resume-identity.test.ts",
+              "title": "unknown lineage schema is ignored"
+            }
+          ]
         },
         {
           "name": "TestValidateResume",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/session/resume-identity.test.ts",
+              "title": "ValidateResume accepts or rejects with precise error substrings"
+            }
+          ]
         },
         {
           "name": "TestValidateResumeNilStateAccepts",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/session/resume-identity.test.ts",
+              "title": "nil parent is accepted as non-resume run"
+            }
+          ]
         }
       ]
     },
