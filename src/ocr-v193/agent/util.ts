@@ -97,7 +97,8 @@ export function copyMessages(msgs: readonly Message[]): Message[] {
   }));
 }
 
-export function countMessagesTokens(msgs: readonly Message[]): number {
+export function countMessagesTokens(msgs: readonly Message[] | null | undefined): number {
+  if (msgs === null || msgs === undefined) return 0;
   let total = 0;
   for (const m of msgs) {
     total += countTokensImpl(extractText(m));

@@ -486,18 +486,42 @@ export class Agent {
   // -- public getters mirroring Go
 
   sessionId(): string {
-    if (this.sessionHistory !== null) return (this.sessionHistory as unknown as { sessionId?: string; SessionID?: string }).sessionId ?? (this.sessionHistory as unknown as { SessionID?: string }).SessionID ?? "";
-    const sid = (this.args as unknown as Record<string, unknown>)["sessionId"] as string | undefined;
+    if ((this as unknown) === null || (this as unknown) === undefined) return "";
+    const sh = (this as unknown as { sessionHistory?: unknown }).sessionHistory as unknown as { sessionId?: string; SessionID?: string; HasPersistence?: () => boolean } | null | undefined;
+    if (sh !== null && sh !== undefined) {
+      if (typeof sh.HasPersistence === "function" && !sh.HasPersistence()) return "";
+      return (sh as unknown as { sessionId?: string; SessionID?: string }).sessionId ?? (sh as unknown as { SessionID?: string }).SessionID ?? "";
+    }
+    const args = (this as unknown as { args?: unknown }).args as unknown as Record<string, unknown> | undefined;
+    const sid = args !== undefined ? (args["sessionId"] as string | undefined) : undefined;
     return sid ?? "";
+  }
+
+  SessionID(): string {
+    if ((this as unknown) === null || (this as unknown) === undefined) return "";
+    return this.sessionId();
   }
 
   // Go-compatible aliases
   Session(): import("../session/history.js").SessionHistory | null {
-    return this.sessionHistory;
+    if ((this as unknown) === null || (this as unknown) === undefined) return null;
+    return (this as unknown as { sessionHistory?: import("../session/history.js").SessionHistory | null }).sessionHistory ?? null;
+  }
+
+  ResumeInfo(): import("../session/history.js").ResumeInfo | null {
+    if ((this as unknown) === null || (this as unknown) === undefined) return null;
+    const anyThis = this as unknown as { resumeInfo?: import("../session/history.js").ResumeInfo | null; args?: { Resume?: unknown } };
+    if (anyThis.resumeInfo !== undefined) {
+      return anyThis.resumeInfo ? { ...anyThis.resumeInfo } : null;
+    }
+    return null;
   }
   FilesReviewed(): number {
+    if ((this as unknown) === null || (this as unknown) === undefined) return 0;
+    const diffs = (this as unknown as { diffs?: unknown[] }).diffs;
+    if (!Array.isArray(diffs)) return 0;
     let n = 0;
-    for (const dRaw of this.diffs) if (!normalizeDiff(dRaw).isDeleted) n++;
+    for (const dRaw of diffs) if (!normalizeDiff(dRaw).isDeleted) n++;
     return n;
   }
   Diffs(): Diff[] {
@@ -582,7 +606,24 @@ export class Agent {
     return null;
   }
 
-  RunManifest(): RunManifest | null { return this.runManifest ? { ...this.runManifest, coverage: { selected: [...this.runManifest.coverage.selected], completed: [...this.runManifest.coverage.completed], reused: [...this.runManifest.coverage.reused], failed: [...this.runManifest.coverage.failed], waived: [...this.runManifest.coverage.waived] } } : null; }
+  RunManifest(): RunManifest | null {
+    if ((this as unknown) === null || (this as unknown) === undefined) return null;
+    const sh = (this as unknown as { sessionHistory?: { FinalManifest?: () => RunManifest | null; finalManifest?: RunManifest | null } | null }).sessionHistory;
+    if (sh !== null && sh !== undefined) {
+      if (typeof (sh as unknown as { FinalManifest?: () => RunManifest | null }).FinalManifest === "function") {
+        return (sh as unknown as { FinalManifest: () => RunManifest | null }).FinalManifest();
+      }
+      const fm = (sh as unknown as { finalManifest?: RunManifest | null }).finalManifest;
+      if (fm !== undefined) return fm ? { ...fm, coverage: { selected: [...fm.coverage.selected], completed: [...fm.coverage.completed], reused: [...fm.coverage.reused], failed: [...fm.coverage.failed], waived: [...fm.coverage.waived] } } : null;
+    }
+    const rm = (this as unknown as { runManifest?: RunManifest | null }).runManifest;
+    return rm ? { ...rm, coverage: { selected: [...rm.coverage.selected], completed: [...rm.coverage.completed], reused: [...rm.coverage.reused], failed: [...rm.coverage.failed], waived: [...rm.coverage.waived] } } : null;
+  }
+
+  // Alias for test that uses lowercase call via Object.create path — ensure both casings work
+  // Bun test used a.SessionID() but our method is sessionId(); provide both.
+  // Also provide SessionID as alias for JS prototype chain when using Object.create.
+
 
   budgetExceededFlag(): boolean {
     return this.budgetExceeded;
