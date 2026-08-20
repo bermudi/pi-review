@@ -124,7 +124,7 @@ export class SessionHistory {
   persistInitErr: Error | null = null;
   private finalizeOnce = false;
   private finalizeErr: Error | null = null;
-  private persist: PersistHandle | null = null;
+  persist: PersistHandle | null = null;
 
   constructor(
     repoDir: string,
@@ -255,6 +255,10 @@ export type PersistHandle = {
   writeReviewItemFailed(filePath: string, oldPath: string, newPath: string, fingerprint: string, errorMsg: string): void;
   writeResumeLineage(l: import("./resume.js").ResumeLineage): void;
   writeSessionEnd(durationMs: number, filesReviewed: string[], llmFailures: number, manifest: RunManifest | null): Error | null;
+  writeLLMRequest(filePath: string, taskType: TaskType, requestNo: number, messages: unknown): void;
+  writeLLMResponse(filePath: string, taskType: TaskType, content: string, toolCalls: Array<Record<string, unknown>>, model: string, usage: TokenUsage, durationMs: number): void;
+  writeLLMError(filePath: string, taskType: TaskType, requestNo: number, errorMsg: string, durationMs: number): void;
+  writeToolCall(filePath: string, taskType: TaskType, toolName: string, args: string, result: string, ok: boolean, durationMs: number): void;
 };
 
 export function New(
@@ -288,6 +292,8 @@ export class FileSession {
     const rec = new TaskRecord(taskType, existing.length + 1, [...messages], this);
     existing.push(rec);
     this.taskRecords.set(taskType, existing);
+    // Mirror Go: write llm_request immediately so a killed run leaves an orphan request that resume can ignore
+    (this.session as unknown as { persist: PersistHandle | null }).persist?.writeLLMRequest(this.filePath, taskType, rec.requestNo, messages.map((m) => ({ ...m })));
     return rec;
   }
 }
@@ -330,16 +336,23 @@ export class TaskRecord {
       usage: resp.usage,
     };
     this.durationMs = durationMs;
+    // Persist llm_response (mirror Go: WriteLLMResponse after setting response)
+    const sess = this.fileSession?.session as unknown as { persist: PersistHandle | null } | undefined;
+    sess?.persist?.writeLLMResponse(this.fileSession.filePath, this.type, resp.content ?? "", toolCalls.map((tc) => ({ id: tc.id, name: tc.name, arguments: tc.arguments })), resp.model ?? "", resp.usage ?? { promptTokens: 0, completionTokens: 0 }, durationMs);
   }
 
   SetError(err: Error | string, durationMs: number): void {
     this.error = typeof err === "string" ? err : err.message;
     this.durationMs = durationMs;
-    this.fileSession.session.llmFailures++;
+    const sess2 = this.fileSession?.session as unknown as { persist: PersistHandle | null; llmFailures: number } | undefined;
+    sess2?.persist?.writeLLMError(this.fileSession.filePath, this.type, this.requestNo, this.error, durationMs);
+    if (this.fileSession?.session) this.fileSession.session.llmFailures++;
   }
 
   AddToolResult(toolName: string, args: string, result: string): void {
     this.toolResults.push({ toolName, arguments: args, result });
+    const sess3 = this.fileSession?.session as unknown as { persist: PersistHandle | null } | undefined;
+    sess3?.persist?.writeToolCall(this.fileSession.filePath, this.type, toolName, args, result, true, 0);
   }
 }
 

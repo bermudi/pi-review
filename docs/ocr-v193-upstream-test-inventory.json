@@ -9863,213 +9863,465 @@
       "tests": [
         {
           "name": "TestConcurrentTransitions",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/session/manifest.test.ts",
+              "title": "concurrent transitions race-free"
+            }
+          ]
         },
         {
           "name": "TestConflictingTransitionErrorsAndKeepsFirst",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/session/manifest.test.ts",
+              "title": "conflicting transition errors and keeps first"
+            }
+          ]
         },
         {
           "name": "TestCoverageSortedAndNonNilJSON",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/session/manifest.test.ts",
+              "title": "coverage sorted and non-nil JSON"
+            }
+          ]
         },
         {
           "name": "TestDuplicateRegistrationIgnored",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/session/manifest.test.ts",
+              "title": "duplicate registration ignored"
+            }
+          ]
         },
         {
           "name": "TestFailedDifferentClassErrorsAndKeepsFirst",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/session/manifest.test.ts",
+              "title": "failed different class errors and keeps first"
+            }
+          ]
         },
         {
           "name": "TestFailedPlusWaivedIsPartial",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/session/manifest.test.ts",
+              "title": "failed plus waived is partial"
+            }
+          ]
         },
         {
           "name": "TestFailedSameClassIsIdempotent",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/session/manifest.test.ts",
+              "title": "failed same class is idempotent and keeps first reason"
+            }
+          ]
         },
         {
           "name": "TestFinalizeNilReceiver",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/session/manifest.test.ts",
+              "title": "finalize nil receiver does not panic"
+            }
+          ]
         },
         {
           "name": "TestFinalizeRejectsEmptyRunID",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/session/manifest.test.ts",
+              "title": "finalize rejects empty runId"
+            }
+          ]
         },
         {
           "name": "TestFinalizeRejectsMissingMode",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/session/manifest.test.ts",
+              "title": "finalize rejects missing or invalid mode"
+            }
+          ]
         },
         {
           "name": "TestFinalizeReturnsOwnedSlices",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/session/manifest.test.ts",
+              "title": "finalize returns owned slices"
+            }
+          ]
         },
         {
           "name": "TestFinalizeSweepsUndecidedToUnknown",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/session/manifest.test.ts",
+              "title": "finalize sweeps undecided to unknown"
+            }
+          ]
         },
         {
           "name": "TestFinalizeValidationFailureDoesNotMutateSelectedItems",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/session/manifest.test.ts",
+              "title": "finalize validation failure does not mutate selected items"
+            }
+          ]
         },
         {
           "name": "TestFrozenAfterFinalize",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/session/manifest.test.ts",
+              "title": "frozen after finalize"
+            }
+          ]
         },
         {
           "name": "TestIdempotentSameOutcome",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/session/manifest.test.ts",
+              "title": "idempotent same outcome"
+            }
+          ]
         },
         {
           "name": "TestIdentityAndExecutionFields",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/session/manifest.test.ts",
+              "title": "identity and execution fields populate manifest"
+            }
+          ]
         },
         {
           "name": "TestInvalidFailureClassRejected",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/session/manifest.test.ts",
+              "title": "invalid failure class rejected"
+            }
+          ]
         },
         {
           "name": "TestItemIDDerivation",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/session/manifest.test.ts",
+              "title": "ItemID derivation"
+            }
+          ]
         },
         {
           "name": "TestMarkFailedEnforcesRedaction",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/session/manifest.test.ts",
+              "title": "MarkFailed enforces redaction"
+            }
+          ]
         },
         {
           "name": "TestMarkUnknownItemErrors",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/session/manifest.test.ts",
+              "title": "mark unknown item errors"
+            }
+          ]
         },
         {
           "name": "TestPendingFailureCauseSweepsWithoutForcingFailed",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/session/manifest.test.ts",
+              "title": "pending failure cause sweeps without forcing failed when some covered"
+            }
+          ]
         },
         {
           "name": "TestPendingFailureCauseWithNoCoverageIsFailed",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/session/manifest.test.ts",
+              "title": "pending failure cause with no coverage is failed"
+            }
+          ]
         },
         {
           "name": "TestRunFailureForcesFailed",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/session/manifest.test.ts",
+              "title": "run failure forces failed regardless of coverage"
+            }
+          ]
         },
         {
           "name": "TestRunFailureOutranksPendingFailureCause",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/session/manifest.test.ts",
+              "title": "run failure outranks pending failure cause"
+            }
+          ]
         },
         {
           "name": "TestRunFailureSweepsPendingToMatchingClass",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/session/manifest.test.ts",
+              "title": "run failure sweeps pending to matching item class"
+            }
+          ]
         },
         {
           "name": "TestSanitizeReasonControlByteInTokenDoesNotLeakTail",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/session/manifest.test.ts",
+              "title": "sanitizeReason control byte in token does not leak tail"
+            }
+          ]
         },
         {
           "name": "TestSanitizeReasonQuotedValue",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/session/manifest.test.ts",
+              "title": "sanitizeReason quoted value"
+            }
+          ]
         },
         {
           "name": "TestSanitizeReasonStripsControlChars",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/session/manifest.test.ts",
+              "title": "sanitizeReason strips control chars"
+            }
+          ]
         },
         {
           "name": "TestSanitizeReasonStripsSecrets",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/session/manifest.test.ts",
+              "title": "sanitizeReason strips secrets"
+            }
+          ]
         },
         {
           "name": "TestSanitizeReasonTruncatesAndSingleLine",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/session/manifest.test.ts",
+              "title": "sanitizeReason truncates and single line"
+            }
+          ]
         },
         {
           "name": "TestSealSelectedClosesDenominator",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/session/manifest.test.ts",
+              "title": "seal selected closes denominator"
+            }
+          ]
         },
         {
           "name": "TestSetPendingFailureCauseValidation",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/session/manifest.test.ts",
+              "title": "SetPendingFailureCause validation and idempotence"
+            }
+          ]
         },
         {
           "name": "TestSetRunFailureValidation",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/session/manifest.test.ts",
+              "title": "SetRunFailure validation"
+            }
+          ]
         },
         {
           "name": "TestTerminalComplete",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/session/manifest.test.ts",
+              "title": "terminal complete when all selected completed"
+            }
+          ]
         },
         {
           "name": "TestTerminalCompleteZeroFindings",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/session/manifest.test.ts",
+              "title": "terminal complete with single item still complete"
+            }
+          ]
         },
         {
           "name": "TestTerminalFailedAll",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/session/manifest.test.ts",
+              "title": "terminal failed when all failed"
+            }
+          ]
         },
         {
           "name": "TestTerminalPartial",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/session/manifest.test.ts",
+              "title": "terminal partial with mixed outcomes"
+            }
+          ]
         },
         {
           "name": "TestTerminalSkipped",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/session/manifest.test.ts",
+              "title": "terminal skipped when nothing selected"
+            }
+          ]
         },
         {
           "name": "TestWaiveAfterFailedErrorsAndKeepsFailed",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/session/manifest.test.ts",
+              "title": "waive after failed errors and keeps failed"
+            }
+          ]
         },
         {
           "name": "TestWaivedResolvesToComplete",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/session/manifest.test.ts",
+              "title": "waived resolves to complete"
+            }
+          ]
         },
         {
           "name": "TestWaiveEmptyReasonRejected",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/session/manifest.test.ts",
+              "title": "waive empty reason rejected"
+            }
+          ]
         },
         {
           "name": "TestZeroValueBuilderSafe",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/session/manifest.test.ts",
+              "title": "zero value builder safe"
+            }
+          ]
         }
       ]
     },
@@ -10094,53 +10346,113 @@
         },
         {
           "name": "TestFinalizeReplaysWriteErrorOnEveryCall",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/session/persist.test.ts",
+              "title": "Finalize replays write error on every call"
+            }
+          ]
         },
         {
           "name": "TestFinalizeSurfacesWriteError",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/session/persist.test.ts",
+              "title": "Finalize surfaces write error when file is closed"
+            }
+          ]
         },
         {
           "name": "TestFinalizeSurfacesWriterCreationErrorWithoutStdout",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/session/persist.test.ts",
+              "title": "Finalize surfaces writer creation error without stdout"
+            }
+          ]
         },
         {
           "name": "TestFinalizeWritesSessionEndExactlyOnce",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/session/persist.test.ts",
+              "title": "Finalize writes session_end exactly once"
+            }
+          ]
         },
         {
           "name": "TestResumeStateSessionStartKeepsRepoDirWhenCwdEmpty",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/session/persist.test.ts",
+              "title": "ResumeState keeps repoDir when cwd empty in session_start"
+            }
+          ]
         },
         {
           "name": "TestResumeStateValidateOptionsRejectsMismatchedMode",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/session/persist.test.ts",
+              "title": "ResumeState ValidateOptions rejects mismatched mode"
+            }
+          ]
         },
         {
           "name": "TestReviewItemResumeRoundTrip",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/session/persist.test.ts",
+              "title": "review item done persists and is reusable via resume"
+            }
+          ]
         },
         {
           "name": "TestScanPathScopeResumeRoundTrip",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/session/persist.test.ts",
+              "title": "scan path scope resume round-trip"
+            }
+          ]
         },
         {
           "name": "TestSessionEndIncludesFailures",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/session/persist.test.ts",
+              "title": "session_end includes llm_failures count"
+            }
+          ]
         },
         {
           "name": "TestSessionFilePermissions",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/session/persist.test.ts",
+              "title": "session file and directory have 0700/0600 permissions"
+            }
+          ]
         },
         {
           "name": "TestSetErrorIncrementsCounter",
@@ -10155,13 +10467,25 @@
         },
         {
           "name": "TestSetErrorWritesJSONL",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/session/persist.test.ts",
+              "title": "SetError writes llm_error JSONL record"
+            }
+          ]
         },
         {
           "name": "TestWholeRepoScanPathScopeResumeRoundTrip",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/session/persist.test.ts",
+              "title": "whole repo scan path scope resume round-trip"
+            }
+          ]
         }
       ]
     },

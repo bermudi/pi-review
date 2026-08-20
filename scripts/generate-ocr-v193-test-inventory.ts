@@ -210,6 +210,10 @@ const localCoverage: readonly LocalCoverage[] = [
     localPath: "test/ocr-v193/session/resume-identity.test.ts",
     upstreamPaths: ["internal/session/resume_identity_test.go"],
   },
+  {
+    localPath: "test/ocr-v193/session/manifest.test.ts",
+    upstreamPaths: ["internal/session/manifest_test.go"],
+  },
 ];
 
 function git(...args: readonly string[]): string {

@@ -586,5 +586,9 @@ function jsonlWriterToPersistHandle(writer: JsonlWriter): import("../session/his
     writeReviewItemFailed: (...args) => { writer.WriteReviewItemFailed(...args); },
     writeResumeLineage: (l: ResumeLineage) => { writer.WriteResumeLineage(l); },
     writeSessionEnd: (durationMs, filesReviewed, llmFailures, manifest) => writer.WriteSessionEnd(durationMs, filesReviewed, llmFailures, manifest),
+    writeLLMRequest: (...args) => { (writer as unknown as { WriteLLMRequest: (...a: unknown[]) => void }).WriteLLMRequest(...(args as unknown[])); },
+    writeLLMResponse: (...args) => { (writer as unknown as { WriteLLMResponse: (...a: unknown[]) => void }).WriteLLMResponse(...(args as unknown[])); },
+    writeLLMError: (...args) => { (writer as unknown as { WriteLLMError: (...a: unknown[]) => void }).WriteLLMError(...(args as unknown[])); },
+    writeToolCall: (...args) => { (writer as unknown as { WriteToolCall: (...a: unknown[]) => void }).WriteToolCall(...(args as unknown[])); },
   };
 }

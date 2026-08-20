@@ -409,11 +409,11 @@ function clonedManifest(m: RunManifest): RunManifest {
   return {
     ...m,
     coverage: {
-      selected: [...m.coverage.selected],
-      completed: [...m.coverage.completed],
-      reused: [...m.coverage.reused],
-      failed: [...m.coverage.failed],
-      waived: [...m.coverage.waived],
+      selected: m.coverage.selected.map((c) => ({ ...c })),
+      completed: m.coverage.completed.map((c) => ({ ...c })),
+      reused: m.coverage.reused.map((c) => ({ ...c })),
+      failed: m.coverage.failed.map((c) => ({ ...c })),
+      waived: m.coverage.waived.map((c) => ({ ...c })),
     },
     runFailure: m.runFailure ? { ...m.runFailure } : null,
     repository: { ...m.repository },
@@ -422,13 +422,20 @@ function clonedManifest(m: RunManifest): RunManifest {
   };
 }
 
-function sanitizeReason(s: string): string {
+export function sanitizeReason(s: string): string {
   if (s === "") return "";
   let v = String(s);
-  // Coerce to valid UTF-8-ish and strip control chars
-  v = v.replaceAll(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, " ");
+  // Go's strings.ToValidUTF8 + stripUnsafeChars: drop C0/C1 controls except tab/newline etc become space
+  v = [...v]
+    .map((ch) => {
+      const cp = ch.codePointAt(0) ?? 0;
+      if (cp === 0x09 || cp === 0x0a || cp === 0x0d || cp === 0x0b || cp === 0x0c || cp === 0x85 || cp === 0x2028 || cp === 0x2029) return " ";
+      if (cp < 0x20 || cp === 0x7f || (cp >= 0x80 && cp <= 0x9f)) return "";
+      return ch;
+    })
+    .join("");
   v = v.replaceAll(/\s+/g, " ").trim();
-  // Redact credential-like patterns
+  // Redact credential-like patterns — order matters: url userinfo before bearer before assignment
   v = v.replaceAll(/([a-zA-Z][a-zA-Z0-9+.\-]*:\/\/)[^/\s:@]+(?::[^/\s@]+)?@/g, "$1[REDACTED]@");
   v = v.replaceAll(/\b(?:bearer|basic)\s+[A-Za-z0-9._~+/=\-]+/gi, "[REDACTED]");
   v = v.replaceAll(/\b(authorization|api[_-]?key|access[_-]?token|refresh[_-]?token|client[_-]?secret|secret|password|passwd|token)\b(\s*[:=]\s*)("[^"]*"|'[^']*'|[^\s"']+)/gi, "$1$2[REDACTED]");

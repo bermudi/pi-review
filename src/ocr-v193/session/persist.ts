@@ -51,7 +51,7 @@ export function encodeRepoPath(p: string): string {
 }
 
 export function SessionsDir(repoDir: string): string {
-  const home = os.homedir();
+  const home = process.env.HOME ?? os.homedir();
   return path.join(home, ".opencodereview", sessionSubDir, encodeRepoPath(repoDir));
 }
 
