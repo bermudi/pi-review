@@ -5529,43 +5529,91 @@
       "tests": [
         {
           "name": "TestCanonicalRemote",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/diff/git-resolve.test.ts",
+              "title": "TestCanonicalRemote"
+            }
+          ]
         },
         {
           "name": "TestRemoteIdentity",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/diff/git-resolve.test.ts",
+              "title": "TestRemoteIdentity"
+            }
+          ]
         },
         {
           "name": "TestResolveInput_MergeCommit",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/diff/git-resolve.test.ts",
+              "title": "TestResolveInput_MergeCommit"
+            }
+          ]
         },
         {
           "name": "TestResolveInput_Range",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/diff/git-resolve.test.ts",
+              "title": "TestResolveInput_Range"
+            }
+          ]
         },
         {
           "name": "TestResolveInput_RootCommit",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/diff/git-resolve.test.ts",
+              "title": "TestResolveInput_RootCommit"
+            }
+          ]
         },
         {
           "name": "TestResolveInput_SingleParentCommit",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/diff/git-resolve.test.ts",
+              "title": "TestResolveInput_SingleParentCommit"
+            }
+          ]
         },
         {
           "name": "TestResolveInput_UnbornWorkspace",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/diff/git-resolve.test.ts",
+              "title": "TestResolveInput_UnbornWorkspace"
+            }
+          ]
         },
         {
           "name": "TestResolveInput_Workspace",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/diff/git-resolve.test.ts",
+              "title": "TestResolveInput_Workspace"
+            }
+          ]
         }
       ]
     },
