@@ -83,14 +83,21 @@ export class ResumeState {
   get Closed(): boolean { return this.closed; }
   get Items(): Map<string, ResumeItem> { return this.items; }
 
-  CompletedCount(): number { return this.items.size; }
+  CompletedCount(): number {
+    if ((this as unknown) === null || (this as unknown) === undefined) return 0;
+    return this.items.size;
+  }
 
   Item(fingerprint: string): ResumeItem | null {
+    if ((this as unknown) === null || (this as unknown) === undefined) return null;
     const it = this.items.get(fingerprint);
-    return it !== undefined ? { ...it, comments: [...it.comments] } : null;
+    if (it === undefined) return null;
+    const clonedComments = copyLlmComments(it.comments);
+    return { ...it, comments: clonedComments ?? [] };
   }
 
   ReusableItem(fingerprint: string): ResumeItem | null {
+    if ((this as unknown) === null || (this as unknown) === undefined) return null;
     if (this.manifest === null) return null;
     if (this.reusable === null) this.reusable = manifestReusableFingerprints(this.manifest);
     if (this.reusable.get(fingerprint) !== true) return null;
@@ -100,6 +107,7 @@ export class ResumeState {
   // -- Validation ------------------------------------------------------------
 
   ValidateOptions(opts: { reviewMode?: string }): Error | null {
+    if ((this as unknown) === null || (this as unknown) === undefined) return null;
     if (opts.reviewMode === undefined || opts.reviewMode === "" || opts.reviewMode === "workspace") {
       return new Error("resume requires --from/--to or --commit; workspace resume is not supported");
     }
@@ -110,6 +118,7 @@ export class ResumeState {
   }
 
   ValidateScanOptions(scanPaths: string[]): Error | null {
+    if ((this as unknown) === null || (this as unknown) === undefined) return null;
     if (this.reviewMode === "") return new Error(`resume session "${this.sessionId}" is missing review mode metadata`);
     if (this.reviewMode !== "full_scan") return new Error(`resume session review mode "${this.reviewMode}" does not match current mode "full_scan"`);
     const cur = normalizeScanPaths(scanPaths);
@@ -150,6 +159,10 @@ export class ResumeState {
 
   // -- Record replay ---------------------------------------------------------
 
+  ApplyResumeLine(line: string): Error | null {
+    return this.applyResumeLine(line);
+  }
+
   applyResumeLine(line: string): Error | null {
     let rec: Record<string, unknown>;
     try { rec = JSON.parse(line) as Record<string, unknown>; } catch (e) { return e instanceof Error ? e : new Error(String(e)); }
@@ -163,7 +176,8 @@ export class ResumeState {
         const filePath = (String(rec["filePath"] ?? "") !== "" ? String(rec["filePath"]) : String(rec["newPath"] ?? ""));
         const rawComments = rec["comments"];
         const comments: LlmComment[] = Array.isArray(rawComments) ? (rawComments as LlmComment[]) : [];
-        this.items.set(fp, { filePath, oldPath: String(rec["oldPath"] ?? ""), newPath: String(rec["newPath"] ?? ""), fingerprint: fp, comments: [...comments] });
+        const storedComments = copyLlmComments(comments) ?? [];
+        this.items.set(fp, { filePath, oldPath: String(rec["oldPath"] ?? ""), newPath: String(rec["newPath"] ?? ""), fingerprint: fp, comments: storedComments });
         break;
       }
       case "review_item_failed": {
@@ -182,7 +196,7 @@ export class ResumeState {
     return null;
   }
 
-  private applySessionStart(rec: Record<string, unknown>): void {
+  applySessionStart(rec: Record<string, unknown>): void {
     if (typeof rec["sessionId"] === "string" && rec["sessionId"] !== "") this.sessionId = rec["sessionId"] as string;
     if (typeof rec["cwd"] === "string" && rec["cwd"] !== "") this.repoDir = rec["cwd"] as string;
     if (typeof rec["gitBranch"] === "string") this.gitBranch = rec["gitBranch"] as string;
@@ -572,4 +586,9 @@ function equalStringSlices(a: string[], b: string[]): boolean {
 function formatScanScope(paths: string[]): string {
   if (paths.length === 0) return "<whole repo>";
   return paths.join(",");
+}
+
+export function copyLlmComments(comments: LlmComment[] | null | undefined): LlmComment[] | null {
+  if (comments === null || comments === undefined || comments.length === 0) return null;
+  return comments.map((c) => ({ ...c }));
 }

@@ -9614,8 +9614,14 @@
       "tests": [
         {
           "name": "TestFinalManifest",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/session/final-manifest.test.ts",
+              "title": "FinalManifest nil safety, empty handling and clone"
+            }
+          ]
         }
       ]
     },
@@ -9843,13 +9849,25 @@
       "tests": [
         {
           "name": "TestManifestBuilderFrozenNoOp",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/session/manifest-guards.test.ts",
+              "title": "TestManifestBuilderFrozenNoOp"
+            }
+          ]
         },
         {
           "name": "TestManifestBuilderNilReceiver",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/session/manifest-guards.test.ts",
+              "title": "TestManifestBuilderNilReceiver"
+            }
+          ]
         }
       ]
     },
@@ -10586,13 +10604,25 @@
       "tests": [
         {
           "name": "TestApplyResumeLine_OrphanLLMRequestIsNoOp",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/session/resume-orphan.test.ts",
+              "title": "applyResumeLine is no-op for orphan llm_request"
+            }
+          ]
         },
         {
           "name": "TestLoadResumeState_IgnoresOrphanLLMRequest",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/session/resume-orphan.test.ts",
+              "title": "LoadResumeState ignores orphan llm_request without error or counting b.go as completed"
+            }
+          ]
         }
       ]
     },
@@ -10606,243 +10636,531 @@
       "tests": [
         {
           "name": "TestApplyResumeLine_InvalidJSON",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/session/resume.test.ts",
+              "title": "applyResumeLine reports invalid JSON and does not add items"
+            }
+          ]
         },
         {
           "name": "TestApplyResumeLine_ReviewItemDone",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/session/resume.test.ts",
+              "title": "applyResumeLine handles review_item_done"
+            }
+          ]
         },
         {
           "name": "TestApplyResumeLine_ReviewItemDone_EmptyFingerprint",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/session/resume.test.ts",
+              "title": "applyResumeLine skips review_item_done with empty fingerprint"
+            }
+          ]
         },
         {
           "name": "TestApplyResumeLine_ReviewItemDone_FallbackToNewPath",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/session/resume.test.ts",
+              "title": "applyResumeLine falls back to newPath when filePath empty"
+            }
+          ]
         },
         {
           "name": "TestApplyResumeLine_ReviewItemFailed",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/session/resume.test.ts",
+              "title": "applyResumeLine removes item on review_item_failed"
+            }
+          ]
         },
         {
           "name": "TestApplyResumeLine_ReviewItemFailed_EmptyFingerprint",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/session/resume.test.ts",
+              "title": "applyResumeLine with empty fingerprint on failed does not affect items"
+            }
+          ]
         },
         {
           "name": "TestApplyResumeLine_ReviewItemReused",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/session/resume.test.ts",
+              "title": "applyResumeLine handles review_item_reused"
+            }
+          ]
         },
         {
           "name": "TestApplyResumeLine_SessionStart",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/session/resume.test.ts",
+              "title": "applyResumeLine handles session_start"
+            }
+          ]
         },
         {
           "name": "TestApplyResumeLine_UnknownType",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/session/resume.test.ts",
+              "title": "applyResumeLine ignores unknown type"
+            }
+          ]
         },
         {
           "name": "TestApplySessionStart_OverridesRepoDir",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/session/resume.test.ts",
+              "title": "applySessionStart overrides RepoDir when cwd provided"
+            }
+          ]
         },
         {
           "name": "TestApplySessionStart_PreservesRepoDirWhenCwdEmpty",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/session/resume.test.ts",
+              "title": "applySessionStart preserves RepoDir when cwd empty"
+            }
+          ]
         },
         {
           "name": "TestApplySessionStart_PreservesSessionIDWhenEmpty",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/session/resume.test.ts",
+              "title": "applySessionStart preserves SessionID when empty"
+            }
+          ]
         },
         {
           "name": "TestApplySessionStart_SetsAllFields",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/session/resume.test.ts",
+              "title": "applySessionStart sets all fields"
+            }
+          ]
         },
         {
           "name": "TestApplySessionStart_SetsScanPathScope",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/session/resume.test.ts",
+              "title": "applySessionStart sets scan path scope normalized and sorted"
+            }
+          ]
         },
         {
           "name": "TestCompletedCount_EmptyItems",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/session/resume.test.ts",
+              "title": "CompletedCount on empty items returns 0"
+            }
+          ]
         },
         {
           "name": "TestCompletedCount_NilState",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/session/resume.test.ts",
+              "title": "CompletedCount on nil state returns 0"
+            }
+          ]
         },
         {
           "name": "TestCompletedCount_WithItems",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/session/resume.test.ts",
+              "title": "CompletedCount with two items returns 2"
+            }
+          ]
         },
         {
           "name": "TestCopyLlmComments_DeepCopy",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/session/resume.test.ts",
+              "title": "copyLlmComments deep copies"
+            }
+          ]
         },
         {
           "name": "TestCopyLlmComments_Empty",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/session/resume.test.ts",
+              "title": "copyLlmComments returns null for empty slice"
+            }
+          ]
         },
         {
           "name": "TestCopyLlmComments_Nil",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/session/resume.test.ts",
+              "title": "copyLlmComments returns null for null input"
+            }
+          ]
         },
         {
           "name": "TestItem_Found",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/session/resume.test.ts",
+              "title": "Item returns stored checkpoint"
+            }
+          ]
         },
         {
           "name": "TestItem_Missing",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/session/resume.test.ts",
+              "title": "Item returns not found for missing key"
+            }
+          ]
         },
         {
           "name": "TestItem_NilState",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/session/resume.test.ts",
+              "title": "Item on nil state returns not found"
+            }
+          ]
         },
         {
           "name": "TestItem_ReturnsCopy",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/session/resume.test.ts",
+              "title": "Item returns defensive copy of comments"
+            }
+          ]
         },
         {
           "name": "TestLoadResumeState_CorruptLineIsFatal",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/session/resume.test.ts",
+              "title": "LoadResumeState is strict and throws on corrupt line"
+            }
+          ]
         },
         {
           "name": "TestLoadResumeState_EmptyFile",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/session/resume.test.ts",
+              "title": "LoadResumeState loads empty file with zero items"
+            }
+          ]
         },
         {
           "name": "TestLoadResumeState_FailThenRedone",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/session/resume.test.ts",
+              "title": "LoadResumeState handles fail then redone sequence"
+            }
+          ]
         },
         {
           "name": "TestLoadResumeState_IntactSessionStillReusable",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/session/resume.test.ts",
+              "title": "LoadResumeState intact session keeps checkpoint reusable without manifest"
+            }
+          ]
         },
         {
           "name": "TestLoadResumeState_MultipleRecords",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/session/resume.test.ts",
+              "title": "LoadResumeState replays multiple records"
+            }
+          ]
         },
         {
           "name": "TestLoadResumeState_NonexistentFile",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/session/resume.test.ts",
+              "title": "LoadResumeState throws for nonexistent file"
+            }
+          ]
         },
         {
           "name": "TestLoadReviewResumeState_CorruptLineDoesNotAbortLoad",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/session/resume.test.ts",
+              "title": "LoadReviewResumeState does not abort on corrupt line; both sides survive and manifest gates reuse"
+            }
+          ]
         },
         {
           "name": "TestReusableItem_ManifestFailureIsNotReusable",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/session/resume.test.ts",
+              "title": "manifest-settled failed item is not reusable"
+            }
+          ]
         },
         {
           "name": "TestSessionFilePath_EmptyID",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/session/resume.test.ts",
+              "title": "SessionFilePath rejects empty session ID"
+            }
+          ]
         },
         {
           "name": "TestSessionFilePath_ValidID",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/session/resume.test.ts",
+              "title": "SessionFilePath returns path containing sessions subdir and encoded repo"
+            }
+          ]
         },
         {
           "name": "TestValidateOptions_CommitMatches",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/session/resume.test.ts",
+              "title": "ValidateOptions accepts matching commit mode"
+            }
+          ]
         },
         {
           "name": "TestValidateOptions_IgnoresCommitText",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/session/resume.test.ts",
+              "title": "ValidateOptions ignores commit text"
+            }
+          ]
         },
         {
           "name": "TestValidateOptions_IgnoresRangeText",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/session/resume.test.ts",
+              "title": "ValidateOptions ignores ref text for range"
+            }
+          ]
         },
         {
           "name": "TestValidateOptions_NilState",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/session/resume.test.ts",
+              "title": "ValidateOptions on nil state returns no error"
+            }
+          ]
         },
         {
           "name": "TestValidateOptions_RangeMatches",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/session/resume.test.ts",
+              "title": "ValidateOptions accepts matching range mode"
+            }
+          ]
         },
         {
           "name": "TestValidateOptions_RejectsEmptyMode",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/session/resume.test.ts",
+              "title": "ValidateOptions rejects empty review mode"
+            }
+          ]
         },
         {
           "name": "TestValidateOptions_RejectsMissingStateMode",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/session/resume.test.ts",
+              "title": "ValidateOptions rejects when state has no review mode"
+            }
+          ]
         },
         {
           "name": "TestValidateOptions_RejectsModeMismatch",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/session/resume.test.ts",
+              "title": "ValidateOptions rejects mode mismatch"
+            }
+          ]
         },
         {
           "name": "TestValidateOptions_RejectsWorkspaceMode",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/session/resume.test.ts",
+              "title": "ValidateOptions rejects workspace mode"
+            }
+          ]
         },
         {
           "name": "TestValidateOptions_UnsupportedMode",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/session/resume.test.ts",
+              "title": "ValidateOptions rejects unsupported mode"
+            }
+          ]
         },
         {
           "name": "TestValidateScanOptions_AllowsLegacySessionWithoutPathScope",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/session/resume.test.ts",
+              "title": "ValidateScanOptions allows legacy session without path scope"
+            }
+          ]
         },
         {
           "name": "TestValidateScanOptions_RejectsScanPathScopeMismatch",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/session/resume.test.ts",
+              "title": "ValidateScanOptions rejects scan path scope mismatch"
+            }
+          ]
         },
         {
           "name": "TestValidateScanOptions_RejectsWholeRepoScopeMismatch",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/session/resume.test.ts",
+              "title": "ValidateScanOptions rejects whole repo mismatch"
+            }
+          ]
         },
         {
           "name": "TestValidateScanOptions_ScanPathScopeMatchesNormalized",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/session/resume.test.ts",
+              "title": "ValidateScanOptions scope matches after normalization"
+            }
+          ]
         }
       ]
     },
@@ -10856,8 +11174,14 @@
       "tests": [
         {
           "name": "TestValidateScanOptions",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/session/validate-scan.test.ts",
+              "title": "ValidateScanOptions covers every branch"
+            }
+          ]
         }
       ]
     },

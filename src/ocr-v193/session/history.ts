@@ -157,11 +157,13 @@ export class SessionHistory {
   Manifest(): ManifestBuilder | null { return this.manifest; }
 
   SetFinalManifest(m: RunManifest | null): void {
+    if ((this as unknown as SessionHistory | null) === null || (this as unknown as SessionHistory | null) === undefined) return;
     if (m === null || m === undefined) return;
     this.finalManifest = m;
   }
 
   FinalManifest(): RunManifest | null {
+    if ((this as unknown as SessionHistory | null) === null || (this as unknown as SessionHistory | null) === undefined) return null;
     return this.finalManifest ? { ...this.finalManifest } : null;
   }
 
