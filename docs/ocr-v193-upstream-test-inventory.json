@@ -6030,58 +6030,124 @@
       "tests": [
         {
           "name": "TestBuildReLocationMessages_NilOrEmptyTask",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/diff/relocation.test.ts",
+              "title": "TestBuildReLocationMessages_NilOrEmptyTask"
+            }
+          ]
         },
         {
           "name": "TestBuildReLocationMessages_Rendering",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/diff/relocation.test.ts",
+              "title": "TestBuildReLocationMessages_Rendering"
+            }
+          ]
         },
         {
           "name": "TestExtractCodeBlock",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/diff/relocation.test.ts",
+              "title": "TestExtractCodeBlock"
+            }
+          ]
         },
         {
           "name": "TestReLocateComment_CodeBlockStillUnresolvable",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/diff/relocation.test.ts",
+              "title": "TestReLocateComment_CodeBlockStillUnresolvable"
+            }
+          ]
         },
         {
           "name": "TestReLocateComment_LLMError",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/diff/relocation.test.ts",
+              "title": "TestReLocateComment_LLMError"
+            }
+          ]
         },
         {
           "name": "TestReLocateComment_LLMReturnsInvalidContent",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/diff/relocation.test.ts",
+              "title": "TestReLocateComment_LLMReturnsInvalidContent"
+            }
+          ]
         },
         {
           "name": "TestReLocateComment_LLMReturnsValidCode",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/diff/relocation.test.ts",
+              "title": "TestReLocateComment_LLMReturnsValidCode"
+            }
+          ]
         },
         {
           "name": "TestReLocateComment_NoMessages",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/diff/relocation.test.ts",
+              "title": "TestReLocateComment_NoMessages"
+            }
+          ]
         },
         {
           "name": "TestResolveComment_AlreadyResolved",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/diff/relocation.test.ts",
+              "title": "TestResolveComment_AlreadyResolved"
+            }
+          ]
         },
         {
           "name": "TestResolveComment_EmptyExistingCode",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/diff/relocation.test.ts",
+              "title": "TestResolveComment_EmptyExistingCode"
+            }
+          ]
         },
         {
           "name": "TestResolveComment_TextMatchSuccess",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/diff/relocation.test.ts",
+              "title": "TestResolveComment_TextMatchSuccess"
+            }
+          ]
         }
       ]
     },
@@ -6095,218 +6161,476 @@
       "tests": [
         {
           "name": "TestExtractSideLines_DivergentStartLines",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/diff/resolver.test.ts",
+              "title": "TestExtractSideLines_DivergentStartLines"
+            }
+          ]
         },
         {
           "name": "TestExtractSideLines_NewSide",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/diff/resolver.test.ts",
+              "title": "TestExtractSideLines_NewSide"
+            }
+          ]
         },
         {
           "name": "TestExtractSideLines_OldSide",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/diff/resolver.test.ts",
+              "title": "TestExtractSideLines_OldSide"
+            }
+          ]
         },
         {
           "name": "TestExtractSideLines_OnlyAdded",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/diff/resolver.test.ts",
+              "title": "TestExtractSideLines_OnlyAdded"
+            }
+          ]
         },
         {
           "name": "TestExtractSideLines_OnlyDeleted",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/diff/resolver.test.ts",
+              "title": "TestExtractSideLines_OnlyDeleted"
+            }
+          ]
         },
         {
           "name": "TestMatchConsecutive_EmptySideLines",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/diff/resolver.test.ts",
+              "title": "TestMatchConsecutive_EmptySideLines"
+            }
+          ]
         },
         {
           "name": "TestMatchConsecutive_ExactFull",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/diff/resolver.test.ts",
+              "title": "TestMatchConsecutive_ExactFull"
+            }
+          ]
         },
         {
           "name": "TestMatchConsecutive_FirstMatchWins",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/diff/resolver.test.ts",
+              "title": "TestMatchConsecutive_FirstMatchWins"
+            }
+          ]
         },
         {
           "name": "TestMatchConsecutive_MatchAtEnd",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/diff/resolver.test.ts",
+              "title": "TestMatchConsecutive_MatchAtEnd"
+            }
+          ]
         },
         {
           "name": "TestMatchConsecutive_MatchAtStart",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/diff/resolver.test.ts",
+              "title": "TestMatchConsecutive_MatchAtStart"
+            }
+          ]
         },
         {
           "name": "TestMatchConsecutive_MultiLine",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/diff/resolver.test.ts",
+              "title": "TestMatchConsecutive_MultiLine"
+            }
+          ]
         },
         {
           "name": "TestMatchConsecutive_NoMatch",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/diff/resolver.test.ts",
+              "title": "TestMatchConsecutive_NoMatch"
+            }
+          ]
         },
         {
           "name": "TestMatchConsecutive_SingleLine",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/diff/resolver.test.ts",
+              "title": "TestMatchConsecutive_SingleLine"
+            }
+          ]
         },
         {
           "name": "TestMatchConsecutive_TargetLongerThanLines",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/diff/resolver.test.ts",
+              "title": "TestMatchConsecutive_TargetLongerThanLines"
+            }
+          ]
         },
         {
           "name": "TestNormalizeLine",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/diff/resolver.test.ts",
+              "title": "TestNormalizeLine"
+            }
+          ]
         },
         {
           "name": "TestResolveFromHunk_AddedLines",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/diff/resolver.test.ts",
+              "title": "TestResolveFromHunk_AddedLines"
+            }
+          ]
         },
         {
           "name": "TestResolveFromHunk_AddedWithContext",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/diff/resolver.test.ts",
+              "title": "TestResolveFromHunk_AddedWithContext"
+            }
+          ]
         },
         {
           "name": "TestResolveFromHunk_ContextLinesOnly",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/diff/resolver.test.ts",
+              "title": "TestResolveFromHunk_ContextLinesOnly"
+            }
+          ]
         },
         {
           "name": "TestResolveFromHunk_MultiHunkMatchInSecond",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/diff/resolver.test.ts",
+              "title": "TestResolveFromHunk_MultiHunkMatchInSecond"
+            }
+          ]
         },
         {
           "name": "TestResolveFromHunk_NewSideAcrossDeletedLines",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/diff/resolver.test.ts",
+              "title": "TestResolveFromHunk_NewSideAcrossDeletedLines"
+            }
+          ]
         },
         {
           "name": "TestResolveFromHunk_NewSidePriority",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/diff/resolver.test.ts",
+              "title": "TestResolveFromHunk_NewSidePriority"
+            }
+          ]
         },
         {
           "name": "TestResolveFromHunk_OldSideAcrossAddedLines",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/diff/resolver.test.ts",
+              "title": "TestResolveFromHunk_OldSideAcrossAddedLines"
+            }
+          ]
         },
         {
           "name": "TestResolveFromHunk_SingleAddedLine",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/diff/resolver.test.ts",
+              "title": "TestResolveFromHunk_SingleAddedLine"
+            }
+          ]
         },
         {
           "name": "TestResolveLineNumbers_AlreadyResolved",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/diff/resolver.test.ts",
+              "title": "TestResolveLineNumbers_AlreadyResolved"
+            }
+          ]
         },
         {
           "name": "TestResolveLineNumbers_DiffMarkerInExistingCode",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/diff/resolver.test.ts",
+              "title": "TestResolveLineNumbers_DiffMarkerInExistingCode"
+            }
+          ]
         },
         {
           "name": "TestResolveLineNumbers_EmptyInputs",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/diff/resolver.test.ts",
+              "title": "TestResolveLineNumbers_EmptyInputs"
+            }
+          ]
         },
         {
           "name": "TestResolveLineNumbers_FallbackToFileContent",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/diff/resolver.test.ts",
+              "title": "TestResolveLineNumbers_FallbackToFileContent"
+            }
+          ]
         },
         {
           "name": "TestResolveLineNumbers_FallbackToFileContent_AllBlankExistingCode",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/diff/resolver.test.ts",
+              "title": "TestResolveLineNumbers_FallbackToFileContent_AllBlankExistingCode"
+            }
+          ]
         },
         {
           "name": "TestResolveLineNumbers_FallbackToFileContent_BlankLines",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/diff/resolver.test.ts",
+              "title": "TestResolveLineNumbers_FallbackToFileContent_BlankLines"
+            }
+          ]
         },
         {
           "name": "TestResolveLineNumbers_FallbackToFileContent_CRLF",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/diff/resolver.test.ts",
+              "title": "TestResolveLineNumbers_FallbackToFileContent_CRLF"
+            }
+          ]
         },
         {
           "name": "TestResolveLineNumbers_FallbackToFileContent_FirstMatchWins",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/diff/resolver.test.ts",
+              "title": "TestResolveLineNumbers_FallbackToFileContent_FirstMatchWins"
+            }
+          ]
         },
         {
           "name": "TestResolveLineNumbers_FallbackToFileContent_LeadingBlanks",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/diff/resolver.test.ts",
+              "title": "TestResolveLineNumbers_FallbackToFileContent_LeadingBlanks"
+            }
+          ]
         },
         {
           "name": "TestResolveLineNumbers_FallbackToFileContent_MultipleBlankLines",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/diff/resolver.test.ts",
+              "title": "TestResolveLineNumbers_FallbackToFileContent_MultipleBlankLines"
+            }
+          ]
         },
         {
           "name": "TestResolveLineNumbers_MixedStrategies",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/diff/resolver.test.ts",
+              "title": "TestResolveLineNumbers_MixedStrategies"
+            }
+          ]
         },
         {
           "name": "TestResolveLineNumbers_MultiLineHunkMatch",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/diff/resolver.test.ts",
+              "title": "TestResolveLineNumbers_MultiLineHunkMatch"
+            }
+          ]
         },
         {
           "name": "TestResolveLineNumbers_MultipleCommentsOnSameFile",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/diff/resolver.test.ts",
+              "title": "TestResolveLineNumbers_MultipleCommentsOnSameFile"
+            }
+          ]
         },
         {
           "name": "TestResolveLineNumbers_NoExistingCode",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/diff/resolver.test.ts",
+              "title": "TestResolveLineNumbers_NoExistingCode"
+            }
+          ]
         },
         {
           "name": "TestResolveLineNumbers_NoMatchKeepsZero",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/diff/resolver.test.ts",
+              "title": "TestResolveLineNumbers_NoMatchKeepsZero"
+            }
+          ]
         },
         {
           "name": "TestResolveLineNumbers_OldPathMapping",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/diff/resolver.test.ts",
+              "title": "TestResolveLineNumbers_OldPathMapping"
+            }
+          ]
         },
         {
           "name": "TestResolveLineNumbers_PathNotFound",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/diff/resolver.test.ts",
+              "title": "TestResolveLineNumbers_PathNotFound"
+            }
+          ]
         },
         {
           "name": "TestResolveLineNumbers_SingleLineHunkMatch",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/diff/resolver.test.ts",
+              "title": "TestResolveLineNumbers_SingleLineHunkMatch"
+            }
+          ]
         },
         {
           "name": "TestResolveLineNumbers_WhitespaceTolerant",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/diff/resolver.test.ts",
+              "title": "TestResolveLineNumbers_WhitespaceTolerant"
+            }
+          ]
         },
         {
           "name": "TestSplitAndNormalize_SkipsEmptyLines",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/diff/resolver.test.ts",
+              "title": "TestSplitAndNormalize_SkipsEmptyLines"
+            }
+          ]
         }
       ]
     },

@@ -163,6 +163,14 @@ const localCoverage: readonly LocalCoverage[] = [
     upstreamPaths: ["internal/diff/hunk_test.go"],
   },
   {
+    localPath: "test/ocr-v193/diff/resolver.test.ts",
+    upstreamPaths: ["internal/diff/resolver_test.go"],
+  },
+  {
+    localPath: "test/ocr-v193/diff/relocation.test.ts",
+    upstreamPaths: ["internal/diff/relocation_test.go"],
+  },
+  {
     localPath: "test/ocr-v193/tool/code-comment.test.ts",
     upstreamPaths: ["internal/tool/code_comment_test.go"],
   },
