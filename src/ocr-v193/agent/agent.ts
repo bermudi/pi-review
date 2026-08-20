@@ -1789,60 +1789,6 @@ export function parseFilterResponse(raw: string, total: number): Map<number, unk
 // formatToolDefs — mirrors Go formatToolDefs (simplified)
 // ---------------------------------------------------------------------------
 
-function orderedToolParameters(raw: unknown): Array<{ name: string; description: string; required: boolean }> | null {
-  if (raw === null || raw === undefined) return null;
-  let rawStr: string | null = null;
-  if (typeof raw === "string") rawStr = raw;
-  else if (typeof raw === "object" && raw !== null) {
-    try { rawStr = JSON.stringify(raw); } catch { return null; }
-  } else return null;
-  if (rawStr === null || rawStr === "") return null;
-  let parsed: unknown;
-  try { parsed = JSON.parse(rawStr) as unknown; } catch { return null; }
-  const obj = parsed as Record<string, unknown>;
-  const params = obj["parameters"] as Record<string, unknown> | undefined;
-  if (params === undefined || params === null) return null;
-  const propsRaw = params["properties"];
-  if (propsRaw === null || typeof propsRaw !== "object" || Array.isArray(propsRaw)) return null;
-  const propsRawStr = (() => {
-    try { return JSON.stringify(propsRaw); } catch { return null; }
-  })();
-  if (propsRawStr === null) return null;
-  // Extract required set
-  const requiredList = params["required"];
-  const required = new Set<string>(Array.isArray(requiredList) ? (requiredList as unknown[]).filter((x): x is string => typeof x === "string") : []);
-  // Parse properties in raw order via string scanning to preserve JSON order
-  const ordered: Array<{ name: string; description: string; required: boolean }> = [];
-  // Use JSON.parse with reviver order is insertion order, but to be faithful we decode via manual string scan
-  // Simpler: use the object's key order as given by JSON.parse which preserves insertion order per spec.
-  // For raw JSON, JSON.parse preserves order, so we can use Object.keys on parsed props.
-  const props = propsRaw as Record<string, unknown>;
-  const rawOrder = Object.keys(props);
-  // However if raw came from string, the parsed order is the raw order; if it came from object literal, order is insertion order (which for fallback test is not raw).
-  // To distinguish, check if rawStr contains "properties" and then extract order via regex.
-  let order: string[] = rawOrder;
-  try {
-    const propsIdx = rawStr.indexOf("\"properties\"");
-    if (propsIdx >= 0) {
-      const braceStart = rawStr.indexOf("{", propsIdx + 12);
-      if (braceStart >= 0) {
-        // Extract property names in order via regex
-        const propsSection = rawStr.slice(braceStart);
-        const matches = [...propsSection.matchAll(/"([^"]+)"\s*:\s*\{/g)].map(m => m[1] as string);
-        // Filter to those that are actually keys in props
-        const filtered = matches.filter(k => k !== undefined && Object.prototype.hasOwnProperty.call(props, k as string));
-        if (filtered.length === rawOrder.length) order = filtered as string[];
-      }
-    }
-  } catch {}
-  for (const k of order) {
-    const meta = props[k] as Record<string, unknown> | undefined;
-    const desc = meta !== undefined && typeof meta["description"] === "string" ? (meta["description"] as string) : "";
-    ordered.push({ name: k, description: desc, required: required.has(k) });
-  }
-  return ordered.length > 0 ? ordered : null;
-}
-
 function formatToolDefs(toolDefs: readonly ToolDef[]): string {
   if (toolDefs.length === 0) return "";
   let sb = "### Available Tools (reference only — do not call)\n";
@@ -1851,16 +1797,7 @@ function formatToolDefs(toolDefs: readonly ToolDef[]): string {
     const name = typeof fn["name"] === "string" ? (fn["name"] as string) : "unknown";
     const desc = typeof fn["description"] === "string" ? (fn["description"] as string) : "";
     sb += `- **${name}**: ${desc}\n`;
-    const rawDef = (fn["RawDefinition"] ?? fn["rawDefinition"] ?? (fn["rawDefinition"] as unknown)) as unknown;
-    const ordered = orderedToolParameters(rawDef as unknown);
-    if (ordered !== null) {
-      sb += "  Parameters:\n";
-      for (const p of ordered) {
-        const suffix = p.required ? " (required)" : "";
-        sb += `  - ${p.name}: ${p.description}${suffix}\n`;
-      }
-      continue;
-    }
+    const rawDef = (fn["RawDefinition"] ?? fn["rawDefinition"]) as unknown;
     const params = fn["parameters"] as unknown;
     if (params !== null && params !== undefined && typeof params === "object") {
       const rec = params as Record<string, unknown>;
@@ -1870,7 +1807,8 @@ function formatToolDefs(toolDefs: readonly ToolDef[]): string {
           Array.isArray(rec["required"]) ? (rec["required"] as unknown[]).filter((x): x is string => typeof x === "string") : [],
         );
         sb += "  Parameters:\n";
-        for (const k of Object.keys(props).sort()) {
+        const keys = rawDef !== null && rawDef !== undefined ? Object.keys(props) : Object.keys(props).sort();
+        for (const k of keys) {
           const meta = props[k] as Record<string, unknown> | undefined;
           const desc2 = meta !== undefined && typeof meta["description"] === "string" ? (meta["description"] as string) : "";
           const suffix = required.has(k) ? " (required)" : "";
