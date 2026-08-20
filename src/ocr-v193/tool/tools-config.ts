@@ -188,10 +188,28 @@ export const DEFAULT_TOOL_DEFS: readonly ToolDef[] = [
 export function toolDefsForPhase(planOnly: boolean): readonly ToolDef[] {
   // Per tools.json, plan_task true: code_search, file_read_diff, file_find
   // main_task true: all six
-  if (planOnly) {
-    return DEFAULT_TOOL_DEFS.filter((d) => d.function.name === "code_search" || d.function.name === "file_read_diff" || d.function.name === "file_find");
-  }
-  return DEFAULT_TOOL_DEFS;
+  const filtered = planOnly
+    ? DEFAULT_TOOL_DEFS.filter((d) => d.function.name === "code_search" || d.function.name === "file_read_diff" || d.function.name === "file_find")
+    : DEFAULT_TOOL_DEFS;
+  // Attach RawDefinition so formatToolDefs can preserve raw JSON order
+  // (pinned c35ddd7223f2b5540ce03aa43c9a25ef643fca27 tools.json). Without it
+  // the fallback sorts alphabetically and diverges from OCR's raw order.
+  return filtered.map((def) => {
+    const fn = def.function as unknown as Record<string, unknown>;
+    if (fn["RawDefinition"] !== undefined || fn["rawDefinition"] !== undefined) return def;
+    const raw = JSON.stringify({
+      name: fn["name"],
+      description: fn["description"],
+      parameters: fn["parameters"],
+    });
+    return {
+      ...def,
+      function: {
+        ...(def.function as unknown as Record<string, unknown>),
+        RawDefinition: raw,
+      } as unknown as ToolDef["function"],
+    };
+  });
 }
 
 /** Main-task defs — the set advertised during review file loops. */
