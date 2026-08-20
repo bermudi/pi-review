@@ -110,6 +110,8 @@ export interface Args {
   readonly maxTokensBudget?: number;
   readonly skipFilter?: boolean;
   readonly runtimeConfig?: RuntimeConfig | null;
+  readonly resume?: import("../session/resume.js").ResumeState | null;
+  readonly Resume?: import("../session/resume.js").ResumeState | null;
   // Go-compat aliases — tests may use capitalized keys
   readonly LLMClient?: AnyLlmClient;
   readonly Model?: string;
@@ -376,6 +378,8 @@ export class Agent {
   private runManifest: RunManifest | null = null;
   private manifestStartTime: number;
   public session: SessionHistory; // compat: Go tests access a.session.Finalize()
+  private resumeInfo: import("../session/history.js").ResumeInfo | null = null;
+  private resumeState: import("../session/resume.js").ResumeState | null = null;
 
   // Public for test harness to observe pool draining behavior if needed
   public readonly commentWorkerPool: CommentWorkerPool;
@@ -411,6 +415,7 @@ export class Agent {
       maxTokensBudget: args.maxTokensBudget ?? (rawArgs["MaxTokensBudget"] as number | undefined),
       skipFilter: args.skipFilter ?? (rawArgs["SkipFilter"] as boolean | undefined) ?? false,
       runtimeConfig: args.runtimeConfig ?? (rawArgs["RuntimeConfig"] as RuntimeConfig | null | undefined) ?? null,
+      resume: (args.resume ?? (rawArgs["Resume"] as import("../session/resume.js").ResumeState | null | undefined) ?? (rawArgs["resume"] as import("../session/resume.js").ResumeState | null | undefined) ?? null) as import("../session/resume.js").ResumeState | null,
     };
     // Overlay resolved aliases back onto this.args for later reads
     (this as unknown as { args: Args }).args = resolvedArgs;
@@ -440,6 +445,7 @@ export class Agent {
       else this.manifestBuilder = existing;
     }
     this.session = this.sessionHistory;
+    this.resumeState = (resolvedArgs.resume ?? null) as import("../session/resume.js").ResumeState | null;
     // Build runner with LlmTransport seam — mirrors Go llmloop.NewRunner.
     const commentCollector = (resolvedArgs.commentCollector ?? createInMemoryCollector()) as unknown as CommentCollectorLike;
     const mainToolDefs = resolvedArgs.mainToolDefs ?? [];
@@ -611,6 +617,68 @@ export class Agent {
     return BuildToolDefs(entries, planOnly);
   }
 
+  private applyResume(diffs: Diff[]): Diff[] {
+    const maybeResume = (this.args as unknown as Record<string, unknown>)["resume"] as import("../session/resume.js").ResumeState | null | undefined;
+    const maybeResumeCap = (this.args as unknown as Record<string, unknown>)["Resume"] as import("../session/resume.js").ResumeState | null | undefined;
+    const resume = (maybeResume ?? maybeResumeCap ?? this.resumeState) as import("../session/resume.js").ResumeState | null | undefined;
+    if (resume === null || resume === undefined) return diffs;
+    const mode = this.reviewModeForManifest();
+    const toDispatch: Diff[] = [];
+    let reused = 0;
+    const collector = this.args.commentCollector ?? (this.args as unknown as Record<string, unknown>)["CommentCollector"] as CommentCollectorLike | null | undefined ?? null;
+    for (const dRaw of diffs) {
+      const d = normalizeDiff(dRaw);
+      if (d.isDeleted) { toDispatch.push(d); continue; }
+      const fingerprint = reviewItemFingerprint(mode, d);
+      const anyResume = resume as unknown as Record<string, unknown>;
+      let item: unknown = null;
+      let ok = false;
+      const reusableFn = (anyResume["ReusableItem"] ?? anyResume["reusableItem"]) as ((fp: string) => unknown) | undefined;
+      if (typeof reusableFn === "function") {
+        item = reusableFn.call(resume, fingerprint);
+        ok = item !== null && item !== undefined;
+      } else if (typeof anyResume["Item"] === "function") {
+        item = (anyResume["Item"] as (fp: string) => unknown).call(resume, fingerprint);
+        const manifest = (anyResume["manifest"] ?? anyResume["Manifest"]) as { coverage?: { completed?: Array<{ fingerprint?: string; itemId?: string }> } } | null | undefined;
+        if (manifest !== null && manifest !== undefined && Array.isArray(manifest.coverage?.completed)) {
+          ok = manifest.coverage!.completed.some((c) => c.fingerprint === fingerprint || c.itemId === fingerprint);
+          if (!ok) item = null;
+        } else {
+          ok = item !== null && item !== undefined;
+        }
+      }
+      if (!ok || item === null || item === undefined) { toDispatch.push(d); continue; }
+      const anyItem = item as Record<string, unknown>;
+      const comments = (anyItem["comments"] ?? anyItem["Comments"] ?? []) as unknown[];
+      if (collector !== null && Array.isArray(comments)) {
+        for (const cm of comments) {
+          const anyCollector = collector as unknown as { add?: (c: unknown) => void; Add?: (c: unknown) => void };
+          if (typeof anyCollector.add === "function") {
+            try { anyCollector.add(cm as never); } catch {}
+          } else if (typeof anyCollector.Add === "function") {
+            try { anyCollector.Add(cm as never); } catch {}
+          }
+        }
+      }
+      try {
+        const sess = this.sessionHistory;
+        const fn = (sess as unknown as { RecordReviewItemReused?: (p: string, o: string, n: string, f: string, s: string, c: unknown[]) => void })?.RecordReviewItemReused;
+        if (typeof fn === "function" && sess !== null) {
+          const resumedFrom = (anyResume["sessionId"] ?? anyResume["SessionID"] ?? "") as string;
+          fn.call(sess, effectivePath(d), d.oldPath, d.newPath, fingerprint, resumedFrom, comments as never[]);
+        }
+      } catch {}
+      this.markReused(d);
+      reused++;
+    }
+    const rerun = toDispatch.filter((d) => !d.isDeleted).length;
+    const prevModel = ((resume as unknown as Record<string, unknown>)["model"] ?? (resume as unknown as Record<string, unknown>)["Model"] ?? "") as string;
+    const curModel = (this.args.model ?? (this.args as unknown as Record<string, unknown>)["Model"] as string ?? "") as string;
+    const resumedFrom = ((resume as unknown as Record<string, unknown>)["sessionId"] ?? (resume as unknown as Record<string, unknown>)["SessionID"] ?? "") as string;
+    this.resumeInfo = { resumedFrom, reusedFiles: reused, rerunFiles: rerun, previousModel: prevModel, currentModel: curModel };
+    return toDispatch;
+  }
+
   private reviewModeForManifest(): string {
     const from = (this.args.from ?? (this.args as unknown as Record<string, unknown>)["From"] as string ?? "") as string;
     const to = (this.args.to ?? (this.args as unknown as Record<string, unknown>)["To"] as string ?? "") as string;
@@ -752,6 +820,13 @@ export class Agent {
     const b = this.manifestBuilder;
     if (!b) return;
     const err = b.MarkCompleted(manifestItemID(this.reviewModeForManifest(), d));
+    if (err) this.recordWarning("manifest_error", d.newPath, err.message);
+  }
+
+  private markReused(d: Diff): void {
+    const b = this.manifestBuilder;
+    if (!b) return;
+    const err = b.MarkReused(manifestItemID(this.reviewModeForManifest(), d));
     if (err) this.recordWarning("manifest_error", d.newPath, err.message);
   }
 
@@ -1075,6 +1150,8 @@ export class Agent {
       this.manifestBuilder.SetRunFailure("internal" as never, "coverage registration failed");
     }
 
+    const toDispatch = this.applyResume(this.diffs);
+
     let concurrency = this.args.maxConcurrency ?? 8;
     if (concurrency <= 0) concurrency = 8;
     const timeoutMs =
@@ -1089,9 +1166,9 @@ export class Agent {
     const collector = this.args.commentCollector ?? null;
 
     // Budget pre-check helper
-    const maxBudget = this.args.maxTokensBudget ?? 0;
+    const maxBudget = this.args.maxTokensBudget ?? (this.args as unknown as Record<string, unknown>)["MaxTokensBudget"] as number | undefined ?? 0;
 
-    for (const dRaw of this.diffs) {
+    for (const dRaw of toDispatch) {
       const d = normalizeDiff(dRaw);
       if (d.isDeleted) continue;
       if (signal.aborted) break;

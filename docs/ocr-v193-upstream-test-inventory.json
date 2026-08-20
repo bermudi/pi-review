@@ -3943,8 +3943,14 @@
       "tests": [
         {
           "name": "TestAgent_TokenAccumulation",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/agent/dispatch.test.ts",
+              "title": "TestAgent_TokenAccumulation"
+            }
+          ]
         },
         {
           "name": "TestAgentGettersNil",
@@ -3959,8 +3965,14 @@
         },
         {
           "name": "TestApplyResumeReusesCompletedItemsAcrossModels",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/agent/dispatch.test.ts",
+              "title": "TestApplyResumeReusesCompletedItemsAcrossModels"
+            }
+          ]
         },
         {
           "name": "TestBuildChangeFilesExcept",
@@ -4008,28 +4020,58 @@
         },
         {
           "name": "TestDispatchSubtasks_AllDeleted",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/agent/dispatch.test.ts",
+              "title": "TestDispatchSubtasks_AllDeleted"
+            }
+          ]
         },
         {
           "name": "TestDispatchSubtasks_IncompleteMainTaskMarksPartialFailure",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/agent/dispatch.test.ts",
+              "title": "TestDispatchSubtasks_IncompleteMainTaskMarksPartialFailure"
+            }
+          ]
         },
         {
           "name": "TestDispatchSubtasks_MainTaskWithoutTaskDoneIsNotReusableCheckpoint",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/agent/dispatch.test.ts",
+              "title": "TestDispatchSubtasks_MainTaskWithoutTaskDoneIsNotReusableCheckpoint"
+            }
+          ]
         },
         {
           "name": "TestDispatchSubtasks_TokenThresholdSkipIsNotReusableCheckpoint",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/agent/dispatch.test.ts",
+              "title": "TestDispatchSubtasks_TokenThresholdSkipIsNotReusableCheckpoint"
+            }
+          ]
         },
         {
           "name": "TestDispatchSubtasks_WithFakeLLM",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/agent/dispatch.test.ts",
+              "title": "TestDispatchSubtasks_WithFakeLLM"
+            }
+          ]
         },
         {
           "name": "TestExtFromPath",
