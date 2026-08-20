@@ -16,7 +16,26 @@
  */
 
 // Core orchestration — internal/agent/agent.go
-export { Agent, newAgent, New, hashFields, reviewItemFingerprint, manifestItemID, manifestPaths } from "./agent.js";
+export {
+  Agent,
+  newAgent,
+  New,
+  hashFields,
+  reviewItemFingerprint,
+  manifestItemID,
+  manifestPaths,
+  NewCommentWorkerPool,
+  newCommentWorkerPool,
+  errMainTaskEmpty,
+  ErrMainTaskEmpty,
+  errDeadlineExceeded,
+  ErrDeadlineExceeded,
+  errCanceled,
+  ErrCanceled,
+  classifyItemError,
+  ClassifyItemError,
+  normalizeDiff,
+} from "./agent.js";
 export type { Args, RuntimeConfig, SystemRuleResolver, ToolRegistryLike, CommentCollectorLike } from "./agent.js";
 
 // Identity — internal/agent/identity.go

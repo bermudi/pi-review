@@ -17,10 +17,24 @@ import { effectivePath, whyExcluded } from "./preview.js";
 import { reviewModeString, stripEmptyPlanBlock } from "./util.js";
 import { countTokens, PromptTokenLimit, StripMarkdownFences } from "../llmloop/compression.js";
 import { Runner } from "../llmloop/loop.js";
-import type { AnyLlmClient, ToolDef } from "../llmloop/types.js";
-import type { Template, ChatMessage } from "../template/template.js";
+import type { AgentWarning, AnyLlmClient, ToolDef } from "../llmloop/types.js";
+import type { Template, ChatMessage, LlmConversation } from "../template/template.js";
 import type { FileFilter } from "../rules/system_rules.js";
 import { CommentWorkerPool } from "../llmloop/pool.js";
+import {
+  FailureBudget,
+  FailureTimeout,
+  FailureCancelled,
+  FailureConfiguration,
+  FailureProvider,
+  FailureUnknown,
+  type CoverageItem,
+  type RunManifest,
+  ManifestBuilder,
+  NewManifestBuilder,
+} from "../session/manifest.js";
+import { SessionHistory } from "../session/history.js";
+import type { FailureClass } from "../session/manifest.js";
 
 // ---------------------------------------------------------------------------
 // RuntimeConfig — mirrors Go RuntimeConfig
@@ -92,6 +106,19 @@ export interface Args {
   readonly maxTokensBudget?: number;
   readonly skipFilter?: boolean;
   readonly runtimeConfig?: RuntimeConfig | null;
+  // Go-compat aliases — tests may use capitalized keys
+  readonly LLMClient?: AnyLlmClient;
+  readonly Model?: string;
+  readonly Template?: Template;
+  readonly SystemRule?: SystemRuleResolver | null;
+  readonly FileFilter?: FileFilter | null;
+  readonly Tools?: ToolRegistryLike | null;
+  readonly CommentCollector?: CommentCollectorLike | null;
+  readonly Session?: unknown;
+  readonly MaxConcurrency?: number;
+  readonly ConcurrentTaskTimeout?: number;
+  readonly SkipFilter?: boolean;
+  readonly Background?: string;
 }
 
 // ---------------------------------------------------------------------------
@@ -135,6 +162,147 @@ export function manifestItemID(mode: string, d: Diff): string {
   // Simplified: operation "review" is fixed for this agent.
   return `review:${mode}:${oldPath}:${newPath}`;
 }
+
+// ---------------------------------------------------------------------------
+// Diff normalization — Go fields are PascalCase, Pi fields are camelCase.
+// Accept both so translated tests can use either.
+// ---------------------------------------------------------------------------
+export function normalizeDiff(d: unknown): Diff {
+  if (d === null || d === undefined || typeof d !== "object") return { oldPath: "", newPath: "", diff: "", newFileContent: "", isBinary: false, isDeleted: false, isNew: false, isRenamed: false, insertions: 0, deletions: 0 };
+  const r = d as Record<string, unknown>;
+  const getStr = (lower: string, upper: string): string => {
+    const v1 = r[lower]; const v2 = r[upper];
+    if (typeof v1 === "string") return v1; if (typeof v2 === "string") return v2; return "";
+  };
+  const getBool = (lower: string, upper: string): boolean => {
+    const v1 = r[lower]; const v2 = r[upper];
+    if (typeof v1 === "boolean") return v1; if (typeof v2 === "boolean") return v2; return false;
+  };
+  const getNum = (lower: string, upper: string): number => {
+    const v1 = r[lower]; const v2 = r[upper];
+    if (typeof v1 === "number") return v1; if (typeof v2 === "number") return v2; return 0;
+  };
+  return {
+    oldPath: getStr("oldPath", "OldPath"),
+    newPath: getStr("newPath", "NewPath"),
+    diff: getStr("diff", "Diff"),
+    newFileContent: getStr("newFileContent", "NewFileContent"),
+    isBinary: getBool("isBinary", "IsBinary"),
+    isDeleted: getBool("isDeleted", "IsDeleted"),
+    isNew: getBool("isNew", "IsNew"),
+    isRenamed: getBool("isRenamed", "IsRenamed"),
+    insertions: getNum("insertions", "Insertions"),
+    deletions: getNum("deletions", "Deletions"),
+  };
+}
+
+function normalizeTemplateObject(tpl: unknown): Template {
+  if (tpl === null || tpl === undefined || typeof tpl !== "object") return tpl as Template;
+  const r = tpl as Record<string, unknown>;
+  const pick = (lower: string, upper: string): unknown => r[lower] ?? r[upper];
+  const conv = (v: unknown): LlmConversation | undefined => {
+    if (v === null || v === undefined) return undefined;
+    if (typeof v !== "object") return undefined;
+    const cr = v as Record<string, unknown>;
+    const msgs = (cr["messages"] ?? cr["Messages"]) as unknown;
+    if (!Array.isArray(msgs)) return { messages: [] };
+    const out: ChatMessage[] = (msgs as unknown[]).map((m) => {
+      const mm = m as Record<string, unknown>;
+      const role = (mm["role"] ?? mm["Role"] ?? "") as string;
+      const content = (mm["content"] ?? mm["Content"] ?? "") as string;
+      return { role, content };
+    });
+    return { messages: out };
+  };
+  const maxTokens = (pick("MaxTokens", "maxTokens") ?? pick("maxTokens", "MaxTokens") ?? (r["MaxTokens"] as number)) as number | undefined;
+  const maxTool = (pick("MaxToolRequestTimes", "maxToolRequestTimes") as number | undefined);
+  const maxCompletion = (pick("MaxCompletionTokens", "maxCompletionTokens") as number | undefined);
+  const planThreshold = (pick("PlanModeLineThreshold", "planModeLineThreshold") as number | undefined);
+  return {
+    MaxTokens: typeof maxTokens === "number" ? maxTokens : 0,
+    MaxToolRequestTimes: typeof maxTool === "number" ? maxTool : 0,
+    PlanModeLineThreshold: typeof planThreshold === "number" ? planThreshold : 0,
+    MainTask: conv(pick("MainTask", "mainTask")) ?? { messages: [] },
+    PlanTask: conv(pick("PlanTask", "planTask")),
+    MemoryCompressionTask: conv(pick("MemoryCompressionTask", "memoryCompressionTask")) ?? { messages: [] },
+    ReLocationTask: conv(pick("ReLocationTask", "reLocationTask")),
+    ReviewFilterTask: conv(pick("ReviewFilterTask", "reviewFilterTask")),
+    MaxCompletionTokens: maxCompletion,
+  } as unknown as Template;
+}
+
+export function NewCommentWorkerPool(workerCount: number): CommentWorkerPool {
+  return new CommentWorkerPool(workerCount);
+}
+export const newCommentWorkerPool = NewCommentWorkerPool;
+
+// ---------------------------------------------------------------------------
+// classifyItemError — mirrors Go classifyItemError
+// ---------------------------------------------------------------------------
+function isWrappedError(err: unknown, target: Error): boolean {
+  let cur: unknown = err;
+  const visited = new Set<unknown>();
+  while (cur !== null && cur !== undefined && !visited.has(cur)) {
+    visited.add(cur);
+    if (cur === target) return true;
+    if (cur instanceof Error) {
+      if (cur.message === target.message) return true;
+      // Check cause chain (ES2022)
+      const cause = (cur as unknown as { cause?: unknown }).cause;
+      if (cause !== undefined) { cur = cause; continue; }
+      // Also check wrapper via string include for deadline/canceled leak tests
+      // but exact sentinel check already handled.
+      return false;
+    }
+    return false;
+  }
+  return false;
+}
+
+function errorContains(err: unknown, substr: string): boolean {
+  let cur: unknown = err;
+  const visited = new Set<unknown>();
+  while (cur !== null && cur !== undefined && !visited.has(cur)) {
+    visited.add(cur);
+    if (cur instanceof Error) {
+      if (cur.message.includes(substr)) return true;
+      if (cur.name.includes(substr)) return true;
+      const cause = (cur as unknown as { cause?: unknown }).cause;
+      if (cause !== undefined) { cur = cause; continue; }
+    } else if (typeof cur === "string" && (cur as string).includes(substr)) return true;
+    break;
+  }
+  return false;
+}
+
+export function classifyItemError(err: unknown): [FailureClass, string] {
+  // Check deadline first (Go errors.Is respects wrapping)
+  if (isWrappedError(err, errDeadlineExceeded) || errorContains(err, "deadline exceeded") || errorContains(err, "DeadlineExceeded")) {
+    return [FailureTimeout, "file review exceeded its time limit"];
+  }
+  if (isWrappedError(err, errCanceled) || errorContains(err, "canceled") || errorContains(err, "cancelled") || (err instanceof Error && err.name === "AbortError" && errorContains(err, "canceled"))) {
+    // Also check generic AbortError without message — treat as cancelled
+    // But must distinguish deadline vs cancelled: deadline check already above.
+    // If error is AbortError and not deadline, treat as cancelled.
+    return [FailureCancelled, "file review was cancelled"];
+  }
+  // Check if err is AbortError (DOMException) even without message
+  if (err instanceof Error && err.name === "AbortError") {
+    // Default AbortError -> cancelled unless deadline phrase present
+    if (errorContains(err, "deadline")) return [FailureTimeout, "file review exceeded its time limit"];
+    return [FailureCancelled, "file review was cancelled"];
+  }
+  // Check DOMException via global
+  if (typeof DOMException !== "undefined" && err instanceof DOMException && err.name === "AbortError") {
+    return [FailureCancelled, "file review was cancelled"];
+  }
+  if (isWrappedError(err, errMainTaskEmpty) || errorContains(err, "main_task.messages is empty")) {
+    return [FailureConfiguration, "review template main_task is empty"];
+  }
+  return [FailureProvider, "provider or subtask request failed"];
+}
+
+export const ClassifyItemError = classifyItemError;
 
 // ---------------------------------------------------------------------------
 // Internal semaphore helper for concurrency
@@ -181,35 +349,106 @@ class Semaphore {
 // Agent — orchestrates diff acquisition, filtering, and per-file loops
 // ---------------------------------------------------------------------------
 
-const errMainTaskEmpty = new Error("main_task.messages is empty in template");
+export const errMainTaskEmpty = new Error("main_task.messages is empty in template");
+export const ErrMainTaskEmpty = errMainTaskEmpty;
+// Sentinel errors mirroring Go context errors for classifyItemError
+// Use same messages so errors.Is-style checks via message work.
+export const errDeadlineExceeded = new Error("context deadline exceeded");
+export const errCanceled = new Error("context canceled");
+export const ErrDeadlineExceeded = errDeadlineExceeded;
+export const ErrCanceled = errCanceled;
 
 export class Agent {
-  private diffs: Diff[] = [];
+  public diffs: Diff[] = [];
   private totalInsertions = 0;
   private totalDeletions = 0;
-  private currentDate: string;
+  public currentDate: string;
   private budgetExceeded = false;
   private runner: Runner;
   private inputResolution: InputResolution = { resolvedBase: "", resolvedHead: "", exactRange: "" };
   private repoRemoteIdentity = "";
   private warnings: Array<{ type: string; file: string; message: string }> = [];
   private subtaskOutcomes: Map<string, { completed: boolean; stop?: string; error?: string }> = new Map();
+  private sessionHistory: import("../session/history.js").SessionHistory | null = null;
+  private manifestBuilder: ManifestBuilder;
+  private runManifest: RunManifest | null = null;
+  private manifestStartTime: number;
+  public session: SessionHistory; // compat: Go tests access a.session.Finalize()
 
   // Public for test harness to observe pool draining behavior if needed
   public readonly commentWorkerPool: CommentWorkerPool;
 
   constructor(private readonly args: Args) {
     this.currentDate = new Date().toISOString().slice(0, 16).replace("T", " ");
+    // Resolve Go-compat aliases
+    const rawArgs = args as unknown as Record<string, unknown>;
+    const rawTpl = (args.template ?? rawArgs["Template"] ?? { MaxTokens: 0, MaxToolRequestTimes: 0, MainTask: { messages: [] }, MemoryCompressionTask: { messages: [] } }) as unknown;
+    const normTpl = normalizeTemplateObject(rawTpl);
+    const resolvedArgs: Args = {
+      repoDir: args.repoDir ?? (rawArgs["RepoDir"] as string | undefined) ?? "",
+      sessionId: args.sessionId ?? (rawArgs["SessionId"] as string | undefined),
+      from: args.from ?? (rawArgs["From"] as string | undefined),
+      to: args.to ?? (rawArgs["To"] as string | undefined),
+      commit: args.commit ?? (rawArgs["Commit"] as string | undefined),
+      reviewMode: args.reviewMode ?? (rawArgs["ReviewMode"] as string | undefined),
+      template: normTpl,
+      systemRule: (args.systemRule ?? rawArgs["SystemRule"] ?? null) as SystemRuleResolver | null,
+      fileFilter: (args.fileFilter ?? rawArgs["FileFilter"] ?? null) as FileFilter | null,
+      llmClient: (args.llmClient ?? rawArgs["LLMClient"] ?? rawArgs["llmClient"]) as AnyLlmClient,
+      tools: (args.tools ?? rawArgs["Tools"] ?? null) as ToolRegistryLike | null,
+      planToolDefs: (args.planToolDefs ?? rawArgs["PlanToolDefs"] as readonly ToolDef[] | undefined),
+      mainToolDefs: (args.mainToolDefs ?? rawArgs["MainToolDefs"] as readonly ToolDef[] | undefined) ?? [],
+      maxConcurrency: args.maxConcurrency ?? (rawArgs["MaxConcurrency"] as number | undefined) ?? (rawArgs["Concurrency"] as number | undefined),
+      concurrentTaskTimeoutMinutes: args.concurrentTaskTimeoutMinutes ?? (rawArgs["ConcurrentTaskTimeout"] as number | undefined),
+      commentCollector: (args.commentCollector ?? rawArgs["CommentCollector"] ?? null) as CommentCollectorLike | null,
+      background: args.background ?? (rawArgs["Background"] as string | undefined),
+      model: args.model ?? (rawArgs["Model"] as string | undefined) ?? "",
+      provider: args.provider ?? (rawArgs["Provider"] as string | undefined),
+      gitRunner: args.gitRunner ?? rawArgs["GitRunner"],
+      sealedInput: args.sealedInput ?? (rawArgs["SealedInput"] as InputResolution | null | undefined) ?? null,
+      maxTokensBudget: args.maxTokensBudget ?? (rawArgs["MaxTokensBudget"] as number | undefined),
+      skipFilter: args.skipFilter ?? (rawArgs["SkipFilter"] as boolean | undefined) ?? false,
+      runtimeConfig: args.runtimeConfig ?? (rawArgs["RuntimeConfig"] as RuntimeConfig | null | undefined) ?? null,
+    };
+    // Overlay resolved aliases back onto this.args for later reads
+    (this as unknown as { args: Args }).args = resolvedArgs;
+    const sessCandidate = rawArgs["Session"] as unknown;
+    if (sessCandidate !== null && sessCandidate !== undefined && typeof sessCandidate === "object") {
+      this.sessionHistory = sessCandidate as import("../session/history.js").SessionHistory;
+    }
+    // Manifest builder — mirrors Go initManifest()
+    const runId =
+      (resolvedArgs.sessionId as string | undefined) ??
+      (rawArgs["SessionId"] as string | undefined) ??
+      (typeof crypto !== "undefined" && typeof (crypto as unknown as { randomUUID?: () => string }).randomUUID === "function"
+        ? (crypto as unknown as { randomUUID: () => string }).randomUUID()
+        : Math.random().toString(36).slice(2) + Date.now().toString(36));
+    this.manifestBuilder = NewManifestBuilder(runId, "review");
+    const manifestMode = this.reviewModeForManifest();
+    this.manifestBuilder.SetInput({ mode: manifestMode });
+    this.manifestStartTime = Date.now();
+    // Create a lightweight SessionHistory for compat with a.session.Finalize() / a.session.Manifest()
+    if (this.sessionHistory === null) {
+      this.sessionHistory = new SessionHistory(resolvedArgs.repoDir ?? "/tmp", "", resolvedArgs.model ?? "", { reviewMode: manifestMode }, runId);
+      (this.sessionHistory as unknown as { manifest: ManifestBuilder }).manifest = this.manifestBuilder;
+    } else {
+      // Attach our builder if session doesn't already have one
+      const existing = (this.sessionHistory as unknown as { manifest?: ManifestBuilder | null }).manifest;
+      if (!existing) (this.sessionHistory as unknown as { manifest: ManifestBuilder }).manifest = this.manifestBuilder;
+      else this.manifestBuilder = existing;
+    }
+    this.session = this.sessionHistory;
     // Build runner with LlmTransport seam — mirrors Go llmloop.NewRunner.
-    const commentCollector = (args.commentCollector ?? createInMemoryCollector()) as unknown as CommentCollectorLike;
-    const mainToolDefs = args.mainToolDefs ?? [];
-    const toolRegistry = (args.tools ?? null) as unknown as ToolRegistryLike | null;
+    const commentCollector = (resolvedArgs.commentCollector ?? createInMemoryCollector()) as unknown as CommentCollectorLike;
+    const mainToolDefs = resolvedArgs.mainToolDefs ?? [];
+    const toolRegistry = (resolvedArgs.tools ?? null) as unknown as ToolRegistryLike | null;
     // CommentWorkerPool: 8 workers, per-file isolation via AwaitKey (mirrors Go NewCommentWorkerPool(8))
     this.commentWorkerPool = new CommentWorkerPool(8);
 
     // DiffLookup: resolve path -> Diff for relocation (mirrors Go Deps.DiffLookup)
     const diffLookup = (path: string): Diff | null => {
-      for (const dd of this.diffs) {
+      for (const ddRaw of this.diffs) {
+        const dd = normalizeDiff(ddRaw);
         if (dd.newPath === path || dd.oldPath === path) return dd;
       }
       return null;
@@ -232,10 +471,10 @@ export class Agent {
     }
 
     this.runner = new Runner({
-      model: args.model,
-      sessionId: args.sessionId,
+      model: resolvedArgs.model,
+      sessionId: resolvedArgs.sessionId,
       template: templateForRunner as unknown as import("../llmloop/types.js").Template,
-      llmClient: args.llmClient,
+      llmClient: resolvedArgs.llmClient,
       mainToolDefs: mainToolDefs as unknown as readonly ToolDef[],
       commentCollector: commentCollector as unknown as never,
       toolRegistry: toolRegistry as unknown as never,
@@ -247,9 +486,103 @@ export class Agent {
   // -- public getters mirroring Go
 
   sessionId(): string {
-    // Stub: no persistent session in this port yet.
+    if (this.sessionHistory !== null) return (this.sessionHistory as unknown as { sessionId?: string; SessionID?: string }).sessionId ?? (this.sessionHistory as unknown as { SessionID?: string }).SessionID ?? "";
+    const sid = (this.args as unknown as Record<string, unknown>)["sessionId"] as string | undefined;
+    return sid ?? "";
+  }
+
+  // Go-compatible aliases
+  Session(): import("../session/history.js").SessionHistory | null {
+    return this.sessionHistory;
+  }
+  FilesReviewed(): number {
+    let n = 0;
+    for (const dRaw of this.diffs) if (!normalizeDiff(dRaw).isDeleted) n++;
+    return n;
+  }
+  Diffs(): Diff[] {
+    return this.diffs.map((d) => normalizeDiff(d));
+  }
+  ProjectSummary(): string {
     return "";
   }
+  Warnings(): Array<{ type: string; file: string; message: string }> {
+    return this.warningsList();
+  }
+  ToolCalls(): Record<string, number> {
+    return this.toolCalls();
+  }
+  TotalTokensUsed(): number { return this.totalTokensUsed(); }
+  TotalInputTokens(): number { return this.totalInputTokens(); }
+  TotalOutputTokens(): number { return this.totalOutputTokens(); }
+  TotalCacheReadTokens(): number { return this.totalCacheReadTokens(); }
+  TotalCacheWriteTokens(): number { return this.totalCacheWriteTokens(); }
+  BudgetExceeded(): boolean { return this.budgetExceededFlag(); }
+
+  // Go calls a.recordWarning (lowercase) — expose both casings
+  recordWarning(warningType: string, file: string, message: string): void {
+    this.warnings.push({ type: warningType, file, message });
+    try { (this.runner as unknown as { RecordWarning?: (t: string, f: string, m: string) => void }).RecordWarning?.(warningType, file, message); } catch {}
+  }
+  RecordWarning(warningType: string, file: string, message: string): void { this.recordWarning(warningType, file, message); }
+
+  // -- manifest helpers — mirrors Go registerCoverage / markCompleted / finalizeManifest
+  private reviewModeForManifest(): string {
+    const from = (this.args.from ?? "") as string;
+    const to = (this.args.to ?? "") as string;
+    const commit = (this.args.commit ?? "") as string;
+    if (commit !== "") return "commit";
+    if (from !== "" && to !== "") return "range";
+    return "workspace";
+  }
+
+  private coverageItem(d: Diff): CoverageItem {
+    const { oldPath, newPath } = manifestPaths(d);
+    const itemId = manifestItemID(this.reviewModeForManifest(), d);
+    const it: CoverageItem = { itemId, path: effectivePath(d), fingerprint: reviewItemFingerprint(this.reviewModeForManifest(), d) };
+    if (oldPath !== "" && oldPath !== newPath) it.oldPath = oldPath;
+    return it;
+  }
+
+  private registerCoverage(diffs: Diff[]): Error | null {
+    if (!this.manifestBuilder) return null;
+    for (const d of diffs) {
+      if (d.isDeleted) continue;
+      const err = this.manifestBuilder.RegisterSelected(this.coverageItem(d));
+      if (err) return err;
+    }
+    return this.manifestBuilder.SealSelected();
+  }
+
+  private markCompleted(d: Diff): void {
+    const b = this.manifestBuilder;
+    if (!b) return;
+    const err = b.MarkCompleted(manifestItemID(this.reviewModeForManifest(), d));
+    if (err) this.recordWarning("manifest_error", d.newPath, err.message);
+  }
+
+  private markFailed(d: Diff, cls: FailureClass, reason: string): void {
+    const b = this.manifestBuilder;
+    if (!b) return;
+    const err = b.MarkFailed(manifestItemID(this.reviewModeForManifest(), d), cls, reason);
+    if (err) this.recordWarning("manifest_error", d.newPath, err.message);
+  }
+
+  finalizeManifest(): Error | null {
+    const b = this.manifestBuilder;
+    if (!b) return null;
+    const elapsed = Date.now() - (this.manifestStartTime ?? Date.now());
+    const { manifest, error } = b.Finalize(elapsed);
+    if (error) {
+      this.recordWarning("manifest_error", "", error.message);
+      return error;
+    }
+    this.runManifest = manifest;
+    if (this.sessionHistory) (this.sessionHistory as unknown as { finalManifest: RunManifest | null }).finalManifest = manifest;
+    return null;
+  }
+
+  RunManifest(): RunManifest | null { return this.runManifest ? { ...this.runManifest, coverage: { selected: [...this.runManifest.coverage.selected], completed: [...this.runManifest.coverage.completed], reused: [...this.runManifest.coverage.reused], failed: [...this.runManifest.coverage.failed], waived: [...this.runManifest.coverage.waived] } } : null; }
 
   budgetExceededFlag(): boolean {
     return this.budgetExceeded;
@@ -388,17 +721,30 @@ export class Agent {
     const getter = maybeGet ?? maybeGetAlt;
     if (typeof getter !== "function") return;
     try {
-      const prov = getter.call(tools, "file_read_diff") as { setDiffMap?: (m: unknown) => void } | undefined;
-      if (prov !== undefined && prov !== null && typeof prov.setDiffMap === "function") {
+      const prov = getter.call(tools, "file_read_diff") as unknown as { setDiffMap?: (m: unknown) => void; SetDiffMap?: (m: unknown) => void } | undefined;
+      const setter = prov !== undefined && prov !== null ? ((prov.setDiffMap ?? (prov as unknown as { SetDiffMap?: (m: unknown) => void }).SetDiffMap) as ((m: unknown) => void) | undefined) : undefined;
+      if (setter !== undefined) {
         const m = new Map<string, string>();
-        for (const d of this.diffs) {
+        for (const dRaw of this.diffs) {
+          const d = normalizeDiff(dRaw);
           if (d.newPath !== "/dev/null") m.set(d.newPath, d.diff);
         }
-        // The real DiffMap class wraps a Map; for the stub we pass a simple object with get().
+        // Provide both Get (Go) and get (JS) so Either API works
         const dm = {
-          get: (p: string): string | undefined => m.get(p),
+          Get: (p: string): [string, boolean] => {
+            const v = m.get(p);
+            if (v !== undefined) return [v, true];
+            return ["", false];
+          },
+          get: (p: string): [string, boolean] => {
+            const v = m.get(p);
+            if (v !== undefined) return [v, true];
+            return ["", false];
+          },
         };
-        prov.setDiffMap(dm);
+        setter.call(prov, dm as unknown);
+      } else if (prov !== undefined && prov !== null && typeof (prov as unknown as { setDiffMap?: unknown }).setDiffMap === "function") {
+        // fallback already handled
       }
     } catch {
       // best-effort only
@@ -417,9 +763,10 @@ export class Agent {
     return reviewModeString(this.args.from ?? "", this.args.to ?? "", this.args.commit ?? "");
   }
 
-  private countReviewable(diffs: readonly Diff[]): number {
+  private countReviewable(diffs: readonly unknown[]): number {
     let n = 0;
-    for (const d of diffs) {
+    for (const dRaw of diffs) {
+      const d = normalizeDiff(dRaw);
       if (!this.shouldReview(d)) continue;
       if (d.isDeleted) continue;
       n++;
@@ -427,14 +774,16 @@ export class Agent {
     return n;
   }
 
-  private shouldReview(d: Diff): boolean {
-    return whyExcluded(d, this.args.fileFilter ?? null) === "";
+  private shouldReview(d: unknown): boolean {
+    const nd = normalizeDiff(d);
+    return whyExcluded(nd, this.args.fileFilter ?? null) === "";
   }
 
-  private filterDiffs(diffs: Diff[]): Diff[] {
+  private filterDiffs(diffs: unknown[]): Diff[] {
     const kept: Diff[] = [];
     let skipped = 0;
-    for (const d of diffs) {
+    for (const dRaw of diffs) {
+      const d = normalizeDiff(dRaw);
       const path = effectivePath(d);
       if (!this.shouldReview(d)) {
         if (d.isBinary) console.error(`[pi-review] Skipping ${path} — binary file`);
@@ -448,12 +797,13 @@ export class Agent {
     return kept;
   }
 
-  private filterLargeDiffs(diffs: Diff[]): Diff[] {
+  private filterLargeDiffs(diffs: unknown[]): Diff[] {
     const limit = PromptTokenLimit(this.args.template.MaxTokens);
-    if (limit <= 0) return diffs;
+    if (limit <= 0) return diffs.map((d) => normalizeDiff(d));
     const kept: Diff[] = [];
     let skipped = 0;
-    for (const d of diffs) {
+    for (const dRaw of diffs) {
+      const d = normalizeDiff(dRaw);
       const tokens = countTokens(d.diff);
       if (tokens > limit) {
         console.error(`[pi-review] Skipping ${d.newPath} (~${tokens} tokens exceeds 80% of max_tokens(${this.args.template.MaxTokens}))`);
@@ -475,12 +825,21 @@ export class Agent {
     }
   }
 
+  private findDiff(path: string): Diff | null {
+    for (const dRaw of this.diffs) {
+      const d = normalizeDiff(dRaw);
+      if (d.newPath === path || d.oldPath === path) return d;
+    }
+    return null;
+  }
+
   private buildChangeFilesExcept(excludePath: string): string {
     // Mirror Go Agent.buildChangeFilesExcept: write a newline after every
     // non-excluded entry except the final element of a.diffs (by original index).
     let out = "";
     for (let i = 0; i < this.diffs.length; i++) {
-      const d = this.diffs[i]!;
+      const dRaw = this.diffs[i]!;
+      const d = normalizeDiff(dRaw);
       if (d.isBinary) continue;
       if (d.newPath === excludePath || d.oldPath === excludePath) continue;
       let status = "MODIFIED";
@@ -495,12 +854,19 @@ export class Agent {
     return out;
   }
 
-  private async dispatchSubtasks(signal: AbortSignal): Promise<LlmComment[]> {
+  async dispatchSubtasks(signal: AbortSignal): Promise<LlmComment[]> {
     // Pre-filter large diffs
     this.diffs = this.filterLargeDiffs(this.diffs);
     if (this.diffs.length === 0) {
       console.error("[pi-review] All changed files exceeded the token size limit. Skipping review.");
       return [];
+    }
+
+    // Register coverage before dispatch — mirrors Go registerCoverage
+    const covErr = this.registerCoverage(this.diffs);
+    if (covErr) {
+      this.recordWarning("manifest_error", "", covErr.message);
+      this.manifestBuilder.SetRunFailure("internal" as never, "coverage registration failed");
     }
 
     let concurrency = this.args.maxConcurrency ?? 8;
@@ -519,7 +885,8 @@ export class Agent {
     // Budget pre-check helper
     const maxBudget = this.args.maxTokensBudget ?? 0;
 
-    for (const d of this.diffs) {
+    for (const dRaw of this.diffs) {
+      const d = normalizeDiff(dRaw);
       if (d.isDeleted) continue;
       if (signal.aborted) break;
 
@@ -536,7 +903,10 @@ export class Agent {
             file: d.newPath,
             message: `stopped dispatch: used ${used} tokens + next-file estimate ${nextEst} = projected ${projected} exceeds budget ${maxBudget}`,
           });
+          try { this.runner.RecordWarning("token_budget_reached", d.newPath, `stopped dispatch: used ${used} tokens + next-file estimate ${nextEst} = projected ${projected} exceeds budget ${maxBudget}`); } catch {}
           this.budgetExceeded = true;
+          // Controlled coverage truncation — pending cause, not run_failure (mirrors Go)
+          try { this.manifestBuilder.SetPendingFailureCause(FailureBudget, "aggregate token budget reached before dispatch completed"); } catch {}
           break;
         }
       }
@@ -576,16 +946,31 @@ export class Agent {
           };
           try {
             const result = await this.executeSubtask(taskSignal, diff);
-            this.subtaskOutcomes.set(diff.newPath, { completed: result.completed, stop: result.stop, error: result.error?.message });
+            const stopStr = result.stop !== undefined ? (typeof result.stop === "string" ? result.stop : (result.stop as { class: string }).class) : undefined;
+            this.subtaskOutcomes.set(diff.newPath, { completed: result.completed, stop: stopStr, error: result.error?.message });
+            if (result.completed) this.markCompleted(diff);
+            else if (result.error !== null && result.error !== undefined) this.markFailed(diff, classifyItemError(result.error)[0], classifyItemError(result.error)[1]);
+            else if (result.stop !== undefined) {
+              const st = result.stop as unknown as { class: FailureClass; reason: string; checkpoint: string; reportAsError?: boolean };
+              const cls = st.class ?? FailureBudget;
+              const reason = st.reason ?? "budget";
+              this.markFailed(diff, cls, reason);
+            }
             cleanup();
-            if (!result.completed && result.error !== null) {
+            if (!result.completed && result.error !== null && result.error !== undefined) {
               failed++;
               this.warnings.push({ type: "subtask_error", file: diff.newPath, message: result.error.message });
               console.error(`[pi-review] Subtask error for ${diff.newPath}: ${result.error.message}`);
             } else if (!result.completed && result.stop !== undefined) {
-              // Non-error stop — still record as budget/unknown but not necessarily error
-              if (result.stop === "budget_exceeded") {
-                this.warnings.push({ type: "subtask_stop", file: diff.newPath, message: "stopped: budget exceeded" });
+              const st = result.stop as unknown as { class: FailureClass; reason: string; checkpoint: string; reportAsError?: boolean };
+              if (st.reportAsError) {
+                failed++;
+                const cp = st.checkpoint ?? st.reason;
+                this.warnings.push({ type: "subtask_error", file: diff.newPath, message: cp });
+                console.error(`[pi-review] Subtask error for ${diff.newPath}: ${cp}`);
+              } else if (st.class === FailureBudget) {
+                // token threshold — already warned inside executeSubtask, treat as not failed but still marked
+                // keep as warning already recorded
               }
             }
           } catch (err) {
@@ -594,6 +979,7 @@ export class Agent {
             const msg = err instanceof Error ? err.message : String(err);
             this.subtaskOutcomes.set(diff.newPath, { completed: false, error: msg });
             this.warnings.push({ type: "subtask_error", file: diff.newPath, message: msg });
+            this.markFailed(diff, FailureProvider, msg);
             console.error(`[pi-review] Subtask panic for ${diff.newPath}: ${msg}`);
           } finally {
             sem.release();
@@ -603,17 +989,33 @@ export class Agent {
 
         try {
           const result = await this.executeSubtask(taskSignal, diff);
-          this.subtaskOutcomes.set(diff.newPath, { completed: result.completed, stop: result.stop, error: result.error?.message });
-          if (!result.completed && result.error !== null) {
+          const stopStr2 = result.stop !== undefined ? (typeof result.stop === "string" ? result.stop : (result.stop as { class: string }).class) : undefined;
+          this.subtaskOutcomes.set(diff.newPath, { completed: result.completed, stop: stopStr2, error: result.error?.message });
+          if (result.completed) this.markCompleted(diff);
+          else if (result.error !== null && result.error !== undefined) this.markFailed(diff, classifyItemError(result.error)[0], classifyItemError(result.error)[1]);
+          else if (result.stop !== undefined) {
+            const st = result.stop as unknown as { class: FailureClass; reason: string; checkpoint: string; reportAsError?: boolean };
+            this.markFailed(diff, st.class ?? FailureBudget, st.reason ?? "budget");
+          }
+          if (!result.completed && result.error !== null && result.error !== undefined) {
             failed++;
             this.warnings.push({ type: "subtask_error", file: diff.newPath, message: result.error.message });
             console.error(`[pi-review] Subtask error for ${diff.newPath}: ${result.error.message}`);
+          } else if (!result.completed && result.stop !== undefined) {
+            const st = result.stop as unknown as { class: FailureClass; reason: string; checkpoint: string; reportAsError?: boolean };
+            if (st.reportAsError) {
+              failed++;
+              const cp = st.checkpoint ?? st.reason;
+              this.warnings.push({ type: "subtask_error", file: diff.newPath, message: cp });
+              console.error(`[pi-review] Subtask error for ${diff.newPath}: ${cp}`);
+            }
           }
         } catch (err) {
           failed++;
           const msg = err instanceof Error ? err.message : String(err);
           this.subtaskOutcomes.set(diff.newPath, { completed: false, error: msg });
           this.warnings.push({ type: "subtask_error", file: diff.newPath, message: msg });
+          this.markFailed(diff, FailureProvider, msg);
           console.error(`[pi-review] Subtask panic for ${diff.newPath}: ${msg}`);
         } finally {
           if (timeoutId !== null) clearTimeout(timeoutId);
@@ -645,11 +1047,17 @@ export class Agent {
 
   private async executeSubtask(
     signal: AbortSignal,
-    d: Diff,
-  ): Promise<{ completed: boolean; stop?: string; error: Error | null }> {
+    dRaw: Diff | unknown,
+  ): Promise<{ completed: boolean; stop?: { class: FailureClass; reason: string; checkpoint: string; reportAsError?: boolean }; error: Error | null }> {
+    const d = normalizeDiff(dRaw);
     if (signal.aborted) {
       const reason = (signal as AbortSignal & { reason?: unknown }).reason;
-      return { completed: false, error: reason instanceof Error ? reason : new Error(String(reason ?? "aborted")) };
+      const err = reason instanceof Error ? reason : (reason !== undefined ? new Error(String(reason)) : new Error("context canceled"));
+      // Ensure the error is recognizable as cancelled via errors.Is
+      if (err.name !== "AbortError" && !err.message.includes("canceled") && !err.message.includes("cancelled")) {
+        err.name = "AbortError";
+      }
+      return { completed: false, error: err };
     }
 
     const newPath = d.newPath;
@@ -706,23 +1114,23 @@ export class Agent {
       const msg = `prompt tokens (${tokenCount}) exceed 80% of max_tokens(${maxAllowed})`;
       console.error(`[pi-review] WARNING: ${msg} for ${newPath}`);
       this.warnings.push({ type: "token_threshold_exceeded", file: newPath, message: msg });
-      return { completed: false, stop: "budget_exceeded", error: null };
+      try { this.runner.RecordWarning("token_threshold_exceeded", newPath, msg); } catch {}
+      return { completed: false, stop: { class: FailureBudget, reason: "prompt exceeded the configured token budget", checkpoint: msg }, error: null };
     }
 
     // Delegate to llmloop Runner
     // Runner expects Message[] shape from compression.ts; ChatMessage is compatible (role/content).
     const runnerMessages = messages as unknown as import("../llmloop/compression.js").Message[];
     let completed = false;
-    let stop: string | undefined;
+    let stop: { class: FailureClass; reason: string; checkpoint: string; reportAsError?: boolean } | undefined;
     try {
       const res = await this.runner.RunPerFile(signal, runnerMessages, newPath);
       completed = res.completed;
-      // Map MainLoopStop to string for caller
       if (!completed) {
-        if (res.stop === 1) stop = "budget_exceeded";
-        else if (res.stop === 2) stop = "empty_rounds";
-        else if (res.stop === 3) stop = "compression";
-        else stop = "max_rounds";
+        if (res.stop === 1) stop = { class: FailureBudget, reason: "reached the maximum tool-request rounds without finishing", checkpoint: "main_task did not complete before stopping", reportAsError: true };
+        else if (res.stop === 2) stop = { class: FailureUnknown, reason: "main task stopped before completing", checkpoint: "main_task did not complete before stopping", reportAsError: true };
+        else if (res.stop === 3) stop = { class: FailureUnknown, reason: "main task stopped before completing", checkpoint: "main_task did not complete before stopping", reportAsError: true };
+        else stop = { class: FailureBudget, reason: "reached the maximum tool-request rounds without finishing", checkpoint: "main_task did not complete before stopping", reportAsError: true };
       }
     } catch (err) {
       const e = err instanceof Error ? err : new Error(String(err));
@@ -730,25 +1138,20 @@ export class Agent {
     }
 
     if (completed) {
-      // Drain per-file async comment workers before filtering, mirroring Go's AwaitKey(newPath)
-      // This must be keyed to newPath to avoid racing with other files' Submit calls.
       try {
         if (this.commentWorkerPool) {
           await this.commentWorkerPool.AwaitKey(newPath);
         }
-      } catch {
-        // best-effort
-      }
+      } catch {}
       await this.executeReviewFilter(signal, d, newPath);
     }
 
     if (!completed && stop === undefined) {
-      // Treat as budget unknown catch-all per Go classifyMainLoopStop
-      stop = "unknown";
+      stop = { class: FailureUnknown, reason: "main task stopped before completing", checkpoint: "main_task did not complete before stopping", reportAsError: true };
     }
 
     if (!completed) {
-      return { completed: false, stop: stop ?? "unknown", error: null };
+      return { completed: false, stop, error: null };
     }
     return { completed: true, error: null };
   }
@@ -783,25 +1186,45 @@ export class Agent {
       maxTokens: this.args.template.MaxCompletionTokens ?? this.args.template.MaxTokens,
     };
 
-    let resp: { content: string };
-    const completionsFn = client["CompletionsWithCtx"] as ((sig: AbortSignal, r: unknown) => Promise<{ content: string }>) | undefined;
-    const completeFn = client["complete"] as ((sig: AbortSignal, r: unknown) => Promise<{ content: string }>) | undefined;
+    let resp: unknown;
+    const completionsFn = client["CompletionsWithCtx"] as ((sig: unknown, r: unknown) => Promise<unknown>) | undefined;
+    const completeFn = client["complete"] as ((sig: unknown, r: unknown) => Promise<unknown>) | undefined;
     if (typeof completionsFn === "function") {
-      resp = await completionsFn.call(client, signal, req);
+      // Try AbortSignal first, then context-like
+      try { resp = await completionsFn.call(client, signal, req); } catch (e) { throw e; }
     } else if (typeof completeFn === "function") {
       resp = await completeFn.call(client, signal, req);
     } else {
       throw new Error("llmClient must provide complete(signal, req) or CompletionsWithCtx(signal, req)");
     }
-
-    // Record usage if present (best-effort)
-    const usage = (resp as unknown as { usage?: { PromptTokens?: number; CompletionTokens?: number } }).usage;
-    if (usage !== undefined) {
-      this.runner.RecordUsage(usage as unknown as never);
+    // Extract content from either Pi or Go shape
+    const extract = (r: unknown): string => {
+      if (r === null || r === undefined) return "";
+      const obj = r as Record<string, unknown>;
+      if (typeof obj["content"] === "string") return obj["content"] as string;
+      if (typeof obj["Content"] === "string") return obj["Content"] as string;
+      const choices = obj["Choices"] as unknown;
+      if (Array.isArray(choices) && choices.length > 0) {
+        const first = choices[0] as Record<string, unknown>;
+        const msg = first["Message"] as Record<string, unknown> | undefined;
+        if (msg !== undefined) {
+          const c = msg["Content"];
+          if (typeof c === "string") return c;
+          if (c !== null && typeof c === "object" && typeof (c as Record<string, unknown>)["valueOf"] === "function") return String(c);
+        }
+      }
+      // Fallback: if resp is string
+      if (typeof r === "string") return r;
+      return "";
+    };
+    const content = extract(resp);
+    // Record usage if present (best-effort) — handle both usages
+    const usageRaw = (resp as Record<string, unknown>)["usage"] ?? (resp as Record<string, unknown>)["Usage"];
+    if (usageRaw !== undefined && usageRaw !== null && typeof usageRaw === "object") {
+      this.runner.RecordUsage(usageRaw as unknown as never);
     }
-
     console.error(`[pi-review] Plan completed for ${newPath}`);
-    return resp.content ?? "";
+    return content ?? "";
   }
 
   /**
@@ -838,14 +1261,14 @@ export class Agent {
       maxTokens: this.args.template.MaxCompletionTokens ?? this.args.template.MaxTokens,
     };
 
-    let resp: { content: string; usage?: unknown } | null = null;
-    const completionsFn = client["CompletionsWithCtx"] as ((sig: AbortSignal, r: unknown) => Promise<{ content: string; usage?: unknown }>) | undefined;
-    const completeFn = client["complete"] as ((sig: AbortSignal, r: unknown) => Promise<{ content: string; usage?: unknown }>) | undefined;
+    let resp: unknown = null;
+    const completionsFn2 = client["CompletionsWithCtx"] as ((sig: unknown, r: unknown) => Promise<unknown>) | undefined;
+    const completeFn2 = client["complete"] as ((sig: unknown, r: unknown) => Promise<unknown>) | undefined;
     try {
-      if (typeof completionsFn === "function") {
-        resp = await completionsFn.call(client, signal, req);
-      } else if (typeof completeFn === "function") {
-        resp = await completeFn.call(client, signal, req);
+      if (typeof completionsFn2 === "function") {
+        resp = await completionsFn2.call(client, signal, req);
+      } else if (typeof completeFn2 === "function") {
+        resp = await completeFn2.call(client, signal, req);
       } else {
         throw new Error("llmClient must provide complete(signal, req) or CompletionsWithCtx(signal, req)");
       }
@@ -854,13 +1277,26 @@ export class Agent {
       return;
     }
     if (!resp) return;
-    const usage = (resp as unknown as { usage?: { PromptTokens?: number; CompletionTokens?: number; CacheReadTokens?: number; CacheWriteTokens?: number } }).usage;
-    if (usage) {
-      try {
-        this.runner.RecordUsage(usage as unknown as never);
-      } catch {}
+    const usage2 = (resp as Record<string, unknown>)["usage"] ?? (resp as Record<string, unknown>)["Usage"];
+    if (usage2 !== null && usage2 !== undefined && typeof usage2 === "object") {
+      try { this.runner.RecordUsage(usage2 as unknown as never); } catch {}
     }
-    const rawContent = (resp as unknown as { content?: string }).content ?? (resp as unknown as { Content?: string }).Content ?? "";
+    const extract2 = (r: unknown): string => {
+      const obj = r as Record<string, unknown>;
+      if (typeof obj["content"] === "string") return obj["content"] as string;
+      if (typeof obj["Content"] === "string") return obj["Content"] as string;
+      const choices = obj["Choices"] as unknown;
+      if (Array.isArray(choices) && choices.length > 0) {
+        const first = choices[0] as Record<string, unknown>;
+        const msg = first["Message"] as Record<string, unknown> | undefined;
+        if (msg !== undefined) {
+          const c = msg["Content"];
+          if (typeof c === "string") return c;
+        }
+      }
+      return "";
+    };
+    const rawContent = extract2(resp);
     const indices = parseFilterResponse(rawContent, comments.length);
     if (!indices || indices.size === 0) return;
     try {

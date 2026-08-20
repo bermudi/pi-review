@@ -4048,18 +4048,36 @@
       "tests": [
         {
           "name": "TestDispatchSubtasks_TokenBudgetBeforeFirstFileIsFailed",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/agent/budget.test.ts",
+              "title": "budget before first file yields failed manifest with all budget failures"
+            }
+          ]
         },
         {
           "name": "TestDispatchSubtasks_TokenBudgetStopsDispatch",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/agent/budget.test.ts",
+              "title": "dispatch stops via token look-ahead with warning and partial manifest"
+            }
+          ]
         },
         {
           "name": "TestDispatchSubtasks_UnlimitedBudget",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/agent/budget.test.ts",
+              "title": "unlimited budget runs all files and does not set BudgetExceeded"
+            }
+          ]
         }
       ]
     },
@@ -4073,118 +4091,256 @@
       "tests": [
         {
           "name": "TestAgent_Getters",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/agent/coverage.test.ts",
+              "title": "TestAgent_Getters"
+            }
+          ]
         },
         {
           "name": "TestAgent_RecordWarning",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/agent/coverage.test.ts",
+              "title": "TestAgent_RecordWarning"
+            }
+          ]
         },
         {
           "name": "TestAgentFilesReviewedCountsDispatchableDiffs",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/agent/coverage.test.ts",
+              "title": "TestAgentFilesReviewedCountsDispatchableDiffs"
+            }
+          ]
         },
         {
           "name": "TestClassifyItemError",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/agent/coverage.test.ts",
+              "title": "TestClassifyItemError"
+            }
+          ]
         },
         {
           "name": "TestDispatchSubtasks_AllFailed",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/agent/coverage.test.ts",
+              "title": "TestDispatchSubtasks_AllFailed"
+            }
+          ]
         },
         {
           "name": "TestDispatchSubtasks_AllFilteredBySize",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/agent/coverage.test.ts",
+              "title": "TestDispatchSubtasks_AllFilteredBySize"
+            }
+          ]
         },
         {
           "name": "TestExecutePlanPhase",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/agent/coverage.test.ts",
+              "title": "TestExecutePlanPhase"
+            }
+          ]
         },
         {
           "name": "TestExecutePlanPhase_LLMError",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/agent/coverage.test.ts",
+              "title": "TestExecutePlanPhase_LLMError"
+            }
+          ]
         },
         {
           "name": "TestExecuteReviewFilter_LLMError",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/agent/coverage.test.ts",
+              "title": "TestExecuteReviewFilter_LLMError"
+            }
+          ]
         },
         {
           "name": "TestExecuteReviewFilter_NoComments",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/agent/coverage.test.ts",
+              "title": "TestExecuteReviewFilter_NoComments"
+            }
+          ]
         },
         {
           "name": "TestExecuteReviewFilter_NoFilterTask",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/agent/coverage.test.ts",
+              "title": "TestExecuteReviewFilter_NoFilterTask"
+            }
+          ]
         },
         {
           "name": "TestExecuteReviewFilter_RemovesComments",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/agent/coverage.test.ts",
+              "title": "TestExecuteReviewFilter_RemovesComments"
+            }
+          ]
         },
         {
           "name": "TestExecuteReviewFilter_SkipFilter",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/agent/coverage.test.ts",
+              "title": "TestExecuteReviewFilter_SkipFilter"
+            }
+          ]
         },
         {
           "name": "TestExecuteReviewFilter_WithTimeout",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/agent/coverage.test.ts",
+              "title": "TestExecuteReviewFilter_WithTimeout"
+            }
+          ]
         },
         {
           "name": "TestExecuteSubtask_ContextCancelled",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/agent/coverage.test.ts",
+              "title": "TestExecuteSubtask_ContextCancelled"
+            }
+          ]
         },
         {
           "name": "TestExecuteSubtask_EmptyMainTask",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/agent/coverage.test.ts",
+              "title": "TestExecuteSubtask_EmptyMainTask"
+            }
+          ]
         },
         {
           "name": "TestExecuteSubtask_TokenThresholdExceeded",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/agent/coverage.test.ts",
+              "title": "TestExecuteSubtask_TokenThresholdExceeded"
+            }
+          ]
         },
         {
           "name": "TestExecuteSubtask_WithPlanPhase",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/agent/coverage.test.ts",
+              "title": "TestExecuteSubtask_WithPlanPhase"
+            }
+          ]
         },
         {
           "name": "TestFilterDiffs",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/agent/coverage.test.ts",
+              "title": "TestFilterDiffs"
+            }
+          ]
         },
         {
           "name": "TestFindDiff",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/agent/coverage.test.ts",
+              "title": "TestFindDiff"
+            }
+          ]
         },
         {
           "name": "TestInjectDiffMap",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/agent/coverage.test.ts",
+              "title": "TestInjectDiffMap"
+            }
+          ]
         },
         {
           "name": "TestNewCommentWorkerPool",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/agent/coverage.test.ts",
+              "title": "TestNewCommentWorkerPool"
+            }
+          ]
         },
         {
           "name": "TestResolveSystemRule",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/agent/coverage.test.ts",
+              "title": "TestResolveSystemRule"
+            }
+          ]
         }
       ]
     },
