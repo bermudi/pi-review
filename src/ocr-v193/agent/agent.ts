@@ -18,7 +18,7 @@ import type { Preview, PreviewEntry, ExcludeReason } from "../model/preview.js";
 import { ExcludeNone, ExcludeDeleted } from "../model/preview.js";
 import { reviewModeString, stripEmptyPlanBlock } from "./util.js";
 import { countTokens, PromptTokenLimit, StripMarkdownFences } from "../llmloop/compression.js";
-import { Runner } from "../llmloop/loop.js";
+import { Runner, sessionTaskKey } from "../llmloop/loop.js";
 import type { AgentWarning, AnyLlmClient, ToolDef } from "../llmloop/types.js";
 import type { Template, ChatMessage, LlmConversation } from "../template/template.js";
 import type { FileFilter } from "../rules/system_rules.js";
@@ -488,7 +488,11 @@ export class Agent {
       toolRegistry: toolRegistry as unknown as never,
       diffLookup: diffLookup as unknown as never,
       commentWorkerPool: this.commentWorkerPool as unknown as never,
-    });
+      session: this.sessionHistory as unknown as never,
+      Session: this.sessionHistory as unknown as never,
+      newRequestMeta: this.newRequestMeta.bind(this) as unknown as never,
+      NewRequestMeta: this.newRequestMeta.bind(this) as unknown as never,
+    } as unknown as import("../llmloop/types.js").RunnerDeps);
   }
 
   // -- public getters mirroring Go
@@ -796,6 +800,18 @@ export class Agent {
       repo = createHash("sha256").update(raw, "utf-8").digest("hex");
     }
     return { mode, sourceArtifactSHA256: source, ruleConfigSHA256: rule, repositorySHA256: repo };
+  }
+
+  private newRequestMeta(filePath: string, taskType: string, requestNo: number): import("../llmloop/types.js").RequestMeta {
+    const anyArgs = this.args as unknown as Record<string, unknown>;
+    const provider = (anyArgs["provider"] ?? anyArgs["Provider"] ?? "") as string;
+    const model = (anyArgs["model"] ?? anyArgs["Model"] ?? "") as string;
+    return { provider, model, filePath, taskType, requestNo };
+  }
+
+  // Alias for Go naming
+  private NewRequestMeta(filePath: string, taskType: string, requestNo: number): import("../llmloop/types.js").RequestMeta {
+    return this.newRequestMeta(filePath, taskType, requestNo);
   }
 
   private coverageItem(d: Diff): CoverageItem {
@@ -1460,25 +1476,50 @@ export class Agent {
       return { role: m.role, content };
     });
 
+    const sess = this.sessionHistory;
+    let rec: import("../session/history.js").TaskRecord | undefined;
+    let start = 0;
+    if (sess) {
+      const fs = sess.GetOrCreateFileSession(newPath);
+      rec = fs.AppendTaskRecord("plan_task" as unknown as import("../session/history.js").TaskType, [...msgs] as unknown as import("../session/history.js").Message[]);
+      start = Date.now();
+    }
+    const meta = rec ? this.newRequestMeta(newPath, "plan_task", rec.requestNo) : undefined;
+    const baseSessionId = sess?.sessionId ?? this.args.sessionId ?? "";
+    const sessionId = sess ? sessionTaskKey(baseSessionId, "plan_task", newPath) : baseSessionId;
+
     // Use llmClient directly for plan — single request, no tool loop.
     // We adapt to both shapes: llmClient.complete(signal, req) or CompletionsWithCtx.
     const client = this.args.llmClient as unknown as Record<string, unknown>;
-    const req = {
+    const req: Record<string, unknown> = {
       model: this.args.model,
       messages: msgs as unknown as import("../llmloop/compression.js").Message[],
       maxTokens: this.args.template.MaxCompletionTokens ?? this.args.template.MaxTokens,
+      sessionId,
+      ...(meta ? { requestMeta: meta } : {}),
     };
 
     let resp: unknown;
     const completionsFn = client["CompletionsWithCtx"] as ((sig: unknown, r: unknown) => Promise<unknown>) | undefined;
     const completeFn = client["complete"] as ((sig: unknown, r: unknown) => Promise<unknown>) | undefined;
-    if (typeof completionsFn === "function") {
-      // Try AbortSignal first, then context-like
-      try { resp = await completionsFn.call(client, signal, req); } catch (e) { throw e; }
-    } else if (typeof completeFn === "function") {
-      resp = await completeFn.call(client, signal, req);
-    } else {
+    const callWithMeta = async (sig: unknown, r: Record<string, unknown>): Promise<unknown> => {
+      // For Go-style clients that read RequestMeta from context, we need to pass it via a context-like object.
+      // Our Fake clients in tests read via llm.RequestMetaFromContext, but Pi's transport reads from req.requestMeta.
+      // To support both, we try to pass signal with attached meta if client expects context.
+      // For now, just call with signal and req containing requestMeta.
+      if (typeof completionsFn === "function") {
+        return completionsFn.call(client, sig, r);
+      }
+      if (typeof completeFn === "function") {
+        return completeFn.call(client, sig, r);
+      }
       throw new Error("llmClient must provide complete(signal, req) or CompletionsWithCtx(signal, req)");
+    };
+    try {
+      resp = await callWithMeta(signal, req);
+    } catch (e) {
+      if (rec) rec.SetError(e instanceof Error ? e : new Error(String(e)), Date.now() - start);
+      throw e;
     }
     // Extract content from either Pi or Go shape
     const extract = (r: unknown): string => {
@@ -1503,8 +1544,14 @@ export class Agent {
     const content = extract(resp);
     // Record usage if present (best-effort) — handle both usages
     const usageRaw = (resp as Record<string, unknown>)["usage"] ?? (resp as Record<string, unknown>)["Usage"];
+    const usageForRec = usageRaw !== undefined && usageRaw !== null && typeof usageRaw === "object" ? (usageRaw as Record<string, unknown>) : null;
     if (usageRaw !== undefined && usageRaw !== null && typeof usageRaw === "object") {
       this.runner.RecordUsage(usageRaw as unknown as never);
+    }
+    if (rec) {
+      const toolCallsForRec: Array<{ id: string; function: { name: string; arguments: string } }> = [];
+      // Plan has no tool calls, but record content
+      rec.SetResponse({ content: content ?? "", toolCalls: toolCallsForRec, model: this.args.model, usage: usageForRec ? { promptTokens: (usageForRec["PromptTokens"] as number ?? 0), completionTokens: (usageForRec["CompletionTokens"] as number ?? 0), cacheReadTokens: (usageForRec["CacheReadTokens"] as number ?? 0), cacheWriteTokens: (usageForRec["CacheWriteTokens"] as number ?? 0) } : undefined }, Date.now() - start);
     }
     console.error(`[pi-review] Plan completed for ${newPath}`);
     return content ?? "";
@@ -1537,11 +1584,25 @@ export class Agent {
       return { role: m.role, content };
     });
 
+    const sessF = this.sessionHistory;
+    let recF: import("../session/history.js").TaskRecord | undefined;
+    let startF = 0;
+    if (sessF) {
+      const fsF = sessF.GetOrCreateFileSession(newPath);
+      recF = fsF.AppendTaskRecord("review_filter_task" as unknown as import("../session/history.js").TaskType, [...messages] as unknown as import("../session/history.js").Message[]);
+      startF = Date.now();
+    }
+    const metaF = recF ? this.newRequestMeta(newPath, "review_filter_task", recF.requestNo) : undefined;
+    const baseSidF = sessF?.sessionId ?? this.args.sessionId ?? "";
+    const sessionIdF = sessF ? sessionTaskKey(baseSidF, "review_filter_task", newPath) : baseSidF;
+
     const client = this.args.llmClient as unknown as Record<string, unknown>;
-    const req = {
+    const req: Record<string, unknown> = {
       model: this.args.model,
       messages: messages as unknown as import("../llmloop/compression.js").Message[],
       maxTokens: this.args.template.MaxCompletionTokens ?? this.args.template.MaxTokens,
+      sessionId: sessionIdF,
+      ...(metaF ? { requestMeta: metaF } : {}),
     };
 
     let resp: unknown = null;
@@ -1556,13 +1617,24 @@ export class Agent {
         throw new Error("llmClient must provide complete(signal, req) or CompletionsWithCtx(signal, req)");
       }
     } catch (err) {
+      if (recF) recF.SetError(err instanceof Error ? err : new Error(String(err)), Date.now() - startF);
       console.error(`[pi-review] Review filter failed for ${newPath}: ${String((err as Error).message)}`);
       return;
     }
-    if (!resp) return;
+    if (!resp) {
+      if (recF) recF.SetError(new Error("empty response"), Date.now() - startF);
+      return;
+    }
     const usage2 = (resp as Record<string, unknown>)["usage"] ?? (resp as Record<string, unknown>)["Usage"];
     if (usage2 !== null && usage2 !== undefined && typeof usage2 === "object") {
       try { this.runner.RecordUsage(usage2 as unknown as never); } catch {}
+    }
+    if (recF) {
+      const rawForRec = (resp as Record<string, unknown>)["content"] as string | undefined ?? (resp as Record<string, unknown>)["Content"] as string | undefined ?? "";
+      const usageForRec = usage2 as unknown as { PromptTokens?: number; CompletionTokens?: number; promptTokens?: number; completionTokens?: number } | undefined;
+      const promptT = (usageForRec as unknown as { PromptTokens?: number; promptTokens?: number })?.PromptTokens ?? (usageForRec as unknown as { promptTokens?: number })?.promptTokens ?? 0;
+      const completionT = (usageForRec as unknown as { CompletionTokens?: number; completionTokens?: number })?.CompletionTokens ?? (usageForRec as unknown as { completionTokens?: number })?.completionTokens ?? 0;
+      recF.SetResponse({ content: typeof rawForRec === "string" ? rawForRec : "", toolCalls: [], model: this.args.model, usage: { promptTokens: promptT, completionTokens: completionT } }, Date.now() - startF);
     }
     const extract2 = (r: unknown): string => {
       const obj = r as Record<string, unknown>;

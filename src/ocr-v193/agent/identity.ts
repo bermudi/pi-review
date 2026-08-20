@@ -151,80 +151,56 @@ export interface ResolveIdentityArgs {
   readonly sealedInput?: InputResolution | null;
   readonly fileFilter?: unknown;
   readonly systemRule?: unknown;
+  readonly template?: unknown;
+  readonly Template?: unknown;
 }
 
 export async function resolveIdentity(
   args: ResolveIdentityArgs,
   signal?: AbortSignal,
 ): Promise<SealedInput> {
-  // Resolve the frozen input identity without side effects (no session, no manifest).
   let sealed: InputResolution | null = null;
   try {
     sealed = await resolveInputBeforeDiff(args.repoDir, args.from, args.to, args.commit, signal);
   } catch (err) {
     throw err;
   }
-  if (sealed !== null) {
-    // In the Go path args.SealedInput = resolution before loadDiffs; we mirror by using it for provider construction below.
+  // Build a minimal Agent to reuse its selection and identity logic exactly.
+  const { Agent } = await import("./agent.js");
+  const dummyClient = { complete: async () => ({ content: "" }), CompletionsWithCtx: async () => ({ content: "" }) } as unknown as never;
+  let maxTokens = 4000;
+  const tmplRaw = (args as unknown as Record<string, unknown>)["template"] ?? (args as unknown as Record<string, unknown>)["Template"];
+  if (tmplRaw !== null && typeof tmplRaw === "object") {
+    const mt = (tmplRaw as Record<string, unknown>)["MaxTokens"] ?? (tmplRaw as Record<string, unknown>)["maxTokens"];
+    if (typeof mt === "number") maxTokens = mt;
   }
-
-  // Load diffs exactly as the run would, applying the two filter passes.
-  // Use the sealed endpoints when available so the identity matches the real run.
-  let from = args.from ?? "";
-  let to = args.to ?? "";
-  let commit = args.commit ?? "";
-  if (sealed !== null && sealed.resolvedHead !== "") {
-    if (commit !== "") {
-      commit = sealed.resolvedHead;
-    } else if (sealed.resolvedBase !== "") {
-      from = sealed.resolvedBase;
-      to = sealed.resolvedHead;
-    }
-  }
-
-  let provider: Provider;
-  if (commit !== "") provider = Provider.forCommit(args.repoDir, commit, null);
-  else if (from !== "" && to !== "") provider = Provider.forRange(args.repoDir, from, to, null);
-  else provider = Provider.forWorkspace(args.repoDir, null);
-
-  const diffs = await provider.getDiff(signal);
-
-  // Apply filtering identical to the review path (filterDiffs + filterLargeDiffs) for identity.
-  // For this stub we use a minimal filter: exclude binaries and deleted via preview logic?
-  // Real logic delegates to Agent's filter; here we approximate but keep deterministic.
-  // The caller that needs exact parity should use Agent.resolveIdentity via the full Agent class.
-  const identity: RunIdentity = {
-    mode: deriveMode(args.from, args.to, args.commit),
-    sourceArtifactSHA256: "",
-    ruleConfigSHA256: "",
-    repositorySHA256: "",
+  const explicitMax = (args as unknown as Record<string, unknown>)["maxTokens"] as number | undefined;
+  if (typeof explicitMax === "number") maxTokens = explicitMax;
+  const agentArgs: Record<string, unknown> = {
+    repoDir: args.repoDir,
+    from: args.from,
+    to: args.to,
+    commit: args.commit,
+    sealedInput: sealed,
+    fileFilter: (args as unknown as Record<string, unknown>)["fileFilter"] ?? null,
+    systemRule: (args as unknown as Record<string, unknown>)["systemRule"] ?? null,
+    template: { MaxTokens: maxTokens, MaxToolRequestTimes: 5, MainTask: { messages: [{ role: "user", content: "t" }] }, MemoryCompressionTask: { messages: [{ role: "system", content: "c" }] } },
+    model: "test",
+    llmClient: dummyClient,
+    mainToolDefs: [],
   };
-
-  // Compute source artifact from filtered diffs (simple: keep all non-deleted for stub).
-  const kept = diffs.filter((d) => !d.isDeleted);
-  const { reviewModeString } = await import("./util.js");
-  const modeStr = reviewModeString(args.from ?? "", args.to ?? "", args.commit ?? "");
-  let sourceHash = "";
-  try {
-    sourceHash = sourceArtifactSHA256For(modeStr, kept, (d) => fingerprintForDiff(modeStr, d), (d) => itemIdForDiff(modeStr, d));
-  } catch {
-    sourceHash = hashFields(...kept.map((d) => d.newPath));
-  }
-
-  // Rule config hash — simplified.
-  identity as unknown as Record<string, unknown>;
-  const repoRaw = await provider.remoteIdentity(signal);
-  const repoHash = repositorySHA256(repoRaw);
-
-  return {
-    identity: {
-      mode: modeStr,
-      sourceArtifactSHA256: sourceHash,
-      ruleConfigSHA256: identity.ruleConfigSHA256,
-      repositorySHA256: repoHash,
-    },
-    resolution: sealed ?? (await provider.resolveInput(signal)),
-  };
+  // Propagate explicit fileFilter/systemRule lower case variants
+  if ((args as unknown as Record<string, unknown>)["FileFilter"] !== undefined) agentArgs["fileFilter"] = (args as unknown as Record<string, unknown>)["FileFilter"];
+  if ((args as unknown as Record<string, unknown>)["SystemRule"] !== undefined) agentArgs["systemRule"] = (args as unknown as Record<string, unknown>)["SystemRule"];
+  const agent = new Agent(agentArgs as unknown as never);
+  await (agent as unknown as { loadDiffs: (s?: AbortSignal) => Promise<void> }).loadDiffs(signal);
+  // Apply same two filter passes as the run
+  const anyAgent = agent as unknown as { filterDiffs: (d: unknown[]) => unknown[]; filterLargeDiffs: (d: unknown[]) => unknown[]; diffs: unknown[]; runIdentity: () => RunIdentity; inputResolution: InputResolution };
+  anyAgent.diffs = anyAgent.filterDiffs(anyAgent.diffs);
+  anyAgent.diffs = anyAgent.filterLargeDiffs(anyAgent.diffs);
+  const identity = anyAgent.runIdentity();
+  const resolution = (agent as unknown as { inputResolution: InputResolution }).inputResolution ?? sealed ?? { resolvedBase: "", resolvedHead: "", exactRange: "" };
+  return { identity, resolution };
 }
 
 function deriveMode(from: string | undefined, to: string | undefined, commit: string | undefined): string {

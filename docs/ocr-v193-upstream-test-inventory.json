@@ -4543,23 +4543,47 @@
       "tests": [
         {
           "name": "TestResolveIdentityMatchesRunPath",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/agent/identity.test.ts",
+              "title": "TestResolveIdentityMatchesRunPath"
+            }
+          ]
         },
         {
           "name": "TestResolveIdentityTracksConfigChanges",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/agent/identity.test.ts",
+              "title": "TestResolveIdentityTracksConfigChanges"
+            }
+          ]
         },
         {
           "name": "TestResolveInputBeforeDiffCommit",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/agent/identity.test.ts",
+              "title": "TestResolveInputBeforeDiffCommit"
+            }
+          ]
         },
         {
           "name": "TestResolveInputBeforeDiffRejectsInvalidRefs",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/agent/identity.test.ts",
+              "title": "TestResolveInputBeforeDiffRejectsInvalidRefs"
+            }
+          ]
         }
       ]
     },
@@ -4886,18 +4910,36 @@
       "tests": [
         {
           "name": "TestExecutePlanPhase_Identity",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/agent/retry-identity.test.ts",
+              "title": "TestExecutePlanPhase_Identity"
+            }
+          ]
         },
         {
           "name": "TestExecuteReviewFilter_Identity",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/agent/retry-identity.test.ts",
+              "title": "TestExecuteReviewFilter_Identity"
+            }
+          ]
         },
         {
           "name": "TestNewRequestMeta_IsSingleSourceOfProviderAndModel",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/agent/retry-identity.test.ts",
+              "title": "TestNewRequestMeta_IsSingleSourceOfProviderAndModel"
+            }
+          ]
         }
       ]
     },
@@ -4911,8 +4953,14 @@
       "tests": [
         {
           "name": "TestSealedInputPinsRunToAdmittedCommits",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/agent/sealed-input.test.ts",
+              "title": "TestSealedInputPinsRunToAdmittedCommits"
+            }
+          ]
         }
       ]
     },
