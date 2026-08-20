@@ -13062,48 +13062,102 @@
       "tests": [
         {
           "name": "TestFileFind_BlankQuery",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/tool/file-find.test.ts",
+              "title": "TestFileFind_BlankQuery"
+            }
+          ]
         },
         {
           "name": "TestFileFind_CaseSensitive",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/tool/file-find.test.ts",
+              "title": "TestFileFind_CaseSensitive"
+            }
+          ]
         },
         {
           "name": "TestFileFind_GitRepo_CommitMode",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/tool/file-find.test.ts",
+              "title": "TestFileFind_GitRepo_CommitMode"
+            }
+          ]
         },
         {
           "name": "TestFileFind_GitRepo_WithRunner",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/tool/file-find.test.ts",
+              "title": "TestFileFind_GitRepo_WithRunner"
+            }
+          ]
         },
         {
           "name": "TestFileFind_GitRepo_WorkspaceMode",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/tool/file-find.test.ts",
+              "title": "TestFileFind_GitRepo_WorkspaceMode"
+            }
+          ]
         },
         {
           "name": "TestFileFind_NonGitDirectoryFallback",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/tool/file-find.test.ts",
+              "title": "TestFileFind_NonGitDirectoryFallback"
+            }
+          ]
         },
         {
           "name": "TestFileFind_NonGitDirectoryNoMatch",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/tool/file-find.test.ts",
+              "title": "TestFileFind_NonGitDirectoryNoMatch"
+            }
+          ]
         },
         {
           "name": "TestFileFindProvider_Tool",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/tool/file-find.test.ts",
+              "title": "TestFileFindProvider_Tool"
+            }
+          ]
         },
         {
           "name": "TestShouldSkipFile",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/tool/file-find.test.ts",
+              "title": "TestShouldSkipFile"
+            }
+          ]
         }
       ]
     },
@@ -13117,28 +13171,58 @@
       "tests": [
         {
           "name": "TestDiffMap_Get",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/tool/file-read-diff.test.ts",
+              "title": "TestDiffMap_Get"
+            }
+          ]
         },
         {
           "name": "TestFileReadDiffProvider_Execute",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/tool/file-read-diff.test.ts",
+              "title": "TestFileReadDiffProvider_Execute"
+            }
+          ]
         },
         {
           "name": "TestFileReadDiffProvider_SetDiffMap",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/tool/file-read-diff.test.ts",
+              "title": "TestFileReadDiffProvider_SetDiffMap"
+            }
+          ]
         },
         {
           "name": "TestFileReadDiffProvider_Tool",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/tool/file-read-diff.test.ts",
+              "title": "TestFileReadDiffProvider_Tool"
+            }
+          ]
         },
         {
           "name": "TestNewDiffMap_DefensiveCopy",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/tool/file-read-diff.test.ts",
+              "title": "TestNewDiffMap_DefensiveCopy"
+            }
+          ]
         }
       ]
     },

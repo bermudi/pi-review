@@ -15,6 +15,7 @@ import { spawn } from "node:child_process";
 
 import { CodeSearch, FileFind, FileRead, FileReadDiff, type Tool } from "./types.js";
 import { canonicalPath, withinBase } from "../pathutil.js";
+import { loadGitignorePatterns, isPathExcluded } from "../diff/gitignore.js";
 
 // ---------------------------------------------------------------------------
 // ReviewMode — mirrors Go `type ReviewMode int`
@@ -491,9 +492,11 @@ export const newFileRead = NewFileRead;
 export class DiffMap {
   private readonly m: Map<string, string>;
 
-  constructor(m: Record<string, string> | Map<string, string>) {
+  constructor(m: Record<string, string> | Map<string, string> | null | undefined) {
     if (m instanceof Map) {
       this.m = new Map(m);
+    } else if (m == null) {
+      this.m = new Map();
     } else {
       this.m = new Map(Object.entries(m));
     }
@@ -511,8 +514,8 @@ export class DiffMap {
   }
 }
 
-export function NewDiffMap(m: Record<string, string> | Map<string, string>): DiffMap {
-  return new DiffMap(m);
+export function NewDiffMap(m: Record<string, string> | Map<string, string> | null | undefined): DiffMap {
+  return new DiffMap(m as Record<string, string>);
 }
 export const newDiffMap = NewDiffMap;
 
@@ -864,6 +867,7 @@ export class FileFindProvider {
 
   private async listWalkFiles(signal: AbortSignal | undefined): Promise<string[]> {
     const root = this.FileReader_.RepoDir;
+    const patterns = loadGitignorePatterns(root);
     const files: string[] = [];
 
     async function walk(dir: string): Promise<void> {
@@ -878,10 +882,10 @@ export class FileFindProvider {
         const full = path.join(dir, entry.name);
         const rel = path.relative(root, full).split(path.sep).join("/");
         if (entry.isDirectory()) {
-          if (rel === ".git" || rel.startsWith(".git/")) continue;
-          if (["node_modules", "vendor", "dist", ".next"].includes(entry.name)) continue;
+          if (isPathExcluded(rel, patterns)) continue;
           await walk(full);
         } else if (entry.isFile()) {
+          if (isPathExcluded(rel, patterns)) continue;
           if (shouldSkipFile(rel)) continue;
           files.push(rel);
         }
