@@ -302,6 +302,10 @@ const localCoverage: readonly LocalCoverage[] = [
     localPath: "test/ocr-v193/diff/git-resolve.test.ts",
     upstreamPaths: ["internal/diff/git_resolve_test.go"],
   },
+  {
+    localPath: "test/ocr-v193/diff/git-boundaries.test.ts",
+    upstreamPaths: ["internal/diff/git_test.go"],
+  },
 ];
 
 function git(...args: readonly string[]): string {

@@ -5627,58 +5627,124 @@
       "tests": [
         {
           "name": "TestCommitDiffMergeCommitReviewsFirstParentDiff",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/diff/git-boundaries.test.ts",
+              "title": "TestCommitDiffMergeCommitReviewsFirstParentDiff"
+            }
+          ]
         },
         {
           "name": "TestCommitDiffSurvivesExternalDiffTool",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/diff/git-boundaries.test.ts",
+              "title": "TestCommitDiffSurvivesExternalDiffTool"
+            }
+          ]
         },
         {
           "name": "TestCommitDiffTreatsOptionLikeRefAsRevision",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/diff/git-boundaries.test.ts",
+              "title": "TestCommitDiffTreatsOptionLikeRefAsRevision"
+            }
+          ]
         },
         {
           "name": "TestDiffModesPreserveNonASCIIPaths",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/diff/git-boundaries.test.ts",
+              "title": "TestDiffModesPreserveNonASCIIPaths"
+            }
+          ]
         },
         {
           "name": "TestRangeDiffDetectsRename",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/diff/git-boundaries.test.ts",
+              "title": "TestRangeDiffDetectsRename"
+            }
+          ]
         },
         {
           "name": "TestRangeDiffSurvivesExternalDiffTool",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/diff/git-boundaries.test.ts",
+              "title": "TestRangeDiffSurvivesExternalDiffTool"
+            }
+          ]
         },
         {
           "name": "TestWorkspaceDiffNoCommitsUsesStagedFallback",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/diff/git-boundaries.test.ts",
+              "title": "TestWorkspaceDiffNoCommitsUsesStagedFallback"
+            }
+          ]
         },
         {
           "name": "TestWorkspaceDiffPreservesNonASCIIUntrackedPath",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/diff/git-boundaries.test.ts",
+              "title": "TestWorkspaceDiffPreservesNonASCIIUntrackedPath"
+            }
+          ]
         },
         {
           "name": "TestWorkspaceDiffSurvivesExternalDiffTool",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/diff/git-boundaries.test.ts",
+              "title": "TestWorkspaceDiffSurvivesExternalDiffTool"
+            }
+          ]
         },
         {
           "name": "TestWorkspaceTrackedFileChangedToSymlinkDoesNotReadExternalTarget",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/diff/git-boundaries.test.ts",
+              "title": "TestWorkspaceTrackedFileChangedToSymlinkDoesNotReadExternalTarget"
+            }
+          ]
         },
         {
           "name": "TestWorkspaceUntrackedSymlinkDoesNotReadExternalTarget",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/diff/git-boundaries.test.ts",
+              "title": "TestWorkspaceUntrackedSymlinkDoesNotReadExternalTarget"
+            }
+          ]
         }
       ]
     },
