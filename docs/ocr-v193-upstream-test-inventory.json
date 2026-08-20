@@ -3948,8 +3948,14 @@
         },
         {
           "name": "TestAgentGettersNil",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/agent/helpers.test.ts",
+              "title": "TestAgentGettersNil"
+            }
+          ]
         },
         {
           "name": "TestApplyResumeReusesCompletedItemsAcrossModels",
@@ -3958,23 +3964,47 @@
         },
         {
           "name": "TestBuildChangeFilesExcept",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/agent/helpers.test.ts",
+              "title": "TestBuildChangeFilesExcept"
+            }
+          ]
         },
         {
           "name": "TestBuildFilterCommentsJSON",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/agent/helpers.test.ts",
+              "title": "TestBuildFilterCommentsJSON"
+            }
+          ]
         },
         {
           "name": "TestBuildToolDefs",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/agent/helpers.test.ts",
+              "title": "TestBuildToolDefs"
+            }
+          ]
         },
         {
           "name": "TestCountReviewable",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/agent/helpers.test.ts",
+              "title": "TestCountReviewable"
+            }
+          ]
         },
         {
           "name": "TestDispatchSubtasks_AllDeleted",
@@ -4003,38 +4033,80 @@
         },
         {
           "name": "TestExtFromPath",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/agent/helpers.test.ts",
+              "title": "TestExtFromPath"
+            }
+          ]
         },
         {
           "name": "TestFilterLargeDiffs",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/agent/helpers.test.ts",
+              "title": "TestFilterLargeDiffs"
+            }
+          ]
         },
         {
           "name": "TestFilterLargeDiffs_Boundary",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/agent/helpers.test.ts",
+              "title": "TestFilterLargeDiffs_Boundary"
+            }
+          ]
         },
         {
           "name": "TestFilterLargeDiffs_ZeroMaxTokens",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/agent/helpers.test.ts",
+              "title": "TestFilterLargeDiffs_ZeroMaxTokens"
+            }
+          ]
         },
         {
           "name": "TestFormatToolDefs",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/agent/helpers.test.ts",
+              "title": "TestFormatToolDefs"
+            }
+          ]
         },
         {
           "name": "TestParseFilterResponse",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/agent/helpers.test.ts",
+              "title": "TestParseFilterResponse"
+            }
+          ]
         },
         {
           "name": "TestReviewItemFingerprintIgnoresTrailingLineEndings",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/agent/helpers.test.ts",
+              "title": "TestReviewItemFingerprintIgnoresTrailingLineEndings"
+            }
+          ]
         }
       ]
     },

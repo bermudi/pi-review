@@ -597,6 +597,20 @@ export class Agent {
     return result;
   }
 
+  // Helpers for tests — mirror Go free functions as instance methods for white-box access
+  private buildFilterCommentsJSON(comments: LlmComment[]): string {
+    return buildFilterCommentsJSON(comments);
+  }
+  private parseFilterResponse(raw: string, total: number): Map<number, unknown> | null {
+    return parseFilterResponse(raw, total);
+  }
+  private formatToolDefs(defs: readonly ToolDef[]): string {
+    return formatToolDefs(defs);
+  }
+  private BuildToolDefs(entries: readonly ToolConfigEntry[] | null | undefined, planOnly: boolean): ToolDef[] | null {
+    return BuildToolDefs(entries, planOnly);
+  }
+
   private reviewModeForManifest(): string {
     const from = (this.args.from ?? (this.args as unknown as Record<string, unknown>)["From"] as string ?? "") as string;
     const to = (this.args.to ?? (this.args as unknown as Record<string, unknown>)["To"] as string ?? "") as string;
@@ -1510,7 +1524,7 @@ export class Agent {
 // Review filter — mirrors Go executeReviewFilter + buildFilterCommentsJSON + parseFilterResponse
 // ---------------------------------------------------------------------------
 
-function buildFilterCommentsJSON(comments: LlmComment[]): string {
+export function buildFilterCommentsJSON(comments: LlmComment[]): string {
   type FilterComment = { id: string; content: string; existing_code?: string };
   const items: FilterComment[] = comments.map((cm, i) => ({
     id: `c-${i}`,
@@ -1520,7 +1534,7 @@ function buildFilterCommentsJSON(comments: LlmComment[]): string {
   return JSON.stringify(items);
 }
 
-function parseFilterResponse(raw: string, total: number): Map<number, unknown> | null {
+export function parseFilterResponse(raw: string, total: number): Map<number, unknown> | null {
   const cleaned = StripMarkdownFences(raw);
   let ids: unknown;
   try {
@@ -1552,6 +1566,60 @@ function parseFilterResponse(raw: string, total: number): Map<number, unknown> |
 // formatToolDefs — mirrors Go formatToolDefs (simplified)
 // ---------------------------------------------------------------------------
 
+function orderedToolParameters(raw: unknown): Array<{ name: string; description: string; required: boolean }> | null {
+  if (raw === null || raw === undefined) return null;
+  let rawStr: string | null = null;
+  if (typeof raw === "string") rawStr = raw;
+  else if (typeof raw === "object" && raw !== null) {
+    try { rawStr = JSON.stringify(raw); } catch { return null; }
+  } else return null;
+  if (rawStr === null || rawStr === "") return null;
+  let parsed: unknown;
+  try { parsed = JSON.parse(rawStr) as unknown; } catch { return null; }
+  const obj = parsed as Record<string, unknown>;
+  const params = obj["parameters"] as Record<string, unknown> | undefined;
+  if (params === undefined || params === null) return null;
+  const propsRaw = params["properties"];
+  if (propsRaw === null || typeof propsRaw !== "object" || Array.isArray(propsRaw)) return null;
+  const propsRawStr = (() => {
+    try { return JSON.stringify(propsRaw); } catch { return null; }
+  })();
+  if (propsRawStr === null) return null;
+  // Extract required set
+  const requiredList = params["required"];
+  const required = new Set<string>(Array.isArray(requiredList) ? (requiredList as unknown[]).filter((x): x is string => typeof x === "string") : []);
+  // Parse properties in raw order via string scanning to preserve JSON order
+  const ordered: Array<{ name: string; description: string; required: boolean }> = [];
+  // Use JSON.parse with reviver order is insertion order, but to be faithful we decode via manual string scan
+  // Simpler: use the object's key order as given by JSON.parse which preserves insertion order per spec.
+  // For raw JSON, JSON.parse preserves order, so we can use Object.keys on parsed props.
+  const props = propsRaw as Record<string, unknown>;
+  const rawOrder = Object.keys(props);
+  // However if raw came from string, the parsed order is the raw order; if it came from object literal, order is insertion order (which for fallback test is not raw).
+  // To distinguish, check if rawStr contains "properties" and then extract order via regex.
+  let order: string[] = rawOrder;
+  try {
+    const propsIdx = rawStr.indexOf("\"properties\"");
+    if (propsIdx >= 0) {
+      const braceStart = rawStr.indexOf("{", propsIdx + 12);
+      if (braceStart >= 0) {
+        // Extract property names in order via regex
+        const propsSection = rawStr.slice(braceStart);
+        const matches = [...propsSection.matchAll(/"([^"]+)"\s*:\s*\{/g)].map(m => m[1] as string);
+        // Filter to those that are actually keys in props
+        const filtered = matches.filter(k => k !== undefined && Object.prototype.hasOwnProperty.call(props, k as string));
+        if (filtered.length === rawOrder.length) order = filtered as string[];
+      }
+    }
+  } catch {}
+  for (const k of order) {
+    const meta = props[k] as Record<string, unknown> | undefined;
+    const desc = meta !== undefined && typeof meta["description"] === "string" ? (meta["description"] as string) : "";
+    ordered.push({ name: k, description: desc, required: required.has(k) });
+  }
+  return ordered.length > 0 ? ordered : null;
+}
+
 function formatToolDefs(toolDefs: readonly ToolDef[]): string {
   if (toolDefs.length === 0) return "";
   let sb = "### Available Tools (reference only — do not call)\n";
@@ -1560,17 +1628,26 @@ function formatToolDefs(toolDefs: readonly ToolDef[]): string {
     const name = typeof fn["name"] === "string" ? (fn["name"] as string) : "unknown";
     const desc = typeof fn["description"] === "string" ? (fn["description"] as string) : "";
     sb += `- **${name}**: ${desc}\n`;
+    const rawDef = (fn["RawDefinition"] ?? fn["rawDefinition"] ?? (fn["rawDefinition"] as unknown)) as unknown;
+    const ordered = orderedToolParameters(rawDef as unknown);
+    if (ordered !== null) {
+      sb += "  Parameters:\n";
+      for (const p of ordered) {
+        const suffix = p.required ? " (required)" : "";
+        sb += `  - ${p.name}: ${p.description}${suffix}\n`;
+      }
+      continue;
+    }
     const params = fn["parameters"] as unknown;
     if (params !== null && params !== undefined && typeof params === "object") {
       const rec = params as Record<string, unknown>;
       const props = rec["properties"] as Record<string, unknown> | undefined;
-      if (props !== undefined) {
+      if (props !== undefined && Object.keys(props).length > 0) {
         const required = new Set<string>(
           Array.isArray(rec["required"]) ? (rec["required"] as unknown[]).filter((x): x is string => typeof x === "string") : [],
         );
         sb += "  Parameters:\n";
-        // Preserve the original property order from tools.json rather than sorting.
-        for (const k of Object.keys(props)) {
+        for (const k of Object.keys(props).sort()) {
           const meta = props[k] as Record<string, unknown> | undefined;
           const desc2 = meta !== undefined && typeof meta["description"] === "string" ? (meta["description"] as string) : "";
           const suffix = required.has(k) ? " (required)" : "";
@@ -1600,6 +1677,61 @@ function createInMemoryCollector(): CommentCollectorLike {
     },
   };
 }
+
+export interface ToolConfigEntry {
+  readonly Name: string;
+  readonly PlanTask: boolean;
+  readonly MainTask: boolean;
+  readonly Definition: unknown;
+  readonly name?: string;
+  readonly planTask?: boolean;
+  readonly mainTask?: boolean;
+  readonly definition?: unknown;
+}
+
+export function BuildToolDefs(entries: readonly ToolConfigEntry[] | null | undefined, planOnly: boolean): ToolDef[] | null {
+  if (entries === null || entries === undefined || entries.length === 0) return null;
+  const out: ToolDef[] = [];
+  for (const e of entries) {
+    const name = (e as unknown as Record<string, unknown>)["Name"] as string | undefined ?? (e as unknown as Record<string, unknown>)["name"] as string | undefined ?? "";
+    const planTask = (e as unknown as Record<string, unknown>)["PlanTask"] as boolean | undefined ?? (e as unknown as Record<string, unknown>)["planTask"] as boolean | undefined ?? false;
+    const mainTask = (e as unknown as Record<string, unknown>)["MainTask"] as boolean | undefined ?? (e as unknown as Record<string, unknown>)["mainTask"] as boolean | undefined ?? false;
+    const defRaw = (e as unknown as Record<string, unknown>)["Definition"] ?? (e as unknown as Record<string, unknown>)["definition"];
+    const shouldInclude = planOnly ? planTask : mainTask;
+    if (!shouldInclude) continue;
+    let parsed: Record<string, unknown> | null = null;
+    let rawStr: string | null = null;
+    if (typeof defRaw === "string") {
+      rawStr = defRaw;
+      try { parsed = JSON.parse(defRaw) as Record<string, unknown>; } catch { console.error(`[ocr] WARNING: failed to parse tool definition "${name}": invalid JSON`); continue; }
+    } else if (defRaw !== null && typeof defRaw === "object") {
+      // Assume object is already parsed
+      parsed = defRaw as Record<string, unknown>;
+      try { rawStr = JSON.stringify(defRaw); } catch { rawStr = null; }
+    } else if (defRaw !== null && typeof defRaw === "object" && (defRaw as { toString?: () => string }) !== null) {
+      // Handle Uint8Array etc?
+      try { rawStr = String(defRaw); parsed = JSON.parse(rawStr) as Record<string, unknown>; } catch { continue; }
+    } else {
+      continue;
+    }
+    if (parsed === null) continue;
+    const fnName = typeof parsed["name"] === "string" ? (parsed["name"] as string) : name;
+    const fnDesc = typeof parsed["description"] === "string" ? (parsed["description"] as string) : "";
+    const parameters = parsed["parameters"] as unknown;
+    out.push({
+      type: "function",
+      function: {
+        name: fnName,
+        description: fnDesc,
+        parameters: parameters as unknown,
+        RawDefinition: rawStr ?? undefined,
+      } as unknown as ToolDef["function"],
+    });
+  }
+  return out.length === 0 ? null : out;
+}
+
+export const buildToolDefs = BuildToolDefs;
 
 // Also export a factory matching Go New() signature helper
 export function newAgent(args: Args): Agent {
