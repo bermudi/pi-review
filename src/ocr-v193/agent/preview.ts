@@ -40,7 +40,7 @@ export function diffStatus(d: Diff): string {
 // extFromPath — mirrors Go extFromPath
 // ---------------------------------------------------------------------------
 
-function extFromPath(p: string): string {
+export function extFromPath(p: string): string {
   let basename = p;
   const slash = p.lastIndexOf("/");
   if (slash >= 0) basename = p.slice(slash + 1);
@@ -85,7 +85,7 @@ export function whyExcluded(
       for (const raw of patterns) {
         if (typeof raw !== "string" || raw === "") continue;
         const pat = raw.toLowerCase();
-        if (minimatch(lowerPath, pat, { dot: true, partial: true, nocase: false })) return true;
+        if (minimatch(lowerPath, pat, { dot: true, nocase: false })) return true;
       }
       return false;
     };
@@ -99,22 +99,22 @@ export function whyExcluded(
     const isUserIncludedAlt = rec["IsUserIncluded"] as ((p: string) => boolean) | undefined;
 
     const isExcludedMethod =
-      (typeof isUserExcludedFn === "function" && isUserExcludedFn(path)) ||
-      (typeof isUserExcludedAlt === "function" && isUserExcludedAlt(path)) ||
+      (typeof isUserExcludedFn === "function" && isUserExcludedFn.call(f, path)) ||
+      (typeof isUserExcludedAlt === "function" && isUserExcludedAlt.call(f, path)) ||
       matchesAny(arrays.exclude, path);
     if (isExcludedMethod) return ExcludeUserRule;
 
     const hasInc =
-      (typeof hasIncludeFn === "function" && hasIncludeFn()) ||
-      (typeof hasIncludeAlt === "function" && hasIncludeAlt()) ||
+      (typeof hasIncludeFn === "function" && hasIncludeFn.call(f)) ||
+      (typeof hasIncludeAlt === "function" && hasIncludeAlt.call(f)) ||
       arrays.include.length > 0;
 
     if (hasInc) {
       const included =
-        (typeof isUserIncludedFn === "function" && isUserIncludedFn(path)) ||
-        (typeof isUserIncludedAlt === "function" && isUserIncludedAlt(path)) ||
+        (typeof isUserIncludedFn === "function" && isUserIncludedFn.call(f, path)) ||
+        (typeof isUserIncludedAlt === "function" && isUserIncludedAlt.call(f, path)) ||
         matchesAny(arrays.include, path);
-      if (!included) return ExcludeUserRule;
+      if (included) return ExcludeNone;
     }
   }
 

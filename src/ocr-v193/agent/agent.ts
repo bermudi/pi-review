@@ -13,7 +13,9 @@ import type { Diff } from "../model/diff.js";
 import type { LlmComment } from "../model/review.js";
 import { isAllowedExt, isExcludedPath } from "../rules/allowed_ext.js";
 import { estimateDiffCost, estimateDiffFileTokens, humanTokens } from "./estimate.js";
-import { effectivePath, whyExcluded } from "./preview.js";
+import { effectivePath, whyExcluded, diffStatus, extFromPath } from "./preview.js";
+import type { Preview, PreviewEntry, ExcludeReason } from "../model/preview.js";
+import { ExcludeNone, ExcludeDeleted } from "../model/preview.js";
 import { reviewModeString, stripEmptyPlanBlock } from "./util.js";
 import { countTokens, PromptTokenLimit, StripMarkdownFences } from "../llmloop/compression.js";
 import { Runner } from "../llmloop/loop.js";
@@ -551,6 +553,50 @@ export class Agent {
   RecordWarning(warningType: string, file: string, message: string): void { this.recordWarning(warningType, file, message); }
 
   // -- manifest helpers — mirrors Go registerCoverage / markCompleted / finalizeManifest
+  // Mirrors Go a.extFromPath
+  private extFromPath(path: string): string {
+    return extFromPath(path);
+  }
+
+  private whyExcluded(d: Diff): ExcludeReason {
+    return whyExcluded(d, this.args.fileFilter ?? null);
+  }
+
+  private shouldReview(d: Diff): boolean {
+    return this.whyExcluded(d as unknown as Diff) === ExcludeNone;
+  }
+
+  async preview(signal?: AbortSignal): Promise<Preview> {
+    await this.loadDiffs(signal ?? new AbortController().signal);
+    const result: Preview = {
+      entries: [],
+      totalInsertions: this.totalInsertions,
+      totalDeletions: this.totalDeletions,
+      totalFiles: this.diffs.length,
+      reviewableCount: 0,
+      excludedCount: 0,
+    };
+    for (const dRaw of this.diffs) {
+      const d = normalizeDiff(dRaw);
+      const path = effectivePath(d);
+      let reason = this.whyExcluded(d);
+      if (reason === ExcludeNone && d.isDeleted) reason = ExcludeDeleted;
+      const entry: PreviewEntry = {
+        path,
+        status: diffStatus(d),
+        insertions: d.insertions,
+        deletions: d.deletions,
+        willReview: reason === ExcludeNone,
+      };
+      if (reason !== ExcludeNone) (entry as unknown as { excludeReason?: ExcludeReason }).excludeReason = reason;
+      if (entry.willReview) result.reviewableCount++;
+      else result.excludedCount++;
+      (result.entries as PreviewEntry[]).push(entry);
+    }
+    // Ensure non-nil entries per Go: already non-nil array
+    return result;
+  }
+
   private reviewModeForManifest(): string {
     const from = (this.args.from ?? "") as string;
     const to = (this.args.to ?? "") as string;
@@ -813,11 +859,6 @@ export class Agent {
       n++;
     }
     return n;
-  }
-
-  private shouldReview(d: unknown): boolean {
-    const nd = normalizeDiff(d);
-    return whyExcluded(nd, this.args.fileFilter ?? null) === "";
   }
 
   private filterDiffs(diffs: unknown[]): Diff[] {

@@ -291,6 +291,14 @@ const localCoverage: readonly LocalCoverage[] = [
     upstreamPaths: ["internal/agent/util_test.go"],
   },
   {
+    localPath: "test/ocr-v193/agent/preview.test.ts",
+    upstreamPaths: ["internal/agent/preview_test.go"],
+  },
+  {
+    localPath: "test/ocr-v193/agent/preview-run.test.ts",
+    upstreamPaths: ["internal/agent/preview_run_test.go"],
+  },
+  {
     localPath: "test/ocr-v193/scan/provider.test.ts",
     upstreamPaths: ["internal/scan/provider_test.go", "internal/scan/provider_more_test.go"],
   },
