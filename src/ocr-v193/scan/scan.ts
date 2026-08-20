@@ -37,7 +37,7 @@ import { Runner } from "../llmloop/loop.js";
 import type { AnyLlmClient, ToolDef, ToolRegistryLike, AgentWarning } from "../llmloop/types.js";
 import { CommentCollector } from "../tool/collector.js";
 import { CommentWorkerPool } from "../llmloop/pool.js";
-import { CountMessagesTokens, PromptTokenLimit, StripMarkdownFences } from "../llmloop/compression.js";
+import { CountMessagesTokens, PromptTokenLimit, StripMarkdownFences, countTokens } from "../llmloop/compression.js";
 import { isAllowedExt, isExcludedPath } from "../rules/allowed_ext.js";
 
 // ---------------------------------------------------------------------------
@@ -223,7 +223,7 @@ export class Agent {
     if (limit <= 0) return [...items];
     const kept: ScanItem[] = [];
     for (const it of items) {
-      const tokens = Math.ceil((it.content?.length ?? 0) / 4);
+      const tokens = countTokens(it.content ?? "");
       if (tokens > limit) {
         console.error(`[pi-review] Skipping ${it.path} (~${tokens} tokens exceeds 80% of max_tokens(${this.args.template.MaxTokens}))`);
         continue;
@@ -740,7 +740,7 @@ class Semaphore {
   }
 }
 
-function formatPlanGuidance(raw: string): string {
+export function formatPlanGuidance(raw: string): string {
   const stripped = StripMarkdownFences(raw).trim();
   if (stripped === "") return "";
 
@@ -767,7 +767,7 @@ function formatPlanGuidance(raw: string): string {
   return sb.join("").trimEnd();
 }
 
-function buildSummaryCommentsList(comments: LlmComment[]): string {
+export function buildSummaryCommentsList(comments: LlmComment[]): string {
   const maxLine = 280;
   const sb: string[] = [];
   for (const c of comments) {
@@ -778,7 +778,7 @@ function buildSummaryCommentsList(comments: LlmComment[]): string {
   return sb.join("");
 }
 
-function buildDedupCommentsJSON(comments: LlmComment[]): string {
+export function buildDedupCommentsJSON(comments: LlmComment[]): string {
   type Wire = { id: string; path: string; content: string; existing_code?: string };
   const items: Wire[] = comments.map((cm, i) => ({
     id: `c-${i}`,
@@ -789,7 +789,7 @@ function buildDedupCommentsJSON(comments: LlmComment[]): string {
   return JSON.stringify(items);
 }
 
-function applyDedupGroups(raw: string, originals: LlmComment[]): LlmComment[] | null {
+export function applyDedupGroups(raw: string, originals: LlmComment[]): LlmComment[] | null {
   const stripped = StripMarkdownFences(raw).trim();
   if (stripped === "") return null;
 

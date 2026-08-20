@@ -242,6 +242,30 @@ const localCoverage: readonly LocalCoverage[] = [
     localPath: "test/ocr-v193/agent/coverage.test.ts",
     upstreamPaths: ["internal/agent/coverage_test.go"],
   },
+  {
+    localPath: "test/ocr-v193/scan/batch.test.ts",
+    upstreamPaths: ["internal/scan/batch_test.go"],
+  },
+  {
+    localPath: "test/ocr-v193/scan/budget.test.ts",
+    upstreamPaths: ["internal/scan/budget_test.go"],
+  },
+  {
+    localPath: "test/ocr-v193/scan/dedup.test.ts",
+    upstreamPaths: ["internal/scan/dedup_test.go"],
+  },
+  {
+    localPath: "test/ocr-v193/scan/coverage.test.ts",
+    upstreamPaths: ["internal/scan/coverage_test.go"],
+  },
+  {
+    localPath: "test/ocr-v193/scan/agent.test.ts",
+    upstreamPaths: ["internal/scan/agent_test.go"],
+  },
+  {
+    localPath: "test/ocr-v193/scan/provider.test.ts",
+    upstreamPaths: ["internal/scan/provider_test.go", "internal/scan/provider_more_test.go"],
+  },
 ];
 
 function git(...args: readonly string[]): string {

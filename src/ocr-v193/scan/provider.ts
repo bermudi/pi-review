@@ -50,10 +50,10 @@ export class Provider {
   readonly paths: string[];
   readonly maxFileSizeBytes: number;
 
-  constructor(repoDir: string, paths: readonly string[] = [], maxFileSizeBytes?: number) {
+  constructor(repoDir: string, paths: readonly string[] | null | undefined = [], maxFileSizeBytes?: number) {
     this.repoDir = repoDir;
     const cleaned: string[] = [];
-    for (const p of paths) {
+    for (const p of (paths ?? [])) {
       let v = String(p).trim();
       if (v === "") continue;
       if (v.startsWith("./")) v = v.slice(2);
@@ -75,6 +75,7 @@ export class Provider {
    * previews can surface them without spending memory on their bytes.
    */
   async enumerate(signal?: AbortSignal): Promise<ScanItem[]> {
+    if (signal?.aborted) throw new DOMException("Aborted", "AbortError");
     const files = await this.listFiles(signal);
     const filtered = this.paths.length > 0 ? filterByPaths(files, this.paths) : files;
     const out: ScanItem[] = [];
@@ -146,7 +147,10 @@ export class Provider {
 
   private async listFilesViaWalk(signal?: AbortSignal): Promise<string[]> {
     const out: string[] = [];
-    await walkDir(this.repoDir, "", out, signal);
+    // Load root .gitignore for non-git fallback to mirror Go's walk filtering
+    const ignorePatterns = await loadGitignorePatterns(this.repoDir);
+    const excludedDirs = new Set(["node_modules", ".git"]);
+    await walkDir(this.repoDir, "", out, signal, ignorePatterns, excludedDirs);
     return out;
   }
 }
@@ -154,7 +158,7 @@ export class Provider {
 /** Factory — mirrors Go `NewProvider`. */
 export function NewProvider(
   repoDir: string,
-  paths: readonly string[] = [],
+  paths: readonly string[] | null | undefined = [],
   _runner?: unknown,
   maxFileSizeBytes?: number,
 ): Provider {
@@ -240,7 +244,7 @@ function runGit(repoDir: string, args: string[], signal?: AbortSignal): Promise<
   });
 }
 
-async function walkDir(repoDir: string, rel: string, out: string[], signal?: AbortSignal): Promise<void> {
+async function walkDir(repoDir: string, rel: string, out: string[], signal?: AbortSignal, ignorePatterns: string[] = [], excludedDirs: Set<string> = new Set([".git"])): Promise<void> {
   if (signal?.aborted) throw new DOMException("Aborted", "AbortError");
   const full = rel === "" ? repoDir : path.join(repoDir, rel);
   let entries: fs.Dirent[];
@@ -251,14 +255,37 @@ async function walkDir(repoDir: string, rel: string, out: string[], signal?: Abo
   }
   for (const entry of entries) {
     const nextRel = rel === "" ? entry.name : `${rel}/${entry.name}`;
-    // Skip common ignored dirs to mirror Go's gitignore + ExcludedDirs blocklist
     if (entry.isDirectory()) {
-      if (nextRel === ".git" || nextRel.startsWith(".git/")) continue;
-      await walkDir(repoDir, nextRel, out, signal);
+      if (excludedDirs.has(nextRel) || [...excludedDirs].some((d) => nextRel.startsWith(d + "/"))) continue;
+      if (isIgnored(nextRel + "/", ignorePatterns)) continue;
+      await walkDir(repoDir, nextRel, out, signal, ignorePatterns, excludedDirs);
     } else if (entry.isFile()) {
+      if (isIgnored(nextRel, ignorePatterns)) continue;
       out.push(nextRel);
     }
   }
+}
+
+async function loadGitignorePatterns(repoDir: string): Promise<string[]> {
+  try {
+    const raw = await fs.promises.readFile(path.join(repoDir, ".gitignore"), "utf-8");
+    return raw.split("\n").map((l) => l.trim()).filter((l) => l !== "" && !l.startsWith("#"));
+  } catch { return []; }
+}
+function isIgnored(rel: string, patterns: string[]): boolean {
+  for (const pat of patterns) {
+    // Simple handling for test patterns like "ignored.txt" and directory ignores
+    const clean = pat.replace(/^\//, "").replace(/\/$/, "");
+    if (clean === "") continue;
+    if (!clean.includes("*") && !clean.includes("?")) {
+      if (rel === clean || rel.endsWith("/" + clean) || rel.startsWith(clean + "/")) return true;
+    } else {
+      // minimal glob: treat * as any substring
+      const regex = new RegExp("^" + clean.replace(/\./g, "\\.").replace(/\*/g, ".*").replace(/\?/g, ".") + "$");
+      if (regex.test(rel)) return true;
+    }
+  }
+  return false;
 }
 
 // Exposed for tests
