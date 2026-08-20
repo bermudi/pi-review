@@ -12634,183 +12634,399 @@
       "tests": [
         {
           "name": "TestBuildGrepArgs_CaseInsensitive",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/tool/code-search.test.ts",
+              "title": "TestBuildGrepArgs_CaseInsensitive"
+            }
+          ]
         },
         {
           "name": "TestBuildGrepArgs_CaseSensitive",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/tool/code-search.test.ts",
+              "title": "TestBuildGrepArgs_CaseSensitive"
+            }
+          ]
         },
         {
           "name": "TestBuildGrepArgs_CommitMode",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/tool/code-search.test.ts",
+              "title": "TestBuildGrepArgs_CommitMode"
+            }
+          ]
         },
         {
           "name": "TestBuildGrepArgs_FixedString",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/tool/code-search.test.ts",
+              "title": "TestBuildGrepArgs_FixedString"
+            }
+          ]
         },
         {
           "name": "TestBuildGrepArgs_NoIndex",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/tool/code-search.test.ts",
+              "title": "TestBuildGrepArgs_NoIndex"
+            }
+          ]
         },
         {
           "name": "TestBuildGrepArgs_PatternStartingWithDash",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/tool/code-search.test.ts",
+              "title": "TestBuildGrepArgs_PatternStartingWithDash"
+            }
+          ]
         },
         {
           "name": "TestBuildGrepArgs_PerlRegexp",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/tool/code-search.test.ts",
+              "title": "TestBuildGrepArgs_PerlRegexp"
+            }
+          ]
         },
         {
           "name": "TestBuildGrepArgs_RejectsOptionLikeRef",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/tool/code-search.test.ts",
+              "title": "TestBuildGrepArgs_RejectsOptionLikeRef"
+            }
+          ]
         },
         {
           "name": "TestBuildGrepArgs_WorkspaceMode",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/tool/code-search.test.ts",
+              "title": "TestBuildGrepArgs_WorkspaceMode"
+            }
+          ]
         },
         {
           "name": "TestCodeSearchProvider_Execute_AllowsDoubleDotInFilename",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/tool/code-search.test.ts",
+              "title": "TestCodeSearchProvider_Execute_AllowsDoubleDotInFilename"
+            }
+          ]
         },
         {
           "name": "TestCodeSearchProvider_Execute_BlankSearchText",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/tool/code-search.test.ts",
+              "title": "TestCodeSearchProvider_Execute_BlankSearchText"
+            }
+          ]
         },
         {
           "name": "TestCodeSearchProvider_Execute_CaseSensitive",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/tool/code-search.test.ts",
+              "title": "TestCodeSearchProvider_Execute_CaseSensitive"
+            }
+          ]
         },
         {
           "name": "TestCodeSearchProvider_Execute_Found",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/tool/code-search.test.ts",
+              "title": "TestCodeSearchProvider_Execute_Found"
+            }
+          ]
         },
         {
           "name": "TestCodeSearchProvider_Execute_PerlRegexp",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/tool/code-search.test.ts",
+              "title": "TestCodeSearchProvider_Execute_PerlRegexp"
+            }
+          ]
         },
         {
           "name": "TestCodeSearchProvider_Execute_RejectsTraversalPattern",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/tool/code-search.test.ts",
+              "title": "TestCodeSearchProvider_Execute_RejectsTraversalPattern"
+            }
+          ]
         },
         {
           "name": "TestCodeSearchProvider_Execute_WithFilePatterns",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/tool/code-search.test.ts",
+              "title": "TestCodeSearchProvider_Execute_WithFilePatterns"
+            }
+          ]
         },
         {
           "name": "TestCodeSearchProvider_Tool",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/tool/code-search.test.ts",
+              "title": "TestCodeSearchProvider_Tool"
+            }
+          ]
         },
         {
           "name": "TestGitGrep_CommitMode_Found",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/tool/code-search.test.ts",
+              "title": "TestGitGrep_CommitMode_Found"
+            }
+          ]
         },
         {
           "name": "TestGitGrep_CommitMode_LiteralWithRegexMetaChars",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/tool/code-search.test.ts",
+              "title": "TestGitGrep_CommitMode_LiteralWithRegexMetaChars"
+            }
+          ]
         },
         {
           "name": "TestGitGrep_CommitMode_NoMatch",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/tool/code-search.test.ts",
+              "title": "TestGitGrep_CommitMode_NoMatch"
+            }
+          ]
         },
         {
           "name": "TestGitGrep_CommitMode_WithBadPathspec",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/tool/code-search.test.ts",
+              "title": "TestGitGrep_CommitMode_WithBadPathspec"
+            }
+          ]
         },
         {
           "name": "TestGitGrep_CommitMode_WithPathspec",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/tool/code-search.test.ts",
+              "title": "TestGitGrep_CommitMode_WithPathspec"
+            }
+          ]
         },
         {
           "name": "TestGitGrep_InvalidRef_ReturnsError",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/tool/code-search.test.ts",
+              "title": "TestGitGrep_InvalidRef_ReturnsError"
+            }
+          ]
         },
         {
           "name": "TestGitGrep_LiteralWithRegexMetaChars",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/tool/code-search.test.ts",
+              "title": "TestGitGrep_LiteralWithRegexMetaChars"
+            }
+          ]
         },
         {
           "name": "TestGitGrep_NonGitDirectoryFallback",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/tool/code-search.test.ts",
+              "title": "TestGitGrep_NonGitDirectoryFallback"
+            }
+          ]
         },
         {
           "name": "TestGitGrep_NonGitDirectoryNoMatch",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/tool/code-search.test.ts",
+              "title": "TestGitGrep_NonGitDirectoryNoMatch"
+            }
+          ]
         },
         {
           "name": "TestGitGrep_OptionLikeRefDoesNotLaunchPager",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/tool/code-search.test.ts",
+              "title": "TestGitGrep_OptionLikeRefDoesNotLaunchPager"
+            }
+          ]
         },
         {
           "name": "TestGitGrep_PerlRegexp_InvalidPattern_ReturnsError",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/tool/code-search.test.ts",
+              "title": "TestGitGrep_PerlRegexp_InvalidPattern_ReturnsError"
+            }
+          ]
         },
         {
           "name": "TestGitGrep_RejectsOptionLikeRef",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/tool/code-search.test.ts",
+              "title": "TestGitGrep_RejectsOptionLikeRef"
+            }
+          ]
         },
         {
           "name": "TestGitGrep_Timeout",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/tool/code-search.test.ts",
+              "title": "TestGitGrep_Timeout"
+            }
+          ]
         },
         {
           "name": "TestGitGrep_WithRunner",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/tool/code-search.test.ts",
+              "title": "TestGitGrep_WithRunner"
+            }
+          ]
         },
         {
           "name": "TestGitGrep_WithRunner_CommitMode",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/tool/code-search.test.ts",
+              "title": "TestGitGrep_WithRunner_CommitMode"
+            }
+          ]
         },
         {
           "name": "TestGitGrep_WithRunner_NoMatch",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/tool/code-search.test.ts",
+              "title": "TestGitGrep_WithRunner_NoMatch"
+            }
+          ]
         },
         {
           "name": "TestGitGrep_WorkspaceMode_Found",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/tool/code-search.test.ts",
+              "title": "TestGitGrep_WorkspaceMode_Found"
+            }
+          ]
         },
         {
           "name": "TestGitGrep_WorkspaceMode_NoMatch",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/tool/code-search.test.ts",
+              "title": "TestGitGrep_WorkspaceMode_NoMatch"
+            }
+          ]
         },
         {
           "name": "TestGitGrep_WorkspaceMode_UntrackedFile",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/tool/code-search.test.ts",
+              "title": "TestGitGrep_WorkspaceMode_UntrackedFile"
+            }
+          ]
         }
       ]
     },
@@ -13641,18 +13857,36 @@
       "tests": [
         {
           "name": "TestParseReviewMode",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/tool/filereader.test.ts",
+              "title": "TestParseReviewMode"
+            }
+          ]
         },
         {
           "name": "TestReviewMode_RefValue",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/tool/filereader.test.ts",
+              "title": "TestReviewMode_RefValue"
+            }
+          ]
         },
         {
           "name": "TestScanLines",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/tool/filereader.test.ts",
+              "title": "TestScanLines"
+            }
+          ]
         }
       ]
     },
