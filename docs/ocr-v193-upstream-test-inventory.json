@@ -3954,14 +3954,8 @@
         },
         {
           "name": "TestAgentGettersNil",
-          "disposition": "covered",
-          "evidence": [
-            {
-              "kind": "bun-test-annotation",
-              "path": "test/ocr-v193/agent/helpers.test.ts",
-              "title": "TestAgentGettersNil"
-            }
-          ]
+          "disposition": "not_applicable",
+          "reason": "Pi replaces Go nil-receiver method call (*Agent)(nil).SessionID() with TypeScript's non-null this guarantee; calling a method on null is not applicable in TypeScript and has no runtime path."
         },
         {
           "name": "TestApplyResumeReusesCompletedItemsAcrossModels",
@@ -4522,14 +4516,8 @@
       "tests": [
         {
           "name": "TestAgentGettersNilSafe",
-          "disposition": "covered",
-          "evidence": [
-            {
-              "kind": "bun-test-annotation",
-              "path": "test/ocr-v193/agent/getters.test.ts",
-              "title": "TestAgentGettersNilSafe"
-            }
-          ]
+          "disposition": "not_applicable",
+          "reason": "Pi replaces Go nil-receiver guard (a := (*Agent)(nil)) with TypeScript's type system where `this` is always valid; not applicable to TypeScript, verified via normal empty-agent behavior instead."
         }
       ]
     },

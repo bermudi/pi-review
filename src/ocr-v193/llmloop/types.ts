@@ -49,7 +49,6 @@ export interface ToolDef {
     readonly parameters?: unknown;
     /** Raw JSON definition for order-preserving parameter rendering (mirrors Go RawDefinition). */
     readonly RawDefinition?: unknown;
-    readonly rawDefinition?: unknown;
   };
 }
 

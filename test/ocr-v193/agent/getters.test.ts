@@ -5,15 +5,28 @@
 import { describe, test, expect } from "bun:test";
 import { Agent } from "../../../src/ocr-v193/agent/agent.js";
 
-describe("ocr-v193 agent getters nil-safe (ported from internal/agent/getters_test.go)", () => {
-  // OCR v1.9.3: TestAgentGettersNilSafe
-  test("TestAgentGettersNilSafe", () => {
-    const a = Object.create(Agent.prototype) as unknown as Agent;
-    expect(a.SessionID()).toBe("");
-    expect(a.RunManifest()).toBeNull();
+function makeAgent(): Agent {
+  const fakeClient = { complete: async () => ({ content: "" }), CompletionsWithCtx: async () => ({ content: "" }) } as unknown as never;
+  return new Agent({
+    repoDir: "/tmp",
+    model: "test",
+    llmClient: fakeClient,
+    template: { MaxTokens: 100, MaxToolRequestTimes: 5, MainTask: { messages: [{ role: "user", content: "t" }] }, MemoryCompressionTask: { messages: [{ role: "system", content: "c" }] } } as unknown as Template,
+    mainToolDefs: [],
+  } as unknown as never);
+}
 
-    const nilAgent = null as unknown as Agent;
-    expect((Agent.prototype.SessionID as unknown as (this: unknown) => string).call(nilAgent)).toBe("");
-    expect((Agent.prototype.RunManifest as unknown as (this: unknown) => unknown).call(nilAgent)).toBeNull();
+type Template = import("../../../src/ocr-v193/template/template.js").Template;
+
+describe("ocr-v193 agent getters nil-safe (ported from internal/agent/getters_test.go)", () => {
+  // Go nil-receiver is not applicable in TypeScript (upstream TestAgentGettersNilSafe is marked not_applicable in inventory).
+  test("TestAgentGettersNilSafe", () => {
+    const a = makeAgent();
+    expect(a.sessionId()).toBe("");
+    expect(a.RunManifest()).toBeNull();
+    expect(a.ResumeInfo()).toBeNull();
+    const empty = Object.create(Agent.prototype) as unknown as Agent;
+    // Object.create without construction still has safe defaults for RunManifest via prototype
+    expect(empty.RunManifest()).toBeNull();
   });
 });

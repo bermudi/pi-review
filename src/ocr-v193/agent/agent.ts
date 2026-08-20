@@ -17,8 +17,10 @@ import { effectivePath, whyExcluded, diffStatus, extFromPath } from "./preview.j
 import type { Preview, PreviewEntry, ExcludeReason } from "../model/preview.js";
 import { ExcludeNone, ExcludeDeleted } from "../model/preview.js";
 import { reviewModeString, stripEmptyPlanBlock } from "./util.js";
-import { countTokens, PromptTokenLimit, StripMarkdownFences } from "../llmloop/compression.js";
+import { countTokens, PromptTokenLimit } from "../llmloop/compression.js";
 import { Runner, sessionTaskKey } from "../llmloop/loop.js";
+import { buildFilterCommentsJSON, parseFilterResponse } from "./filter.js";
+import { formatToolDefs } from "./format.js";
 import type { AgentWarning, AnyLlmClient, ToolDef } from "../llmloop/types.js";
 import type { Template, ChatMessage, LlmConversation } from "../template/template.js";
 import type { FileFilter } from "../rules/system_rules.js";
@@ -112,7 +114,6 @@ export interface Args {
   readonly skipFilter?: boolean;
   readonly runtimeConfig?: RuntimeConfig | null;
   readonly resume?: import("../session/resume.js").ResumeState | null;
-  readonly Resume?: import("../session/resume.js").ResumeState | null;
   // Go-compat aliases — tests may use capitalized keys
   readonly LLMClient?: AnyLlmClient;
   readonly Model?: string;
@@ -419,7 +420,7 @@ export class Agent {
       maxTokensBudget: args.maxTokensBudget ?? (rawArgs["MaxTokensBudget"] as number | undefined),
       skipFilter: args.skipFilter ?? (rawArgs["SkipFilter"] as boolean | undefined) ?? false,
       runtimeConfig: args.runtimeConfig ?? (rawArgs["RuntimeConfig"] as RuntimeConfig | null | undefined) ?? null,
-      resume: (args.resume ?? (rawArgs["Resume"] as import("../session/resume.js").ResumeState | null | undefined) ?? (rawArgs["resume"] as import("../session/resume.js").ResumeState | null | undefined) ?? null) as import("../session/resume.js").ResumeState | null,
+      resume: args.resume ?? null,
     };
     // Overlay resolved aliases back onto this.args for later reads
     (this as unknown as { args: Args }).args = resolvedArgs;
@@ -494,51 +495,31 @@ export class Agent {
       diffLookup: diffLookup as unknown as never,
       commentWorkerPool: this.commentWorkerPool as unknown as never,
       session: this.sessionHistory as unknown as never,
-      Session: this.sessionHistory as unknown as never,
       newRequestMeta: this.newRequestMeta.bind(this) as unknown as never,
-      NewRequestMeta: this.newRequestMeta.bind(this) as unknown as never,
     } as unknown as import("../llmloop/types.js").RunnerDeps);
   }
 
   // -- public getters mirroring Go
 
   sessionId(): string {
-    if ((this as unknown) === null || (this as unknown) === undefined) return "";
-    const sh = (this as unknown as { sessionHistory?: unknown }).sessionHistory as unknown as { sessionId?: string; SessionID?: string; HasPersistence?: () => boolean } | null | undefined;
-    if (sh !== null && sh !== undefined) {
-      if (typeof sh.HasPersistence === "function" && !sh.HasPersistence()) return "";
-      return (sh as unknown as { sessionId?: string; SessionID?: string }).sessionId ?? (sh as unknown as { SessionID?: string }).SessionID ?? "";
+    if (this.sessionHistory !== null) {
+      const hasPersistence = (this.sessionHistory as unknown as { HasPersistence?: () => boolean }).HasPersistence;
+      if (typeof hasPersistence === "function" && !hasPersistence.call(this.sessionHistory)) return "";
+      return this.sessionHistory.sessionId ?? "";
     }
-    const args = (this as unknown as { args?: unknown }).args as unknown as Record<string, unknown> | undefined;
-    const sid = args !== undefined ? (args["sessionId"] as string | undefined) : undefined;
-    return sid ?? "";
+    return this.args.sessionId ?? "";
   }
 
-  SessionID(): string {
-    if ((this as unknown) === null || (this as unknown) === undefined) return "";
-    return this.sessionId();
-  }
-
-  // Go-compatible aliases
   Session(): import("../session/history.js").SessionHistory | null {
-    if ((this as unknown) === null || (this as unknown) === undefined) return null;
-    return (this as unknown as { sessionHistory?: import("../session/history.js").SessionHistory | null }).sessionHistory ?? null;
+    return this.sessionHistory;
   }
 
   ResumeInfo(): import("../session/history.js").ResumeInfo | null {
-    if ((this as unknown) === null || (this as unknown) === undefined) return null;
-    const anyThis = this as unknown as { resumeInfo?: import("../session/history.js").ResumeInfo | null; args?: { Resume?: unknown } };
-    if (anyThis.resumeInfo !== undefined) {
-      return anyThis.resumeInfo ? { ...anyThis.resumeInfo } : null;
-    }
-    return null;
+    return this.resumeInfo ? { ...this.resumeInfo } : null;
   }
   FilesReviewed(): number {
-    if ((this as unknown) === null || (this as unknown) === undefined) return 0;
-    const diffs = (this as unknown as { diffs?: unknown[] }).diffs;
-    if (!Array.isArray(diffs)) return 0;
     let n = 0;
-    for (const dRaw of diffs) if (!normalizeDiff(dRaw).isDeleted) n++;
+    for (const dRaw of this.diffs) if (!normalizeDiff(dRaw).isDeleted) n++;
     return n;
   }
   Diffs(): Diff[] {
@@ -568,19 +549,6 @@ export class Agent {
   RecordWarning(warningType: string, file: string, message: string): void { this.recordWarning(warningType, file, message); }
 
   // -- manifest helpers — mirrors Go registerCoverage / markCompleted / finalizeManifest
-  // Mirrors Go a.extFromPath
-  private extFromPath(path: string): string {
-    return extFromPath(path);
-  }
-
-  private whyExcluded(d: Diff): ExcludeReason {
-    return whyExcluded(d, this.args.fileFilter ?? null);
-  }
-
-  private shouldReview(d: Diff): boolean {
-    return this.whyExcluded(d as unknown as Diff) === ExcludeNone;
-  }
-
   async preview(signal?: AbortSignal): Promise<Preview> {
     await this.loadDiffs(signal ?? new AbortController().signal);
     const result: Preview = {
@@ -594,7 +562,7 @@ export class Agent {
     for (const dRaw of this.diffs) {
       const d = normalizeDiff(dRaw);
       const path = effectivePath(d);
-      let reason = this.whyExcluded(d);
+      let reason = whyExcluded(d, this.args.fileFilter ?? null);
       if (reason === ExcludeNone && d.isDeleted) reason = ExcludeDeleted;
       const entry: PreviewEntry = {
         path,
@@ -612,86 +580,47 @@ export class Agent {
     return result;
   }
 
-  // Helpers for tests — mirror Go free functions as instance methods for white-box access
-  private buildFilterCommentsJSON(comments: LlmComment[]): string {
-    return buildFilterCommentsJSON(comments);
-  }
-  private parseFilterResponse(raw: string, total: number): Map<number, unknown> | null {
-    return parseFilterResponse(raw, total);
-  }
-  private formatToolDefs(defs: readonly ToolDef[]): string {
-    return formatToolDefs(defs);
-  }
-  private BuildToolDefs(entries: readonly ToolConfigEntry[] | null | undefined, planOnly: boolean): ToolDef[] | null {
-    return BuildToolDefs(entries, planOnly);
-  }
-
   private applyResume(diffs: Diff[]): Diff[] {
-    const maybeResume = (this.args as unknown as Record<string, unknown>)["resume"] as import("../session/resume.js").ResumeState | null | undefined;
-    const maybeResumeCap = (this.args as unknown as Record<string, unknown>)["Resume"] as import("../session/resume.js").ResumeState | null | undefined;
-    const resume = (maybeResume ?? maybeResumeCap ?? this.resumeState) as import("../session/resume.js").ResumeState | null | undefined;
+    const resume = this.args.resume ?? this.resumeState;
     if (resume === null || resume === undefined) return diffs;
     const mode = this.reviewModeForManifest();
     const toDispatch: Diff[] = [];
     let reused = 0;
-    const collector = this.args.commentCollector ?? (this.args as unknown as Record<string, unknown>)["CommentCollector"] as CommentCollectorLike | null | undefined ?? null;
+    const collector = this.args.commentCollector ?? null;
     for (const dRaw of diffs) {
       const d = normalizeDiff(dRaw);
       if (d.isDeleted) { toDispatch.push(d); continue; }
       const fingerprint = reviewItemFingerprint(mode, d);
-      const anyResume = resume as unknown as Record<string, unknown>;
-      let item: unknown = null;
-      let ok = false;
-      const reusableFn = (anyResume["ReusableItem"] ?? anyResume["reusableItem"]) as ((fp: string) => unknown) | undefined;
-      if (typeof reusableFn === "function") {
-        item = reusableFn.call(resume, fingerprint);
-        ok = item !== null && item !== undefined;
-      } else if (typeof anyResume["Item"] === "function") {
-        item = (anyResume["Item"] as (fp: string) => unknown).call(resume, fingerprint);
-        const manifest = (anyResume["manifest"] ?? anyResume["Manifest"]) as { coverage?: { completed?: Array<{ fingerprint?: string; itemId?: string }> } } | null | undefined;
-        if (manifest !== null && manifest !== undefined && Array.isArray(manifest.coverage?.completed)) {
-          ok = manifest.coverage!.completed.some((c) => c.fingerprint === fingerprint || c.itemId === fingerprint);
-          if (!ok) item = null;
-        } else {
-          ok = item !== null && item !== undefined;
-        }
-      }
-      if (!ok || item === null || item === undefined) { toDispatch.push(d); continue; }
-      const anyItem = item as Record<string, unknown>;
-      const comments = (anyItem["comments"] ?? anyItem["Comments"] ?? []) as unknown[];
+      const item = resume.ReusableItem(fingerprint);
+      if (item === null || item === undefined) { toDispatch.push(d); continue; }
+      const comments = (item as unknown as { comments?: unknown }).comments as unknown[] | undefined;
       if (collector !== null && Array.isArray(comments)) {
         for (const cm of comments) {
-          const anyCollector = collector as unknown as { add?: (c: unknown) => void; Add?: (c: unknown) => void };
-          if (typeof anyCollector.add === "function") {
-            try { anyCollector.add(cm as never); } catch {}
-          } else if (typeof anyCollector.Add === "function") {
-            try { anyCollector.Add(cm as never); } catch {}
-          }
+          try { collector.add(cm as never); } catch {}
         }
       }
       try {
         const sess = this.sessionHistory;
-        const fn = (sess as unknown as { RecordReviewItemReused?: (p: string, o: string, n: string, f: string, s: string, c: unknown[]) => void })?.RecordReviewItemReused;
-        if (typeof fn === "function" && sess !== null) {
-          const resumedFrom = (anyResume["sessionId"] ?? anyResume["SessionID"] ?? "") as string;
-          fn.call(sess, effectivePath(d), d.oldPath, d.newPath, fingerprint, resumedFrom, comments as never[]);
+        if (sess !== null && typeof (sess as unknown as { RecordReviewItemReused?: unknown }).RecordReviewItemReused === "function") {
+          const resumedFrom = resume.sessionId;
+          (sess as unknown as { RecordReviewItemReused: (p: string, o: string, n: string, f: string, s: string, c: unknown[]) => void }).RecordReviewItemReused(effectivePath(d), d.oldPath, d.newPath, fingerprint, resumedFrom, comments as never[]);
         }
       } catch {}
       this.markReused(d);
       reused++;
     }
     const rerun = toDispatch.filter((d) => !d.isDeleted).length;
-    const prevModel = ((resume as unknown as Record<string, unknown>)["model"] ?? (resume as unknown as Record<string, unknown>)["Model"] ?? "") as string;
-    const curModel = (this.args.model ?? (this.args as unknown as Record<string, unknown>)["Model"] as string ?? "") as string;
-    const resumedFrom = ((resume as unknown as Record<string, unknown>)["sessionId"] ?? (resume as unknown as Record<string, unknown>)["SessionID"] ?? "") as string;
+    const prevModel = resume.model ?? "";
+    const curModel = this.args.model ?? "";
+    const resumedFrom = resume.sessionId ?? "";
     this.resumeInfo = { resumedFrom, reusedFiles: reused, rerunFiles: rerun, previousModel: prevModel, currentModel: curModel };
     return toDispatch;
   }
 
   private reviewModeForManifest(): string {
-    const from = (this.args.from ?? (this.args as unknown as Record<string, unknown>)["From"] as string ?? "") as string;
-    const to = (this.args.to ?? (this.args as unknown as Record<string, unknown>)["To"] as string ?? "") as string;
-    const commit = (this.args.commit ?? (this.args as unknown as Record<string, unknown>)["Commit"] as string ?? "") as string;
+    const from = this.args.from ?? "";
+    const to = this.args.to ?? "";
+    const commit = this.args.commit ?? "";
     if (commit !== "") return "commit";
     if (from !== "" && to !== "") return "range";
     return "workspace";
@@ -723,32 +652,22 @@ export class Agent {
   private ruleConfigSHA256(): string {
     const fields: string[] = [];
     const anyArgs = this.args as unknown as Record<string, unknown>;
-    const sysRule = (anyArgs["systemRule"] ?? anyArgs["SystemRule"]) as unknown;
+    const sysRule = anyArgs["systemRule"] as unknown;
     if (sysRule !== null && sysRule !== undefined && typeof sysRule === "object") {
       const rec = sysRule as Record<string, unknown>;
-      const cc = (rec["canonicalConfig"] ?? rec["CanonicalConfig"]) as unknown;
+      const cc = rec["canonicalConfig"] as unknown;
       if (typeof cc === "function") {
         try {
           const result = (cc as () => string[]).call(sysRule) as string[];
           if (Array.isArray(result)) fields.push(...result);
         } catch {}
-      } else if (typeof (rec["canonicalConfig"] as unknown) === "function") {
-        // already handled
-      }
-      // Also support object with method via direct call
-      const alt = rec["CanonicalConfig"] as unknown;
-      if (typeof alt === "function" && cc !== alt) {
-        try {
-          const result = (alt as () => string[]).call(sysRule) as string[];
-          if (Array.isArray(result)) fields.push(...result);
-        } catch {}
       }
     }
-    const fileFilter = (anyArgs["fileFilter"] ?? anyArgs["FileFilter"]) as unknown;
+    const fileFilter = anyArgs["fileFilter"] as unknown;
     if (fileFilter !== null && fileFilter !== undefined && typeof fileFilter === "object") {
       const rec = fileFilter as Record<string, unknown>;
-      const inc = (rec["include"] ?? rec["Include"]) as unknown;
-      const exc = (rec["exclude"] ?? rec["Exclude"]) as unknown;
+      const inc = rec["include"] as unknown;
+      const exc = rec["exclude"] as unknown;
       if (Array.isArray(inc)) for (const v of inc) if (typeof v === "string") fields.push("include", v);
       if (Array.isArray(exc)) for (const v of exc) if (typeof v === "string") fields.push("exclude", v);
     }
@@ -756,12 +675,11 @@ export class Agent {
   }
 
   private runtimeConfigSHA256(): string {
-    const anyArgs = this.args as unknown as Record<string, unknown>;
-    const rc = (anyArgs["runtimeConfig"] ?? anyArgs["RuntimeConfig"] ?? {}) as Record<string, unknown>;
-    const protocol = (rc["protocol"] ?? rc["Protocol"] ?? "") as string;
-    const endpointHost = (rc["endpointHost"] ?? rc["EndpointHost"] ?? rc["endpoint_host"] ?? "") as string;
-    const language = (rc["language"] ?? rc["Language"] ?? "") as string;
-    const timeoutRaw = (rc["timeoutMs"] ?? rc["Timeout"] ?? rc["timeout"] ?? "") as unknown;
+    const rc = (this.args.runtimeConfig ?? {}) as unknown as Record<string, unknown>;
+    const protocol = (rc["protocol"] ?? "") as string;
+    const endpointHost = (rc["endpointHost"] ?? "") as string;
+    const language = (rc["language"] ?? "") as string;
+    const timeoutRaw = (rc["timeoutMs"] ?? "") as unknown;
     let timeoutStr = "";
     if (typeof timeoutRaw === "number") {
       // Go's Timeout.String() for time.Duration: convert ms to Go duration string approx
@@ -781,9 +699,9 @@ export class Agent {
     } else if (timeoutRaw !== null && typeof timeoutRaw === "object" && typeof (timeoutRaw as { toString?: () => string }).toString === "function") {
       try { timeoutStr = String(timeoutRaw); } catch { timeoutStr = ""; }
     }
-    const model = (anyArgs["model"] ?? anyArgs["Model"] ?? "") as string;
-    const maxConcurrency = (anyArgs["maxConcurrency"] ?? anyArgs["MaxConcurrency"] ?? 0) as number;
-    const maxTokensBudget = (anyArgs["maxTokensBudget"] ?? anyArgs["MaxTokensBudget"] ?? 0) as number;
+    const model = this.args.model ?? "";
+    const maxConcurrency = this.args.maxConcurrency ?? 0;
+    const maxTokensBudget = this.args.maxTokensBudget ?? 0;
     return hashFields(
       "protocol", protocol,
       "model", model,
@@ -809,10 +727,9 @@ export class Agent {
 
   private manifestInput(): import("../session/manifest.js").ManifestInput {
     const mode = this.manifestMode();
-    const anyArgs = this.args as unknown as Record<string, unknown>;
-    const from = (anyArgs["from"] ?? anyArgs["From"] ?? "") as string;
-    const to = (anyArgs["to"] ?? anyArgs["To"] ?? "") as string;
-    const commit = (anyArgs["commit"] ?? anyArgs["Commit"] ?? "") as string;
+    const from = this.args.from ?? "";
+    const to = this.args.to ?? "";
+    const commit = this.args.commit ?? "";
     const input: import("../session/manifest.js").ManifestInput = { mode };
     if (mode === "range") {
       input.requestedFrom = from;
@@ -845,15 +762,14 @@ export class Agent {
   private initManifest(): void {
     const b = this.manifestBuilder;
     if (!b) return;
-    const anyArgs = this.args as unknown as Record<string, unknown>;
-    const resume = (anyArgs["resume"] ?? anyArgs["Resume"]) as { sessionId?: string; SessionID?: string } | null | undefined;
-    const parent = resume ? ((resume as Record<string, unknown>)["sessionId"] as string ?? (resume as Record<string, unknown>)["SessionID"] as string ?? "") : "";
+    const resume = this.args.resume;
+    const parent = resume ? resume.sessionId : "";
     if (parent !== "") b.SetParentRunID(parent);
     const input = this.manifestInput();
     b.SetInput(input);
-    const provider = (anyArgs["provider"] ?? anyArgs["Provider"] ?? "") as string;
-    const model = (anyArgs["model"] ?? anyArgs["Model"] ?? "") as string;
-    const maxConcurrency = (anyArgs["maxConcurrency"] ?? anyArgs["MaxConcurrency"] ?? 0) as number;
+    const provider = this.args.provider ?? "";
+    const model = this.args.model ?? "";
+    const maxConcurrency = this.args.maxConcurrency ?? 0;
     b.SetExecution({
       provider,
       model,
@@ -866,15 +782,9 @@ export class Agent {
   }
 
   private newRequestMeta(filePath: string, taskType: string, requestNo: number): import("../llmloop/types.js").RequestMeta {
-    const anyArgs = this.args as unknown as Record<string, unknown>;
-    const provider = (anyArgs["provider"] ?? anyArgs["Provider"] ?? "") as string;
-    const model = (anyArgs["model"] ?? anyArgs["Model"] ?? "") as string;
+    const provider = this.args.provider ?? "";
+    const model = this.args.model ?? "";
     return { provider, model, filePath, taskType, requestNo };
-  }
-
-  // Alias for Go naming
-  private NewRequestMeta(filePath: string, taskType: string, requestNo: number): import("../llmloop/types.js").RequestMeta {
-    return this.newRequestMeta(filePath, taskType, requestNo);
   }
 
   private coverageItem(d: Diff): CoverageItem {
@@ -932,22 +842,8 @@ export class Agent {
   }
 
   RunManifest(): RunManifest | null {
-    if ((this as unknown) === null || (this as unknown) === undefined) return null;
-    const sh = (this as unknown as { sessionHistory?: { FinalManifest?: () => RunManifest | null; finalManifest?: RunManifest | null } | null }).sessionHistory;
-    if (sh !== null && sh !== undefined) {
-      if (typeof (sh as unknown as { FinalManifest?: () => RunManifest | null }).FinalManifest === "function") {
-        return (sh as unknown as { FinalManifest: () => RunManifest | null }).FinalManifest();
-      }
-      const fm = (sh as unknown as { finalManifest?: RunManifest | null }).finalManifest;
-      if (fm !== undefined) return fm ? { ...fm, coverage: { selected: [...fm.coverage.selected], completed: [...fm.coverage.completed], reused: [...fm.coverage.reused], failed: [...fm.coverage.failed], waived: [...fm.coverage.waived] } } : null;
-    }
-    const rm = (this as unknown as { runManifest?: RunManifest | null }).runManifest;
-    return rm ? { ...rm, coverage: { selected: [...rm.coverage.selected], completed: [...rm.coverage.completed], reused: [...rm.coverage.reused], failed: [...rm.coverage.failed], waived: [...rm.coverage.waived] } } : null;
+    return this.runManifest ? { ...this.runManifest, coverage: { selected: [...this.runManifest.coverage.selected], completed: [...this.runManifest.coverage.completed], reused: [...this.runManifest.coverage.reused], failed: [...this.runManifest.coverage.failed], waived: [...this.runManifest.coverage.waived] } } : null;
   }
-
-  // Alias for test that uses lowercase call via Object.create path — ensure both casings work
-  // Bun test used a.SessionID() but our method is sessionId(); provide both.
-  // Also provide SessionID as alias for JS prototype chain when using Object.create.
 
 
   budgetExceededFlag(): boolean {
@@ -1138,7 +1034,7 @@ export class Agent {
     let n = 0;
     for (const dRaw of diffs) {
       const d = normalizeDiff(dRaw);
-      if (!this.shouldReview(d)) continue;
+      if (whyExcluded(d, this.args.fileFilter ?? null) !== ExcludeNone) continue;
       if (d.isDeleted) continue;
       n++;
     }
@@ -1151,7 +1047,7 @@ export class Agent {
     for (const dRaw of diffs) {
       const d = normalizeDiff(dRaw);
       const path = effectivePath(d);
-      if (!this.shouldReview(d)) {
+      if (whyExcluded(d, this.args.fileFilter ?? null) !== ExcludeNone) {
         if (d.isBinary) console.error(`[pi-review] Skipping ${path} — binary file`);
         else console.error(`[pi-review] Skipping ${path} — filtered by path/extension rules`);
         skipped++;
@@ -1251,7 +1147,7 @@ export class Agent {
     const collector = this.args.commentCollector ?? null;
 
     // Budget pre-check helper
-    const maxBudget = this.args.maxTokensBudget ?? (this.args as unknown as Record<string, unknown>)["MaxTokensBudget"] as number | undefined ?? 0;
+    const maxBudget = this.args.maxTokensBudget ?? 0;
 
     for (const dRaw of toDispatch) {
       const d = normalizeDiff(dRaw);
@@ -1744,83 +1640,6 @@ export class Agent {
 }
 
 // ---------------------------------------------------------------------------
-// Review filter — mirrors Go executeReviewFilter + buildFilterCommentsJSON + parseFilterResponse
-// ---------------------------------------------------------------------------
-
-export function buildFilterCommentsJSON(comments: LlmComment[]): string {
-  type FilterComment = { id: string; content: string; existing_code?: string };
-  const items: FilterComment[] = comments.map((cm, i) => ({
-    id: `c-${i}`,
-    content: cm.content,
-    ...(cm.existingCode ? { existing_code: cm.existingCode } : {}),
-  }));
-  return JSON.stringify(items);
-}
-
-export function parseFilterResponse(raw: string, total: number): Map<number, unknown> | null {
-  const cleaned = StripMarkdownFences(raw);
-  let ids: unknown;
-  try {
-    ids = JSON.parse(cleaned);
-  } catch (err) {
-    const preview = cleaned.length > 200 ? cleaned.slice(0, 200) + "..." : cleaned;
-    console.error(`[pi-review] Review filter: failed to parse LLM response: ${String((err as Error).message)}, raw: ${preview}`);
-    return null;
-  }
-  if (!Array.isArray(ids)) {
-    const preview = cleaned.length > 200 ? cleaned.slice(0, 200) + "..." : cleaned;
-    console.error(`[pi-review] Review filter: failed to parse LLM response: expected array, raw: ${preview}`);
-    return null;
-  }
-  const indices = new Map<number, unknown>();
-  for (const id of ids) {
-    if (typeof id !== "string") continue;
-    const m = /^c-(\d+)$/.exec(id);
-    if (!m) continue;
-    const idx = Number(m[1]);
-    if (!Number.isInteger(idx) || idx < 0 || idx >= total) continue;
-    indices.set(idx, {});
-  }
-  return indices;
-}
-
-  
-// ---------------------------------------------------------------------------
-// formatToolDefs — mirrors Go formatToolDefs (simplified)
-// ---------------------------------------------------------------------------
-
-function formatToolDefs(toolDefs: readonly ToolDef[]): string {
-  if (toolDefs.length === 0) return "";
-  let sb = "### Available Tools (reference only — do not call)\n";
-  for (const td of toolDefs) {
-    const fn = td.function as unknown as Record<string, unknown>;
-    const name = typeof fn["name"] === "string" ? (fn["name"] as string) : "unknown";
-    const desc = typeof fn["description"] === "string" ? (fn["description"] as string) : "";
-    sb += `- **${name}**: ${desc}\n`;
-    const rawDef = (fn["RawDefinition"] ?? fn["rawDefinition"]) as unknown;
-    const params = fn["parameters"] as unknown;
-    if (params !== null && params !== undefined && typeof params === "object") {
-      const rec = params as Record<string, unknown>;
-      const props = rec["properties"] as Record<string, unknown> | undefined;
-      if (props !== undefined && Object.keys(props).length > 0) {
-        const required = new Set<string>(
-          Array.isArray(rec["required"]) ? (rec["required"] as unknown[]).filter((x): x is string => typeof x === "string") : [],
-        );
-        sb += "  Parameters:\n";
-        const keys = rawDef !== null && rawDef !== undefined ? Object.keys(props) : Object.keys(props).sort();
-        for (const k of keys) {
-          const meta = props[k] as Record<string, unknown> | undefined;
-          const desc2 = meta !== undefined && typeof meta["description"] === "string" ? (meta["description"] as string) : "";
-          const suffix = required.has(k) ? " (required)" : "";
-          sb += `  - ${k}: ${desc2}${suffix}\n`;
-        }
-      }
-    }
-  }
-  return sb;
-}
-
-// ---------------------------------------------------------------------------
 // Minimal in-memory collector used when none is supplied
 // ---------------------------------------------------------------------------
 
@@ -1839,62 +1658,6 @@ function createInMemoryCollector(): CommentCollectorLike {
   };
 }
 
-export interface ToolConfigEntry {
-  readonly Name: string;
-  readonly PlanTask: boolean;
-  readonly MainTask: boolean;
-  readonly Definition: unknown;
-  readonly name?: string;
-  readonly planTask?: boolean;
-  readonly mainTask?: boolean;
-  readonly definition?: unknown;
-}
-
-export function BuildToolDefs(entries: readonly ToolConfigEntry[] | null | undefined, planOnly: boolean): ToolDef[] | null {
-  if (entries === null || entries === undefined || entries.length === 0) return null;
-  const out: ToolDef[] = [];
-  for (const e of entries) {
-    const name = (e as unknown as Record<string, unknown>)["Name"] as string | undefined ?? (e as unknown as Record<string, unknown>)["name"] as string | undefined ?? "";
-    const planTask = (e as unknown as Record<string, unknown>)["PlanTask"] as boolean | undefined ?? (e as unknown as Record<string, unknown>)["planTask"] as boolean | undefined ?? false;
-    const mainTask = (e as unknown as Record<string, unknown>)["MainTask"] as boolean | undefined ?? (e as unknown as Record<string, unknown>)["mainTask"] as boolean | undefined ?? false;
-    const defRaw = (e as unknown as Record<string, unknown>)["Definition"] ?? (e as unknown as Record<string, unknown>)["definition"];
-    const shouldInclude = planOnly ? planTask : mainTask;
-    if (!shouldInclude) continue;
-    let parsed: Record<string, unknown> | null = null;
-    let rawStr: string | null = null;
-    if (typeof defRaw === "string") {
-      rawStr = defRaw;
-      try { parsed = JSON.parse(defRaw) as Record<string, unknown>; } catch { console.error(`[ocr] WARNING: failed to parse tool definition "${name}": invalid JSON`); continue; }
-    } else if (defRaw !== null && typeof defRaw === "object") {
-      // Assume object is already parsed
-      parsed = defRaw as Record<string, unknown>;
-      try { rawStr = JSON.stringify(defRaw); } catch { rawStr = null; }
-    } else if (defRaw !== null && typeof defRaw === "object" && (defRaw as { toString?: () => string }) !== null) {
-      // Handle Uint8Array etc?
-      try { rawStr = String(defRaw); parsed = JSON.parse(rawStr) as Record<string, unknown>; } catch { continue; }
-    } else {
-      continue;
-    }
-    if (parsed === null) continue;
-    const fnName = typeof parsed["name"] === "string" ? (parsed["name"] as string) : name;
-    const fnDesc = typeof parsed["description"] === "string" ? (parsed["description"] as string) : "";
-    const parameters = parsed["parameters"] as unknown;
-    out.push({
-      type: "function",
-      function: {
-        name: fnName,
-        description: fnDesc,
-        parameters: parameters as unknown,
-        RawDefinition: rawStr ?? undefined,
-      } as unknown as ToolDef["function"],
-    });
-  }
-  return out.length === 0 ? null : out;
-}
-
-export const buildToolDefs = BuildToolDefs;
-
-// Also export a factory matching Go New() signature helper
 export function newAgent(args: Args): Agent {
   return new Agent(args);
 }

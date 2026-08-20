@@ -3,58 +3,43 @@
 // Ported from internal/agent/preview_test.go at c35ddd7223f2b5540ce03aa43c9a25ef643fca27
 
 import { describe, test, expect } from "bun:test";
-import { Agent } from "../../../src/ocr-v193/agent/agent.js";
-import { effectivePath, diffStatus } from "../../../src/ocr-v193/agent/preview.js";
+import { effectivePath, diffStatus, whyExcluded } from "../../../src/ocr-v193/agent/preview.js";
 import type { Diff } from "../../../src/ocr-v193/model/diff.js";
 import { createDiff } from "../../../src/ocr-v193/model/diff.js";
 import { ExcludeNone, ExcludeUserRule, ExcludeExtension, ExcludeDefaultPath, ExcludeBinary } from "../../../src/ocr-v193/model/preview.js";
-import type { Template } from "../../../src/ocr-v193/template/template.js";
-
-function makeAgent(fileFilter: unknown): Agent {
-  const fakeClient = { complete: async () => ({ content: "" }), CompletionsWithCtx: async () => ({ content: "" }) } as unknown as never;
-  return new Agent({
-    repoDir: "/tmp",
-    model: "test",
-    llmClient: fakeClient,
-    template: { MaxTokens: 10000, MaxToolRequestTimes: 5, MainTask: { messages: [{ role: "user", content: "t" }] }, MemoryCompressionTask: { messages: [{ role: "system", content: "c" }] } } as unknown as Template,
-    fileFilter: fileFilter as unknown as never,
-    mainToolDefs: [],
-  } as unknown as never);
-}
+import type { ExcludeReason } from "../../../src/ocr-v193/model/preview.js";
 
 describe("ocr-v193 agent preview whyExcluded (ported)", () => {
   // OCR v1.9.3: TestWhyExcluded_BinaryFile
   test("TestWhyExcluded_BinaryFile", () => {
-    const agent = makeAgent(null);
-    const cases: Array<{ name: string; diff: Diff; expected: string }> = [
+    const cases: Array<{ name: string; diff: Diff; expected: ExcludeReason }> = [
       { name: "binary file returns ExcludeBinary", diff: createDiff({ newPath: "image.png", isBinary: true }), expected: ExcludeBinary },
       { name: "non-binary go file returns ExcludeNone", diff: createDiff({ newPath: "main.go" }), expected: ExcludeNone },
       { name: "binary file with valid extension still excluded", diff: createDiff({ newPath: "document.pdf", isBinary: true }), expected: ExcludeBinary },
     ];
     for (const tc of cases) {
-      const got = (agent as unknown as { whyExcluded: (d: Diff) => string }).whyExcluded(tc.diff);
+      const got = whyExcluded(tc.diff, null);
       expect(got).toBe(tc.expected);
     }
   });
 
   // OCR v1.9.3: TestWhyExcluded_UserExcludePattern
   test("TestWhyExcluded_UserExcludePattern", () => {
-    const agent = makeAgent({ Exclude: ["vendor/**", "*.gen.go"], exclude: ["vendor/**", "*.gen.go"] });
-    const cases: Array<{ name: string; diff: Diff; expected: string }> = [
+    const filter = { exclude: ["vendor/**", "*.gen.go"] } as unknown as import("../../../src/ocr-v193/rules/system_rules.js").FileFilter;
+    const cases: Array<{ name: string; diff: Diff; expected: ExcludeReason }> = [
       { name: "file matching exclude pattern", diff: createDiff({ newPath: "vendor/foo/bar.go" }), expected: ExcludeUserRule },
       { name: "generated file excluded", diff: createDiff({ newPath: "api.gen.go" }), expected: ExcludeUserRule },
       { name: "regular file not excluded", diff: createDiff({ newPath: "main.go" }), expected: ExcludeNone },
     ];
     for (const tc of cases) {
-      const got = (agent as unknown as { whyExcluded: (d: Diff) => string }).whyExcluded(tc.diff);
+      const got = whyExcluded(tc.diff, filter);
       expect(got).toBe(tc.expected);
     }
   });
 
   // OCR v1.9.3: TestWhyExcluded_ExtensionFilter
   test("TestWhyExcluded_ExtensionFilter", () => {
-    const agent = makeAgent(null);
-    const cases: Array<{ name: string; diff: Diff; expected: string }> = [
+    const cases: Array<{ name: string; diff: Diff; expected: ExcludeReason }> = [
       { name: "unsupported extension txt", diff: createDiff({ newPath: "README.txt" }), expected: ExcludeExtension },
       { name: "unsupported extension md", diff: createDiff({ newPath: "docs/guide.md" }), expected: ExcludeExtension },
       { name: "supported extension go", diff: createDiff({ newPath: "main.go" }), expected: ExcludeNone },
@@ -63,30 +48,29 @@ describe("ocr-v193 agent preview whyExcluded (ported)", () => {
       { name: "file without extension", diff: createDiff({ newPath: "Makefile" }), expected: ExcludeNone },
     ];
     for (const tc of cases) {
-      const got = (agent as unknown as { whyExcluded: (d: Diff) => string }).whyExcluded(tc.diff);
+      const got = whyExcluded(tc.diff, null);
       expect(got).toBe(tc.expected);
     }
   });
 
   // OCR v1.9.3: TestWhyExcluded_DefaultPathFilter
   test("TestWhyExcluded_DefaultPathFilter", () => {
-    const agent = makeAgent(null);
-    const cases: Array<{ name: string; diff: Diff; expected: string }> = [
+    const cases: Array<{ name: string; diff: Diff; expected: ExcludeReason }> = [
       { name: "test file excluded by default path", diff: createDiff({ newPath: "foo_test.go" }), expected: ExcludeDefaultPath },
       { name: "java test file excluded", diff: createDiff({ newPath: "src/test/java/com/example/FooTest.java" }), expected: ExcludeDefaultPath },
       { name: "regular source file not excluded", diff: createDiff({ newPath: "src/main/java/com/example/Foo.java" }), expected: ExcludeNone },
       { name: "go source file not excluded", diff: createDiff({ newPath: "handler.go" }), expected: ExcludeNone },
     ];
     for (const tc of cases) {
-      const got = (agent as unknown as { whyExcluded: (d: Diff) => string }).whyExcluded(tc.diff);
+      const got = whyExcluded(tc.diff, null);
       expect(got).toBe(tc.expected);
     }
   });
 
   // OCR v1.9.3: TestWhyExcluded_UserIncludePattern
   test("TestWhyExcluded_UserIncludePattern", () => {
-    const agent = makeAgent({ Include: ["src/**/*.go", "pkg/**/*.go", "**/*.supportedext"], include: ["src/**/*.go", "pkg/**/*.go", "**/*.supportedext"] });
-    const cases: Array<{ name: string; diff: Diff; expected: string }> = [
+    const filter = { include: ["src/**/*.go", "pkg/**/*.go", "**/*.supportedext"], exclude: [] } as unknown as import("../../../src/ocr-v193/rules/system_rules.js").FileFilter;
+    const cases: Array<{ name: string; diff: Diff; expected: ExcludeReason }> = [
       { name: "file matching first include pattern is reviewed", diff: createDiff({ newPath: "src/foo/bar.go" }), expected: ExcludeNone },
       { name: "file matching second include pattern is reviewed", diff: createDiff({ newPath: "pkg/util/helper.go" }), expected: ExcludeNone },
       { name: "include pattern bypasses default-path exclusion for test files", diff: createDiff({ newPath: "src/foo/bar_test.go" }), expected: ExcludeNone },
@@ -97,49 +81,48 @@ describe("ocr-v193 agent preview whyExcluded (ported)", () => {
       { name: "non-included test file excluded by default path", diff: createDiff({ newPath: "internal/handler_test.go" }), expected: ExcludeDefaultPath },
     ];
     for (const tc of cases) {
-      const got = (agent as unknown as { whyExcluded: (d: Diff) => string }).whyExcluded(tc.diff);
+      const got = whyExcluded(tc.diff, filter as unknown as never);
       expect(got).toBe(tc.expected);
     }
   });
 
   // OCR v1.9.3: TestWhyExcluded_IncludeBypassesDefaultPath
   test("TestWhyExcluded_IncludeBypassesDefaultPath", () => {
-    const agent = makeAgent({ Include: ["**/*_test.go"], include: ["**/*_test.go"] });
-    const cases: Array<{ name: string; diff: Diff; expected: string }> = [
+    const filter = { include: ["**/*_test.go"] } as unknown as import("../../../src/ocr-v193/rules/system_rules.js").FileFilter;
+    const cases: Array<{ name: string; diff: Diff; expected: ExcludeReason }> = [
       { name: "test file explicitly included overrides default-path exclusion", diff: createDiff({ newPath: "foo_test.go" }), expected: ExcludeNone },
       { name: "non-test file still reviewed via default checks", diff: createDiff({ newPath: "main.go" }), expected: ExcludeNone },
     ];
     for (const tc of cases) {
-      const got = (agent as unknown as { whyExcluded: (d: Diff) => string }).whyExcluded(tc.diff);
+      const got = whyExcluded(tc.diff, filter as unknown as never);
       expect(got).toBe(tc.expected);
     }
   });
 
   // OCR v1.9.3: TestWhyExcluded_IncludeAndExcludeInteraction
   test("TestWhyExcluded_IncludeAndExcludeInteraction", () => {
-    const agent = makeAgent({ Include: ["src/**/*.go"], include: ["src/**/*.go"], Exclude: ["src/generated/**"], exclude: ["src/generated/**"] });
-    const cases: Array<{ name: string; diff: Diff; expected: string }> = [
+    const filter = { include: ["src/**/*.go"], exclude: ["src/generated/**"] } as unknown as import("../../../src/ocr-v193/rules/system_rules.js").FileFilter;
+    const cases: Array<{ name: string; diff: Diff; expected: ExcludeReason }> = [
       { name: "included file is reviewed", diff: createDiff({ newPath: "src/handler.go" }), expected: ExcludeNone },
       { name: "file matching both include and exclude is excluded (exclude wins)", diff: createDiff({ newPath: "src/generated/api.go" }), expected: ExcludeUserRule },
       { name: "file outside include with valid ext still reviewed (additive)", diff: createDiff({ newPath: "lib/utils.go" }), expected: ExcludeNone },
     ];
     for (const tc of cases) {
-      const got = (agent as unknown as { whyExcluded: (d: Diff) => string }).whyExcluded(tc.diff);
+      const got = whyExcluded(tc.diff, filter as unknown as never);
       expect(got).toBe(tc.expected);
     }
   });
 
   // OCR v1.9.3: TestWhyExcluded_PriorityOrder
   test("TestWhyExcluded_PriorityOrder", () => {
-    const agent = makeAgent({ Exclude: ["vendor/**"], exclude: ["vendor/**"] });
+    const filter = { exclude: ["vendor/**"] } as unknown as import("../../../src/ocr-v193/rules/system_rules.js").FileFilter;
     const diff = createDiff({ newPath: "vendor/image.png", isBinary: true });
-    const got = (agent as unknown as { whyExcluded: (d: Diff) => string }).whyExcluded(diff);
+    const got = whyExcluded(diff, filter as unknown as never);
     expect(got).toBe(ExcludeBinary);
   });
 
   // OCR v1.9.3: TestShouldReview
   test("TestShouldReview", () => {
-    const agent = makeAgent(null);
     const cases: Array<{ name: string; diff: Diff; expected: boolean }> = [
       { name: "binary file should not be reviewed", diff: createDiff({ newPath: "image.png", isBinary: true }), expected: false },
       { name: "regular go file should be reviewed", diff: createDiff({ newPath: "main.go" }), expected: true },
@@ -147,7 +130,7 @@ describe("ocr-v193 agent preview whyExcluded (ported)", () => {
       { name: "unsupported extension should not be reviewed", diff: createDiff({ newPath: "README.md" }), expected: false },
     ];
     for (const tc of cases) {
-      const got = (agent as unknown as { shouldReview: (d: Diff) => boolean }).shouldReview(tc.diff);
+      const got = whyExcluded(tc.diff, null) === ExcludeNone;
       expect(got).toBe(tc.expected);
     }
   });

@@ -294,15 +294,10 @@ describe("ocr-v193 agent dispatch (ported from internal/agent/agent_test.go)", (
     const fp = reviewItemFingerprint("range", diffs[0]!);
     const resume: Record<string, unknown> = {
       sessionId: "old-session",
-      SessionID: "old-session",
       model: "anthropic-model",
-      Model: "anthropic-model",
       reviewMode: "range",
-      ReviewMode: "range",
       diffFrom: "main",
-      DiffFrom: "main",
       diffTo: "feature",
-      DiffTo: "feature",
       items: new Map<string, unknown>([
         [fp, { filePath: "a.go", oldPath: "a.go", newPath: "a.go", fingerprint: fp, comments: [{ path: "a.go", content: "cached comment" }] }],
       ]),
@@ -329,7 +324,7 @@ describe("ocr-v193 agent dispatch (ported from internal/agent/agent_test.go)", (
       to: "feature",
       model: "openai-model",
       commentCollector: collector as unknown as never,
-      Resume: resume as unknown as never,
+      resume: resume as unknown as never,
       Session: sess as unknown as never,
       repoDir: "/tmp",
       llmClient: { complete: async () => ({ content: "" }) } as unknown as never,

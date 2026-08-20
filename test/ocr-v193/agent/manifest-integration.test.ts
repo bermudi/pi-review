@@ -40,7 +40,7 @@ function newManifestFlowAgent(diffs: Diff[], resume: unknown, client?: unknown):
   const repoDir = fs.mkdtempSync(os.tmpdir() + "/pi-manifest-");
   const home = fs.mkdtempSync(os.tmpdir() + "/pi-home-");
   process.env.HOME = home;
-  const sess = new SessionHistory(repoDir, "feature", "fake", { reviewMode: "range", diffFrom: "main", diffTo: "feature", resumedFrom: (resume as Record<string, unknown>)?.["SessionID"] as string ?? (resume as Record<string, unknown>)?.["sessionId"] as string ?? "" });
+  const sess = new SessionHistory(repoDir, "feature", "fake", { reviewMode: "range", diffFrom: "main", diffTo: "feature", resumedFrom: (resume as Record<string, unknown>)?.["sessionId"] as string ?? "" });
   const c = (client ?? new ManifestFlowClient()) as unknown as never;
   const collector = new CommentCollector() as unknown as never;
   const agent = new Agent({
@@ -51,7 +51,7 @@ function newManifestFlowAgent(diffs: Diff[], resume: unknown, client?: unknown):
     llmClient: c,
     model: "fake",
     Session: sess as unknown as never,
-    Resume: resume as unknown as never,
+    resume: resume as unknown as never,
     commentCollector: collector as unknown as never,
     template: {
       MaxTokens: 100000,
@@ -177,7 +177,7 @@ describe("ocr-v193 agent manifest integration (ported)", () => {
     const diffs = [createDiff({ oldPath: "cached.go", newPath: "cached.go", diff: "+cached", insertions: 1 }), createDiff({ oldPath: "fresh.go", newPath: "fresh.go", diff: "+fresh", insertions: 1 })];
     const fp = reviewItemFingerprint("range", diffs[0]!);
     const resume: Record<string, unknown> = {
-      sessionId: "parent-run", SessionID: "parent-run", reviewMode: "range", diffFrom: "main", diffTo: "feature",
+      sessionId: "parent-run", reviewMode: "range", diffFrom: "main", diffTo: "feature",
       items: new Map([[fp, { filePath: "cached.go", oldPath: "cached.go", newPath: "cached.go", fingerprint: fp }]]),
       manifest: { coverage: { selected: [{ itemId: fp, fingerprint: fp }], completed: [{ itemId: fp, fingerprint: fp }], reused: [], failed: [], waived: [] } },
       ReusableItem: function (f: string) { return (this as unknown as { items: Map<string, unknown> }).items.get(f) ?? null; },
@@ -195,7 +195,7 @@ describe("ocr-v193 agent manifest integration (ported)", () => {
     const fp = reviewItemFingerprint("range", diffs[0]!);
     const finding = "PARENT_FINDING_ABOUT_CACHED_GO";
     const resume: Record<string, unknown> = {
-      sessionId: "parent-run", SessionID: "parent-run", reviewMode: "range", diffFrom: "main", diffTo: "feature",
+      sessionId: "parent-run", reviewMode: "range", diffFrom: "main", diffTo: "feature",
       items: new Map([[fp, { filePath: "cached.go", oldPath: "cached.go", newPath: "cached.go", fingerprint: fp, comments: [{ path: "cached.go", content: finding }] }]]),
       manifest: { coverage: { selected: [{ itemId: fp, fingerprint: fp }], completed: [{ itemId: fp, fingerprint: fp }], reused: [], failed: [], waived: [] } },
       ReusableItem: function (f: string) { return (this as unknown as { items: Map<string, unknown> }).items.get(f) ?? null; },
@@ -226,7 +226,7 @@ describe("ocr-v193 agent manifest integration (ported)", () => {
     const diffs = [createDiff({ oldPath: "cached.go", newPath: "cached.go", diff: "+cached", insertions: 1 })];
     const fp = reviewItemFingerprint("range", diffs[0]!);
     const resume: Record<string, unknown> = {
-      sessionId: "parent-run", SessionID: "parent-run", reviewMode: "range", diffFrom: "main", diffTo: "feature",
+      sessionId: "parent-run", reviewMode: "range", diffFrom: "main", diffTo: "feature",
       items: new Map([[fp, { filePath: "cached.go", newPath: "cached.go", fingerprint: fp }]]),
       manifest: { coverage: { selected: [{ itemId: "fp-some-other-item", fingerprint: "fp-some-other-item" }], completed: [{ itemId: "fp-some-other-item", fingerprint: "fp-some-other-item" }], reused: [], failed: [], waived: [] } },
       ReusableItem: function (f: string) { const m = (this as unknown as { manifest: { coverage: { completed: unknown[] } } }).manifest; if (!m.coverage.completed.some((c: unknown) => (c as { fingerprint: string }).fingerprint === f)) return null; return (this as unknown as { items: Map<string, unknown> }).items.get(f) ?? null; },
@@ -243,7 +243,7 @@ describe("ocr-v193 agent manifest integration (ported)", () => {
     const diffs = [createDiff({ oldPath: "one.go", newPath: "one.go", diff: "+one", insertions: 1 }), createDiff({ oldPath: "two.go", newPath: "two.go", diff: "+two", insertions: 1 })];
     const fps = diffs.map((d) => reviewItemFingerprint("range", d));
     const resume: Record<string, unknown> = {
-      sessionId: "parent-run", SessionID: "parent-run", reviewMode: "range", diffFrom: "main", diffTo: "feature",
+      sessionId: "parent-run", reviewMode: "range", diffFrom: "main", diffTo: "feature",
       items: new Map(),
       manifest: { coverage: { selected: fps.map((fp) => ({ itemId: fp, fingerprint: fp })), completed: [], failed: fps.map((fp) => ({ itemId: fp, fingerprint: fp, classification: "provider" })), reused: [], waived: [] } },
       ReusableItem: () => null,
@@ -260,7 +260,7 @@ describe("ocr-v193 agent manifest integration (ported)", () => {
     const diffs = [createDiff({ oldPath: "cached.go", newPath: "cached.go", diff: "+cached", insertions: 1 }), createDiff({ oldPath: "bad.go", newPath: "bad.go", diff: "+bad", insertions: 1 })];
     const fp = reviewItemFingerprint("range", diffs[0]!);
     const resume: Record<string, unknown> = {
-      sessionId: "parent-run", SessionID: "parent-run", reviewMode: "range", diffFrom: "main", diffTo: "feature",
+      sessionId: "parent-run", reviewMode: "range", diffFrom: "main", diffTo: "feature",
       items: new Map([[fp, { filePath: "cached.go", oldPath: "cached.go", newPath: "cached.go", fingerprint: fp }]]),
       manifest: { coverage: { selected: [{ itemId: fp, fingerprint: fp }], completed: [{ itemId: fp, fingerprint: fp }], reused: [], failed: [], waived: [] } },
       ReusableItem: function (f: string) { return (this as unknown as { items: Map<string, unknown> }).items.get(f) ?? null; },
@@ -278,7 +278,7 @@ describe("ocr-v193 agent manifest integration (ported)", () => {
     const diffs = [createDiff({ oldPath: "cached.go", newPath: "cached.go", diff: "+cached", insertions: 1 })];
     const fp = reviewItemFingerprint("range", diffs[0]!);
     const resume: Record<string, unknown> = {
-      sessionId: "parent-run", SessionID: "parent-run", reviewMode: "range", diffFrom: "main", diffTo: "feature",
+      sessionId: "parent-run", reviewMode: "range", diffFrom: "main", diffTo: "feature",
       items: new Map([[fp, { filePath: "cached.go", oldPath: "cached.go", newPath: "cached.go", fingerprint: fp }]]),
       manifest: { coverage: { selected: [{ itemId: fp, fingerprint: fp }], completed: [{ itemId: fp, fingerprint: fp }], reused: [], failed: [], waived: [] } },
       ReusableItem: function (f: string) { return (this as unknown as { items: Map<string, unknown> }).items.get(f) ?? null; },
@@ -286,8 +286,6 @@ describe("ocr-v193 agent manifest integration (ported)", () => {
     const agent = newManifestFlowAgent(diffs, resume);
     (agent as unknown as { args: Record<string, unknown> }).args["provider"] = "beta";
     (agent as unknown as { args: Record<string, unknown> }).args["model"] = "model-b";
-    (agent as unknown as { args: Record<string, unknown> }).args["Provider"] = "beta";
-    (agent as unknown as { args: Record<string, unknown> }).args["Model"] = "model-b";
     (agent as unknown as { initManifest: () => void }).initManifest();
     await (agent as unknown as { dispatchSubtasks: (s: AbortSignal) => Promise<unknown> }).dispatchSubtasks(new AbortController().signal);
     const m = await finish(agent);

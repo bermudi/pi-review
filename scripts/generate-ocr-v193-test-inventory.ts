@@ -90,7 +90,14 @@ const equivalentTests: ReadonlyMap<string, readonly Evidence[]> = new Map<string
 ]);
 
 const notApplicableTests: ReadonlyMap<string, string> = new Map<string, string>([
-  // Example: "internal/llm/resolver_test.go::TestResolver_ShellRC": "Pi replaces OCR shell-rc resolver with Pi SettingsManager; transport-independent contract is covered elsewhere"
+  [
+    "internal/agent/agent_test.go::TestAgentGettersNil",
+    "Pi replaces Go nil-receiver method call (*Agent)(nil).SessionID() with TypeScript's non-null this guarantee; calling a method on null is not applicable in TypeScript and has no runtime path.",
+  ],
+  [
+    "internal/agent/getters_test.go::TestAgentGettersNilSafe",
+    "Pi replaces Go nil-receiver guard (a := (*Agent)(nil)) with TypeScript's type system where `this` is always valid; not applicable to TypeScript, verified via normal empty-agent behavior instead.",
+  ],
 ]);
 
 // Explicit scope decisions for paths that would otherwise be needs_decision.

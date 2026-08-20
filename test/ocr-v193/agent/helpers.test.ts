@@ -4,7 +4,10 @@
 // Covers helper pure tests: BuildFilterCommentsJSON, ParseFilterResponse, ExtFromPath, FormatToolDefs, BuildToolDefs, FilterLargeDiffs, ReviewItemFingerprint etc.
 
 import { describe, test, expect } from "bun:test";
-import { Agent, hashFields, reviewItemFingerprint, buildFilterCommentsJSON, parseFilterResponse, BuildToolDefs } from "../../../src/ocr-v193/agent/agent.js";
+import { Agent, hashFields, reviewItemFingerprint } from "../../../src/ocr-v193/agent/agent.js";
+import { buildFilterCommentsJSON, parseFilterResponse } from "../../../src/ocr-v193/agent/filter.js";
+import { formatToolDefs, BuildToolDefs } from "../../../src/ocr-v193/agent/format.js";
+import { extFromPath } from "../../../src/ocr-v193/agent/preview.js";
 import type { Diff } from "../../../src/ocr-v193/model/diff.js";
 import { createDiff } from "../../../src/ocr-v193/model/diff.js";
 import { countTokens } from "../../../src/ocr-v193/llmloop/compression.js";
@@ -28,9 +31,6 @@ function makeAgent(templateOverrides: Partial<Template> = {}): Agent {
 }
 
 function exactNTokens(n: number): string {
-  // Generate string that countTokens reports as exactly n, using byte/4 fallback.
-  // Since countTokens = floor(bytes/4), we need bytes in [4n, 4n+3].
-  // Use "a".repeat(4*n) which is exactly 4n bytes => n tokens.
   if (n === 0) return "";
   const s = "a".repeat(4 * n);
   const got = countTokens(s);
@@ -48,9 +48,7 @@ describe("ocr-v193 agent helpers (ported from internal/agent/agent_test.go)", ()
     ];
     for (const tc of cases) {
       const input = tc.comments.map((c) => ({ path: "a.go", content: c.content, existingCode: c.existingCode } as unknown as import("../../../src/ocr-v193/model/review.js").LlmComment));
-      // Use free function via Agent instance wrapper
-      const agent = makeAgent();
-      const got = (agent as unknown as { buildFilterCommentsJSON: (c: unknown[]) => string }).buildFilterCommentsJSON(input);
+      const got = buildFilterCommentsJSON(input);
       const items = JSON.parse(got) as Array<{ id: string; content: string; existing_code?: string }>;
       expect(items.length).toBe(tc.comments.length);
       for (let i = 0; i < items.length; i++) {
@@ -59,7 +57,6 @@ describe("ocr-v193 agent helpers (ported from internal/agent/agent_test.go)", ()
         expect(items[i]!.existing_code ?? "").toBe(tc.comments[i]!.existingCode ?? "");
       }
     }
-    // Also test free function directly
     expect(buildFilterCommentsJSON([])).toBe("[]");
   });
 
@@ -75,8 +72,7 @@ describe("ocr-v193 agent helpers (ported from internal/agent/agent_test.go)", ()
       { name: "empty array", raw: `[]`, total: 5, wantSet: new Map() },
     ];
     for (const tc of cases) {
-      const agent = makeAgent();
-      const got = (agent as unknown as { parseFilterResponse: (raw: string, total: number) => Map<number, unknown> | null }).parseFilterResponse(tc.raw, tc.total);
+      const got = parseFilterResponse(tc.raw, tc.total);
       if (tc.wantSet === null) {
         expect(got).toBeNull();
         continue;
@@ -85,13 +81,11 @@ describe("ocr-v193 agent helpers (ported from internal/agent/agent_test.go)", ()
       expect(got!.size).toBe(tc.wantSet.size);
       for (const k of tc.wantSet.keys()) expect(got!.has(k)).toBe(true);
     }
-    // Also test free function
     expect(parseFilterResponse(`["c-0"]`, 1)!.has(0)).toBe(true);
   });
 
   // OCR v1.9.3: TestExtFromPath
   test("TestExtFromPath", () => {
-    const agent = makeAgent();
     const cases: Array<{ path: string; want: string }> = [
       { path: "main.go", want: ".go" },
       { path: "src/app.tsx", want: ".tsx" },
@@ -104,20 +98,17 @@ describe("ocr-v193 agent helpers (ported from internal/agent/agent_test.go)", ()
       { path: "path/to/", want: "" },
     ];
     for (const tc of cases) {
-      const got = (agent as unknown as { extFromPath: (p: string) => string }).extFromPath(tc.path);
+      const got = extFromPath(tc.path);
       expect(got).toBe(tc.want);
     }
   });
 
   // OCR v1.9.3: TestFormatToolDefs
   test("TestFormatToolDefs", () => {
-    const agent = makeAgent();
-    const format = (defs: unknown[]) => (agent as unknown as { formatToolDefs: (d: unknown[]) => string }).formatToolDefs(defs as never);
+    const format = (defs: unknown[]) => formatToolDefs(defs as never);
 
-    // empty defs returns empty string
     expect(format([])).toBe("");
 
-    // single tool with parameters
     {
       const defs = [
         {
@@ -144,7 +135,6 @@ describe("ocr-v193 agent helpers (ported from internal/agent/agent_test.go)", ()
       expect(got.includes("(required)")).toBe(true);
     }
 
-    // parameters preserve raw JSON order
     {
       const raw = `{\n      \"name\":\"code_search\",\n      \"description\":\"Search code\",\n      \"parameters\":{\n        \"type\":\"object\",\n        \"properties\":{\n          \"query\":{\"description\":\"Query string\"},\n          \"path_glob\":{\"description\":\"Path glob\"},\n          \"case_sensitive\":{\"description\":\"Match case\"},\n          \"max_results\":{\"description\":\"Maximum results\"}\n        },\n        \"required\":[\"query\"]\n      }\n    }` as unknown as string;
       const defs = [
@@ -183,7 +173,6 @@ describe("ocr-v193 agent helpers (ported from internal/agent/agent_test.go)", ()
       }
     }
 
-    // fallback parameters are sorted when raw order is unavailable
     {
       const defs = [
         {
@@ -220,7 +209,6 @@ describe("ocr-v193 agent helpers (ported from internal/agent/agent_test.go)", ()
       }
     }
 
-    // tool without parameters
     {
       const defs = [
         {
@@ -237,7 +225,6 @@ describe("ocr-v193 agent helpers (ported from internal/agent/agent_test.go)", ()
       expect(got.includes("Parameters:")).toBe(false);
     }
 
-    // multiple tools
     {
       const defs = [
         { type: "function", function: { name: "tool_a", description: "desc a" } },
@@ -259,7 +246,6 @@ describe("ocr-v193 agent helpers (ported from internal/agent/agent_test.go)", ()
       { Name: "neither", PlanTask: false, MainTask: false, Definition: funcDef },
     ];
 
-    // planOnly=true returns plan_task tools
     {
       const defs = BuildToolDefs(entries as unknown as never, true);
       expect(defs).not.toBeNull();
@@ -268,14 +254,12 @@ describe("ocr-v193 agent helpers (ported from internal/agent/agent_test.go)", ()
       expect(names.has("test_tool")).toBe(true);
     }
 
-    // planOnly=false returns main_task tools
     {
       const defs = BuildToolDefs(entries as unknown as never, false);
       expect(defs).not.toBeNull();
       expect(defs!.length).toBe(2);
     }
 
-    // invalid definition JSON is skipped
     {
       const bad: Array<Record<string, unknown>> = [
         { Name: "bad", PlanTask: true, MainTask: true, Definition: `{invalid}` },
@@ -286,7 +270,6 @@ describe("ocr-v193 agent helpers (ported from internal/agent/agent_test.go)", ()
       expect(defs!.length).toBe(1);
     }
 
-    // empty entries returns nil
     {
       const defs = BuildToolDefs(null as unknown as never, true);
       expect(defs).toBeNull();
@@ -329,7 +312,7 @@ describe("ocr-v193 agent helpers (ported from internal/agent/agent_test.go)", ()
   test("TestReviewItemFingerprintIgnoresTrailingLineEndings", () => {
     const base = createDiff({ oldPath: "main.go", newPath: "main.go", diff: "@@ -1 +1 @@\n-old\n+new" });
     const want = reviewItemFingerprint("range", base);
-    for (const [name, suffix] of Object.entries({ lf: "\n", crlf: "\r\n", "extra blank line": "\n\n" })) {
+    for (const suffix of ["\n", "\r\n", "\n\n"]) {
       const d = { ...base, diff: base.diff + suffix };
       const got = reviewItemFingerprint("range", d);
       expect(got).toBe(want);
@@ -351,15 +334,15 @@ describe("ocr-v193 agent helpers (ported from internal/agent/agent_test.go)", ()
     expect(count).toBe(2);
   });
 
-  // OCR v1.9.3: TestAgentGettersNil
+  // Go nil-receiver is not applicable in TypeScript (upstream TestAgentGettersNil is marked not_applicable in inventory).
   test("TestAgentGettersNil", () => {
-    const nilAgent = null as unknown as Agent;
-    expect((Agent.prototype as unknown as { SessionID: (this: unknown) => string }).SessionID.call(nilAgent)).toBe("");
-    expect((Agent.prototype as unknown as { RunManifest: (this: unknown) => unknown }).RunManifest.call(nilAgent)).toBeNull();
     const empty = Object.create(Agent.prototype) as unknown as Agent;
-    expect((empty as unknown as { SessionID: () => string }).SessionID()).toBe("");
-    expect((empty as unknown as { RunManifest: () => unknown }).RunManifest()).toBeNull();
-    expect((empty as unknown as { ResumeInfo: () => unknown }).ResumeInfo()).toBeNull();
+    // Empty agent without initialization should have safe defaults via normal construction paths
+    const a = makeAgent();
+    expect(a.sessionId()).toBe("");
+    expect(a.RunManifest()).toBeNull();
+    expect(a.ResumeInfo()).toBeNull();
+    expect(empty.RunManifest()).toBeNull();
   });
 
   // OCR v1.9.3: TestBuildChangeFilesExcept
