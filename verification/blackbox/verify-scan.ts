@@ -231,6 +231,57 @@ async function main(): Promise<void> {
     ocrServer2.stop();
     piServer2.stop();
 
+    // Budget truncated fixture — incomplete work must not be clean (exit 2, not 0)
+    const id3 = "scan-budget-truncated";
+    fixtures.push(id3);
+    const { dir: budgetSource, cleanup: cleanupBudgetSource } = await createTempRepo();
+    for (let i = 0; i < 9; i++) {
+      await writeFile(join(budgetSource, `extra${i}.go`), `package p\nfunc F${i}(){}\n`);
+    }
+    spawnSync("git", ["add", "-A"], { cwd: budgetSource });
+    spawnSync("git", ["commit", "-m", "add extra files"], { cwd: budgetSource });
+    const ocrBudgetRepo = await mkdtemp(join(tmpdir(), "ocr-budget-"));
+    const piBudgetRepo = await mkdtemp(join(tmpdir(), "pi-budget-"));
+    await cloneRepo(budgetSource, ocrBudgetRepo);
+    await cloneRepo(budgetSource, piBudgetRepo);
+    const budgetResponses: unknown[] = Array.from({ length: 20 }, (_, i) => ({
+      id: `chatcmpl-budget-${i}`,
+      object: "chat.completion",
+      created: i,
+      model: "test",
+      choices: [{ index: 0, message: { role: "assistant", content: "", tool_calls: [{ id: "1", type: "function", function: { name: "task_done", arguments: "{}" } }] }, finish_reason: "tool_calls" }],
+      usage: { prompt_tokens: 50000, completion_tokens: 0, total_tokens: 50000 },
+    }));
+    const ocrBudgetServer = createCaptureServer({ responses: budgetResponses });
+    const piBudgetServer = createCaptureServer({ responses: budgetResponses });
+    const piBudgetAgentDir = await createPiAgentDir(piBudgetServer.url);
+    const [ocrBudgetRes, piBudgetRes] = await Promise.all([
+      runOcrSubprocess({ binaryPath: ocrBinary, repoDir: ocrBudgetRepo, serverUrl: ocrBudgetServer.url, serverPort: Number(new URL(ocrBudgetServer.url).port), subcommand: "scan", command: ["--format", "json", "--no-plan", "--no-dedup", "--no-summary", "--max-tokens-budget", "120000"] }),
+      runPiSubprocess({ repoDir: piBudgetRepo, serverUrl: piBudgetServer.url, consumerBinPath: resolve(pack.consumerDir, "node_modules/.bin/pi-review"), consumerDir: pack.consumerDir, agentDir: piBudgetAgentDir.dir, subcommand: "scan", command: ["--format", "json", "--no-plan", "--no-dedup", "--no-summary", "--max-tokens-budget", "120000"] }),
+    ]);
+    await Promise.all([
+      writeFile(join(artifactDir, `${id3}-ocr-stdout.json`), ocrBudgetRes.stdout, "utf-8"),
+      writeFile(join(artifactDir, `${id3}-ocr-stderr.txt`), ocrBudgetRes.stderr, "utf-8"),
+      writeFile(join(artifactDir, `${id3}-ocr-captures.json`), JSON.stringify(ocrBudgetServer.captures, null, 2), "utf-8"),
+      writeFile(join(artifactDir, `${id3}-pi-stdout.json`), piBudgetRes.stdout, "utf-8"),
+      writeFile(join(artifactDir, `${id3}-pi-stderr.txt`), piBudgetRes.stderr, "utf-8"),
+      writeFile(join(artifactDir, `${id3}-pi-captures.json`), JSON.stringify(piBudgetServer.captures, null, 2), "utf-8"),
+    ]);
+    // Pi must be partial (2) not clean (0) when budget truncates; check warning present
+    if (piBudgetRes.exitCode !== 2) {
+      failHere(`fixture ${id3} pi exit code ${piBudgetRes.exitCode} != 2 (budget truncated must be partial)`, artifactDir, { fixtures, ocrExit: ocrBudgetRes.exitCode, piExit: piBudgetRes.exitCode });
+    }
+    const piWarnings = piBudgetRes.stdout + piBudgetRes.stderr;
+    if (!piWarnings.includes("token_budget_reached") && !piWarnings.includes("budget")) {
+      failHere(`fixture ${id3} pi missing token_budget_reached warning`, artifactDir, { fixtures });
+    }
+    assertions += 2;
+    ocrBudgetServer.stop();
+    piBudgetServer.stop();
+    await cleanupBudgetSource();
+    await rm(ocrBudgetRepo, { recursive: true, force: true });
+    await rm(piBudgetRepo, { recursive: true, force: true });
+
     await cleanupSource();
     await rm(ocrRepo, { recursive: true, force: true });
     await rm(piRepo, { recursive: true, force: true });
