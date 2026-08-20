@@ -4468,33 +4468,69 @@
       "tests": [
         {
           "name": "TestHashFields_EmptyIsCanonical",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/agent/manifest-hash.test.ts",
+              "title": "TestHashFields_EmptyIsCanonical"
+            }
+          ]
         },
         {
           "name": "TestHashFields_LengthPrefixPreventsCollision",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/agent/manifest-hash.test.ts",
+              "title": "TestHashFields_LengthPrefixPreventsCollision"
+            }
+          ]
         },
         {
           "name": "TestRuleConfigSHA256",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/agent/manifest-hash.test.ts",
+              "title": "TestRuleConfigSHA256"
+            }
+          ]
         },
         {
           "name": "TestRuleConfigSHA256_NilResolverAndFilter",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/agent/manifest-hash.test.ts",
+              "title": "TestRuleConfigSHA256_NilResolverAndFilter"
+            }
+          ]
         },
         {
           "name": "TestRuntimeConfigSHA256",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/agent/manifest-hash.test.ts",
+              "title": "TestRuntimeConfigSHA256"
+            }
+          ]
         },
         {
           "name": "TestSourceArtifactSHA256_DedupsByItemID",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/agent/manifest-hash.test.ts",
+              "title": "TestSourceArtifactSHA256_DedupsByItemID"
+            }
+          ]
         }
       ]
     },

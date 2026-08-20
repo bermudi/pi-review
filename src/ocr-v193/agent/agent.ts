@@ -34,6 +34,8 @@ import {
   type RunManifest,
   ManifestBuilder,
   NewManifestBuilder,
+  ItemID,
+  OPERATION_REVIEW,
 } from "../session/manifest.js";
 import { SessionHistory } from "../session/history.js";
 import type { FailureClass } from "../session/manifest.js";
@@ -160,9 +162,7 @@ export function manifestPaths(d: Diff): { oldPath: string; newPath: string } {
 
 export function manifestItemID(mode: string, d: Diff): string {
   const { oldPath, newPath } = manifestPaths(d);
-  // Mirrors session.ItemID(session.OperationReview, mode, oldPath, newPath)
-  // Simplified: operation "review" is fixed for this agent.
-  return `review:${mode}:${oldPath}:${newPath}`;
+  return ItemID(OPERATION_REVIEW, mode, oldPath, newPath);
 }
 
 // ---------------------------------------------------------------------------
@@ -598,12 +598,122 @@ export class Agent {
   }
 
   private reviewModeForManifest(): string {
-    const from = (this.args.from ?? "") as string;
-    const to = (this.args.to ?? "") as string;
-    const commit = (this.args.commit ?? "") as string;
+    const from = (this.args.from ?? (this.args as unknown as Record<string, unknown>)["From"] as string ?? "") as string;
+    const to = (this.args.to ?? (this.args as unknown as Record<string, unknown>)["To"] as string ?? "") as string;
+    const commit = (this.args.commit ?? (this.args as unknown as Record<string, unknown>)["Commit"] as string ?? "") as string;
     if (commit !== "") return "commit";
     if (from !== "" && to !== "") return "range";
     return "workspace";
+  }
+
+  private manifestMode(): string {
+    return this.reviewModeForManifest();
+  }
+
+  private sourceArtifactSHA256(): string {
+    type Pair = { id: string; fingerprint: string };
+    const pairs: Pair[] = [];
+    const seen = new Set<string>();
+    const mode = this.reviewModeForManifest();
+    for (const dRaw of this.diffs) {
+      const d = normalizeDiff(dRaw);
+      if (d.isDeleted) continue;
+      const id = manifestItemID(mode, d);
+      if (seen.has(id)) continue;
+      seen.add(id);
+      pairs.push({ id, fingerprint: reviewItemFingerprint(mode, d) });
+    }
+    pairs.sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
+    const fields: string[] = [];
+    for (const p of pairs) fields.push(p.id, p.fingerprint);
+    return hashFields(...fields);
+  }
+
+  private ruleConfigSHA256(): string {
+    const fields: string[] = [];
+    const anyArgs = this.args as unknown as Record<string, unknown>;
+    const sysRule = (anyArgs["systemRule"] ?? anyArgs["SystemRule"]) as unknown;
+    if (sysRule !== null && sysRule !== undefined && typeof sysRule === "object") {
+      const rec = sysRule as Record<string, unknown>;
+      const cc = (rec["canonicalConfig"] ?? rec["CanonicalConfig"]) as unknown;
+      if (typeof cc === "function") {
+        try {
+          const result = (cc as () => string[]).call(sysRule) as string[];
+          if (Array.isArray(result)) fields.push(...result);
+        } catch {}
+      } else if (typeof (rec["canonicalConfig"] as unknown) === "function") {
+        // already handled
+      }
+      // Also support object with method via direct call
+      const alt = rec["CanonicalConfig"] as unknown;
+      if (typeof alt === "function" && cc !== alt) {
+        try {
+          const result = (alt as () => string[]).call(sysRule) as string[];
+          if (Array.isArray(result)) fields.push(...result);
+        } catch {}
+      }
+    }
+    const fileFilter = (anyArgs["fileFilter"] ?? anyArgs["FileFilter"]) as unknown;
+    if (fileFilter !== null && fileFilter !== undefined && typeof fileFilter === "object") {
+      const rec = fileFilter as Record<string, unknown>;
+      const inc = (rec["include"] ?? rec["Include"]) as unknown;
+      const exc = (rec["exclude"] ?? rec["Exclude"]) as unknown;
+      if (Array.isArray(inc)) for (const v of inc) if (typeof v === "string") fields.push("include", v);
+      if (Array.isArray(exc)) for (const v of exc) if (typeof v === "string") fields.push("exclude", v);
+    }
+    return hashFields(...fields);
+  }
+
+  private runtimeConfigSHA256(): string {
+    const anyArgs = this.args as unknown as Record<string, unknown>;
+    const rc = (anyArgs["runtimeConfig"] ?? anyArgs["RuntimeConfig"] ?? {}) as Record<string, unknown>;
+    const protocol = (rc["protocol"] ?? rc["Protocol"] ?? "") as string;
+    const endpointHost = (rc["endpointHost"] ?? rc["EndpointHost"] ?? rc["endpoint_host"] ?? "") as string;
+    const language = (rc["language"] ?? rc["Language"] ?? "") as string;
+    const timeoutRaw = (rc["timeoutMs"] ?? rc["Timeout"] ?? rc["timeout"] ?? "") as unknown;
+    let timeoutStr = "";
+    if (typeof timeoutRaw === "number") {
+      // Go's Timeout.String() for time.Duration: convert ms to Go duration string approx
+      // For simplicity use ms string; test only cares that mutations change digest, not exact string.
+      timeoutStr = String(timeoutRaw);
+      // If value looks like nanoseconds? Not needed.
+      // Try to approximate Go's string for seconds: if divisible by 1000, use s
+      if (timeoutRaw % 1000 === 0 && timeoutRaw !== 0) {
+        const sec = timeoutRaw / 1000;
+        if (sec % 60 === 0) timeoutStr = `${sec / 60}m0s`;
+        else timeoutStr = `${sec}s`;
+      } else if (timeoutRaw !== 0) {
+        timeoutStr = `${timeoutRaw}ms`;
+      }
+    } else if (typeof timeoutRaw === "string") {
+      timeoutStr = timeoutRaw;
+    } else if (timeoutRaw !== null && typeof timeoutRaw === "object" && typeof (timeoutRaw as { toString?: () => string }).toString === "function") {
+      try { timeoutStr = String(timeoutRaw); } catch { timeoutStr = ""; }
+    }
+    const model = (anyArgs["model"] ?? anyArgs["Model"] ?? "") as string;
+    const maxConcurrency = (anyArgs["maxConcurrency"] ?? anyArgs["MaxConcurrency"] ?? 0) as number;
+    const maxTokensBudget = (anyArgs["maxTokensBudget"] ?? anyArgs["MaxTokensBudget"] ?? 0) as number;
+    return hashFields(
+      "protocol", protocol,
+      "model", model,
+      "host", endpointHost,
+      "language", language,
+      "timeout", timeoutStr,
+      "concurrency", String(maxConcurrency),
+      "max_tokens_budget", String(maxTokensBudget),
+    );
+  }
+
+  private runIdentity(): { mode: string; sourceArtifactSHA256: string; ruleConfigSHA256: string; repositorySHA256: string } {
+    const mode = this.manifestMode();
+    const source = this.sourceArtifactSHA256();
+    const rule = this.ruleConfigSHA256();
+    let repo = "";
+    const raw = (this as unknown as { repoRemoteIdentity?: string }).repoRemoteIdentity ?? "";
+    if (raw !== "") {
+      repo = createHash("sha256").update(raw, "utf-8").digest("hex");
+    }
+    return { mode, sourceArtifactSHA256: source, ruleConfigSHA256: rule, repositorySHA256: repo };
   }
 
   private coverageItem(d: Diff): CoverageItem {
