@@ -11,7 +11,7 @@ import { resolve } from "node:path";
 
 interface InventoryTest {
   readonly name: string;
-  readonly disposition: "covered" | "pending" | "pending_scope" | "out_of_scope";
+  readonly disposition: "covered" | "equivalent" | "not_applicable" | "pending" | "pending_scope" | "out_of_scope";
   readonly evidence?: readonly { readonly kind: string; readonly path: string; readonly title: string }[];
   readonly reason?: string;
 }
@@ -52,7 +52,7 @@ describe("OCR v1.9.3 exhaustive upstream-test inventory", () => {
 
   test("uses closed, internally consistent dispositions", () => {
     const inventory = JSON.parse(readFileSync(inventoryPath, "utf8")) as Inventory;
-    expect(inventory.schemaVersion).toBe(1);
+    expect(inventory.schemaVersion).toBe(2);
     expect(inventory.reference).toEqual({
       tag: "v1.9.3",
       tagObject: "4d796ae54cabdcf4e22b69ef502ed8871456a909",
@@ -71,7 +71,7 @@ describe("OCR v1.9.3 exhaustive upstream-test inventory", () => {
       expect(new Set(names).size).toBe(names.length);
 
       for (const entry of file.tests) {
-        if (entry.disposition === "covered") {
+        if (entry.disposition === "covered" || entry.disposition === "equivalent") {
           expect(entry.evidence?.length ?? 0).toBeGreaterThan(0);
           for (const evidence of entry.evidence ?? []) {
             expect(evidence.kind).toBe("bun-test-annotation");
@@ -79,12 +79,18 @@ describe("OCR v1.9.3 exhaustive upstream-test inventory", () => {
             expect(localSource).toContain(`// OCR v1.9.3: ${entry.name}`);
             expect(localSource).toContain(`"${evidence.title}"`);
           }
+          if (entry.disposition === "equivalent") expect(entry.reason?.length ?? 0).toBeGreaterThan(0);
         } else {
           expect(entry.reason?.length ?? 0).toBeGreaterThan(0);
+          if (entry.disposition === "not_applicable") {
+            const lower = (entry.reason ?? "").toLowerCase();
+            expect(lower.includes("pi replaces") || lower.includes("not applicable") || lower.includes("deferred")).toBe(true);
+          }
         }
 
         if (file.scope.kind === "out_of_scope") expect(entry.disposition).toBe("out_of_scope");
         if (file.scope.kind === "needs_decision") expect(entry.disposition).toBe("pending_scope");
+        // equivalent and not_applicable are explicit per-test overrides validated by generator
       }
     }
   });

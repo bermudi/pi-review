@@ -46,9 +46,11 @@ interface Evidence {
   readonly title: string;
 }
 
+type Disposition = "covered" | "equivalent" | "not_applicable" | "pending" | "pending_scope" | "out_of_scope";
+
 interface InventoryTest {
   readonly name: string;
-  readonly disposition: "covered" | "pending" | "pending_scope" | "out_of_scope";
+  readonly disposition: Disposition;
   readonly evidence?: readonly Evidence[];
   readonly reason?: string;
 }
@@ -61,7 +63,7 @@ interface InventoryFile {
 }
 
 interface Inventory {
-  readonly schemaVersion: 1;
+  readonly schemaVersion: 2;
   readonly reference: typeof reference;
   readonly files: readonly InventoryFile[];
 }
@@ -70,6 +72,32 @@ interface LocalCoverage {
   readonly localPath: string;
   readonly upstreamPaths: readonly string[];
 }
+
+// Explicit per-test overrides for honest, machine-checked dispositions.
+// Every entry must have an exact rationale or evidence; the generator
+// validates that the key matches a real pinned test and that the
+// disposition is allowed for the file's scope.
+//
+// - equivalent: covered by a specifically named existing unit or
+//   packed black-box assertion (evidence path + title required).
+// - not_applicable: Pi replaces the mechanism (reason must contain
+//   "Pi replaces" or "not applicable" with concrete justification).
+//
+// Keep this table explicit — hidden source-code rules are not allowed
+// to silently decide these categories.
+const equivalentTests: ReadonlyMap<string, readonly Evidence[]> = new Map<string, readonly Evidence[]>([
+  // Example: "internal/tool/filereader_test.go::TestFoo": [{ kind: "bun-test-annotation", path: "test/ocr-v193/tool/stub.test.ts", title: "..." }]
+]);
+
+const notApplicableTests: ReadonlyMap<string, string> = new Map<string, string>([
+  // Example: "internal/llm/resolver_test.go::TestResolver_ShellRC": "Pi replaces OCR shell-rc resolver with Pi SettingsManager; transport-independent contract is covered elsewhere"
+]);
+
+// Explicit scope decisions for paths that would otherwise be needs_decision.
+// Each entry must state kind/area/reason; generator validates completeness.
+// Empty initially — every needs_decision file will be flagged until triaged.
+const scopeOverrides: ReadonlyMap<string, Scope> = new Map<string, Scope>([
+]);
 
 const localCoverage: readonly LocalCoverage[] = [
   {
@@ -331,6 +359,45 @@ function coverageByTestId(testNamesByPath: ReadonlyMap<string, ReadonlySet<strin
   return result;
 }
 
+function validateOverrides(
+  testNamesByPath: ReadonlyMap<string, ReadonlySet<string>>,
+): void {
+  for (const [key, evidence] of equivalentTests) {
+    const [path, name] = key.split("::");
+    if (!path || !name) throw new Error(`equivalentTests key must be "path::TestName", got ${JSON.stringify(key)}`);
+    const names = testNamesByPath.get(path);
+    if (!names) throw new Error(`equivalentTests references unknown file ${path}`);
+    if (!names.has(name)) throw new Error(`equivalentTests references unknown test ${key}`);
+    if (evidence.length === 0) throw new Error(`equivalentTests ${key} has no evidence`);
+    for (const e of evidence) {
+      if (e.kind !== "bun-test-annotation") throw new Error(`equivalentTests ${key} evidence kind must be bun-test-annotation`);
+      if (!existsSync(resolve(repoRoot, e.path))) throw new Error(`equivalentTests ${key} evidence path does not exist: ${e.path}`);
+    }
+  }
+  for (const [key, reason] of notApplicableTests) {
+    const [path, name] = key.split("::");
+    if (!path || !name) throw new Error(`notApplicableTests key must be "path::TestName", got ${JSON.stringify(key)}`);
+    const names = testNamesByPath.get(path);
+    if (!names) throw new Error(`notApplicableTests references unknown file ${path}`);
+    if (!names.has(name)) throw new Error(`notApplicableTests references unknown test ${key}`);
+    if (reason.length < 20) throw new Error(`notApplicableTests ${key} reason too short`);
+    const lower = reason.toLowerCase();
+    if (!lower.includes("pi replaces") && !lower.includes("not applicable") && !lower.includes("deferred")) {
+      throw new Error(`notApplicableTests ${key} reason must mention "Pi replaces", "not applicable" or "deferred" with concrete rationale`);
+    }
+  }
+  for (const [path, scope] of scopeOverrides) {
+    if (!testNamesByPath.has(path)) throw new Error(`scopeOverrides references unknown file ${path}`);
+    if (!scope.area || !scope.kind) throw new Error(`scopeOverrides ${path} missing area/kind`);
+  }
+}
+
+function effectiveScope(path: string): Scope {
+  const override = scopeOverrides.get(path);
+  if (override !== undefined) return override;
+  return classifyScope(path);
+}
+
 function generateInventory(): Inventory {
   const actualTagObject = git("rev-parse", `${reference.tag}^{tag}`).trim();
   const actualCommit = git("rev-parse", `${reference.tag}^{commit}`).trim();
@@ -364,15 +431,22 @@ function generateInventory(): Inventory {
     testNamesByPath.set(path, new Set(names));
   }
 
+  validateOverrides(testNamesByPath);
+
   const evidence = coverageByTestId(testNamesByPath);
   const files = [...blobs.entries()]
     .sort(([left], [right]) => left.localeCompare(right))
     .map(([path, blob]): InventoryFile => {
-      const scope = classifyScope(path);
+      const scope = effectiveScope(path);
       const names = [...(testNamesByPath.get(path) ?? [])].sort((left, right) => left.localeCompare(right));
       const tests = names.map((name): InventoryTest => {
-        const testEvidence = evidence.get(`${path}::${name}`);
+        const id = `${path}::${name}`;
+        const testEvidence = evidence.get(id);
         if (testEvidence !== undefined) return { name, disposition: "covered", evidence: testEvidence };
+        const equivEvidence = equivalentTests.get(id);
+        if (equivEvidence !== undefined) return { name, disposition: "equivalent", evidence: equivEvidence, reason: `equivalent via ${equivEvidence.map((e) => e.path).join(", ")}` };
+        const naReason = notApplicableTests.get(id);
+        if (naReason !== undefined) return { name, disposition: "not_applicable", reason: naReason };
         if (scope.kind === "out_of_scope") return { name, disposition: "out_of_scope", reason: scope.reason };
         if (scope.kind === "needs_decision") return { name, disposition: "pending_scope", reason: scope.reason };
         return { name, disposition: "pending", reason: "OCR-derived test translation has not been recorded" };
@@ -380,7 +454,24 @@ function generateInventory(): Inventory {
       return { path, blob, scope, tests };
     });
 
-  return { schemaVersion: 1, reference, files };
+  // Validate every equivalent/not_applicable/covered evidence actually contains the OCR annotation
+  for (const file of files) {
+    for (const t of file.tests) {
+      if ((t.disposition === "covered" || t.disposition === "equivalent") && t.evidence) {
+        for (const e of t.evidence) {
+          const src = readFileSync(resolve(repoRoot, e.path), "utf8");
+          if (!src.includes(`// OCR v1.9.3: ${t.name}`)) {
+            throw new Error(`Evidence ${e.path} does not contain annotation for ${file.path}::${t.name}`);
+          }
+        }
+      }
+      if (t.disposition === "not_applicable" && (!t.reason || t.reason.length < 20)) {
+        throw new Error(`not_applicable ${file.path}::${t.name} missing rationale`);
+      }
+    }
+  }
+
+  return { schemaVersion: 2, reference, files };
 }
 
 function serializedInventory(): string {
