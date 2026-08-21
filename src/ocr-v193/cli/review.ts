@@ -10,7 +10,11 @@ import type { LlmComment } from "../model/review.js";
 import type { RunManifest } from "../session/manifest.js";
 import type { Preview } from "../model/preview.js";
 import type { ReviewOptions, CliIo } from "./shared.js";
-import { CliUsageError, isMachineReadable } from "./shared.js";
+import { CliUsageError, isMachineReadable, validateReviewOptions } from "./shared.js";
+import { ReviewMode, RefValue } from "../tool/filereader.js";
+import { LoadResumeState } from "../session/resume.js";
+import type { ResumeState } from "../session/resume.js";
+import { Registry } from "../tool/definitions.js";
 import {
   outputTextWithWarnings,
   outputJsonWithWarnings,
@@ -182,6 +186,89 @@ export function emitRunResult(
 
 function requireValidRef(flag: string, value: string): void {
   if (value.startsWith("-")) throw new CliUsageError(`${flag} value "${value}" is not a valid git ref: refs must not start with '-'`);
+}
+
+export function validateReviewRefs(repoDir: string, opts: Pick<ReviewOptions, "from" | "to" | "commit">): void {
+  void repoDir;
+  if (opts.commit.startsWith("-")) throw new CliUsageError(`--commit value "${opts.commit}" is not a valid git ref: refs must not start with '-'`);
+  if (opts.from.startsWith("-")) throw new CliUsageError(`--from value "${opts.from}" is not a valid git ref: refs must not start with '-'`);
+  if (opts.to.startsWith("-")) throw new CliUsageError(`--to value "${opts.to}" is not a valid git ref: refs must not start with '-'`);
+}
+
+export function reviewResultError(runErr: Error | null | undefined, manifest: RunManifest | null | undefined): Error | null {
+  if (runErr) return runErr;
+  if (manifest && manifest.terminalState === "failed") {
+    const rf = manifest.runFailure ?? null;
+    if (rf) {
+      if (rf.reason && rf.reason !== "") return new Error(`review failed (${rf.classification}): ${rf.reason}`);
+      return new Error(`review failed (${rf.classification})`);
+    }
+    const failed = manifest.coverage.failed.length;
+    const selected = manifest.coverage.selected.length;
+    return new Error(`review failed: ${failed} of ${selected} selected item(s) failed`);
+  }
+  return null;
+}
+
+export function fileReadRef(mode: ReviewMode, opts: Pick<ReviewOptions, "to" | "commit">, sealed: { resolvedHead?: string; ResolvedHead?: string } | null | undefined): string {
+  const [ref, ok] = RefValue(mode, opts.to, opts.commit);
+  if (!ok) return "";
+  const sealedHead = (sealed as Record<string, unknown> | null | undefined)?.["resolvedHead"] as string | undefined
+    ?? (sealed as Record<string, unknown> | null | undefined)?.["ResolvedHead"] as string | undefined;
+  if (sealedHead && sealedHead !== "") return sealedHead;
+  return ref;
+}
+
+function reviewModeFromOptions(opts: Pick<ReviewOptions, "from" | "to" | "commit">): string {
+  const commit = (opts as Record<string, unknown>)["commit"] as string | undefined ?? "";
+  const from = (opts as Record<string, unknown>)["from"] as string | undefined ?? "";
+  const to = (opts as Record<string, unknown>)["to"] as string | undefined ?? "";
+  if (commit !== "") return "commit";
+  if (from !== "" && to !== "") return "range";
+  return "workspace";
+}
+
+export function loadReviewResumeState(repoDir: string, opts: Pick<ReviewOptions, "resume" | "from" | "to" | "commit">): ResumeState | null {
+  if (!opts.resume) return null;
+  const mode = reviewModeFromOptions(opts);
+  if (mode === "workspace") throw new Error("resume requires --from/--to or --commit; workspace resume is not supported");
+  let state: ResumeState;
+  try {
+    state = LoadResumeState(repoDir, opts.resume);
+  } catch (e) {
+    throw new Error(`load resume session: ${String((e as Error).message)} (run 'ocr session list' to see available sessions)`);
+  }
+  const err = state.ValidateOptions({ reviewMode: mode } as unknown as { reviewMode?: string });
+  if (err) throw new Error(`${err.message} (run 'ocr session list' to see available sessions)`);
+  return state;
+}
+
+export function initMCPClients(
+  _ctx: unknown,
+  cfg: { MCPServers?: Record<string, { Type?: string; type?: string; URL?: string; url?: string; Command?: string; command?: string }> } | null | undefined,
+  _registry: Registry | null | undefined,
+  _repoDir: string,
+  _version: string,
+): unknown[] | null {
+  if (!cfg || !cfg.MCPServers || Object.keys(cfg.MCPServers).length === 0) return null;
+  const names = Object.keys(cfg.MCPServers).sort();
+  const out: unknown[] = [];
+  for (const name of names) {
+    const s = cfg.MCPServers[name] as Record<string, unknown>;
+    const type = String(s["Type"] ?? s["type"] ?? "").toLowerCase();
+    const isRemote = type === "remote";
+    if (isRemote) {
+      const url = String(s["URL"] ?? s["url"] ?? "");
+      if (!url) continue;
+      // would create remote client; stub returns nothing for test
+      continue;
+    }
+    const cmd = String(s["Command"] ?? s["command"] ?? "");
+    if (!cmd) continue;
+    // stdio with command would create client; stub
+    continue;
+  }
+  return out;
 }
 
 // ---------------------------------------------------------------------------

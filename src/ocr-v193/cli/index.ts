@@ -155,7 +155,7 @@ const REVIEW_FLAGS: readonly FlagSpec[] = [
   { name: "tools", takesValue: true },
   { name: "preview", short: "p", takesValue: false },
   { name: "no-filter", takesValue: false },
-  { name: "help", takesValue: false },
+  { name: "help", short: "h", takesValue: false },
 ];
 
 const SCAN_FLAGS: readonly FlagSpec[] = [
@@ -181,7 +181,7 @@ const SCAN_FLAGS: readonly FlagSpec[] = [
   { name: "provider", takesValue: true },
   { name: "model", takesValue: true },
   { name: "resume", takesValue: true },
-  { name: "help", takesValue: false },
+  { name: "help", short: "h", takesValue: false },
 ];
 
 function buildFlagMaps(specs: readonly FlagSpec[]): {
@@ -299,6 +299,25 @@ function flagVal(map: Map<string, string | boolean>, key: string): string | unde
 
 function flagBool(map: Map<string, string | boolean>, key: string): boolean {
   return map.get(key) === true;
+}
+
+export function parseReviewFlags(argv: readonly string[]): ReviewOptions {
+  const map = parseFlags(argv, REVIEW_FLAGS);
+  // Treat -h as help that should not error; mimic Go's cobra help handling for test
+  if (map.get("help") === true) return buildReviewOptions(map);
+  const opts = buildReviewOptions(map);
+  validateReviewOptions(opts);
+  if (opts.from !== "" && opts.to === "") throw new CliUsageError("--to is required when --from is specified");
+  if (opts.to !== "" && opts.from === "") throw new CliUsageError("--from is required when --to is specified");
+  return opts;
+}
+
+export function parseScanFlags(argv: readonly string[]): ScanOptions {
+  const map = parseFlags(argv, SCAN_FLAGS);
+  if (map.get("help") === true) return buildScanOptions(map);
+  const opts = buildScanOptions(map);
+  validateScanOptions(opts);
+  return opts;
 }
 
 function buildReviewOptions(map: Map<string, string | boolean>): ReviewOptions {

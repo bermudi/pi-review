@@ -10,7 +10,9 @@ import type { LlmComment } from "../model/review.js";
 import type { RunManifest } from "../session/manifest.js";
 import type { Preview } from "../model/preview.js";
 import type { ScanOptions, CliIo } from "./shared.js";
-import { CliUsageError, isMachineReadable } from "./shared.js";
+import { CliUsageError, isMachineReadable, splitPaths } from "./shared.js";
+import { LoadResumeState } from "../session/resume.js";
+import type { ResumeState } from "../session/resume.js";
 import {
   outputTextWithWarnings,
   outputJsonWithWarnings,
@@ -63,6 +65,37 @@ export interface ScanContext {
 // ---------------------------------------------------------------------------
 // emitScanResult — mirrors review emit but for scan provider
 // ---------------------------------------------------------------------------
+
+export function loadScanResumeState(repoDir: string, opts: Pick<ScanOptions, "resume" | "paths"> & { paths?: string; resume?: string }, scanPaths?: string[] | null): ResumeState | null {
+  const resumeId = (opts as Record<string, unknown>)["resume"] as string | undefined ?? "";
+  if (!resumeId) return null;
+  let state: ResumeState;
+  try {
+    state = LoadResumeState(repoDir, resumeId);
+  } catch (e) {
+    throw new Error(`load resume session: ${String((e as Error).message)} (run 'ocr session list' to see available sessions)`);
+  }
+  const paths = scanPaths ?? splitPaths((opts as Record<string, unknown>)["paths"] as string ?? "");
+  const err = state.ValidateScanOptions(paths as unknown as string[]);
+  if (err) throw new Error(`${err.message} (run 'ocr session list' to see available sessions)`);
+  if (state.CompletedCount() === 0) {
+    throw new Error(`resume session "${resumeId}" has no completed scan items (run 'ocr session list' to see available sessions)`);
+  }
+  return state;
+}
+
+export function excludeToolDef(
+  defs: ReadonlyArray<Record<string, unknown>>,
+  name: string,
+): Array<Record<string, unknown>> {
+  const out: Array<Record<string, unknown>> = [];
+  for (const d of defs) {
+    const fn = (d["Function"] as { Name?: string } | undefined)?.Name ?? (d["function"] as { name?: string } | undefined)?.name ?? "";
+    if (fn === name) continue;
+    out.push({ ...d });
+  }
+  return out;
+}
 
 function emitScanResult(
   provider: ResultProvider,

@@ -232,6 +232,19 @@ export function splitPaths(raw: string): string[] {
   return out;
 }
 
+export function excludeToolDef(
+  defs: ReadonlyArray<{ Function: { Name: string }; function?: { name: string } } & Record<string, unknown>> | ReadonlyArray<{ function: { name: string } }> | ReadonlyArray<Record<string, unknown>>,
+  name: string,
+): Array<Record<string, unknown>> {
+  const out: Array<Record<string, unknown>> = [];
+  for (const d of defs as ReadonlyArray<Record<string, unknown>>) {
+    const fn = (d["Function"] as { Name?: string } | undefined)?.Name ?? (d["function"] as { name?: string } | undefined)?.name ?? "";
+    if (fn === name) continue;
+    out.push({ ...d });
+  }
+  return out;
+}
+
 // ---------------------------------------------------------------------------
 // Validation — mirrors Go validateDiffMode / validateAudience / etc.
 // ---------------------------------------------------------------------------

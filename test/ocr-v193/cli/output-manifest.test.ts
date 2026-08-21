@@ -11,13 +11,13 @@ function makeManifest(overrides: Partial<RunManifest> & { terminalState: RunMani
     schemaVersion: "ocr.run-manifest/v1",
     runId: "run-1",
     operation: "review",
-    terminalState: overrides.terminalState,
     repository: {},
     input: { mode: "workspace" },
     execution: {},
     coverage: overrides.coverage ?? { selected: [], completed: [], reused: [], failed: [], waived: [] },
     elapsedMs: 0,
     ...overrides,
+    terminalState: overrides.terminalState,
   } as RunManifest;
 }
 

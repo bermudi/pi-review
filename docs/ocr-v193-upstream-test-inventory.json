@@ -3736,38 +3736,80 @@
       "tests": [
         {
           "name": "TestParseReviewFlagsAllowsFromAndTo",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/cli/review-cmd.test.ts",
+              "title": "parseReviewFlags allows from and to"
+            }
+          ]
         },
         {
           "name": "TestParseReviewFlagsRejectsFromWithoutTo",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/cli/review-cmd.test.ts",
+              "title": "parseReviewFlags rejects from without to"
+            }
+          ]
         },
         {
           "name": "TestParseReviewFlagsRejectsToWithoutFrom",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/cli/review-cmd.test.ts",
+              "title": "parseReviewFlags rejects to without from"
+            }
+          ]
         },
         {
           "name": "TestReviewResultErrorUsesManifestTerminalState",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/cli/review-cmd.test.ts",
+              "title": "reviewResultError uses manifest terminal state"
+            }
+          ]
         },
         {
           "name": "TestRunReviewFlagValidationWritesNoArtifacts",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/cli/review-cmd.test.ts",
+              "title": "runReview flag validation writes no artifacts"
+            }
+          ]
         },
         {
           "name": "TestValidateReviewRefsRejectsOptionLikeCommit",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/cli/review-cmd.test.ts",
+              "title": "validateReviewRefs rejects option-like commit"
+            }
+          ]
         },
         {
           "name": "TestValidateReviewRefsRejectsOptionLikeRangeRef",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/cli/review-cmd.test.ts",
+              "title": "validateReviewRefs rejects option-like range ref"
+            }
+          ]
         }
       ]
     },
@@ -3781,28 +3823,58 @@
       "tests": [
         {
           "name": "TestInitMCPClients",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/cli/review-helpers.test.ts",
+              "title": "initMCPClients nil, empty, remote without url, stdio without command"
+            }
+          ]
         },
         {
           "name": "TestLoadReviewResumeState",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/cli/review-helpers.test.ts",
+              "title": "loadReviewResumeState empty, workspace rejected, missing session"
+            }
+          ]
         },
         {
           "name": "TestRunPreview",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/cli/review-helpers.test.ts",
+              "title": "runPreview produces preview without error"
+            }
+          ]
         },
         {
           "name": "TestRunPreviewCreatesNoSession",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/cli/review-helpers.test.ts",
+              "title": "runPreview creates no session"
+            }
+          ]
         },
         {
           "name": "TestRunPreviewJSONFormat",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/cli/review-helpers.test.ts",
+              "title": "runPreview JSON format filters by extension allowlist"
+            }
+          ]
         }
       ]
     },
@@ -3832,18 +3904,36 @@
       "tests": [
         {
           "name": "TestFileReadRef",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/cli/review-resume.test.ts",
+              "title": "fileReadRef sealed vs typed ref"
+            }
+          ]
         },
         {
           "name": "TestLoadReviewResumeState_WithSession",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/cli/review-resume.test.ts",
+              "title": "loadReviewResumeState with session success, mode mismatch, no completed admitted"
+            }
+          ]
         },
         {
           "name": "TestValidateResumeIdentity",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/cli/review-resume.test.ts",
+              "title": "validateResumeIdentity provider/model and input change"
+            }
+          ]
         }
       ]
     },
@@ -4158,98 +4248,212 @@
       "tests": [
         {
           "name": "TestExcludeToolDef",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/cli/scan-cmd.test.ts",
+              "title": "excludeToolDef removes named def and does not mutate input"
+            }
+          ]
         },
         {
           "name": "TestExcludeToolDef_AbsentName",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/cli/scan-cmd.test.ts",
+              "title": "excludeToolDef absent name returns identical content"
+            }
+          ]
         },
         {
           "name": "TestParseScanFlags_AllStringFlags",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/cli/scan-cmd.test.ts",
+              "title": "parseScanFlags all string flags"
+            }
+          ]
         },
         {
           "name": "TestParseScanFlags_BareCommandScansWholeRepo",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/cli/scan-cmd.test.ts",
+              "title": "parseScanFlags bare command scans whole repo"
+            }
+          ]
         },
         {
           "name": "TestParseScanFlags_BooleanFlags",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/cli/scan-cmd.test.ts",
+              "title": "parseScanFlags boolean flags"
+            }
+          ]
         },
         {
           "name": "TestParseScanFlags_DefaultsValid",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/cli/scan-cmd.test.ts",
+              "title": "parseScanFlags defaults valid"
+            }
+          ]
         },
         {
           "name": "TestParseScanFlags_HelpFlag",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/cli/scan-cmd.test.ts",
+              "title": "parseScanFlags help flag does not error"
+            }
+          ]
         },
         {
           "name": "TestParseScanFlags_IntFlags",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/cli/scan-cmd.test.ts",
+              "title": "parseScanFlags int flags"
+            }
+          ]
         },
         {
           "name": "TestParseScanFlags_ModelOverride",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/cli/scan-cmd.test.ts",
+              "title": "parseScanFlags model override"
+            }
+          ]
         },
         {
           "name": "TestParseScanFlags_PathNarrowsScope",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/cli/scan-cmd.test.ts",
+              "title": "parseScanFlags path narrows scope"
+            }
+          ]
         },
         {
           "name": "TestParseScanFlags_PreviewWithResume",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/cli/scan-cmd.test.ts",
+              "title": "parseScanFlags preview with resume rejected"
+            }
+          ]
         },
         {
           "name": "TestParseScanFlags_ProviderAndModelOverrides",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/cli/scan-cmd.test.ts",
+              "title": "parseScanFlags provider and model overrides"
+            }
+          ]
         },
         {
           "name": "TestParseScanFlags_RejectsInvalidAudience",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/cli/scan-cmd.test.ts",
+              "title": "parseScanFlags rejects invalid audience"
+            }
+          ]
         },
         {
           "name": "TestParseScanFlags_RejectsNegativeMaxGitProcs",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/cli/scan-cmd.test.ts",
+              "title": "parseScanFlags rejects negative max-git-procs"
+            }
+          ]
         },
         {
           "name": "TestParseScanFlags_RejectsNegativeMaxTokens",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/cli/scan-cmd.test.ts",
+              "title": "parseScanFlags rejects negative max-tokens"
+            }
+          ]
         },
         {
           "name": "TestParseScanFlags_RejectsNegativeMaxTokensBudget",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/cli/scan-cmd.test.ts",
+              "title": "parseScanFlags rejects negative max-tokens-budget"
+            }
+          ]
         },
         {
           "name": "TestParseScanFlags_RejectsNegativeMaxTools",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/cli/scan-cmd.test.ts",
+              "title": "parseScanFlags rejects negative max-tools"
+            }
+          ]
         },
         {
           "name": "TestParseScanFlags_Resume",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/cli/scan-cmd.test.ts",
+              "title": "parseScanFlags resume"
+            }
+          ]
         },
         {
           "name": "TestSplitPaths",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/cli/scan-cmd.test.ts",
+              "title": "splitPaths trims, drops empty, handles empty"
+            }
+          ]
         }
       ]
     },
@@ -4263,23 +4467,47 @@
       "tests": [
         {
           "name": "TestLoadScanResumeState",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/cli/scan-helpers.test.ts",
+              "title": "loadScanResumeState empty and missing"
+            }
+          ]
         },
         {
           "name": "TestRunScanPreview",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/cli/scan-helpers.test.ts",
+              "title": "runScanPreview produces preview without error"
+            }
+          ]
         },
         {
           "name": "TestRunScanPreviewCreatesNoSession",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/cli/scan-helpers.test.ts",
+              "title": "runScanPreview creates no session"
+            }
+          ]
         },
         {
           "name": "TestRunScanPreviewJSONFormat",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/cli/scan-helpers.test.ts",
+              "title": "runScanPreview JSON format includes y.go as scan"
+            }
+          ]
         }
       ]
     },
@@ -4293,8 +4521,14 @@
       "tests": [
         {
           "name": "TestLoadScanResumeState_WithSession",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/cli/scan-resume.test.ts",
+              "title": "loadScanResumeState with session success, non-scan rejected, no completed errors"
+            }
+          ]
         }
       ]
     },

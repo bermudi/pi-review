@@ -1662,6 +1662,30 @@ const localCoverage: readonly LocalCoverage[] = [
     localPath: "test/ocr-v193/cli/session-complete.test.ts",
     upstreamPaths: ["cmd/opencodereview/session_complete_test.go"],
   },
+  {
+    localPath: "test/ocr-v193/cli/review-cmd.test.ts",
+    upstreamPaths: ["cmd/opencodereview/review_cmd_test.go"],
+  },
+  {
+    localPath: "test/ocr-v193/cli/review-helpers.test.ts",
+    upstreamPaths: ["cmd/opencodereview/review_helpers_test.go"],
+  },
+  {
+    localPath: "test/ocr-v193/cli/review-resume.test.ts",
+    upstreamPaths: ["cmd/opencodereview/review_resume_more_test.go"],
+  },
+  {
+    localPath: "test/ocr-v193/cli/scan-cmd.test.ts",
+    upstreamPaths: ["cmd/opencodereview/scan_cmd_test.go"],
+  },
+  {
+    localPath: "test/ocr-v193/cli/scan-helpers.test.ts",
+    upstreamPaths: ["cmd/opencodereview/scan_helpers_test.go"],
+  },
+  {
+    localPath: "test/ocr-v193/cli/scan-resume.test.ts",
+    upstreamPaths: ["cmd/opencodereview/scan_resume_more_test.go"],
+  },
 ];
 
 function git(...args: readonly string[]): string {
@@ -1761,6 +1785,10 @@ function annotations(localPath: string): readonly LocalAnnotation[] {
     if (ts.isIdentifier(node.expression)) {
       return node.expression.text === "test" || node.expression.text === "it" || node.expression.text === "describe";
     }
+    if (ts.isPropertyAccessExpression(node.expression)) {
+      const prop = node.expression;
+      if (prop.name.text === "serial" && ts.isIdentifier(prop.expression) && (prop.expression.text === "test" || prop.expression.text === "it" || prop.expression.text === "describe")) return true;
+    }
     if (!ts.isCallExpression(node.expression) || !ts.isPropertyAccessExpression(node.expression.expression)) {
       return false;
     }
@@ -1768,7 +1796,7 @@ function annotations(localPath: string): readonly LocalAnnotation[] {
     const method = node.expression.expression.name.text;
     return ts.isIdentifier(owner)
       && (owner.text === "test" || owner.text === "it" || owner.text === "describe")
-      && (method === "each" || method === "skipIf" || method === "runIf");
+      && (method === "each" || method === "skipIf" || method === "runIf" || method === "serial");
   };
 
   const visit = (node: ts.Node): void => {

@@ -50,7 +50,7 @@ function attachTestWriter(sh: SessionHistory): void {
 function captureStdout(fn: () => void): string {
   let out = "";
   const orig = process.stdout.write;
-  // @ts-expect-error monkey
+  // @ts-ignore monkey patch for capture
   process.stdout.write = (chunk: unknown) => {
     out += String(chunk);
     return true;
