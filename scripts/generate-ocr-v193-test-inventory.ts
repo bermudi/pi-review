@@ -182,6 +182,10 @@ const equivalentTests: ReadonlyMap<string, readonly Evidence[]> = new Map<string
     "internal/llm/message_test.go::TestChatResponse_Content_Empty",
     [{ kind: "bun-test-annotation", path: "test/ocr-v193/pi-adapter/usage.test.ts", title: "empty Pi usage object yields undefined" }],
   ],
+  [
+    "internal/llm/client_test.go::TestOpenAIClient_StreamingCancellation",
+    [{ kind: "bun-test-annotation", path: "test/ocr-v193/pi-adapter.test.ts", title: "PiTransport forwards abort signal to session.abort" }],
+  ],
 ]);
 
 const notApplicableTests: ReadonlyMap<string, string> = new Map<string, string>([
@@ -255,6 +259,7 @@ const notApplicableTests: ReadonlyMap<string, string> = new Map<string, string>(
     "internal/llm/client_test.go::TestEncodingForModel",
     "Pi replaces OCR tiktoken encoding selection (cl100k vs o200k) with absence; encoding table is not applicable via public Pi APIs (documented deviation).",
   ],
+
   [
     "internal/llm/embedded_loader_test.go::TestParseBpeData_Valid",
     "Pi replaces OCR tiktoken BPE parsing with bytes/4 fallback; LoadTiktokenBpe and embedded bpe_data are not applicable via public Pi APIs (documented deviation).",
@@ -286,6 +291,31 @@ const notApplicableTests: ReadonlyMap<string, string> = new Map<string, string>(
   [
     "internal/llm/embedded_loader_test.go::TestInitEmbeddedLoader",
     "Pi replaces OCR InitEmbeddedLoader global tiktoken loader with absence; not applicable via public Pi APIs.",
+  ],
+  // ---- retry middleware: Pi replaces SDK middleware with SettingsManager retry disabled ----
+  [
+    "internal/llm/client_test.go::TestRetryCodesMiddleware_Nil",
+    "Pi replaces OCR retry middleware with SettingsManager.inMemory({retry:{enabled:false}}) and SessionManager.inMemory(); no public WithMiddleware hook exists on PiSession, not applicable via public Pi APIs.",
+  ],
+  [
+    "internal/llm/client_test.go::TestRetryCodesMiddleware_SetsHeader",
+    "Pi replaces OCR retry middleware that sets x-should-retry header with absence; Pi disables retry via SettingsManager, not applicable via public Pi APIs.",
+  ],
+  [
+    "internal/llm/client_test.go::TestRetryCodesMiddleware_NoHeaderForNonMatchingCode",
+    "Pi replaces OCR retry middleware header logic with absence; not applicable via public Pi APIs.",
+  ],
+  [
+    "internal/llm/client_test.go::TestRetryCodesMiddleware_PassthroughError",
+    "Pi replaces OCR retry middleware passthrough with absence; not applicable via public Pi APIs.",
+  ],
+  [
+    "internal/llm/client_test.go::TestAnthropicClient_RetryCodesTriggersRetry",
+    "Pi replaces OCR SDK retry on 429/403 with retry disabled via SettingsManager.inMemory({retry:{enabled:false}}); single-retry behavior is not applicable via public Pi APIs.",
+  ],
+  [
+    "internal/llm/client_test.go::TestOpenAIClient_RetryCodesTriggersRetry",
+    "Pi replaces OCR SDK retry with disabled retry; not applicable via public Pi APIs.",
   ],
   // ---- header/user-agent wiring replaced by Pi SDK internals ----
   [

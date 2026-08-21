@@ -100,6 +100,7 @@ describe("ocr-v193 pi-adapter", () => {
     expect(capturedNames!).toEqual(["code_comment", "task_done"]);
   });
 
+  // OCR v1.9.3: TestOpenAIClient_StreamingCancellation
   it("PiTransport forwards abort signal to session.abort", async () => {
     let abortCalled = false;
     const session = fakeSession({

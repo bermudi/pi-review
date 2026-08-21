@@ -7680,8 +7680,8 @@
         },
         {
           "name": "TestAnthropicClient_RetryCodesTriggersRetry",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "not_applicable",
+          "reason": "Pi replaces OCR SDK retry on 429/403 with retry disabled via SettingsManager.inMemory({retry:{enabled:false}}); single-retry behavior is not applicable via public Pi APIs."
         },
         {
           "name": "TestAnthropicClient_SessionKeyExpandedInExtraHeadersAndBody",
@@ -7800,8 +7800,8 @@
         },
         {
           "name": "TestOpenAIClient_RetryCodesTriggersRetry",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "not_applicable",
+          "reason": "Pi replaces OCR SDK retry with disabled retry; not applicable via public Pi APIs."
         },
         {
           "name": "TestOpenAIClient_SessionKeyExpandedInExtraBody",
@@ -7825,8 +7825,15 @@
         },
         {
           "name": "TestOpenAIClient_StreamingCancellation",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "equivalent",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/pi-adapter.test.ts",
+              "title": "PiTransport forwards abort signal to session.abort"
+            }
+          ],
+          "reason": "equivalent via test/ocr-v193/pi-adapter.test.ts"
         },
         {
           "name": "TestOpenAIClient_StreamingError",
@@ -7877,23 +7884,23 @@
         },
         {
           "name": "TestRetryCodesMiddleware_Nil",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "not_applicable",
+          "reason": "Pi replaces OCR retry middleware with SettingsManager.inMemory({retry:{enabled:false}}) and SessionManager.inMemory(); no public WithMiddleware hook exists on PiSession, not applicable via public Pi APIs."
         },
         {
           "name": "TestRetryCodesMiddleware_NoHeaderForNonMatchingCode",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "not_applicable",
+          "reason": "Pi replaces OCR retry middleware header logic with absence; not applicable via public Pi APIs."
         },
         {
           "name": "TestRetryCodesMiddleware_PassthroughError",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "not_applicable",
+          "reason": "Pi replaces OCR retry middleware passthrough with absence; not applicable via public Pi APIs."
         },
         {
           "name": "TestRetryCodesMiddleware_SetsHeader",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "not_applicable",
+          "reason": "Pi replaces OCR retry middleware that sets x-should-retry header with absence; Pi disables retry via SettingsManager, not applicable via public Pi APIs."
         },
         {
           "name": "TestStripThinkTags",
