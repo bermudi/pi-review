@@ -8844,33 +8844,33 @@
       "tests": [
         {
           "name": "TestBuildResponsesParams_AssistantTextPlusToolCalls",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "not_applicable",
+          "reason": "Pi replaces OCR Responses API wire (provider-specific) with Pi ModelRuntime openai-responses via createAgentSession; not applicable via public Pi APIs."
         },
         {
           "name": "TestBuildResponsesParams_MaxTokensAndTemperature",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "not_applicable",
+          "reason": "Pi replaces OCR Responses API wire (provider-specific) with Pi ModelRuntime openai-responses via createAgentSession; not applicable via public Pi APIs."
         },
         {
           "name": "TestBuildResponsesParams_NoInstructionsWhenNoSystem",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "not_applicable",
+          "reason": "Pi replaces OCR Responses API wire (provider-specific) with Pi ModelRuntime openai-responses via createAgentSession; not applicable via public Pi APIs."
         },
         {
           "name": "TestBuildResponsesParams_StoreAndCacheKey",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "not_applicable",
+          "reason": "Pi replaces OCR Responses API wire (provider-specific) with Pi ModelRuntime openai-responses via createAgentSession; not applicable via public Pi APIs."
         },
         {
           "name": "TestBuildResponsesParams_SystemToInstructions",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "not_applicable",
+          "reason": "Pi replaces OCR Responses API wire (provider-specific) with Pi ModelRuntime openai-responses via createAgentSession; not applicable via public Pi APIs."
         },
         {
           "name": "TestBuildResponsesParams_ToolCallItems",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "not_applicable",
+          "reason": "Pi replaces OCR Responses API wire (provider-specific) with Pi ModelRuntime openai-responses via createAgentSession; not applicable via public Pi APIs."
         },
         {
           "name": "TestBuildResponsesParams_Tools",
@@ -8879,13 +8879,13 @@
         },
         {
           "name": "TestMapResponsesResponse_FunctionCalls",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "not_applicable",
+          "reason": "Pi replaces OCR Responses API wire (provider-specific) with Pi ModelRuntime openai-responses via createAgentSession; not applicable via public Pi APIs."
         },
         {
           "name": "TestMapResponsesResponse_ReasoningAggregated",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "not_applicable",
+          "reason": "Pi replaces OCR Responses API wire (provider-specific) with Pi ModelRuntime openai-responses via createAgentSession; not applicable via public Pi APIs."
         },
         {
           "name": "TestMapResponsesResponse_StatusFailedAndCancelled",
@@ -8899,23 +8899,23 @@
         },
         {
           "name": "TestMapResponsesResponse_TextOnly",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "not_applicable",
+          "reason": "Pi replaces OCR Responses API wire (provider-specific) with Pi ModelRuntime openai-responses via createAgentSession; not applicable via public Pi APIs."
         },
         {
           "name": "TestMapResponsesResponse_Usage",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "not_applicable",
+          "reason": "Pi replaces OCR Responses API wire (provider-specific) with Pi ModelRuntime openai-responses via createAgentSession; not applicable via public Pi APIs."
         },
         {
           "name": "TestNewOpenAIResponsesClient_URLNormalization",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "not_applicable",
+          "reason": "Pi replaces OCR Responses API wire (provider-specific) with Pi ModelRuntime openai-responses via createAgentSession; not applicable via public Pi APIs."
         },
         {
           "name": "TestOpenAIResponsesClient_EndToEnd",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "not_applicable",
+          "reason": "Pi replaces OCR Responses API wire (provider-specific) with Pi ModelRuntime openai-responses via createAgentSession; not applicable via public Pi APIs."
         },
         {
           "name": "TestOpenAIResponsesClient_ExtraBodyPromptCacheKeyOverridesSessionID",

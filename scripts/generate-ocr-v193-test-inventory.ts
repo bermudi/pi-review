@@ -410,6 +410,54 @@ const notApplicableTests: ReadonlyMap<string, string> = new Map<string, string>(
     "internal/llm/message_test.go::TestParseShellRC_NonexistentFile",
     "Pi replaces OCR shell RC file handling; not applicable via public Pi APIs.",
   ],
+  [
+    "internal/llm/responses_client_test.go::TestBuildResponsesParams_AssistantTextPlusToolCalls",
+    "Pi replaces OCR Responses API wire (provider-specific) with Pi ModelRuntime openai-responses via createAgentSession; not applicable via public Pi APIs.",
+  ],
+  [
+    "internal/llm/responses_client_test.go::TestBuildResponsesParams_MaxTokensAndTemperature",
+    "Pi replaces OCR Responses API wire (provider-specific) with Pi ModelRuntime openai-responses via createAgentSession; not applicable via public Pi APIs.",
+  ],
+  [
+    "internal/llm/responses_client_test.go::TestBuildResponsesParams_NoInstructionsWhenNoSystem",
+    "Pi replaces OCR Responses API wire (provider-specific) with Pi ModelRuntime openai-responses via createAgentSession; not applicable via public Pi APIs.",
+  ],
+  [
+    "internal/llm/responses_client_test.go::TestBuildResponsesParams_StoreAndCacheKey",
+    "Pi replaces OCR Responses API wire (provider-specific) with Pi ModelRuntime openai-responses via createAgentSession; not applicable via public Pi APIs.",
+  ],
+  [
+    "internal/llm/responses_client_test.go::TestBuildResponsesParams_SystemToInstructions",
+    "Pi replaces OCR Responses API wire (provider-specific) with Pi ModelRuntime openai-responses via createAgentSession; not applicable via public Pi APIs.",
+  ],
+  [
+    "internal/llm/responses_client_test.go::TestBuildResponsesParams_ToolCallItems",
+    "Pi replaces OCR Responses API wire (provider-specific) with Pi ModelRuntime openai-responses via createAgentSession; not applicable via public Pi APIs.",
+  ],
+  [
+    "internal/llm/responses_client_test.go::TestMapResponsesResponse_FunctionCalls",
+    "Pi replaces OCR Responses API wire (provider-specific) with Pi ModelRuntime openai-responses via createAgentSession; not applicable via public Pi APIs.",
+  ],
+  [
+    "internal/llm/responses_client_test.go::TestMapResponsesResponse_ReasoningAggregated",
+    "Pi replaces OCR Responses API wire (provider-specific) with Pi ModelRuntime openai-responses via createAgentSession; not applicable via public Pi APIs.",
+  ],
+  [
+    "internal/llm/responses_client_test.go::TestMapResponsesResponse_TextOnly",
+    "Pi replaces OCR Responses API wire (provider-specific) with Pi ModelRuntime openai-responses via createAgentSession; not applicable via public Pi APIs.",
+  ],
+  [
+    "internal/llm/responses_client_test.go::TestMapResponsesResponse_Usage",
+    "Pi replaces OCR Responses API wire (provider-specific) with Pi ModelRuntime openai-responses via createAgentSession; not applicable via public Pi APIs.",
+  ],
+  [
+    "internal/llm/responses_client_test.go::TestNewOpenAIResponsesClient_URLNormalization",
+    "Pi replaces OCR Responses API wire (provider-specific) with Pi ModelRuntime openai-responses via createAgentSession; not applicable via public Pi APIs.",
+  ],
+  [
+    "internal/llm/responses_client_test.go::TestOpenAIResponsesClient_EndToEnd",
+    "Pi replaces OCR Responses API wire (provider-specific) with Pi ModelRuntime openai-responses via createAgentSession; not applicable via public Pi APIs.",
+  ],
   // ---- resolver provider dispatch: Pi replaces with createAgentSession model routing ----
   [
     "internal/llm/resolver_test.go::TestResolveEndpoint_CCEnvStripsModelSuffix",
