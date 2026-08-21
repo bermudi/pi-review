@@ -45,6 +45,8 @@ export interface ScanRunner {
   projectSummary: string;
   resumeInfo: unknown;
   diffs: unknown[];
+  retryReport?: RetryReport | null;
+  retryReportError?: string | null;
 }
 
 export interface ScanPreviewFactory {
@@ -153,7 +155,7 @@ function modelIdFromScanModel(model: string): string {
 }
 
 export async function runScanContext(ctx: ScanContext): Promise<number> {
-  const { opts, io, traceId, llmIdentity, retryReport } = ctx;
+  const { opts, io, traceId, llmIdentity, retryReport: ctxRetryReport } = ctx;
   const effectiveLlmIdentity = llmIdentity ?? { model: modelIdFromScanModel(opts.model) };
 
   if (opts.preview && opts.resume !== "") throw new CliUsageError("--preview and --resume cannot be used together");
@@ -187,6 +189,13 @@ export async function runScanContext(ctx: ScanContext): Promise<number> {
   const manifest = runner?.manifest ?? null;
   const emitted = manifest !== null || runErr === null;
 
+  const runnerRetryReport = (runner as unknown as { retryReport?: RetryReport | null })?.retryReport ?? null;
+  const runnerRetryError = (runner as unknown as { retryReportError?: string | null })?.retryReportError ?? null;
+  const effectiveRetryReport = runnerRetryReport ?? ctxRetryReport ?? null;
+  if (runnerRetryError) {
+    io.stderr(`[ocr] warning: freeze retry report: ${runnerRetryError} (retry report suppressed)\n`);
+  }
+
   let emitErr: Error | null = null;
   if (emitted && runner !== null) {
     const provider: ResultProvider = {
@@ -206,7 +215,7 @@ export async function runScanContext(ctx: ScanContext): Promise<number> {
       ResumeInfo: () => runner!.resumeInfo,
     };
     try {
-      emitScanResult(provider, comments, durationMs, opts.outputFormat, traceId, effectiveLlmIdentity, retryReport ?? null, io);
+      emitScanResult(provider, comments, durationMs, opts.outputFormat, traceId, effectiveLlmIdentity, effectiveRetryReport, io);
     } catch (err) {
       emitErr = err instanceof Error ? err : new Error(String(err));
     }

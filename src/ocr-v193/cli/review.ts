@@ -71,6 +71,8 @@ export interface ReviewRunner {
   projectSummary: string;
   resumeInfo: unknown;
   diffs: unknown[];
+  retryReport?: RetryReport | null;
+  retryReportError?: string | null;
 }
 
 export interface ReviewContext {
@@ -246,6 +248,14 @@ export async function runReviewContext(ctx: ReviewContext): Promise<number> {
   const manifest = runner?.manifest ?? null;
   const emitted = manifest !== null || runErr === null;
 
+  // Resolve retry report from runner (production) or ctx (tests); surface freeze error.
+  const runnerRetryReport = (runner as unknown as { retryReport?: RetryReport | null })?.retryReport ?? null;
+  const runnerRetryError = (runner as unknown as { retryReportError?: string | null })?.retryReportError ?? null;
+  const effectiveRetryReport = runnerRetryReport ?? retryReport ?? null;
+  if (runnerRetryError) {
+    io.stderr(`[ocr] warning: freeze retry report: ${runnerRetryError} (retry report suppressed)\n`);
+  }
+
   let emitErr: Error | null = null;
   if (emitted && runner !== null) {
     const provider: ResultProvider = {
@@ -265,7 +275,7 @@ export async function runReviewContext(ctx: ReviewContext): Promise<number> {
       ResumeInfo: () => runner!.resumeInfo,
     };
     try {
-      emitRunResult(provider, comments, durationMs, opts.outputFormat, opts.audience, traceId, effectiveLlmIdentity, retryReport ?? null, io);
+      emitRunResult(provider, comments, durationMs, opts.outputFormat, opts.audience, traceId, effectiveLlmIdentity, effectiveRetryReport, io);
     } catch (err) {
       emitErr = err instanceof Error ? err : new Error(String(err));
     }
@@ -310,7 +320,7 @@ export async function runReviewContext(ctx: ReviewContext): Promise<number> {
           RunManifest: () => null,
         };
     // Emit failure usage only if manifest not already published with retry report
-    const failureReport = emitted ? null : retryReport ?? null;
+    const failureReport = emitted ? null : effectiveRetryReport;
     // Text vs JSON handling is inside shared retry helper; here we do best-effort
     if (opts.outputFormat === "json") {
       const total = Object.values(failedProvider.ToolCalls()).reduce((a, b) => a + b, 0);

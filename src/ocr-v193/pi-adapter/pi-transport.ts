@@ -28,6 +28,10 @@ import type { Message, ToolCall } from "../llmloop/compression.js";
 import type { ChatRequest, ChatResponse, ToolDef, UsageInfo } from "../llmloop/types.js";
 import type { LlmTransport as TranscriptLlmTransport } from "../llmloop/transcript.js";
 import { stripThinkTags } from "./strip-think-tags.js";
+import type { RetryCollector } from "../retry/collector.js";
+import { isValidRequestMeta } from "../retry/meta.js";
+import { classifyAttempt, isAbortError } from "../retry/types.js";
+import { classifyBoundaryError } from "../retry/boundary.js";
 
 // ---------------------------------------------------------------------------
 // Pi session type — derived from public factory return without deep import.
@@ -329,6 +333,8 @@ export interface CreatePiTransportForFileOptions {
   readonly model?: unknown;
   /** Optional session affinity id for SessionManager (maps to prompt_cache_key / x-session-affinity via Pi providers). */
   readonly sessionId?: string;
+  /** Optional retry collector for per-round observability; one Pi request = one attempt. */
+  readonly retryCollector?: RetryCollector;
 }
 
 // ---------------------------------------------------------------------------
@@ -349,12 +355,14 @@ export class PiTransport implements TranscriptLlmTransport {
   private readonly session: PiSession;
   private readonly sessionManager: ReturnType<typeof SessionManager.inMemory> | undefined;
   private readonly promptRef: { current: string | undefined } | undefined;
+  private readonly retryCollector: RetryCollector | undefined;
   private completeChain: Promise<unknown> = Promise.resolve();
 
-  constructor(session: PiSession, promptRef?: { current: string | undefined }, sessionManager?: ReturnType<typeof SessionManager.inMemory>) {
+  constructor(session: PiSession, promptRef?: { current: string | undefined }, sessionManager?: ReturnType<typeof SessionManager.inMemory>, retryCollector?: RetryCollector) {
     this.session = session;
     this.promptRef = promptRef;
     this.sessionManager = sessionManager;
+    this.retryCollector = retryCollector;
   }
 
   /** Dispose the underlying Pi session — await to surface cleanup failure. */
@@ -385,11 +393,48 @@ export class PiTransport implements TranscriptLlmTransport {
 
     if (signal.aborted) throw createAbortError();
 
-    // Serialize concurrent complete() calls — the Pi session is stateful
-    // and cannot handle overlapping prompt/continue/abort sequences.
-    // The CommentWorkerPool may run relocation async while the main loop
-    // continues; this chain ensures calls execute one at a time.
-    const runComplete = (): Promise<ChatResponse> => this.doComplete(req, signal);
+    const meta = (req as unknown as { requestMeta?: import("../retry/meta.js").RequestMeta }).requestMeta;
+    const collector = this.retryCollector;
+    const valid = meta !== undefined && collector !== undefined && isValidRequestMeta(meta as import("../retry/meta.js").RequestMeta);
+    const startedAt = valid ? Date.now() : 0;
+
+    const runComplete = async (): Promise<ChatResponse> => {
+      try {
+        const res = await this.doComplete(req, signal);
+        if (valid) {
+          const endedAt = Date.now();
+          collector!.recordAttempt(meta as import("../retry/meta.js").RequestMeta, { statusCode: 200 }, startedAt, endedAt);
+          let isCancelled = false;
+          if (signal.aborted) {
+            const reason = (signal as unknown as { reason?: unknown }).reason;
+            isCancelled = reason === undefined ? true : isAbortError(reason);
+          }
+          collector!.finalize(meta as import("../retry/meta.js").RequestMeta, null, isCancelled);
+        }
+        return res;
+      } catch (err) {
+        if (valid) {
+          const endedAt = Date.now();
+          const { errorClass, failurePhase, recognized } = classifyBoundaryError(err);
+          let ec: string = errorClass as unknown as string;
+          let fp: string = failurePhase as unknown as string;
+          if (!recognized || ec === "" ) {
+            const c = classifyAttempt({ statusCode: 0, err });
+            ec = c.errorClass as string;
+            fp = c.failurePhase as string;
+          }
+          collector!.recordAttempt(meta as import("../retry/meta.js").RequestMeta, { errorClass: ec as never, failurePhase: fp as never }, startedAt, endedAt);
+          const cancelled = isAbortError(err) || (() => {
+            if (!signal.aborted) return false;
+            const r = (signal as unknown as { reason?: unknown }).reason;
+            return r === undefined ? true : isAbortError(r);
+          })();
+          collector!.finalize(meta as import("../retry/meta.js").RequestMeta, err, cancelled);
+        }
+        throw err;
+      }
+    };
+
     const chained = this.completeChain.then(runComplete, runComplete);
     this.completeChain = chained.then(
       () => undefined,
@@ -771,7 +816,7 @@ export class PiTransport implements TranscriptLlmTransport {
 export async function createPiTransportForFile(
   options: CreatePiTransportForFileOptions,
 ): Promise<PiTransport> {
-  const { cwd, agentDir, tools, model, sessionId } = options;
+  const { cwd, agentDir, tools, model, sessionId, retryCollector } = options;
 
   const sessionManager = sessionId !== undefined && sessionId !== "" ? SessionManager.inMemory(cwd, { id: sessionId }) : SessionManager.inMemory(cwd);
   const settingsManager = SettingsManager.inMemory({
@@ -853,5 +898,5 @@ export async function createPiTransportForFile(
 
   const { session } = await createAgentSession(createOpts as unknown as Parameters<typeof createAgentSession>[0]);
 
-  return new PiTransport(session as PiSession, promptRef, sessionManager);
+  return new PiTransport(session as PiSession, promptRef, sessionManager, retryCollector);
 }
