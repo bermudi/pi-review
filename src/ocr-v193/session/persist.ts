@@ -51,7 +51,24 @@ export function encodeRepoPath(p: string): string {
 }
 
 export function SessionsDir(repoDir: string): string {
-  const home = process.env.HOME ?? os.homedir();
+  const homeEnv = process.env.HOME;
+  if (homeEnv === "") throw new Error("resolve home dir: $HOME is empty");
+  let home: string;
+  if (homeEnv !== undefined) home = homeEnv;
+  else {
+    try {
+      home = os.homedir();
+    } catch (e) {
+      throw new Error(`resolve home dir: ${e instanceof Error ? e.message : String(e)}`);
+    }
+    if (home === "" || home === "/" || home === ".") {
+      // os.homedir fell back to generic; treat as error when HOME unset if it cannot determine
+      // but keep compatibility: only throw if HOME was explicitly unset and homedir is empty
+      // For parity with Go's UserHomeDir, an empty HOME should error, while undefined HOME
+      // tries homedir; our caller sets HOME="" explicitly in tests to trigger error.
+    }
+  }
+  if (!home) throw new Error("resolve home dir: empty home");
   return path.join(home, ".opencodereview", sessionSubDir, encodeRepoPath(repoDir));
 }
 

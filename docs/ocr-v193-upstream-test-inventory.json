@@ -11527,18 +11527,36 @@
       "tests": [
         {
           "name": "TestLoadComments_LaterCheckpointSupersedes",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/session/comments.test.ts",
+              "title": "LoadComments later checkpoint supersedes"
+            }
+          ]
         },
         {
           "name": "TestLoadComments_MissingSession",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/session/comments.test.ts",
+              "title": "LoadComments missing session"
+            }
+          ]
         },
         {
           "name": "TestLoadComments_ReturnsCommentsInOrder",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/session/comments.test.ts",
+              "title": "LoadComments returns comments in order"
+            }
+          ]
         }
       ]
     },
@@ -11682,13 +11700,25 @@
       "tests": [
         {
           "name": "TestListSessions_DirIsFile",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/session/list-error.test.ts",
+              "title": "ListSessions DirIsFile"
+            }
+          ]
         },
         {
           "name": "TestRecordToItem",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/session/list-error.test.ts",
+              "title": "RecordToItem"
+            }
+          ]
         }
       ]
     },
@@ -11702,33 +11732,69 @@
       "tests": [
         {
           "name": "TestLoadSummary_HomeUnset",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/session/list-more.test.ts",
+              "title": "LoadSummary HomeUnset"
+            }
+          ]
         },
         {
           "name": "TestManifest_NilReceiver",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/session/list-more.test.ts",
+              "title": "Manifest nil receiver"
+            }
+          ]
         },
         {
           "name": "TestParseRecordTime",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/session/list-more.test.ts",
+              "title": "parseRecordTime covers empty, valid RFC3339 and garbage"
+            }
+          ]
         },
         {
           "name": "TestRecordReviewItem_EmptyFilePathUsesNewPath",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/session/list-more.test.ts",
+              "title": "RecordReviewItem EmptyFilePathUsesNewPath"
+            }
+          ]
         },
         {
           "name": "TestRecordReviewItem_NilReceiver",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/session/list-more.test.ts",
+              "title": "RecordReviewItem nil receiver"
+            }
+          ]
         },
         {
           "name": "TestSessionsDir_HomeUnset",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/session/list-more.test.ts",
+              "title": "SessionsDir HomeUnset"
+            }
+          ]
         }
       ]
     },
@@ -11742,38 +11808,80 @@
       "tests": [
         {
           "name": "TestListSessions_EmptyRepoReturnsNil",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/session/list.test.ts",
+              "title": "ListSessions empty repo returns nil"
+            }
+          ]
         },
         {
           "name": "TestListSessions_SortsAndAggregates",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/session/list.test.ts",
+              "title": "ListSessions sorts and aggregates"
+            }
+          ]
         },
         {
           "name": "TestLoadDetail_ReturnsItems",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/session/list.test.ts",
+              "title": "LoadDetail returns items"
+            }
+          ]
         },
         {
           "name": "TestLoadSummary_FallsBackToSessionEndFilesReviewed",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/session/list.test.ts",
+              "title": "LoadSummary falls back to session_end files_reviewed"
+            }
+          ]
         },
         {
           "name": "TestLoadSummary_MissingFile",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/session/list.test.ts",
+              "title": "LoadSummary missing file"
+            }
+          ]
         },
         {
           "name": "TestLoadSummaryIgnoresUnknownManifestVersion",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/session/list.test.ts",
+              "title": "LoadSummary ignores unknown manifest version"
+            }
+          ]
         },
         {
           "name": "TestLoadSummaryPrefersV1RunManifest",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/session/list.test.ts",
+              "title": "LoadSummary prefers v1 run manifest"
+            }
+          ]
         }
       ]
     },

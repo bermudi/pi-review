@@ -341,8 +341,12 @@ export interface ItemDetail {
 export function ListSessions(repoDir: string): Summary[] {
   const dir = SessionsDir(repoDir);
   let entries: fs.Dirent[];
-  try { entries = fs.readdirSync(dir, { withFileTypes: true }); } catch {
-    return [];
+  try {
+    entries = fs.readdirSync(dir, { withFileTypes: true });
+  } catch (e) {
+    const err = e as NodeJS.ErrnoException;
+    if (err !== null && typeof err === "object" && "code" in err && (err as { code?: string }).code === "ENOENT") return [];
+    throw new Error(`read sessions dir "${dir}": ${err instanceof Error ? err.message : String(err)}`);
   }
   const out: Summary[] = [];
   for (const entry of entries) {
@@ -523,7 +527,7 @@ function applyRecordToSummary(s: Summary, rec: Record<string, unknown>): void {
   }
 }
 
-function recordToItem(rec: Record<string, unknown>): ItemDetail | null {
+export function recordToItem(rec: Record<string, unknown>): ItemDetail | null {
   const type = String(rec["type"] ?? "");
   if (type !== "review_item_done" && type !== "review_item_reused" && type !== "review_item_failed") return null;
   const kind = type.replace("review_item_", "");
@@ -550,6 +554,10 @@ function parseTime(s: string): Date | null {
   if (s === "") return null;
   const t = new Date(s);
   return Number.isNaN(t.getTime()) ? null : t;
+}
+
+export function parseRecordTime(s: string): Date | null {
+  return parseTime(s);
 }
 
 function manifestReusableFingerprints(m: RunManifest): Map<string, boolean> {

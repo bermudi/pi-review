@@ -397,6 +397,22 @@ const localCoverage: readonly LocalCoverage[] = [
     localPath: "test/ocr-v193/tool/filereader.test.ts",
     upstreamPaths: ["internal/tool/filereader_test.go"],
   },
+  {
+    localPath: "test/ocr-v193/session/comments.test.ts",
+    upstreamPaths: ["internal/session/comments_test.go"],
+  },
+  {
+    localPath: "test/ocr-v193/session/list.test.ts",
+    upstreamPaths: ["internal/session/list_test.go"],
+  },
+  {
+    localPath: "test/ocr-v193/session/list-more.test.ts",
+    upstreamPaths: ["internal/session/list_more_test.go"],
+  },
+  {
+    localPath: "test/ocr-v193/session/list-error.test.ts",
+    upstreamPaths: ["internal/session/list_error_test.go"],
+  },
 ];
 
 function git(...args: readonly string[]): string {
