@@ -8318,13 +8318,13 @@
       "tests": [
         {
           "name": "TestNormalizeAuthHeader",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "not_applicable",
+          "reason": "Pi replaces OCR auth header normalization with Pi SessionManager auth handling; not applicable via public Pi APIs."
         },
         {
           "name": "TestTryCCEnv",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "not_applicable",
+          "reason": "Pi replaces OCR Claude Code env resolution with Pi SettingsManager; not applicable via public Pi APIs."
         }
       ]
     },
@@ -8338,13 +8338,13 @@
       "tests": [
         {
           "name": "TestShellRCFiles",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "not_applicable",
+          "reason": "Pi replaces OCR shell RC file enumeration with Pi DefaultResourceLoader; not applicable via public Pi APIs."
         },
         {
           "name": "TestTryShellRC",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "not_applicable",
+          "reason": "Pi replaces OCR shell RC parsing with Pi DefaultResourceLoader; not applicable via public Pi APIs."
         }
       ]
     },
@@ -9253,28 +9253,63 @@
       "tests": [
         {
           "name": "TestExpandSessionKeyInBody",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "equivalent",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/pi-adapter/session-key.test.ts",
+              "title": "expandSessionKeyInBody replaces recursively without mutating"
+            }
+          ],
+          "reason": "equivalent via test/ocr-v193/pi-adapter/session-key.test.ts"
         },
         {
           "name": "TestExpandSessionKeyInHeaders",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "equivalent",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/pi-adapter/session-key.test.ts",
+              "title": "expandSessionKeyInHeaders replaces placeholder without mutating input"
+            }
+          ],
+          "reason": "equivalent via test/ocr-v193/pi-adapter/session-key.test.ts"
         },
         {
           "name": "TestNewSessionKey",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "equivalent",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/pi-adapter/session-key.test.ts",
+              "title": "newSessionKey returns UUIDv4 and uniqueness"
+            }
+          ],
+          "reason": "equivalent via test/ocr-v193/pi-adapter/session-key.test.ts"
         },
         {
           "name": "TestSessionKeyContext",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "equivalent",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/pi-adapter/session-key.test.ts",
+              "title": "sessionTaskKey override semantics via sessionId"
+            }
+          ],
+          "reason": "equivalent via test/ocr-v193/pi-adapter/session-key.test.ts"
         },
         {
           "name": "TestSessionTaskKey",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "equivalent",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/pi-adapter/session-key.test.ts",
+              "title": "sessionTaskKey derives task-scoped keys with hash"
+            }
+          ],
+          "reason": "equivalent via test/ocr-v193/pi-adapter/session-key.test.ts"
         }
       ]
     },

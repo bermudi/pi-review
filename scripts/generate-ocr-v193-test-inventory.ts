@@ -186,6 +186,26 @@ const equivalentTests: ReadonlyMap<string, readonly Evidence[]> = new Map<string
     "internal/llm/client_test.go::TestOpenAIClient_StreamingCancellation",
     [{ kind: "bun-test-annotation", path: "test/ocr-v193/pi-adapter.test.ts", title: "PiTransport forwards abort signal to session.abort" }],
   ],
+  [
+    "internal/llm/sessionkey_test.go::TestNewSessionKey",
+    [{ kind: "bun-test-annotation", path: "test/ocr-v193/pi-adapter/session-key.test.ts", title: "newSessionKey returns UUIDv4 and uniqueness" }],
+  ],
+  [
+    "internal/llm/sessionkey_test.go::TestSessionTaskKey",
+    [{ kind: "bun-test-annotation", path: "test/ocr-v193/pi-adapter/session-key.test.ts", title: "sessionTaskKey derives task-scoped keys with hash" }],
+  ],
+  [
+    "internal/llm/sessionkey_test.go::TestExpandSessionKeyInHeaders",
+    [{ kind: "bun-test-annotation", path: "test/ocr-v193/pi-adapter/session-key.test.ts", title: "expandSessionKeyInHeaders replaces placeholder without mutating input" }],
+  ],
+  [
+    "internal/llm/sessionkey_test.go::TestExpandSessionKeyInBody",
+    [{ kind: "bun-test-annotation", path: "test/ocr-v193/pi-adapter/session-key.test.ts", title: "expandSessionKeyInBody replaces recursively without mutating" }],
+  ],
+  [
+    "internal/llm/sessionkey_test.go::TestSessionKeyContext",
+    [{ kind: "bun-test-annotation", path: "test/ocr-v193/pi-adapter/session-key.test.ts", title: "sessionTaskKey override semantics via sessionId" }],
+  ],
 ]);
 
 const notApplicableTests: ReadonlyMap<string, string> = new Map<string, string>([
@@ -316,6 +336,22 @@ const notApplicableTests: ReadonlyMap<string, string> = new Map<string, string>(
   [
     "internal/llm/client_test.go::TestOpenAIClient_RetryCodesTriggersRetry",
     "Pi replaces OCR SDK retry with disabled retry; not applicable via public Pi APIs.",
+  ],
+  [
+    "internal/llm/resolver_norm_test.go::TestNormalizeAuthHeader",
+    "Pi replaces OCR auth header normalization with Pi SessionManager auth handling; not applicable via public Pi APIs.",
+  ],
+  [
+    "internal/llm/resolver_norm_test.go::TestTryCCEnv",
+    "Pi replaces OCR Claude Code env resolution with Pi SettingsManager; not applicable via public Pi APIs.",
+  ],
+  [
+    "internal/llm/resolver_shellrc_test.go::TestShellRCFiles",
+    "Pi replaces OCR shell RC file enumeration with Pi DefaultResourceLoader; not applicable via public Pi APIs.",
+  ],
+  [
+    "internal/llm/resolver_shellrc_test.go::TestTryShellRC",
+    "Pi replaces OCR shell RC parsing with Pi DefaultResourceLoader; not applicable via public Pi APIs.",
   ],
   // ---- header/user-agent wiring replaced by Pi SDK internals ----
   [
