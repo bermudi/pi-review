@@ -354,6 +354,8 @@ export interface CreatePiTransportForFileOptions {
   readonly agentDir: string;
   readonly tools: readonly ToolDef[];
   readonly model?: unknown;
+  /** Optional session affinity id for SessionManager (maps to prompt_cache_key / x-session-affinity via Pi providers). */
+  readonly sessionId?: string;
 }
 
 // ---------------------------------------------------------------------------
@@ -372,12 +374,14 @@ export interface CreatePiTransportForFileOptions {
  */
 export class PiTransport implements TranscriptLlmTransport {
   private readonly session: PiSession;
+  private readonly sessionManager: ReturnType<typeof SessionManager.inMemory> | undefined;
   private readonly promptRef: { current: string | undefined } | undefined;
   private completeChain: Promise<unknown> = Promise.resolve();
 
-  constructor(session: PiSession, promptRef?: { current: string | undefined }) {
+  constructor(session: PiSession, promptRef?: { current: string | undefined }, sessionManager?: ReturnType<typeof SessionManager.inMemory>) {
     this.session = session;
     this.promptRef = promptRef;
+    this.sessionManager = sessionManager;
   }
 
   /** Dispose the underlying Pi session — await to surface cleanup failure. */
@@ -423,6 +427,19 @@ export class PiTransport implements TranscriptLlmTransport {
 
   private async doComplete(req: ChatRequest, signal: AbortSignal): Promise<ChatResponse> {
     const expectsToolCall = req.tools !== undefined && req.tools.length > 0;
+
+    // Session affinity: per-request sessionId maps to Pi's prompt_cache_key / x-session-affinity
+    // via SessionManager id (public NewSessionOptions.id). Update manager before driving turn.
+    if (req.sessionId !== undefined && req.sessionId !== "" && this.sessionManager !== undefined) {
+      try {
+        const currentId = this.sessionManager.getSessionId();
+        if (currentId !== req.sessionId) {
+          this.sessionManager.newSession({ id: req.sessionId });
+        }
+      } catch {
+        // ignore: session affinity is best-effort
+      }
+    }
 
     // -----------------------------------------------------------------
     // 1) Dynamic allowlist — sync req.tools via setActiveToolsByName
@@ -779,9 +796,9 @@ export class PiTransport implements TranscriptLlmTransport {
 export async function createPiTransportForFile(
   options: CreatePiTransportForFileOptions,
 ): Promise<PiTransport> {
-  const { cwd, agentDir, tools, model } = options;
+  const { cwd, agentDir, tools, model, sessionId } = options;
 
-  const sessionManager = SessionManager.inMemory();
+  const sessionManager = sessionId !== undefined && sessionId !== "" ? SessionManager.inMemory(cwd, { id: sessionId }) : SessionManager.inMemory(cwd);
   const settingsManager = SettingsManager.inMemory({
     compaction: { enabled: false },
     retry: { enabled: false },
@@ -861,5 +878,5 @@ export async function createPiTransportForFile(
 
   const { session } = await createAgentSession(createOpts as unknown as Parameters<typeof createAgentSession>[0]);
 
-  return new PiTransport(session as PiSession, promptRef);
+  return new PiTransport(session as PiSession, promptRef, sessionManager);
 }
