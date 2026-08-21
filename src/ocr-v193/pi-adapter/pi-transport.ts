@@ -30,7 +30,7 @@ import type { LlmTransport as TranscriptLlmTransport } from "../llmloop/transcri
 import { stripThinkTags } from "./strip-think-tags.js";
 import type { RetryCollector } from "../retry/collector.js";
 import { isValidRequestMeta } from "../retry/meta.js";
-import { classifyAttempt, isAbortError } from "../retry/types.js";
+import { classifyAttempt, isAbortError, ErrorClassProvider, FailurePhaseResponseStatus } from "../retry/types.js";
 import { classifyBoundaryError } from "../retry/boundary.js";
 
 // ---------------------------------------------------------------------------
@@ -403,13 +403,22 @@ export class PiTransport implements TranscriptLlmTransport {
         const res = await this.doComplete(req, signal);
         if (valid) {
           const endedAt = Date.now();
-          collector!.recordAttempt(meta as import("../retry/meta.js").RequestMeta, { statusCode: 200 }, startedAt, endedAt);
-          let isCancelled = false;
-          if (signal.aborted) {
-            const reason = (signal as unknown as { reason?: unknown }).reason;
-            isCancelled = reason === undefined ? true : isAbortError(reason);
+          const expectsToolCall = req.tools !== undefined && req.tools.length > 0;
+          const emptyToolCallResponse = expectsToolCall && res.toolCalls.length === 0;
+          if (emptyToolCallResponse) {
+            // Treat empty tool-call response as provider error so retry_report is observable.
+            // This mirrors OCR's boundary handling where truncated/empty responses are classified.
+            collector!.recordAttempt(meta as import("../retry/meta.js").RequestMeta, { errorClass: ErrorClassProvider as never, failurePhase: FailurePhaseResponseStatus as never, statusCode: 200 }, startedAt, endedAt);
+            collector!.finalize(meta as import("../retry/meta.js").RequestMeta, new Error("no tool calls in response"), false);
+          } else {
+            collector!.recordAttempt(meta as import("../retry/meta.js").RequestMeta, { statusCode: 200 }, startedAt, endedAt);
+            let isCancelled = false;
+            if (signal.aborted) {
+              const reason = (signal as unknown as { reason?: unknown }).reason;
+              isCancelled = reason === undefined ? true : isAbortError(reason);
+            }
+            collector!.finalize(meta as import("../retry/meta.js").RequestMeta, null, isCancelled);
           }
-          collector!.finalize(meta as import("../retry/meta.js").RequestMeta, null, isCancelled);
         }
         return res;
       } catch (err) {

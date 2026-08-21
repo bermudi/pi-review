@@ -1638,6 +1638,18 @@ const localCoverage: readonly LocalCoverage[] = [
     localPath: "test/ocr-v193/cli/sarif.test.ts",
     upstreamPaths: ["cmd/opencodereview/sarif_test.go"],
   },
+  {
+    localPath: "test/ocr-v193/cli/emit-run-result.test.ts",
+    upstreamPaths: ["cmd/opencodereview/emit_run_result_test.go"],
+  },
+  {
+    localPath: "test/ocr-v193/cli/budget-output.test.ts",
+    upstreamPaths: ["cmd/opencodereview/budget_output_test.go"],
+  },
+  {
+    localPath: "test/ocr-v193/cli/retry-e2e.test.ts",
+    upstreamPaths: ["cmd/opencodereview/retry_report_e2e_test.go"],
+  },
 ];
 
 function git(...args: readonly string[]): string {

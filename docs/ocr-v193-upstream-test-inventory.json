@@ -184,38 +184,80 @@
       "tests": [
         {
           "name": "TestEmitFailureUsage_BudgetExceededPropagated",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/cli/budget-output.test.ts",
+              "title": "emitFailureUsage budget exceeded propagated"
+            }
+          ]
         },
         {
           "name": "TestEmitFailureUsage_JSONEmitsStructuredRecord",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/cli/budget-output.test.ts",
+              "title": "emitFailureUsage JSON emits structured record"
+            }
+          ]
         },
         {
           "name": "TestEmitFailureUsage_TextEmitsStructuredRecord",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/cli/budget-output.test.ts",
+              "title": "emitFailureUsage text emits structured record"
+            }
+          ]
         },
         {
           "name": "TestEmitRunResult_BudgetExceededFalseOmittedFromJSON",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/cli/budget-output.test.ts",
+              "title": "emitRunResult budget exceeded false omitted from JSON"
+            }
+          ]
         },
         {
           "name": "TestEmitRunResult_JSONBudgetDoesNotOverrideLegacyStatus",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/cli/budget-output.test.ts",
+              "title": "emitRunResult JSON budget does not override legacy status"
+            }
+          ]
         },
         {
           "name": "TestEmitRunResult_JSONBudgetStopIsPartial",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/cli/budget-output.test.ts",
+              "title": "emitRunResult JSON budget stop is partial"
+            }
+          ]
         },
         {
           "name": "TestEmitRunResult_JSONNoBudgetIsSuccess",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/cli/budget-output.test.ts",
+              "title": "emitRunResult JSON no budget is success"
+            }
+          ]
         }
       ]
     },
@@ -910,148 +952,322 @@
       "tests": [
         {
           "name": "TestEmitFailureUsage_JSONCarriesRetryReport",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/cli/emit-run-result.test.ts",
+              "title": "emitFailureUsage JSON carries retry report"
+            }
+          ]
         },
         {
           "name": "TestEmitFailureUsage_NilReportUnchanged",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/cli/emit-run-result.test.ts",
+              "title": "emitFailureUsage nil report unchanged"
+            }
+          ]
         },
         {
           "name": "TestEmitFailureUsage_TextCarriesRetryReport",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/cli/emit-run-result.test.ts",
+              "title": "emitFailureUsage text carries retry report"
+            }
+          ]
         },
         {
           "name": "TestEmitRunResult_AgentJSONDoesNotRestore",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/cli/emit-run-result.test.ts",
+              "title": "emitRunResult agent json does not restore automatically"
+            }
+          ]
         },
         {
           "name": "TestEmitRunResult_AgentTextRestoresQuiet",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/cli/emit-run-result.test.ts",
+              "title": "emitRunResult agent text restores quiet"
+            }
+          ]
         },
         {
           "name": "TestEmitRunResult_JSONCarriesRetryReport",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/cli/emit-run-result.test.ts",
+              "title": "emitRunResult JSON carries retry report"
+            }
+          ]
         },
         {
           "name": "TestEmitRunResult_JSONHasNoReportText",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/cli/emit-run-result.test.ts",
+              "title": "emitRunResult JSON has no report text"
+            }
+          ]
         },
         {
           "name": "TestEmitRunResult_JSONIncludesSessionID",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/cli/emit-run-result.test.ts",
+              "title": "emitRunResult JSON includes session id"
+            }
+          ]
         },
         {
           "name": "TestEmitRunResult_JSONLLMIdentityNamedProvider",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/cli/emit-run-result.test.ts",
+              "title": "emitRunResult JSON llm identity named provider"
+            }
+          ]
         },
         {
           "name": "TestEmitRunResult_JSONLLMIdentityOmitsUnknownProvider",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/cli/emit-run-result.test.ts",
+              "title": "emitRunResult JSON omits unknown provider"
+            }
+          ]
         },
         {
           "name": "TestEmitRunResult_JSONManifestMatchesPersistedSessionEnd",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/cli/emit-run-result.test.ts",
+              "title": "emitRunResult JSON manifest matches persisted session end"
+            }
+          ]
         },
         {
           "name": "TestEmitRunResult_JSONNoFiles",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/cli/emit-run-result.test.ts",
+              "title": "emitRunResult JSON no files skipped"
+            }
+          ]
         },
         {
           "name": "TestEmitRunResult_JSONNoFilesTraceID",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/cli/emit-run-result.test.ts",
+              "title": "emitRunResult JSON no files trace id"
+            }
+          ]
         },
         {
           "name": "TestEmitRunResult_JSONOmitsRetryReportWhenNil",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/cli/emit-run-result.test.ts",
+              "title": "emitRunResult JSON omits retry report when nil"
+            }
+          ]
         },
         {
           "name": "TestEmitRunResult_JSONSkippedIncludesManifest",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/cli/emit-run-result.test.ts",
+              "title": "emitRunResult JSON skipped includes manifest"
+            }
+          ]
         },
         {
           "name": "TestEmitRunResult_JSONTraceIDFromContext",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/cli/emit-run-result.test.ts",
+              "title": "emitRunResult JSON trace id from context"
+            }
+          ]
         },
         {
           "name": "TestEmitRunResult_JSONUsesManifestTerminalState",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/cli/emit-run-result.test.ts",
+              "title": "emitRunResult JSON uses manifest terminal state"
+            }
+          ]
         },
         {
           "name": "TestEmitRunResult_JSONWithComments",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/cli/emit-run-result.test.ts",
+              "title": "emitRunResult JSON with comments"
+            }
+          ]
         },
         {
           "name": "TestEmitRunResult_JSONWithResumeInfo",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/cli/emit-run-result.test.ts",
+              "title": "emitRunResult JSON with resume info"
+            }
+          ]
         },
         {
           "name": "TestEmitRunResult_NilQuietHandle",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/cli/emit-run-result.test.ts",
+              "title": "emitRunResult nil quiet handle"
+            }
+          ]
         },
         {
           "name": "TestEmitRunResult_TextCompleteReportsFindingsAndWaived",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/cli/emit-run-result.test.ts",
+              "title": "emitRunResult text complete reports findings and waived"
+            }
+          ]
         },
         {
           "name": "TestEmitRunResult_TextDoesNotPrintSuccessfulSessionHint",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/cli/emit-run-result.test.ts",
+              "title": "emitRunResult text does not print successful session hint"
+            }
+          ]
         },
         {
           "name": "TestEmitRunResult_TextNoComments",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/cli/emit-run-result.test.ts",
+              "title": "emitRunResult text no comments"
+            }
+          ]
         },
         {
           "name": "TestEmitRunResult_TextOmitsReportWhenNil",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/cli/emit-run-result.test.ts",
+              "title": "emitRunResult text omits report when nil"
+            }
+          ]
         },
         {
           "name": "TestEmitRunResult_TextPartialNeverLooksGood",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/cli/emit-run-result.test.ts",
+              "title": "emitRunResult text partial never looks good"
+            }
+          ]
         },
         {
           "name": "TestEmitRunResult_TextReportOrder",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/cli/emit-run-result.test.ts",
+              "title": "emitRunResult text report order"
+            }
+          ]
         },
         {
           "name": "TestEmitRunResult_TextReportWithWarnings",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/cli/emit-run-result.test.ts",
+              "title": "emitRunResult text report with warnings"
+            }
+          ]
         },
         {
           "name": "TestEmitRunResult_TextWithComments",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/cli/emit-run-result.test.ts",
+              "title": "emitRunResult text with comments"
+            }
+          ]
         },
         {
           "name": "TestEmitRunResult_TextWithProjectSummary",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/cli/emit-run-result.test.ts",
+              "title": "emitRunResult text with project summary"
+            }
+          ]
         }
       ]
     },
@@ -3291,38 +3507,80 @@
       "tests": [
         {
           "name": "TestReviewE2E_AllFilesFailPublishesReportOnce",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/cli/retry-e2e.test.ts",
+              "title": "all files fail publishes report once (json)"
+            }
+          ]
         },
         {
           "name": "TestReviewE2E_AllFilesFailTextPublishesReportOnce",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/cli/retry-e2e.test.ts",
+              "title": "all files fail publishes report once (text)"
+            }
+          ]
         },
         {
           "name": "TestReviewE2E_CleanRunEmitsNoRetryReport",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/cli/retry-e2e.test.ts",
+              "title": "clean run emits no retry report"
+            }
+          ]
         },
         {
           "name": "TestReviewE2E_FreezeErrorIsAWarning",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/cli/retry-e2e.test.ts",
+              "title": "freeze error is a warning"
+            }
+          ]
         },
         {
           "name": "TestReviewE2E_RecoveredAndFailedReachesJSONExit",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/cli/retry-e2e.test.ts",
+              "title": "recovered and failed reaches JSON exit"
+            }
+          ]
         },
         {
           "name": "TestReviewE2E_ReportSurvivesSessionPersistenceFailure",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/cli/retry-e2e.test.ts",
+              "title": "report survives session persistence failure"
+            }
+          ]
         },
         {
           "name": "TestReviewE2E_RetryReportReachesTextExit",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/cli/retry-e2e.test.ts",
+              "title": "retry report reaches text exit"
+            }
+          ]
         }
       ]
     },
