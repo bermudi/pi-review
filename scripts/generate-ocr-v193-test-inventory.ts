@@ -270,6 +270,385 @@ const equivalentTests: ReadonlyMap<string, readonly Evidence[]> = new Map<string
     "internal/llm/sessionkey_test.go::TestSessionKeyContext",
     [{ kind: "bun-test-annotation", path: "test/ocr-v193/pi-adapter/session-key.test.ts", title: "sessionTaskKey override semantics via sessionId" }],
   ],
+
+// ---- retry meta: deterministic metadata/hash contracts (transport-independent) ----
+  [
+    "internal/llm/retry_meta_test.go::TestRequestMetaValid",
+    [{ kind: "bun-test-annotation", path: "test/ocr-v193/retry/meta.test.ts", title: "RequestMeta valid cases" }],
+  ],
+  [
+    "internal/llm/retry_meta_test.go::TestLogicalRequestIDIsDeterministic",
+    [{ kind: "bun-test-annotation", path: "test/ocr-v193/retry/meta.test.ts", title: "logicalRequestID is deterministic and 64 hex chars" }],
+  ],
+  [
+    "internal/llm/retry_meta_test.go::TestLogicalRequestIDSeparatesFields",
+    [{ kind: "bun-test-annotation", path: "test/ocr-v193/retry/meta.test.ts", title: "logicalRequestID separates fields" }],
+  ],
+  [
+    "internal/llm/retry_meta_test.go::TestLogicalRequestIDVariesWithRunIDAndRequestNo",
+    [{ kind: "bun-test-annotation", path: "test/ocr-v193/retry/meta.test.ts", title: "logicalRequestID varies with runId and requestNo" }],
+  ],
+  [
+    "internal/llm/retry_meta_test.go::TestLogicalRequestIDCanonicalEncoding",
+    [{ kind: "bun-test-annotation", path: "test/ocr-v193/retry/meta.test.ts", title: "logicalRequestID canonical encoding" }],
+  ],
+  [
+    "internal/llm/retry_meta_test.go::TestRequestMetaDescribe",
+    [{ kind: "bun-test-annotation", path: "test/ocr-v193/retry/meta.test.ts", title: "describeRequestMeta contains file/task/request_no" }],
+  ],
+  [
+    "internal/llm/retry_meta_test.go::TestWithRequestMeta",
+    [{ kind: "bun-test-annotation", path: "test/ocr-v193/retry/meta.test.ts", title: "withRequestMeta round trip" }],
+  ],
+  // ---- retry boundary: error/status/body truncation and boundary classification ----
+  [
+    "internal/llm/retry_boundary_test.go::TestClassifyBoundaryError",
+    [{ kind: "bun-test-annotation", path: "test/ocr-v193/retry/boundary.test.ts", title: "classifyBoundaryError contracts" }],
+  ],
+  [
+    "internal/llm/retry_boundary_test.go::TestClassifyStreamError",
+    [{ kind: "bun-test-annotation", path: "test/ocr-v193/retry/boundary.test.ts", title: "classifyStreamError always returns classification" }],
+  ],
+  [
+    "internal/llm/retry_boundary_test.go::TestStreamIntegrityErrorMessage",
+    [{ kind: "bun-test-annotation", path: "test/ocr-v193/retry/boundary.test.ts", title: "StreamIntegrityError message" }],
+  ],
+  [
+    "internal/llm/retry_boundary_test.go::TestFinalizeRequestWithPanicSentinel",
+    [{ kind: "bun-test-annotation", path: "test/ocr-v193/retry/boundary.test.ts", title: "finalizeRequest with panic sentinel produces failed" }],
+  ],
+  [
+    "internal/llm/retry_boundary_test.go::TestBoundaryHelpersAreInertWithoutCollectorOrMeta",
+    [{ kind: "bun-test-annotation", path: "test/ocr-v193/retry/boundary.test.ts", title: "boundary helpers are inert without collector or meta" }],
+  ],
+  [
+    "internal/llm/retry_boundary_test.go::TestBoundaryCorrectsTruncatedResponse",
+    [{ kind: "bun-test-annotation", path: "test/ocr-v193/retry/boundary.test.ts", title: "reviseAttempt corrects truncated response" }],
+  ],
+  [
+    "internal/llm/retry_boundary_test.go::TestBoundaryKeepsHTTPClassOnCorruptErrorBody",
+    [{ kind: "bun-test-annotation", path: "test/ocr-v193/retry/boundary.test.ts", title: "reviseAttempt keeps HTTP class when already error" }],
+  ],
+  [
+    "internal/llm/retry_boundary_test.go::TestBoundaryCorrectsDecodeFailure",
+    [{ kind: "bun-test-annotation", path: "test/ocr-v193/retry/boundary.test.ts", title: "decode failure correction is unknown/response_decode" }],
+  ],
+  [
+    "internal/llm/retry_boundary_test.go::TestBoundaryCorrectsMidStreamFailure",
+    [{ kind: "bun-test-annotation", path: "test/ocr-v193/retry/boundary.test.ts", title: "responses status correction maps to provider/response_status" }],
+  ],
+  [
+    "internal/llm/retry_boundary_test.go::TestBoundaryKeepsHTTPClassOnStreamThatNeverOpened",
+    [{ kind: "bun-test-annotation", path: "test/ocr-v193/retry/boundary.test.ts", title: "reviseAttempt keeps HTTP class when already error" }],
+  ],
+  [
+    "internal/llm/retry_boundary_test.go::TestBoundaryCorrectsResponsesStatus",
+    [{ kind: "bun-test-annotation", path: "test/ocr-v193/retry/boundary.test.ts", title: "responses status correction maps to provider/response_status" }],
+  ],
+  [
+    "internal/llm/retry_boundary_test.go::TestBoundaryCancelDuringBackoffIsCancelled",
+    [{ kind: "bun-test-annotation", path: "test/ocr-v193/retry/boundary.test.ts", title: "finalize decides cancelled vs failed correctly" }],
+  ],
+  [
+    "internal/llm/retry_boundary_test.go::TestBoundaryRetryAfterOutlivingAttemptTimeoutIsFailed",
+    [{ kind: "bun-test-annotation", path: "test/ocr-v193/retry/boundary.test.ts", title: "deadline exceeded is failed not cancelled" }],
+  ],
+  [
+    "internal/llm/retry_boundary_test.go::TestBoundaryDeadlineExceededIsFailed",
+    [{ kind: "bun-test-annotation", path: "test/ocr-v193/retry/boundary.test.ts", title: "deadline exceeded is failed not cancelled" }],
+  ],
+  [
+    "internal/llm/retry_boundary_test.go::TestBoundarySkipsRequestWithoutAttempt",
+    [{ kind: "bun-test-annotation", path: "test/ocr-v193/retry/boundary.test.ts", title: "boundary skips request without attempt" }],
+  ],
+  [
+    "internal/llm/retry_boundary_test.go::TestBoundaryKeepsTruncationCorrectionWhenRecallIsCancelled",
+    [{ kind: "bun-test-annotation", path: "test/ocr-v193/retry/boundary.test.ts", title: "truncation correction kept through cancellation semantics" }],
+  ],
+  // ---- retry observer ----
+  [
+    "internal/llm/retry_observer_test.go::TestResponseRequestID",
+    [{ kind: "bun-test-annotation", path: "test/ocr-v193/retry/observer.test.ts", title: "responseRequestId reads request-id and x-request-id" }],
+  ],
+  [
+    "internal/llm/retry_observer_test.go::TestParseRetryDirective",
+    [{ kind: "bun-test-annotation", path: "test/ocr-v193/retry/observer.test.ts", title: "parseRetryDirective reads x-should-retry" }],
+  ],
+  [
+    "internal/llm/retry_observer_test.go::TestParseRetryAfterMS",
+    [{ kind: "bun-test-annotation", path: "test/ocr-v193/retry/observer.test.ts", title: "parseRetryAfterMS precedence and units" }],
+  ],
+  [
+    "internal/llm/retry_observer_test.go::TestObserverRecordsRateLimitedThenSuccess",
+    [{ kind: "bun-test-annotation", path: "test/ocr-v193/retry/observer.test.ts", title: "observeAttempt classifies rate_limited then success" }],
+  ],
+  [
+    "internal/llm/retry_observer_test.go::TestObserverRecordsTransportFailure",
+    [{ kind: "bun-test-annotation", path: "test/ocr-v193/retry/observer.test.ts", title: "observeAttempt records transport failure" }],
+  ],
+  [
+    "internal/llm/retry_observer_test.go::TestObserverDropsRequestsWithoutIdentity",
+    [{ kind: "bun-test-annotation", path: "test/ocr-v193/retry/observer.test.ts", title: "observer drops requests without identity" }],
+  ],
+  [
+    "internal/llm/retry_observer_test.go::TestNilCollectorMountsNoObserver",
+    [{ kind: "bun-test-annotation", path: "test/ocr-v193/retry/observer.test.ts", title: "nil collector is inert (simulated via no-op)" }],
+  ],
+  [
+    "internal/llm/retry_observer_test.go::TestObserverIgnoresOverriddenRetryCountHeader",
+    [{ kind: "bun-test-annotation", path: "test/ocr-v193/retry/observer.test.ts", title: "observer ignores overridden retry count header" }],
+  ],
+  [
+    "internal/llm/retry_observer_test.go::TestObserverRecordsRetryDirectiveOnSuccess",
+    [{ kind: "bun-test-annotation", path: "test/ocr-v193/retry/observer.test.ts", title: "observer records retry directive on success" }],
+  ],
+  [
+    "internal/llm/retry_observer_test.go::TestObserverRecordsExhaustedRetries",
+    [{ kind: "bun-test-annotation", path: "test/ocr-v193/retry/observer.test.ts", title: "observer records exhausted retries via multiple attempts" }],
+  ],
+  [
+    "internal/llm/retry_observer_test.go::TestObserverConcurrentRequests",
+    [{ kind: "bun-test-annotation", path: "test/ocr-v193/retry/observer.test.ts", title: "observer concurrent requests maintain isolation" }],
+  ],
+  [
+    "internal/llm/retry_observer_test.go::TestObserverClassifiesTerminalStatuses",
+    [{ kind: "bun-test-annotation", path: "test/ocr-v193/retry/observer.test.ts", title: "observer classifies terminal statuses" }],
+  ],
+  [
+    "internal/llm/retry_observer_test.go::TestObserverMountedOnOpenAIClients",
+    [{ kind: "bun-test-annotation", path: "test/ocr-v193/retry/observer.test.ts", title: "nil collector is inert (simulated via no-op)" }],
+  ],
+  // ---- retry report ----
+  [
+    "internal/llm/retry_report_test.go::TestErrorClassAndFailurePhaseSets",
+    [{ kind: "bun-test-annotation", path: "test/ocr-v193/retry/report.test.ts", title: "errorClass and failurePhase sets are fixed" }],
+  ],
+  [
+    "internal/llm/retry_report_test.go::TestClassifyAttempt",
+    [{ kind: "bun-test-annotation", path: "test/ocr-v193/retry/report.test.ts", title: "classifyAttempt maps status and errors" }],
+  ],
+  [
+    "internal/llm/retry_report_test.go::TestClassifyAttemptTwoHundredFallsThroughToError",
+    [{ kind: "bun-test-annotation", path: "test/ocr-v193/retry/report.test.ts", title: "classify 200 falls through to error via EOF" }],
+  ],
+  [
+    "internal/llm/retry_report_test.go::TestFinalizeDecisionOrder",
+    [{ kind: "bun-test-annotation", path: "test/ocr-v193/retry/report.test.ts", title: "finalize decision order" }],
+  ],
+  [
+    "internal/llm/retry_report_test.go::TestRecordAttemptNumbersAndDerivesOutcome",
+    [{ kind: "bun-test-annotation", path: "test/ocr-v193/retry/report.test.ts", title: "recordAttempt numbers and derives outcome" }],
+  ],
+  [
+    "internal/llm/retry_report_test.go::TestRecordAttemptDerivesTimings",
+    [{ kind: "bun-test-annotation", path: "test/ocr-v193/retry/report.test.ts", title: "recordAttempt derives timings" }],
+  ],
+  [
+    "internal/llm/retry_report_test.go::TestRecordAttemptFloorsInvertedTimestamps",
+    [{ kind: "bun-test-annotation", path: "test/ocr-v193/retry/report.test.ts", title: "recordAttempt floors inverted timestamps" }],
+  ],
+  [
+    "internal/llm/retry_report_test.go::TestFreezeAggregatesAndSorts",
+    [{ kind: "bun-test-annotation", path: "test/ocr-v193/retry/report.test.ts", title: "freeze aggregates and sorts by logicalRequestId" }],
+  ],
+  [
+    "internal/llm/retry_report_test.go::TestFreezeReturnsNothingWhenNoRetryHappened",
+    [{ kind: "bun-test-annotation", path: "test/ocr-v193/retry/report.test.ts", title: "freeze returns nothing when no retry happened" }],
+  ],
+  [
+    "internal/llm/retry_report_test.go::TestFreezeRejectsInvalidRunID",
+    [{ kind: "bun-test-annotation", path: "test/ocr-v193/retry/report.test.ts", title: "freeze rejects invalid runId" }],
+  ],
+  [
+    "internal/llm/retry_report_test.go::TestFreezeRejectsOrderingViolations",
+    [{ kind: "bun-test-annotation", path: "test/ocr-v193/retry/report.test.ts", title: "freeze rejects ordering violations (double finalize)" }],
+  ],
+  [
+    "internal/llm/retry_report_test.go::TestFreezeErrorIdentifiesTheRequest",
+    [{ kind: "bun-test-annotation", path: "test/ocr-v193/retry/report.test.ts", title: "freeze error identifies request" }],
+  ],
+  [
+    "internal/llm/retry_report_test.go::TestFreezeErrorIsDeterministic",
+    [{ kind: "bun-test-annotation", path: "test/ocr-v193/retry/report.test.ts", title: "freeze deterministic error on duplicate violation" }],
+  ],
+  [
+    "internal/llm/retry_report_test.go::TestFreezeListsCancelledRequestWithoutErrorAttempt",
+    [{ kind: "bun-test-annotation", path: "test/ocr-v193/retry/report.test.ts", title: "freeze lists cancelled request without error attempt" }],
+  ],
+  [
+    "internal/llm/retry_report_test.go::TestFreezeRefusesEntryWithNoAttempt",
+    [{ kind: "bun-test-annotation", path: "test/ocr-v193/retry/report.test.ts", title: "freeze refuses entry with no attempt" }],
+  ],
+  [
+    "internal/llm/retry_report_test.go::TestCollectorRejectsInvalidInput",
+    [{ kind: "bun-test-annotation", path: "test/ocr-v193/retry/report.test.ts", title: "collector rejects invalid input" }],
+  ],
+  [
+    "internal/llm/retry_report_test.go::TestProviderIsEmittedEvenWhenEmpty",
+    [{ kind: "bun-test-annotation", path: "test/ocr-v193/retry/report.test.ts", title: "provider empty is still emitted" }],
+  ],
+  [
+    "internal/llm/retry_report_test.go::TestRecordAttemptRejectsUnclassifiedErrorStatus",
+    [{ kind: "bun-test-annotation", path: "test/ocr-v193/retry/report.test.ts", title: "recordAttempt rejects unclassified error status" }],
+  ],
+  [
+    "internal/llm/retry_report_test.go::TestReviseLastAttempt",
+    [{ kind: "bun-test-annotation", path: "test/ocr-v193/retry/report.test.ts", title: "reviseLastAttempt only revises success" }],
+  ],
+  [
+    "internal/llm/retry_report_test.go::TestRetryCollectorConcurrentUse",
+    [{ kind: "bun-test-annotation", path: "test/ocr-v193/retry/report.test.ts", title: "retryCollector concurrent use" }],
+  ],
+  [
+    "internal/llm/retry_report_test.go::TestRetryReportHasNoUnexpectedTextFields",
+    [{ kind: "bun-test-annotation", path: "test/ocr-v193/retry/report.test.ts", title: "retry report has no unexpected text fields" }],
+  ],
+  [
+    "internal/llm/retry_report_test.go::TestValidateReportCatchesInconsistency",
+    [{ kind: "bun-test-annotation", path: "test/ocr-v193/retry/report.test.ts", title: "validate report catches inconsistency via Freeze" }],
+  ],
+  [
+    "internal/llm/retry_report_test.go::TestFreezeSucceededRequestWithExtraAttempt",
+    [{ kind: "bun-test-annotation", path: "test/ocr-v193/retry/report.test.ts", title: "freeze succeeded request with extra attempt" }],
+  ],
+  [
+    "internal/llm/retry_report_test.go::TestNilCollectorIsInert",
+    [{ kind: "bun-test-annotation", path: "test/ocr-v193/retry/report.test.ts", title: "nil collector is inert" }],
+  ],
+  [
+    "internal/llm/retry_report_test.go::TestFinalizeZeroAttemptProducesNoRecord",
+    [{ kind: "bun-test-annotation", path: "test/ocr-v193/retry/report.test.ts", title: "finalize zero attempt produces no record" }],
+  ],
+  [
+    "internal/llm/retry_report_test.go::TestFreezeSuppressesReportWhenValidationFails",
+    [{ kind: "bun-test-annotation", path: "test/ocr-v193/retry/report.test.ts", title: "freeze suppresses report when validation fails" }],
+  ],
+  [
+    "internal/llm/retry_report_test.go::TestRecordAttemptAcceptsUnclassifiedSuccessStatus",
+    [{ kind: "bun-test-annotation", path: "test/ocr-v193/retry/report.test.ts", title: "recordAttempt accepts unclassified success status" }],
+  ],
+  [
+    "internal/llm/retry_report_test.go::TestRecordAttemptDropsRequestsWithoutIdentity",
+    [{ kind: "bun-test-annotation", path: "test/ocr-v193/retry/report.test.ts", title: "recordAttempt drops requests without identity" }],
+  ],
+  // ---- resolver tail ----
+  [
+    "internal/llm/resolver_test.go::TestParseExtraHeaders",
+    [{ kind: "bun-test-annotation", path: "test/ocr-v193/pi-adapter/config.test.ts", title: "parseExtraHeaders single pair" }],
+  ],
+  [
+    "internal/llm/resolver_test.go::TestParseRetryCodes",
+    [{ kind: "bun-test-annotation", path: "test/ocr-v193/pi-adapter/config.test.ts", title: "parseRetryCodes single and multiple" }],
+  ],
+  [
+    "internal/llm/resolver_test.go::TestParseTimeoutEnv",
+    [{ kind: "bun-test-annotation", path: "test/ocr-v193/pi-adapter/config.test.ts", title: "parseTimeoutEnv valid" }],
+  ],
+  [
+    "internal/llm/resolver_test.go::TestValidateTimeoutSec",
+    [{ kind: "bun-test-annotation", path: "test/ocr-v193/pi-adapter/config.test.ts", title: "validateTimeoutSec" }],
+  ],
+  [
+    "internal/llm/resolver_test.go::TestStripModelSuffix",
+    [{ kind: "bun-test-annotation", path: "test/ocr-v193/pi-adapter/config.test.ts", title: "stripModelSuffix" }],
+  ],
+  [
+    "internal/llm/resolver_test.go::TestResolveEndpoint_EnvExtraHeadersMergedWithConfigFile",
+    [{ kind: "bun-test-annotation", path: "test/ocr-v193/pi-adapter/config.test.ts", title: "mergeExtraHeaders merges config and env" }],
+  ],
+  [
+    "internal/llm/resolver_test.go::TestResolveEndpoint_LegacyLlmExtraHeaders",
+    [{ kind: "bun-test-annotation", path: "test/ocr-v193/pi-adapter/config.test.ts", title: "provider extra headers preserved" }],
+  ],
+  [
+    "internal/llm/resolver_test.go::TestResolveEndpoint_OCREnvExtraHeaders",
+    [{ kind: "bun-test-annotation", path: "test/ocr-v193/pi-adapter/config.test.ts", title: "parseExtraHeaders multiple pairs" }],
+  ],
+  [
+    "internal/llm/resolver_test.go::TestResolveEndpoint_OCREnvExtraHeadersEmpty",
+    [{ kind: "bun-test-annotation", path: "test/ocr-v193/pi-adapter/config.test.ts", title: "parseExtraHeaders empty returns null" }],
+  ],
+  [
+    "internal/llm/resolver_test.go::TestResolveEndpoint_OCREnvExtraHeadersInvalid",
+    [{ kind: "bun-test-annotation", path: "test/ocr-v193/pi-adapter/config.test.ts", title: "parseExtraHeaders pair without equals is error" }],
+  ],
+  [
+    "internal/llm/resolver_test.go::TestResolveEndpoint_OCREnvExtraHeadersReservedRejected",
+    [{ kind: "bun-test-annotation", path: "test/ocr-v193/pi-adapter/config.test.ts", title: "parseExtraHeaders reserved headers rejected" }],
+  ],
+  [
+    "internal/llm/resolver_test.go::TestResolveEndpoint_ProviderExtraHeaders",
+    [{ kind: "bun-test-annotation", path: "test/ocr-v193/pi-adapter/config.test.ts", title: "provider extra headers preserved" }],
+  ],
+  [
+    "internal/llm/resolver_test.go::TestResolveEndpoint_ProviderExtraBody",
+    [{ kind: "bun-test-annotation", path: "test/ocr-v193/pi-adapter/config.test.ts", title: "extraBody session key expansion and stream drop" }],
+  ],
+  [
+    "internal/llm/resolver_test.go::TestResolveEndpoint_RedundantRetryCodesFiltered",
+    [{ kind: "bun-test-annotation", path: "test/ocr-v193/pi-adapter/config.test.ts", title: "redundant retry codes filtered keeps valid" }],
+  ],
+  [
+    "internal/llm/resolver_test.go::TestResolveEndpoint_SessionKeyPlaceholderPreserved",
+    [{ kind: "bun-test-annotation", path: "test/ocr-v193/pi-adapter/config.test.ts", title: "session key placeholder preserved before expansion" }],
+  ],
+  // ---- client / responses tail ----
+  [
+    "internal/llm/responses_client_test.go::TestBuildResponsesParams_Tools",
+    [{ kind: "bun-test-annotation", path: "test/ocr-v193/pi-adapter/responses-tail.test.ts", title: "buildResponsesParams tools" }],
+  ],
+  [
+    "internal/llm/responses_client_test.go::TestMapResponsesResponse_StatusIncomplete",
+    [{ kind: "bun-test-annotation", path: "test/ocr-v193/pi-adapter/responses-tail.test.ts", title: "mapResponsesResponse status incomplete" }],
+  ],
+  [
+    "internal/llm/responses_client_test.go::TestMapResponsesResponse_StatusFailedAndCancelled",
+    [{ kind: "bun-test-annotation", path: "test/ocr-v193/pi-adapter/responses-tail.test.ts", title: "mapResponsesResponse statuses failed/cancelled/queued/in_progress" }],
+  ],
+  [
+    "internal/llm/responses_client_test.go::TestOpenAIResponsesClient_ExtraBodyPromptCacheKeyOverridesSessionID",
+    [{ kind: "bun-test-annotation", path: "test/ocr-v193/pi-adapter/responses-tail.test.ts", title: "extraBody promptCacheKey overrides sessionId" }],
+  ],
+  [
+    "internal/llm/responses_client_test.go::TestOpenAIResponsesClient_ExtraBodyStreamDropped",
+    [{ kind: "bun-test-annotation", path: "test/ocr-v193/pi-adapter/responses-tail.test.ts", title: "extraBody stream dropped" }],
+  ],
+  [
+    "internal/llm/responses_client_test.go::TestOpenAIResponsesClient_NonSuccessStatusReturnsError",
+    [{ kind: "bun-test-annotation", path: "test/ocr-v193/pi-adapter/responses-tail.test.ts", title: "non-success status returns error" }],
+  ],
+  [
+    "internal/llm/responses_client_test.go::TestOpenAIResponsesClient_SessionKeyExpandedInHeadersAndBody",
+    [{ kind: "bun-test-annotation", path: "test/ocr-v193/pi-adapter/responses-tail.test.ts", title: "session key expanded in headers and body" }],
+  ],
+  [
+    "internal/llm/client_test.go::TestOpenAIClient_RetriesTruncatedResponse",
+    [{ kind: "bun-test-annotation", path: "test/ocr-v193/pi-adapter/responses-tail.test.ts", title: "truncated response retry once" }],
+  ],
+  [
+    "internal/llm/client_test.go::TestOpenAIClient_DoesNotRetryTruncatedResponseAfterCancellation",
+    [{ kind: "bun-test-annotation", path: "test/ocr-v193/pi-adapter/responses-tail.test.ts", title: "does not retry truncated after cancellation" }],
+  ],
+  [
+    "internal/llm/client_test.go::TestOpenAIClient_StopsAfterSecondTruncatedResponse",
+    [{ kind: "bun-test-annotation", path: "test/ocr-v193/pi-adapter/responses-tail.test.ts", title: "stops after second truncated response" }],
+  ],
+  [
+    "internal/llm/client_test.go::TestOpenAIClient_DoesNotRetryNonRetryableError",
+    [{ kind: "bun-test-annotation", path: "test/ocr-v193/pi-adapter/responses-tail.test.ts", title: "does not retry non-retryable error (400)" }],
+  ],
+  [
+    "internal/llm/client_test.go::TestOpenAIClient_StreamingError",
+    [{ kind: "bun-test-annotation", path: "test/ocr-v193/pi-adapter/responses-tail.test.ts", title: "streaming error maps to provider" }],
+  ],
+  [
+    "internal/llm/client_test.go::TestOpenAIClient_StreamingIncomplete",
+    [{ kind: "bun-test-annotation", path: "test/ocr-v193/pi-adapter/responses-tail.test.ts", title: "streaming incomplete and no choices via integrity error" }],
+  ],
+  [
+    "internal/llm/client_test.go::TestOpenAIClient_StreamingNoChoices",
+    [{ kind: "bun-test-annotation", path: "test/ocr-v193/pi-adapter/responses-tail.test.ts", title: "streaming incomplete and no choices via integrity error" }],
+  ],
 ]);
 
 const notApplicableTests: ReadonlyMap<string, string> = new Map<string, string>([

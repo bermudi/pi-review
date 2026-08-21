@@ -37,6 +37,7 @@ function metaCtx(m: RequestMeta): unknown {
 }
 
 // classifyBoundaryError cases
+// OCR v1.9.3: TestClassifyBoundaryError
 test("classifyBoundaryError contracts", () => {
   const cases: Array<{ name: string; err: unknown; wantClass: string; wantPhase: string; recognized: boolean }> = [
     { name: "nil", err: null, wantClass: "", wantPhase: "", recognized: false },
@@ -65,6 +66,7 @@ test("classifyBoundaryError wraps", () => {
   expect(errorClass).toBe(ErrorClassCancelled);
 });
 
+// OCR v1.9.3: TestClassifyStreamError
 test("classifyStreamError always returns classification", () => {
   const cases: Array<{ name: string; err: unknown; wantClass: ErrorClass; wantPhase: FailurePhase }> = [
     { name: "integrity", err: new StreamIntegrityError("contained no choices"), wantClass: ErrorClassProvider, wantPhase: FailurePhaseStream },
@@ -80,11 +82,13 @@ test("classifyStreamError always returns classification", () => {
   }
 });
 
+// OCR v1.9.3: TestStreamIntegrityErrorMessage
 test("StreamIntegrityError message", () => {
   const err = new StreamIntegrityError("contained no choices");
   expect(err.message).toBe("OpenAI streaming response contained no choices");
 });
 
+// OCR v1.9.3: TestFinalizeRequestWithPanicSentinel
 test("finalizeRequest with panic sentinel produces failed", () => {
   const c = new RetryCollector();
   const m = testMeta();
@@ -96,6 +100,7 @@ test("finalizeRequest with panic sentinel produces failed", () => {
   expect(report!.requests[0]!.outcome).toBe("failed");
 });
 
+// OCR v1.9.3: TestBoundaryHelpersAreInertWithoutCollectorOrMeta
 test("boundary helpers are inert without collector or meta", () => {
   const m = testMeta();
   reviseAttempt(metaCtx(m), null, ErrorClassNetwork, FailurePhaseResponseDecode);
@@ -106,6 +111,7 @@ test("boundary helpers are inert without collector or meta", () => {
   expect(c.getEntryCount()).toBe(0);
 });
 
+// OCR v1.9.3: TestBoundaryCorrectsTruncatedResponse
 test("reviseAttempt corrects truncated response", () => {
   const c = new RetryCollector();
   const m = testMeta();
@@ -119,6 +125,8 @@ test("reviseAttempt corrects truncated response", () => {
   expect(attempts[0]!.statusCode).toBe(200);
 });
 
+// OCR v1.9.3: TestBoundaryKeepsHTTPClassOnCorruptErrorBody
+// OCR v1.9.3: TestBoundaryKeepsHTTPClassOnStreamThatNeverOpened
 test("reviseAttempt keeps HTTP class when already error", () => {
   const c = new RetryCollector();
   const m = testMeta();
@@ -130,6 +138,7 @@ test("reviseAttempt keeps HTTP class when already error", () => {
   expect(attempts[0]!.failurePhase).toBe(FailurePhaseHTTP);
 });
 
+// OCR v1.9.3: TestBoundaryCancelDuringBackoffIsCancelled
 test("finalize decides cancelled vs failed correctly", () => {
   const c = new RetryCollector();
   const m = testMeta();
@@ -140,6 +149,7 @@ test("finalize decides cancelled vs failed correctly", () => {
   expect(report!.requests[0]!.outcome).toBe("cancelled");
 });
 
+// OCR v1.9.3: TestBoundarySkipsRequestWithoutAttempt
 test("boundary skips request without attempt", () => {
   const c = new RetryCollector();
   const m2 = testMeta();
@@ -162,6 +172,7 @@ test("classifyStreamError opaque maps to unknown/stream", () => {
   expect(failurePhase).toBe(FailurePhaseStream);
 });
 
+// OCR v1.9.3: TestBoundaryKeepsTruncationCorrectionWhenRecallIsCancelled
 test("truncation correction kept through cancellation semantics", () => {
   const c = new RetryCollector();
   const m = testMeta();
@@ -175,6 +186,8 @@ test("truncation correction kept through cancellation semantics", () => {
   expect(req.attempts[0]!.errorClass).toBe(ErrorClassNetwork);
 });
 
+// OCR v1.9.3: TestBoundaryCorrectsMidStreamFailure
+// OCR v1.9.3: TestBoundaryCorrectsResponsesStatus
 test("responses status correction maps to provider/response_status", () => {
   const c = new RetryCollector();
   const m = testMeta();
@@ -185,6 +198,7 @@ test("responses status correction maps to provider/response_status", () => {
   expect(attempts[0]!.failurePhase).toBe("response_status");
 });
 
+// OCR v1.9.3: TestBoundaryCorrectsDecodeFailure
 test("decode failure correction is unknown/response_decode", () => {
   const c = new RetryCollector();
   const m = testMeta();
@@ -197,6 +211,8 @@ test("decode failure correction is unknown/response_decode", () => {
   expect(c.getAttempts(m)[0]!.errorClass).toBe(ErrorClassUnknown);
 });
 
+// OCR v1.9.3: TestBoundaryRetryAfterOutlivingAttemptTimeoutIsFailed
+// OCR v1.9.3: TestBoundaryDeadlineExceededIsFailed
 test("deadline exceeded is failed not cancelled", () => {
   const c = new RetryCollector();
   const m = testMeta();

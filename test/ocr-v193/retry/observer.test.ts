@@ -10,6 +10,7 @@ function testMeta(): RequestMeta {
   return { provider: "anthropic", model: "claude-sonnet-4-6", filePath: "payment.go", taskType: "main_task", requestNo: 1 };
 }
 
+// OCR v1.9.3: TestResponseRequestID
 test("responseRequestId reads request-id and x-request-id", () => {
   expect(responseRequestId({ "request-id": "req_1", "x-request-id": "x_1" })).toBe("req_1");
   expect(responseRequestId({ "x-request-id": "x_2" })).toBe("x_2");
@@ -17,6 +18,7 @@ test("responseRequestId reads request-id and x-request-id", () => {
   expect(responseRequestId({ "Request-Id": "caps" })).toBe("caps");
 });
 
+// OCR v1.9.3: TestParseRetryDirective
 test("parseRetryDirective reads x-should-retry", () => {
   expect(parseRetryDirective({ "x-should-retry": "true" })).toBe(true);
   expect(parseRetryDirective({ "x-should-retry": "false" })).toBe(false);
@@ -24,6 +26,7 @@ test("parseRetryDirective reads x-should-retry", () => {
   expect(parseRetryDirective({})).toBeUndefined();
 });
 
+// OCR v1.9.3: TestParseRetryAfterMS
 test("parseRetryAfterMS precedence and units", () => {
   const now = Date.now();
   expect(parseRetryAfterMs({ "Retry-After-Ms": "40" }, now)).toBe(40);
@@ -36,6 +39,7 @@ test("parseRetryAfterMS precedence and units", () => {
   expect(parseRetryAfterMs({}, now)).toBe(0);
 });
 
+// OCR v1.9.3: TestObserverRecordsRateLimitedThenSuccess
 test("observeAttempt classifies rate_limited then success", () => {
   const ended = Date.now();
   const errObs = observeAttempt({ status: 429, headers: { "Retry-After-Ms": "40", "request-id": "req_1" } }, new Error("429"), ended);
@@ -49,6 +53,7 @@ test("observeAttempt classifies rate_limited then success", () => {
   expect(okObs.errorClass).toBeUndefined();
 });
 
+// OCR v1.9.3: TestObserverRecordsTransportFailure
 test("observeAttempt records transport failure", () => {
   const obs = observeAttempt(null, new Error("dial tcp"), Date.now());
   expect(obs.errorClass).toBe(ErrorClassNetwork);
@@ -62,6 +67,7 @@ test("observeAttempt drops classification on 2xx success", () => {
   expect(obs["errorClass"]).toBeUndefined();
 });
 
+// OCR v1.9.3: TestObserverDropsRequestsWithoutIdentity
 test("observer drops requests without identity", () => {
   const c = new RetryCollector();
   const bogus: RequestMeta = { provider: "", model: "", filePath: "", taskType: "", requestNo: 0 };
@@ -69,24 +75,29 @@ test("observer drops requests without identity", () => {
   expect(c.getEntryCount()).toBe(0);
 });
 
+// OCR v1.9.3: TestNilCollectorMountsNoObserver
+// OCR v1.9.3: TestObserverMountedOnOpenAIClients
 test("nil collector is inert (simulated via no-op)", () => {
   // In Go, nil collector mounts no middleware; here we test that calling with undefined doesn't throw
   const obs = observeAttempt({ status: 200, headers: {} }, null, Date.now());
   expect(obs.statusCode).toBe(200);
 });
 
+// OCR v1.9.3: TestObserverIgnoresOverriddenRetryCountHeader
 test("observer ignores overridden retry count header", () => {
   // Simulate that collector ignores SDK retry count header; we just ensure parse doesn't read it
   const obs = observeAttempt({ status: 429, headers: { "x-should-retry": "true", "retry-count": "5" } }, new Error("429"), Date.now());
   expect(obs.sdkRetryDirective).toBe(true);
 });
 
+// OCR v1.9.3: TestObserverRecordsRetryDirectiveOnSuccess
 test("observer records retry directive on success", () => {
   const obs = observeAttempt({ status: 200, headers: { "x-should-retry": "true" } }, null, Date.now());
   // Even on 200, directive is recorded (both SDKs consult ahead of status)
   expect(obs.sdkRetryDirective).toBe(true);
 });
 
+// OCR v1.9.3: TestObserverRecordsExhaustedRetries
 test("observer records exhausted retries via multiple attempts", () => {
   const c = new RetryCollector();
   const m = testMeta();
@@ -99,6 +110,7 @@ test("observer records exhausted retries via multiple attempts", () => {
   expect(report!.totalRetries).toBe(5);
 });
 
+// OCR v1.9.3: TestObserverConcurrentRequests
 test("observer concurrent requests maintain isolation", async () => {
   const c = new RetryCollector();
   const metas: RequestMeta[] = Array.from({ length: 5 }, (_, i) => ({ ...testMeta(), filePath: `file${i}.go`, requestNo: 1 }));
@@ -114,6 +126,7 @@ test("observer concurrent requests maintain isolation", async () => {
   expect(c.getEntryCount()).toBe(5);
 });
 
+// OCR v1.9.3: TestObserverClassifiesTerminalStatuses
 test("observer classifies terminal statuses", () => {
   const cases: Array<{ status: number; wantClass: string }> = [
     { status: 429, wantClass: ErrorClassRateLimited },

@@ -7834,14 +7834,26 @@
         {
           "name": "TestOpenAIClient_DoesNotRetryNonRetryableError",
           "disposition": "equivalent",
-          "reason": "OCR-derived test translation has not been recorded",
-          "via": "equivalent via test/ocr-v193/pi-adapter/responses-tail.test.ts"
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/pi-adapter/responses-tail.test.ts",
+              "title": "does not retry non-retryable error (400)"
+            }
+          ],
+          "reason": "equivalent via test/ocr-v193/pi-adapter/responses-tail.test.ts"
         },
         {
           "name": "TestOpenAIClient_DoesNotRetryTruncatedResponseAfterCancellation",
           "disposition": "equivalent",
-          "reason": "OCR-derived test translation has not been recorded",
-          "via": "equivalent via test/ocr-v193/pi-adapter/responses-tail.test.ts"
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/pi-adapter/responses-tail.test.ts",
+              "title": "does not retry truncated after cancellation"
+            }
+          ],
+          "reason": "equivalent via test/ocr-v193/pi-adapter/responses-tail.test.ts"
         },
         {
           "name": "TestOpenAIClient_ExtraHeadersSent",
@@ -7868,8 +7880,14 @@
         {
           "name": "TestOpenAIClient_RetriesTruncatedResponse",
           "disposition": "equivalent",
-          "reason": "OCR-derived test translation has not been recorded",
-          "via": "equivalent via test/ocr-v193/pi-adapter/responses-tail.test.ts"
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/pi-adapter/responses-tail.test.ts",
+              "title": "truncated response retry once"
+            }
+          ],
+          "reason": "equivalent via test/ocr-v193/pi-adapter/responses-tail.test.ts"
         },
         {
           "name": "TestOpenAIClient_RetryCodesTriggersRetry",
@@ -7915,8 +7933,14 @@
         {
           "name": "TestOpenAIClient_StopsAfterSecondTruncatedResponse",
           "disposition": "equivalent",
-          "reason": "OCR-derived test translation has not been recorded",
-          "via": "equivalent via test/ocr-v193/pi-adapter/responses-tail.test.ts"
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/pi-adapter/responses-tail.test.ts",
+              "title": "stops after second truncated response"
+            }
+          ],
+          "reason": "equivalent via test/ocr-v193/pi-adapter/responses-tail.test.ts"
         },
         {
           "name": "TestOpenAIClient_StreamingCancellation",
@@ -7933,14 +7957,26 @@
         {
           "name": "TestOpenAIClient_StreamingError",
           "disposition": "equivalent",
-          "reason": "OCR-derived test translation has not been recorded",
-          "via": "equivalent via test/ocr-v193/pi-adapter/responses-tail.test.ts"
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/pi-adapter/responses-tail.test.ts",
+              "title": "streaming error maps to provider"
+            }
+          ],
+          "reason": "equivalent via test/ocr-v193/pi-adapter/responses-tail.test.ts"
         },
         {
           "name": "TestOpenAIClient_StreamingIncomplete",
           "disposition": "equivalent",
-          "reason": "OCR-derived test translation has not been recorded",
-          "via": "equivalent via test/ocr-v193/pi-adapter/responses-tail.test.ts"
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/pi-adapter/responses-tail.test.ts",
+              "title": "streaming incomplete and no choices via integrity error"
+            }
+          ],
+          "reason": "equivalent via test/ocr-v193/pi-adapter/responses-tail.test.ts"
         },
         {
           "name": "TestOpenAIClient_StreamingInconsistentChunks",
@@ -7950,8 +7986,14 @@
         {
           "name": "TestOpenAIClient_StreamingNoChoices",
           "disposition": "equivalent",
-          "reason": "OCR-derived test translation has not been recorded",
-          "via": "equivalent via test/ocr-v193/pi-adapter/responses-tail.test.ts"
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/pi-adapter/responses-tail.test.ts",
+              "title": "streaming incomplete and no choices via integrity error"
+            }
+          ],
+          "reason": "equivalent via test/ocr-v193/pi-adapter/responses-tail.test.ts"
         },
         {
           "name": "TestOpenAIClient_StreamingReasoningContent",
@@ -8493,20 +8535,38 @@
         {
           "name": "TestParseExtraHeaders",
           "disposition": "equivalent",
-          "reason": "OCR-derived test translation has not been recorded",
-          "via": "equivalent via test/ocr-v193/pi-adapter/config.test.ts"
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/pi-adapter/config.test.ts",
+              "title": "parseExtraHeaders single pair"
+            }
+          ],
+          "reason": "equivalent via test/ocr-v193/pi-adapter/config.test.ts"
         },
         {
           "name": "TestParseRetryCodes",
           "disposition": "equivalent",
-          "reason": "OCR-derived test translation has not been recorded",
-          "via": "equivalent via test/ocr-v193/pi-adapter/config.test.ts"
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/pi-adapter/config.test.ts",
+              "title": "parseRetryCodes single and multiple"
+            }
+          ],
+          "reason": "equivalent via test/ocr-v193/pi-adapter/config.test.ts"
         },
         {
           "name": "TestParseTimeoutEnv",
           "disposition": "equivalent",
-          "reason": "OCR-derived test translation has not been recorded",
-          "via": "equivalent via test/ocr-v193/pi-adapter/config.test.ts"
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/pi-adapter/config.test.ts",
+              "title": "parseTimeoutEnv valid"
+            }
+          ],
+          "reason": "equivalent via test/ocr-v193/pi-adapter/config.test.ts"
         },
         {
           "name": "TestResolveEndpoint_CCEnvCleanModelUnchanged",
@@ -8601,8 +8661,14 @@
         {
           "name": "TestResolveEndpoint_EnvExtraHeadersMergedWithConfigFile",
           "disposition": "equivalent",
-          "reason": "OCR-derived test translation has not been recorded",
-          "via": "equivalent via test/ocr-v193/pi-adapter/config.test.ts"
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/pi-adapter/config.test.ts",
+              "title": "mergeExtraHeaders merges config and env"
+            }
+          ],
+          "reason": "equivalent via test/ocr-v193/pi-adapter/config.test.ts"
         },
         {
           "name": "TestResolveEndpoint_EnvTimeoutGlobalOverride",
@@ -8637,8 +8703,14 @@
         {
           "name": "TestResolveEndpoint_LegacyLlmExtraHeaders",
           "disposition": "equivalent",
-          "reason": "OCR-derived test translation has not been recorded",
-          "via": "equivalent via test/ocr-v193/pi-adapter/config.test.ts"
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/pi-adapter/config.test.ts",
+              "title": "provider extra headers preserved"
+            }
+          ],
+          "reason": "equivalent via test/ocr-v193/pi-adapter/config.test.ts"
         },
         {
           "name": "TestResolveEndpoint_LegacyLlmProtocolTakesPriorityOverUseAnthropic",
@@ -8683,26 +8755,50 @@
         {
           "name": "TestResolveEndpoint_OCREnvExtraHeaders",
           "disposition": "equivalent",
-          "reason": "OCR-derived test translation has not been recorded",
-          "via": "equivalent via test/ocr-v193/pi-adapter/config.test.ts"
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/pi-adapter/config.test.ts",
+              "title": "parseExtraHeaders multiple pairs"
+            }
+          ],
+          "reason": "equivalent via test/ocr-v193/pi-adapter/config.test.ts"
         },
         {
           "name": "TestResolveEndpoint_OCREnvExtraHeadersEmpty",
           "disposition": "equivalent",
-          "reason": "OCR-derived test translation has not been recorded",
-          "via": "equivalent via test/ocr-v193/pi-adapter/config.test.ts"
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/pi-adapter/config.test.ts",
+              "title": "parseExtraHeaders empty returns null"
+            }
+          ],
+          "reason": "equivalent via test/ocr-v193/pi-adapter/config.test.ts"
         },
         {
           "name": "TestResolveEndpoint_OCREnvExtraHeadersInvalid",
           "disposition": "equivalent",
-          "reason": "OCR-derived test translation has not been recorded",
-          "via": "equivalent via test/ocr-v193/pi-adapter/config.test.ts"
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/pi-adapter/config.test.ts",
+              "title": "parseExtraHeaders pair without equals is error"
+            }
+          ],
+          "reason": "equivalent via test/ocr-v193/pi-adapter/config.test.ts"
         },
         {
           "name": "TestResolveEndpoint_OCREnvExtraHeadersReservedRejected",
           "disposition": "equivalent",
-          "reason": "OCR-derived test translation has not been recorded",
-          "via": "equivalent via test/ocr-v193/pi-adapter/config.test.ts"
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/pi-adapter/config.test.ts",
+              "title": "parseExtraHeaders reserved headers rejected"
+            }
+          ],
+          "reason": "equivalent via test/ocr-v193/pi-adapter/config.test.ts"
         },
         {
           "name": "TestResolveEndpoint_OCREnvOpenAIIgnoresAuthHeader",
@@ -8762,14 +8858,26 @@
         {
           "name": "TestResolveEndpoint_ProviderExtraBody",
           "disposition": "equivalent",
-          "reason": "OCR-derived test translation has not been recorded",
-          "via": "equivalent via test/ocr-v193/pi-adapter/config.test.ts"
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/pi-adapter/config.test.ts",
+              "title": "extraBody session key expansion and stream drop"
+            }
+          ],
+          "reason": "equivalent via test/ocr-v193/pi-adapter/config.test.ts"
         },
         {
           "name": "TestResolveEndpoint_ProviderExtraHeaders",
           "disposition": "equivalent",
-          "reason": "OCR-derived test translation has not been recorded",
-          "via": "equivalent via test/ocr-v193/pi-adapter/config.test.ts"
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/pi-adapter/config.test.ts",
+              "title": "provider extra headers preserved"
+            }
+          ],
+          "reason": "equivalent via test/ocr-v193/pi-adapter/config.test.ts"
         },
         {
           "name": "TestResolveEndpoint_ProviderMissingAPIKey",
@@ -8799,8 +8907,14 @@
         {
           "name": "TestResolveEndpoint_RedundantRetryCodesFiltered",
           "disposition": "equivalent",
-          "reason": "OCR-derived test translation has not been recorded",
-          "via": "equivalent via test/ocr-v193/pi-adapter/config.test.ts"
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/pi-adapter/config.test.ts",
+              "title": "redundant retry codes filtered keeps valid"
+            }
+          ],
+          "reason": "equivalent via test/ocr-v193/pi-adapter/config.test.ts"
         },
         {
           "name": "TestResolveEndpoint_ResponsesURLNotMutated",
@@ -8810,8 +8924,14 @@
         {
           "name": "TestResolveEndpoint_SessionKeyPlaceholderPreserved",
           "disposition": "equivalent",
-          "reason": "OCR-derived test translation has not been recorded",
-          "via": "equivalent via test/ocr-v193/pi-adapter/config.test.ts"
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/pi-adapter/config.test.ts",
+              "title": "session key placeholder preserved before expansion"
+            }
+          ],
+          "reason": "equivalent via test/ocr-v193/pi-adapter/config.test.ts"
         },
         {
           "name": "TestResolveEndpointWithModelOverride_CustomProviderWithoutConfiguredModel",
@@ -8901,14 +9021,26 @@
         {
           "name": "TestStripModelSuffix",
           "disposition": "equivalent",
-          "reason": "OCR-derived test translation has not been recorded",
-          "via": "equivalent via test/ocr-v193/pi-adapter/config.test.ts"
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/pi-adapter/config.test.ts",
+              "title": "stripModelSuffix"
+            }
+          ],
+          "reason": "equivalent via test/ocr-v193/pi-adapter/config.test.ts"
         },
         {
           "name": "TestValidateTimeoutSec",
           "disposition": "equivalent",
-          "reason": "OCR-derived test translation has not been recorded",
-          "via": "equivalent via test/ocr-v193/pi-adapter/config.test.ts"
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/pi-adapter/config.test.ts",
+              "title": "validateTimeoutSec"
+            }
+          ],
+          "reason": "equivalent via test/ocr-v193/pi-adapter/config.test.ts"
         }
       ]
     },
@@ -8953,8 +9085,14 @@
         {
           "name": "TestBuildResponsesParams_Tools",
           "disposition": "equivalent",
-          "reason": "OCR-derived test translation has not been recorded",
-          "via": "equivalent via test/ocr-v193/pi-adapter/responses-tail.test.ts"
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/pi-adapter/responses-tail.test.ts",
+              "title": "buildResponsesParams tools"
+            }
+          ],
+          "reason": "equivalent via test/ocr-v193/pi-adapter/responses-tail.test.ts"
         },
         {
           "name": "TestMapResponsesResponse_FunctionCalls",
@@ -8969,14 +9107,26 @@
         {
           "name": "TestMapResponsesResponse_StatusFailedAndCancelled",
           "disposition": "equivalent",
-          "reason": "OCR-derived test translation has not been recorded",
-          "via": "equivalent via test/ocr-v193/pi-adapter/responses-tail.test.ts"
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/pi-adapter/responses-tail.test.ts",
+              "title": "mapResponsesResponse statuses failed/cancelled/queued/in_progress"
+            }
+          ],
+          "reason": "equivalent via test/ocr-v193/pi-adapter/responses-tail.test.ts"
         },
         {
           "name": "TestMapResponsesResponse_StatusIncomplete",
           "disposition": "equivalent",
-          "reason": "OCR-derived test translation has not been recorded",
-          "via": "equivalent via test/ocr-v193/pi-adapter/responses-tail.test.ts"
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/pi-adapter/responses-tail.test.ts",
+              "title": "mapResponsesResponse status incomplete"
+            }
+          ],
+          "reason": "equivalent via test/ocr-v193/pi-adapter/responses-tail.test.ts"
         },
         {
           "name": "TestMapResponsesResponse_TextOnly",
@@ -9001,26 +9151,50 @@
         {
           "name": "TestOpenAIResponsesClient_ExtraBodyPromptCacheKeyOverridesSessionID",
           "disposition": "equivalent",
-          "reason": "OCR-derived test translation has not been recorded",
-          "via": "equivalent via test/ocr-v193/pi-adapter/responses-tail.test.ts"
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/pi-adapter/responses-tail.test.ts",
+              "title": "extraBody promptCacheKey overrides sessionId"
+            }
+          ],
+          "reason": "equivalent via test/ocr-v193/pi-adapter/responses-tail.test.ts"
         },
         {
           "name": "TestOpenAIResponsesClient_ExtraBodyStreamDropped",
           "disposition": "equivalent",
-          "reason": "OCR-derived test translation has not been recorded",
-          "via": "equivalent via test/ocr-v193/pi-adapter/responses-tail.test.ts"
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/pi-adapter/responses-tail.test.ts",
+              "title": "extraBody stream dropped"
+            }
+          ],
+          "reason": "equivalent via test/ocr-v193/pi-adapter/responses-tail.test.ts"
         },
         {
           "name": "TestOpenAIResponsesClient_NonSuccessStatusReturnsError",
           "disposition": "equivalent",
-          "reason": "OCR-derived test translation has not been recorded",
-          "via": "equivalent via test/ocr-v193/pi-adapter/responses-tail.test.ts"
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/pi-adapter/responses-tail.test.ts",
+              "title": "non-success status returns error"
+            }
+          ],
+          "reason": "equivalent via test/ocr-v193/pi-adapter/responses-tail.test.ts"
         },
         {
           "name": "TestOpenAIResponsesClient_SessionKeyExpandedInHeadersAndBody",
           "disposition": "equivalent",
-          "reason": "OCR-derived test translation has not been recorded",
-          "via": "equivalent via test/ocr-v193/pi-adapter/responses-tail.test.ts"
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/pi-adapter/responses-tail.test.ts",
+              "title": "session key expanded in headers and body"
+            }
+          ],
+          "reason": "equivalent via test/ocr-v193/pi-adapter/responses-tail.test.ts"
         }
       ]
     },
@@ -9035,98 +9209,194 @@
         {
           "name": "TestBoundaryCancelDuringBackoffIsCancelled",
           "disposition": "equivalent",
-          "reason": "OCR-derived test translation has not been recorded",
-          "via": "equivalent via test/ocr-v193/retry/boundary.test.ts"
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/retry/boundary.test.ts",
+              "title": "finalize decides cancelled vs failed correctly"
+            }
+          ],
+          "reason": "equivalent via test/ocr-v193/retry/boundary.test.ts"
         },
         {
           "name": "TestBoundaryCorrectsDecodeFailure",
           "disposition": "equivalent",
-          "reason": "OCR-derived test translation has not been recorded",
-          "via": "equivalent via test/ocr-v193/retry/boundary.test.ts"
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/retry/boundary.test.ts",
+              "title": "decode failure correction is unknown/response_decode"
+            }
+          ],
+          "reason": "equivalent via test/ocr-v193/retry/boundary.test.ts"
         },
         {
           "name": "TestBoundaryCorrectsMidStreamFailure",
           "disposition": "equivalent",
-          "reason": "OCR-derived test translation has not been recorded",
-          "via": "equivalent via test/ocr-v193/retry/boundary.test.ts"
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/retry/boundary.test.ts",
+              "title": "responses status correction maps to provider/response_status"
+            }
+          ],
+          "reason": "equivalent via test/ocr-v193/retry/boundary.test.ts"
         },
         {
           "name": "TestBoundaryCorrectsResponsesStatus",
           "disposition": "equivalent",
-          "reason": "OCR-derived test translation has not been recorded",
-          "via": "equivalent via test/ocr-v193/retry/boundary.test.ts"
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/retry/boundary.test.ts",
+              "title": "responses status correction maps to provider/response_status"
+            }
+          ],
+          "reason": "equivalent via test/ocr-v193/retry/boundary.test.ts"
         },
         {
           "name": "TestBoundaryCorrectsTruncatedResponse",
           "disposition": "equivalent",
-          "reason": "OCR-derived test translation has not been recorded",
-          "via": "equivalent via test/ocr-v193/retry/boundary.test.ts"
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/retry/boundary.test.ts",
+              "title": "reviseAttempt corrects truncated response"
+            }
+          ],
+          "reason": "equivalent via test/ocr-v193/retry/boundary.test.ts"
         },
         {
           "name": "TestBoundaryDeadlineExceededIsFailed",
           "disposition": "equivalent",
-          "reason": "OCR-derived test translation has not been recorded",
-          "via": "equivalent via test/ocr-v193/retry/boundary.test.ts"
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/retry/boundary.test.ts",
+              "title": "deadline exceeded is failed not cancelled"
+            }
+          ],
+          "reason": "equivalent via test/ocr-v193/retry/boundary.test.ts"
         },
         {
           "name": "TestBoundaryHelpersAreInertWithoutCollectorOrMeta",
           "disposition": "equivalent",
-          "reason": "OCR-derived test translation has not been recorded",
-          "via": "equivalent via test/ocr-v193/retry/boundary.test.ts"
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/retry/boundary.test.ts",
+              "title": "boundary helpers are inert without collector or meta"
+            }
+          ],
+          "reason": "equivalent via test/ocr-v193/retry/boundary.test.ts"
         },
         {
           "name": "TestBoundaryKeepsHTTPClassOnCorruptErrorBody",
           "disposition": "equivalent",
-          "reason": "OCR-derived test translation has not been recorded",
-          "via": "equivalent via test/ocr-v193/retry/boundary.test.ts"
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/retry/boundary.test.ts",
+              "title": "reviseAttempt keeps HTTP class when already error"
+            }
+          ],
+          "reason": "equivalent via test/ocr-v193/retry/boundary.test.ts"
         },
         {
           "name": "TestBoundaryKeepsHTTPClassOnStreamThatNeverOpened",
           "disposition": "equivalent",
-          "reason": "OCR-derived test translation has not been recorded",
-          "via": "equivalent via test/ocr-v193/retry/boundary.test.ts"
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/retry/boundary.test.ts",
+              "title": "reviseAttempt keeps HTTP class when already error"
+            }
+          ],
+          "reason": "equivalent via test/ocr-v193/retry/boundary.test.ts"
         },
         {
           "name": "TestBoundaryKeepsTruncationCorrectionWhenRecallIsCancelled",
           "disposition": "equivalent",
-          "reason": "OCR-derived test translation has not been recorded",
-          "via": "equivalent via test/ocr-v193/retry/boundary.test.ts"
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/retry/boundary.test.ts",
+              "title": "truncation correction kept through cancellation semantics"
+            }
+          ],
+          "reason": "equivalent via test/ocr-v193/retry/boundary.test.ts"
         },
         {
           "name": "TestBoundaryRetryAfterOutlivingAttemptTimeoutIsFailed",
           "disposition": "equivalent",
-          "reason": "OCR-derived test translation has not been recorded",
-          "via": "equivalent via test/ocr-v193/retry/boundary.test.ts"
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/retry/boundary.test.ts",
+              "title": "deadline exceeded is failed not cancelled"
+            }
+          ],
+          "reason": "equivalent via test/ocr-v193/retry/boundary.test.ts"
         },
         {
           "name": "TestBoundarySkipsRequestWithoutAttempt",
           "disposition": "equivalent",
-          "reason": "OCR-derived test translation has not been recorded",
-          "via": "equivalent via test/ocr-v193/retry/boundary.test.ts"
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/retry/boundary.test.ts",
+              "title": "boundary skips request without attempt"
+            }
+          ],
+          "reason": "equivalent via test/ocr-v193/retry/boundary.test.ts"
         },
         {
           "name": "TestClassifyBoundaryError",
           "disposition": "equivalent",
-          "reason": "OCR-derived test translation has not been recorded",
-          "via": "equivalent via test/ocr-v193/retry/boundary.test.ts"
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/retry/boundary.test.ts",
+              "title": "classifyBoundaryError contracts"
+            }
+          ],
+          "reason": "equivalent via test/ocr-v193/retry/boundary.test.ts"
         },
         {
           "name": "TestClassifyStreamError",
           "disposition": "equivalent",
-          "reason": "OCR-derived test translation has not been recorded",
-          "via": "equivalent via test/ocr-v193/retry/boundary.test.ts"
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/retry/boundary.test.ts",
+              "title": "classifyStreamError always returns classification"
+            }
+          ],
+          "reason": "equivalent via test/ocr-v193/retry/boundary.test.ts"
         },
         {
           "name": "TestFinalizeRequestWithPanicSentinel",
           "disposition": "equivalent",
-          "reason": "OCR-derived test translation has not been recorded",
-          "via": "equivalent via test/ocr-v193/retry/boundary.test.ts"
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/retry/boundary.test.ts",
+              "title": "finalizeRequest with panic sentinel produces failed"
+            }
+          ],
+          "reason": "equivalent via test/ocr-v193/retry/boundary.test.ts"
         },
         {
           "name": "TestStreamIntegrityErrorMessage",
           "disposition": "equivalent",
-          "reason": "OCR-derived test translation has not been recorded",
-          "via": "equivalent via test/ocr-v193/retry/boundary.test.ts"
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/retry/boundary.test.ts",
+              "title": "StreamIntegrityError message"
+            }
+          ],
+          "reason": "equivalent via test/ocr-v193/retry/boundary.test.ts"
         }
       ]
     },
@@ -9141,44 +9411,86 @@
         {
           "name": "TestLogicalRequestIDCanonicalEncoding",
           "disposition": "equivalent",
-          "reason": "OCR-derived test translation has not been recorded",
-          "via": "equivalent via test/ocr-v193/retry/meta.test.ts"
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/retry/meta.test.ts",
+              "title": "logicalRequestID canonical encoding"
+            }
+          ],
+          "reason": "equivalent via test/ocr-v193/retry/meta.test.ts"
         },
         {
           "name": "TestLogicalRequestIDIsDeterministic",
           "disposition": "equivalent",
-          "reason": "OCR-derived test translation has not been recorded",
-          "via": "equivalent via test/ocr-v193/retry/meta.test.ts"
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/retry/meta.test.ts",
+              "title": "logicalRequestID is deterministic and 64 hex chars"
+            }
+          ],
+          "reason": "equivalent via test/ocr-v193/retry/meta.test.ts"
         },
         {
           "name": "TestLogicalRequestIDSeparatesFields",
           "disposition": "equivalent",
-          "reason": "OCR-derived test translation has not been recorded",
-          "via": "equivalent via test/ocr-v193/retry/meta.test.ts"
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/retry/meta.test.ts",
+              "title": "logicalRequestID separates fields"
+            }
+          ],
+          "reason": "equivalent via test/ocr-v193/retry/meta.test.ts"
         },
         {
           "name": "TestLogicalRequestIDVariesWithRunIDAndRequestNo",
           "disposition": "equivalent",
-          "reason": "OCR-derived test translation has not been recorded",
-          "via": "equivalent via test/ocr-v193/retry/meta.test.ts"
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/retry/meta.test.ts",
+              "title": "logicalRequestID varies with runId and requestNo"
+            }
+          ],
+          "reason": "equivalent via test/ocr-v193/retry/meta.test.ts"
         },
         {
           "name": "TestRequestMetaDescribe",
           "disposition": "equivalent",
-          "reason": "OCR-derived test translation has not been recorded",
-          "via": "equivalent via test/ocr-v193/retry/meta.test.ts"
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/retry/meta.test.ts",
+              "title": "describeRequestMeta contains file/task/request_no"
+            }
+          ],
+          "reason": "equivalent via test/ocr-v193/retry/meta.test.ts"
         },
         {
           "name": "TestRequestMetaValid",
           "disposition": "equivalent",
-          "reason": "OCR-derived test translation has not been recorded",
-          "via": "equivalent via test/ocr-v193/retry/meta.test.ts"
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/retry/meta.test.ts",
+              "title": "RequestMeta valid cases"
+            }
+          ],
+          "reason": "equivalent via test/ocr-v193/retry/meta.test.ts"
         },
         {
           "name": "TestWithRequestMeta",
           "disposition": "equivalent",
-          "reason": "OCR-derived test translation has not been recorded",
-          "via": "equivalent via test/ocr-v193/retry/meta.test.ts"
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/retry/meta.test.ts",
+              "title": "withRequestMeta round trip"
+            }
+          ],
+          "reason": "equivalent via test/ocr-v193/retry/meta.test.ts"
         }
       ]
     },
@@ -9193,80 +9505,158 @@
         {
           "name": "TestNilCollectorMountsNoObserver",
           "disposition": "equivalent",
-          "reason": "OCR-derived test translation has not been recorded",
-          "via": "equivalent via test/ocr-v193/retry/observer.test.ts"
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/retry/observer.test.ts",
+              "title": "nil collector is inert (simulated via no-op)"
+            }
+          ],
+          "reason": "equivalent via test/ocr-v193/retry/observer.test.ts"
         },
         {
           "name": "TestObserverClassifiesTerminalStatuses",
           "disposition": "equivalent",
-          "reason": "OCR-derived test translation has not been recorded",
-          "via": "equivalent via test/ocr-v193/retry/observer.test.ts"
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/retry/observer.test.ts",
+              "title": "observer classifies terminal statuses"
+            }
+          ],
+          "reason": "equivalent via test/ocr-v193/retry/observer.test.ts"
         },
         {
           "name": "TestObserverConcurrentRequests",
           "disposition": "equivalent",
-          "reason": "OCR-derived test translation has not been recorded",
-          "via": "equivalent via test/ocr-v193/retry/observer.test.ts"
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/retry/observer.test.ts",
+              "title": "observer concurrent requests maintain isolation"
+            }
+          ],
+          "reason": "equivalent via test/ocr-v193/retry/observer.test.ts"
         },
         {
           "name": "TestObserverDropsRequestsWithoutIdentity",
           "disposition": "equivalent",
-          "reason": "OCR-derived test translation has not been recorded",
-          "via": "equivalent via test/ocr-v193/retry/observer.test.ts"
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/retry/observer.test.ts",
+              "title": "observer drops requests without identity"
+            }
+          ],
+          "reason": "equivalent via test/ocr-v193/retry/observer.test.ts"
         },
         {
           "name": "TestObserverIgnoresOverriddenRetryCountHeader",
           "disposition": "equivalent",
-          "reason": "OCR-derived test translation has not been recorded",
-          "via": "equivalent via test/ocr-v193/retry/observer.test.ts"
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/retry/observer.test.ts",
+              "title": "observer ignores overridden retry count header"
+            }
+          ],
+          "reason": "equivalent via test/ocr-v193/retry/observer.test.ts"
         },
         {
           "name": "TestObserverMountedOnOpenAIClients",
           "disposition": "equivalent",
-          "reason": "OCR-derived test translation has not been recorded",
-          "via": "equivalent via test/ocr-v193/retry/observer.test.ts"
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/retry/observer.test.ts",
+              "title": "nil collector is inert (simulated via no-op)"
+            }
+          ],
+          "reason": "equivalent via test/ocr-v193/retry/observer.test.ts"
         },
         {
           "name": "TestObserverRecordsExhaustedRetries",
           "disposition": "equivalent",
-          "reason": "OCR-derived test translation has not been recorded",
-          "via": "equivalent via test/ocr-v193/retry/observer.test.ts"
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/retry/observer.test.ts",
+              "title": "observer records exhausted retries via multiple attempts"
+            }
+          ],
+          "reason": "equivalent via test/ocr-v193/retry/observer.test.ts"
         },
         {
           "name": "TestObserverRecordsRateLimitedThenSuccess",
           "disposition": "equivalent",
-          "reason": "OCR-derived test translation has not been recorded",
-          "via": "equivalent via test/ocr-v193/retry/observer.test.ts"
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/retry/observer.test.ts",
+              "title": "observeAttempt classifies rate_limited then success"
+            }
+          ],
+          "reason": "equivalent via test/ocr-v193/retry/observer.test.ts"
         },
         {
           "name": "TestObserverRecordsRetryDirectiveOnSuccess",
           "disposition": "equivalent",
-          "reason": "OCR-derived test translation has not been recorded",
-          "via": "equivalent via test/ocr-v193/retry/observer.test.ts"
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/retry/observer.test.ts",
+              "title": "observer records retry directive on success"
+            }
+          ],
+          "reason": "equivalent via test/ocr-v193/retry/observer.test.ts"
         },
         {
           "name": "TestObserverRecordsTransportFailure",
           "disposition": "equivalent",
-          "reason": "OCR-derived test translation has not been recorded",
-          "via": "equivalent via test/ocr-v193/retry/observer.test.ts"
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/retry/observer.test.ts",
+              "title": "observeAttempt records transport failure"
+            }
+          ],
+          "reason": "equivalent via test/ocr-v193/retry/observer.test.ts"
         },
         {
           "name": "TestParseRetryAfterMS",
           "disposition": "equivalent",
-          "reason": "OCR-derived test translation has not been recorded",
-          "via": "equivalent via test/ocr-v193/retry/observer.test.ts"
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/retry/observer.test.ts",
+              "title": "parseRetryAfterMS precedence and units"
+            }
+          ],
+          "reason": "equivalent via test/ocr-v193/retry/observer.test.ts"
         },
         {
           "name": "TestParseRetryDirective",
           "disposition": "equivalent",
-          "reason": "OCR-derived test translation has not been recorded",
-          "via": "equivalent via test/ocr-v193/retry/observer.test.ts"
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/retry/observer.test.ts",
+              "title": "parseRetryDirective reads x-should-retry"
+            }
+          ],
+          "reason": "equivalent via test/ocr-v193/retry/observer.test.ts"
         },
         {
           "name": "TestResponseRequestID",
           "disposition": "equivalent",
-          "reason": "OCR-derived test translation has not been recorded",
-          "via": "equivalent via test/ocr-v193/retry/observer.test.ts"
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/retry/observer.test.ts",
+              "title": "responseRequestId reads request-id and x-request-id"
+            }
+          ],
+          "reason": "equivalent via test/ocr-v193/retry/observer.test.ts"
         }
       ]
     },
@@ -9281,170 +9671,338 @@
         {
           "name": "TestClassifyAttempt",
           "disposition": "equivalent",
-          "reason": "OCR-derived test translation has not been recorded",
-          "via": "equivalent via test/ocr-v193/retry/report.test.ts"
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/retry/report.test.ts",
+              "title": "classifyAttempt maps status and errors"
+            }
+          ],
+          "reason": "equivalent via test/ocr-v193/retry/report.test.ts"
         },
         {
           "name": "TestClassifyAttemptTwoHundredFallsThroughToError",
           "disposition": "equivalent",
-          "reason": "OCR-derived test translation has not been recorded",
-          "via": "equivalent via test/ocr-v193/retry/report.test.ts"
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/retry/report.test.ts",
+              "title": "classify 200 falls through to error via EOF"
+            }
+          ],
+          "reason": "equivalent via test/ocr-v193/retry/report.test.ts"
         },
         {
           "name": "TestCollectorRejectsInvalidInput",
           "disposition": "equivalent",
-          "reason": "OCR-derived test translation has not been recorded",
-          "via": "equivalent via test/ocr-v193/retry/report.test.ts"
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/retry/report.test.ts",
+              "title": "collector rejects invalid input"
+            }
+          ],
+          "reason": "equivalent via test/ocr-v193/retry/report.test.ts"
         },
         {
           "name": "TestErrorClassAndFailurePhaseSets",
           "disposition": "equivalent",
-          "reason": "OCR-derived test translation has not been recorded",
-          "via": "equivalent via test/ocr-v193/retry/report.test.ts"
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/retry/report.test.ts",
+              "title": "errorClass and failurePhase sets are fixed"
+            }
+          ],
+          "reason": "equivalent via test/ocr-v193/retry/report.test.ts"
         },
         {
           "name": "TestFinalizeDecisionOrder",
           "disposition": "equivalent",
-          "reason": "OCR-derived test translation has not been recorded",
-          "via": "equivalent via test/ocr-v193/retry/report.test.ts"
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/retry/report.test.ts",
+              "title": "finalize decision order"
+            }
+          ],
+          "reason": "equivalent via test/ocr-v193/retry/report.test.ts"
         },
         {
           "name": "TestFinalizeZeroAttemptProducesNoRecord",
           "disposition": "equivalent",
-          "reason": "OCR-derived test translation has not been recorded",
-          "via": "equivalent via test/ocr-v193/retry/report.test.ts"
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/retry/report.test.ts",
+              "title": "finalize zero attempt produces no record"
+            }
+          ],
+          "reason": "equivalent via test/ocr-v193/retry/report.test.ts"
         },
         {
           "name": "TestFreezeAggregatesAndSorts",
           "disposition": "equivalent",
-          "reason": "OCR-derived test translation has not been recorded",
-          "via": "equivalent via test/ocr-v193/retry/report.test.ts"
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/retry/report.test.ts",
+              "title": "freeze aggregates and sorts by logicalRequestId"
+            }
+          ],
+          "reason": "equivalent via test/ocr-v193/retry/report.test.ts"
         },
         {
           "name": "TestFreezeErrorIdentifiesTheRequest",
           "disposition": "equivalent",
-          "reason": "OCR-derived test translation has not been recorded",
-          "via": "equivalent via test/ocr-v193/retry/report.test.ts"
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/retry/report.test.ts",
+              "title": "freeze error identifies request"
+            }
+          ],
+          "reason": "equivalent via test/ocr-v193/retry/report.test.ts"
         },
         {
           "name": "TestFreezeErrorIsDeterministic",
           "disposition": "equivalent",
-          "reason": "OCR-derived test translation has not been recorded",
-          "via": "equivalent via test/ocr-v193/retry/report.test.ts"
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/retry/report.test.ts",
+              "title": "freeze deterministic error on duplicate violation"
+            }
+          ],
+          "reason": "equivalent via test/ocr-v193/retry/report.test.ts"
         },
         {
           "name": "TestFreezeListsCancelledRequestWithoutErrorAttempt",
           "disposition": "equivalent",
-          "reason": "OCR-derived test translation has not been recorded",
-          "via": "equivalent via test/ocr-v193/retry/report.test.ts"
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/retry/report.test.ts",
+              "title": "freeze lists cancelled request without error attempt"
+            }
+          ],
+          "reason": "equivalent via test/ocr-v193/retry/report.test.ts"
         },
         {
           "name": "TestFreezeRefusesEntryWithNoAttempt",
           "disposition": "equivalent",
-          "reason": "OCR-derived test translation has not been recorded",
-          "via": "equivalent via test/ocr-v193/retry/report.test.ts"
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/retry/report.test.ts",
+              "title": "freeze refuses entry with no attempt"
+            }
+          ],
+          "reason": "equivalent via test/ocr-v193/retry/report.test.ts"
         },
         {
           "name": "TestFreezeRejectsInvalidRunID",
           "disposition": "equivalent",
-          "reason": "OCR-derived test translation has not been recorded",
-          "via": "equivalent via test/ocr-v193/retry/report.test.ts"
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/retry/report.test.ts",
+              "title": "freeze rejects invalid runId"
+            }
+          ],
+          "reason": "equivalent via test/ocr-v193/retry/report.test.ts"
         },
         {
           "name": "TestFreezeRejectsOrderingViolations",
           "disposition": "equivalent",
-          "reason": "OCR-derived test translation has not been recorded",
-          "via": "equivalent via test/ocr-v193/retry/report.test.ts"
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/retry/report.test.ts",
+              "title": "freeze rejects ordering violations (double finalize)"
+            }
+          ],
+          "reason": "equivalent via test/ocr-v193/retry/report.test.ts"
         },
         {
           "name": "TestFreezeReturnsNothingWhenNoRetryHappened",
           "disposition": "equivalent",
-          "reason": "OCR-derived test translation has not been recorded",
-          "via": "equivalent via test/ocr-v193/retry/report.test.ts"
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/retry/report.test.ts",
+              "title": "freeze returns nothing when no retry happened"
+            }
+          ],
+          "reason": "equivalent via test/ocr-v193/retry/report.test.ts"
         },
         {
           "name": "TestFreezeSucceededRequestWithExtraAttempt",
           "disposition": "equivalent",
-          "reason": "OCR-derived test translation has not been recorded",
-          "via": "equivalent via test/ocr-v193/retry/report.test.ts"
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/retry/report.test.ts",
+              "title": "freeze succeeded request with extra attempt"
+            }
+          ],
+          "reason": "equivalent via test/ocr-v193/retry/report.test.ts"
         },
         {
           "name": "TestFreezeSuppressesReportWhenValidationFails",
           "disposition": "equivalent",
-          "reason": "OCR-derived test translation has not been recorded",
-          "via": "equivalent via test/ocr-v193/retry/report.test.ts"
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/retry/report.test.ts",
+              "title": "freeze suppresses report when validation fails"
+            }
+          ],
+          "reason": "equivalent via test/ocr-v193/retry/report.test.ts"
         },
         {
           "name": "TestNilCollectorIsInert",
           "disposition": "equivalent",
-          "reason": "OCR-derived test translation has not been recorded",
-          "via": "equivalent via test/ocr-v193/retry/report.test.ts"
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/retry/report.test.ts",
+              "title": "nil collector is inert"
+            }
+          ],
+          "reason": "equivalent via test/ocr-v193/retry/report.test.ts"
         },
         {
           "name": "TestProviderIsEmittedEvenWhenEmpty",
           "disposition": "equivalent",
-          "reason": "OCR-derived test translation has not been recorded",
-          "via": "equivalent via test/ocr-v193/retry/report.test.ts"
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/retry/report.test.ts",
+              "title": "provider empty is still emitted"
+            }
+          ],
+          "reason": "equivalent via test/ocr-v193/retry/report.test.ts"
         },
         {
           "name": "TestRecordAttemptAcceptsUnclassifiedSuccessStatus",
           "disposition": "equivalent",
-          "reason": "OCR-derived test translation has not been recorded",
-          "via": "equivalent via test/ocr-v193/retry/report.test.ts"
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/retry/report.test.ts",
+              "title": "recordAttempt accepts unclassified success status"
+            }
+          ],
+          "reason": "equivalent via test/ocr-v193/retry/report.test.ts"
         },
         {
           "name": "TestRecordAttemptDerivesTimings",
           "disposition": "equivalent",
-          "reason": "OCR-derived test translation has not been recorded",
-          "via": "equivalent via test/ocr-v193/retry/report.test.ts"
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/retry/report.test.ts",
+              "title": "recordAttempt derives timings"
+            }
+          ],
+          "reason": "equivalent via test/ocr-v193/retry/report.test.ts"
         },
         {
           "name": "TestRecordAttemptDropsRequestsWithoutIdentity",
           "disposition": "equivalent",
-          "reason": "OCR-derived test translation has not been recorded",
-          "via": "equivalent via test/ocr-v193/retry/report.test.ts"
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/retry/report.test.ts",
+              "title": "recordAttempt drops requests without identity"
+            }
+          ],
+          "reason": "equivalent via test/ocr-v193/retry/report.test.ts"
         },
         {
           "name": "TestRecordAttemptFloorsInvertedTimestamps",
           "disposition": "equivalent",
-          "reason": "OCR-derived test translation has not been recorded",
-          "via": "equivalent via test/ocr-v193/retry/report.test.ts"
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/retry/report.test.ts",
+              "title": "recordAttempt floors inverted timestamps"
+            }
+          ],
+          "reason": "equivalent via test/ocr-v193/retry/report.test.ts"
         },
         {
           "name": "TestRecordAttemptNumbersAndDerivesOutcome",
           "disposition": "equivalent",
-          "reason": "OCR-derived test translation has not been recorded",
-          "via": "equivalent via test/ocr-v193/retry/report.test.ts"
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/retry/report.test.ts",
+              "title": "recordAttempt numbers and derives outcome"
+            }
+          ],
+          "reason": "equivalent via test/ocr-v193/retry/report.test.ts"
         },
         {
           "name": "TestRecordAttemptRejectsUnclassifiedErrorStatus",
           "disposition": "equivalent",
-          "reason": "OCR-derived test translation has not been recorded",
-          "via": "equivalent via test/ocr-v193/retry/report.test.ts"
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/retry/report.test.ts",
+              "title": "recordAttempt rejects unclassified error status"
+            }
+          ],
+          "reason": "equivalent via test/ocr-v193/retry/report.test.ts"
         },
         {
           "name": "TestRetryCollectorConcurrentUse",
           "disposition": "equivalent",
-          "reason": "OCR-derived test translation has not been recorded",
-          "via": "equivalent via test/ocr-v193/retry/report.test.ts"
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/retry/report.test.ts",
+              "title": "retryCollector concurrent use"
+            }
+          ],
+          "reason": "equivalent via test/ocr-v193/retry/report.test.ts"
         },
         {
           "name": "TestRetryReportHasNoUnexpectedTextFields",
           "disposition": "equivalent",
-          "reason": "OCR-derived test translation has not been recorded",
-          "via": "equivalent via test/ocr-v193/retry/report.test.ts"
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/retry/report.test.ts",
+              "title": "retry report has no unexpected text fields"
+            }
+          ],
+          "reason": "equivalent via test/ocr-v193/retry/report.test.ts"
         },
         {
           "name": "TestReviseLastAttempt",
           "disposition": "equivalent",
-          "reason": "OCR-derived test translation has not been recorded",
-          "via": "equivalent via test/ocr-v193/retry/report.test.ts"
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/retry/report.test.ts",
+              "title": "reviseLastAttempt only revises success"
+            }
+          ],
+          "reason": "equivalent via test/ocr-v193/retry/report.test.ts"
         },
         {
           "name": "TestValidateReportCatchesInconsistency",
           "disposition": "equivalent",
-          "reason": "OCR-derived test translation has not been recorded",
-          "via": "equivalent via test/ocr-v193/retry/report.test.ts"
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/retry/report.test.ts",
+              "title": "validate report catches inconsistency via Freeze"
+            }
+          ],
+          "reason": "equivalent via test/ocr-v193/retry/report.test.ts"
         }
       ]
     },

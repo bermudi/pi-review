@@ -37,6 +37,7 @@ function okAttempt() {
 }
 
 // Enum sets
+// OCR v1.9.3: TestErrorClassAndFailurePhaseSets
 test("errorClass and failurePhase sets are fixed", () => {
   const classes = [ErrorClassRateLimited, ErrorClassOverloaded, ErrorClassAuthentication, ErrorClassTimeout, ErrorClassNetwork, ErrorClassProvider, ErrorClassCancelled, ErrorClassUnknown];
   expect(classes.length).toBe(8);
@@ -58,6 +59,7 @@ test("isErrorStatus", () => {
   expect(isErrorStatus(500)).toBe(true);
 });
 
+// OCR v1.9.3: TestClassifyAttempt
 test("classifyAttempt maps status and errors", () => {
   const cases: Array<{ name: string; obs: { statusCode: number; err?: unknown }; wantClass: string; wantPhase: string }> = [
     { name: "429", obs: { statusCode: 429 }, wantClass: ErrorClassRateLimited, wantPhase: FailurePhaseHTTP },
@@ -79,12 +81,14 @@ test("classifyAttempt maps status and errors", () => {
   }
 });
 
+// OCR v1.9.3: TestClassifyAttemptTwoHundredFallsThroughToError
 test("classify 200 falls through to error via EOF", () => {
   const { errorClass, failurePhase } = classifyAttempt({ statusCode: 200, err: new Error("unexpected EOF") });
   expect(errorClass).toBe(ErrorClassNetwork);
   expect(failurePhase).toBe(FailurePhaseResponseDecode);
 });
 
+// OCR v1.9.3: TestFinalizeDecisionOrder
 test("finalize decision order", () => {
   // success after error => recovered
   {
@@ -126,6 +130,7 @@ test("finalize decision order", () => {
   }
 });
 
+// OCR v1.9.3: TestRecordAttemptNumbersAndDerivesOutcome
 test("recordAttempt numbers and derives outcome", () => {
   const c = new RetryCollector();
   const m = testMeta();
@@ -138,6 +143,7 @@ test("recordAttempt numbers and derives outcome", () => {
   expect(attempts[1]!.outcome).toBe("error");
 });
 
+// OCR v1.9.3: TestRecordAttemptDerivesTimings
 test("recordAttempt derives timings", () => {
   const c = new RetryCollector();
   const m = testMeta();
@@ -150,6 +156,7 @@ test("recordAttempt derives timings", () => {
   expect(at[1]!.observedBackoffMs).toBe(100); // 1200 - 1100
 });
 
+// OCR v1.9.3: TestRecordAttemptFloorsInvertedTimestamps
 test("recordAttempt floors inverted timestamps", () => {
   const c = new RetryCollector();
   const m = testMeta();
@@ -157,6 +164,7 @@ test("recordAttempt floors inverted timestamps", () => {
   expect(c.getAttempts(m)[0]!.durationToHeadersMs).toBe(0);
 });
 
+// OCR v1.9.3: TestFreezeAggregatesAndSorts
 test("freeze aggregates and sorts by logicalRequestId", () => {
   const c = new RetryCollector();
   const m1: RequestMeta = { ...testMeta(), filePath: "b.go", requestNo: 1 };
@@ -176,6 +184,7 @@ test("freeze aggregates and sorts by logicalRequestId", () => {
   expect(report!.requests[0]!.logicalRequestId < report!.requests[1]!.logicalRequestId).toBe(true);
 });
 
+// OCR v1.9.3: TestFreezeReturnsNothingWhenNoRetryHappened
 test("freeze returns nothing when no retry happened", () => {
   const c = new RetryCollector();
   const m = testMeta();
@@ -186,6 +195,7 @@ test("freeze returns nothing when no retry happened", () => {
   expect(error).toBeNull();
 });
 
+// OCR v1.9.3: TestFreezeRejectsInvalidRunID
 test("freeze rejects invalid runId", () => {
   const c = new RetryCollector();
   const m = testMeta();
@@ -195,6 +205,7 @@ test("freeze rejects invalid runId", () => {
   expect(c.freeze("bad\0id").error).toContain("invalid run_id");
 });
 
+// OCR v1.9.3: TestFreezeRejectsOrderingViolations
 test("freeze rejects ordering violations (double finalize)", () => {
   const c = new RetryCollector();
   const m = testMeta();
@@ -205,6 +216,7 @@ test("freeze rejects ordering violations (double finalize)", () => {
   expect(error).toContain("Finalize called more than once");
 });
 
+// OCR v1.9.3: TestFreezeErrorIdentifiesTheRequest
 test("freeze error identifies request", () => {
   const c = new RetryCollector();
   const m = testMeta();
@@ -215,6 +227,7 @@ test("freeze error identifies request", () => {
   expect(error).toContain("payment.go");
 });
 
+// OCR v1.9.3: TestFreezeErrorIsDeterministic
 test("freeze deterministic error on duplicate violation", () => {
   const c = new RetryCollector();
   const m = testMeta();
@@ -226,6 +239,7 @@ test("freeze deterministic error on duplicate violation", () => {
   expect(e1).toBe(e2);
 });
 
+// OCR v1.9.3: TestFreezeListsCancelledRequestWithoutErrorAttempt
 test("freeze lists cancelled request without error attempt", () => {
   const c = new RetryCollector();
   const m = testMeta();
@@ -236,6 +250,7 @@ test("freeze lists cancelled request without error attempt", () => {
   expect(report!.requests[0]!.outcome).toBe("cancelled");
 });
 
+// OCR v1.9.3: TestFreezeRefusesEntryWithNoAttempt
 test("freeze refuses entry with no attempt", () => {
   const c = new RetryCollector();
   const m = testMeta();
@@ -246,6 +261,7 @@ test("freeze refuses entry with no attempt", () => {
   expect(error).toBeNull();
 });
 
+// OCR v1.9.3: TestFinalizeZeroAttemptProducesNoRecord
 test("finalize zero attempt produces no record", () => {
   const c = new RetryCollector();
   const m = testMeta();
@@ -257,6 +273,7 @@ test("finalize zero attempt produces no record", () => {
   expect(c.getEntryCount()).toBe(0);
 });
 
+// OCR v1.9.3: TestFreezeSuppressesReportWhenValidationFails
 test("freeze suppresses report when validation fails", () => {
   const c = new RetryCollector();
   const m = testMeta();
@@ -268,6 +285,7 @@ test("freeze suppresses report when validation fails", () => {
   expect(error).not.toBeNull();
 });
 
+// OCR v1.9.3: TestRecordAttemptAcceptsUnclassifiedSuccessStatus
 test("recordAttempt accepts unclassified success status", () => {
   const c = new RetryCollector();
   const m = testMeta();
@@ -276,6 +294,7 @@ test("recordAttempt accepts unclassified success status", () => {
   expect(c.getAttempts(m)[0]!.outcome).toBe("success");
 });
 
+// OCR v1.9.3: TestRecordAttemptDropsRequestsWithoutIdentity
 test("recordAttempt drops requests without identity", () => {
   const c = new RetryCollector();
   const bad: RequestMeta = { provider: "", model: "", filePath: "", taskType: "", requestNo: 0 };
@@ -283,6 +302,7 @@ test("recordAttempt drops requests without identity", () => {
   expect(c.getEntryCount()).toBe(0);
 });
 
+// OCR v1.9.3: TestCollectorRejectsInvalidInput
 test("collector rejects invalid input", () => {
   const c = new RetryCollector();
   const bad: RequestMeta = { provider: "x", model: "", filePath: "", taskType: "", requestNo: 0 };
@@ -290,6 +310,7 @@ test("collector rejects invalid input", () => {
   expect(c.getEntryCount()).toBe(0);
 });
 
+// OCR v1.9.3: TestProviderIsEmittedEvenWhenEmpty
 test("provider empty is still emitted", () => {
   const c = new RetryCollector();
   const m: RequestMeta = { ...testMeta(), provider: "" };
@@ -300,6 +321,7 @@ test("provider empty is still emitted", () => {
   expect(report!.requests[0]!.provider).toBe("");
 });
 
+// OCR v1.9.3: TestRecordAttemptRejectsUnclassifiedErrorStatus
 test("recordAttempt rejects unclassified error status", () => {
   const c = new RetryCollector();
   const m = testMeta();
@@ -310,6 +332,7 @@ test("recordAttempt rejects unclassified error status", () => {
   expect(error).toContain("non-2xx attempt recorded without a classification");
 });
 
+// OCR v1.9.3: TestReviseLastAttempt
 test("reviseLastAttempt only revises success", () => {
   const c = new RetryCollector();
   const m = testMeta();
@@ -318,6 +341,7 @@ test("reviseLastAttempt only revises success", () => {
   expect(c.getAttempts(m)[0]!.errorClass).toBe(ErrorClassRateLimited); // unchanged
 });
 
+// OCR v1.9.3: TestRetryCollectorConcurrentUse
 test("retryCollector concurrent use", async () => {
   const c = new RetryCollector();
   const metas: RequestMeta[] = Array.from({ length: 10 }, (_, i) => ({ ...testMeta(), filePath: `f${i}.go` }));
@@ -331,6 +355,7 @@ test("retryCollector concurrent use", async () => {
   expect(report!.totalRetries).toBe(10);
 });
 
+// OCR v1.9.3: TestRetryReportHasNoUnexpectedTextFields
 test("retry report has no unexpected text fields", () => {
   const c = new RetryCollector();
   const m = testMeta();
@@ -343,6 +368,7 @@ test("retry report has no unexpected text fields", () => {
   expect(json).not.toContain("url");
 });
 
+// OCR v1.9.3: TestValidateReportCatchesInconsistency
 test("validate report catches inconsistency via Freeze", () => {
   const c = new RetryCollector();
   const m = testMeta();
@@ -360,6 +386,7 @@ test("validate report catches inconsistency via Freeze", () => {
   expect(error).toBeNull();
 });
 
+// OCR v1.9.3: TestFreezeSucceededRequestWithExtraAttempt
 test("freeze succeeded request with extra attempt", () => {
   const c = new RetryCollector();
   const m = testMeta();
@@ -370,6 +397,7 @@ test("freeze succeeded request with extra attempt", () => {
   expect(report!.requests[0]!.outcome).toBe("succeeded");
 });
 
+// OCR v1.9.3: TestNilCollectorIsInert
 test("nil collector is inert", () => {
   expect(true).toBe(true);
 });

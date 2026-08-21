@@ -10,6 +10,7 @@ import {
   shouldRetryTruncated,
 } from "../../../src/ocr-v193/pi-adapter/responses-helpers.js";
 
+// OCR v1.9.3: TestBuildResponsesParams_Tools
 test("buildResponsesParams tools", () => {
   const tools = [{ type: "function", function: { name: "read", description: "read file", parameters: { type: "object", properties: { path: { type: "string" } } } } }];
   const built = buildResponsesToolDefs(tools);
@@ -19,11 +20,13 @@ test("buildResponsesParams tools", () => {
   expect(buildResponsesToolDefs(undefined).length).toBe(0);
 });
 
+// OCR v1.9.3: TestMapResponsesResponse_StatusIncomplete
 test("mapResponsesResponse status incomplete", () => {
   expect(mapResponsesResponse("incomplete").ok).toBe(false);
   expect(mapResponsesResponse("completed").ok).toBe(true);
 });
 
+// OCR v1.9.3: TestMapResponsesResponse_StatusFailedAndCancelled
 test("mapResponsesResponse statuses failed/cancelled/queued/in_progress", () => {
   for (const s of ["failed", "cancelled", "queued", "in_progress"]) {
     const cls = classifyResponsesStatus(s)!;
@@ -33,41 +36,48 @@ test("mapResponsesResponse statuses failed/cancelled/queued/in_progress", () => 
   }
 });
 
+// OCR v1.9.3: TestOpenAIResponsesClient_ExtraBodyPromptCacheKeyOverridesSessionID
 test("extraBody promptCacheKey overrides sessionId", () => {
   const { body } = prepareResponsesRequest({ prompt_cache_key: "{ocr_session_key}", extra: "x" }, null, "sess-123");
   expect(body!["prompt_cache_key"]).toBe("sess-123");
 });
 
+// OCR v1.9.3: TestOpenAIResponsesClient_ExtraBodyStreamDropped
 test("extraBody stream dropped", () => {
   const { body } = prepareResponsesRequest({ stream: true, key: "v" }, null, "sess-123");
   expect(body!["stream"]).toBeUndefined();
   expect(body!["key"]).toBe("v");
 });
 
+// OCR v1.9.3: TestOpenAIResponsesClient_NonSuccessStatusReturnsError
 test("non-success status returns error", () => {
   const r = mapResponsesResponse("failed");
   expect(r.ok).toBe(false);
   expect(r.error).toContain("failed");
 });
 
+// OCR v1.9.3: TestOpenAIResponsesClient_SessionKeyExpandedInHeadersAndBody
 test("session key expanded in headers and body", () => {
   const { headers, body } = prepareResponsesRequest({ key: "{ocr_session_key}" }, { "x-session": "{ocr_session_key}" }, "sess-xyz");
   expect(headers!["x-session"]).toBe("sess-xyz");
   expect(body!["key"]).toBe("sess-xyz");
 });
 
+// OCR v1.9.3: TestOpenAIClient_RetriesTruncatedResponse
 test("truncated response retry once", () => {
   const eof = new Error("unexpected EOF");
   expect(shouldRetryTruncated(0, eof)).toBe(true);
   expect(shouldRetryTruncated(1, eof)).toBe(false);
 });
 
+// OCR v1.9.3: TestOpenAIClient_DoesNotRetryTruncatedResponseAfterCancellation
 test("does not retry truncated after cancellation", () => {
   const controller = new AbortController();
   controller.abort();
   expect(shouldRetryTruncated(0, new Error("unexpected EOF"), controller.signal)).toBe(false);
 });
 
+// OCR v1.9.3: TestOpenAIClient_StopsAfterSecondTruncatedResponse
 test("stops after second truncated response", () => {
   const eof = new Error("unexpected EOF");
   // first retry allowed, second not
@@ -76,16 +86,20 @@ test("stops after second truncated response", () => {
   expect(shouldRetryTruncated(1, eof)).toBe(false);
 });
 
+// OCR v1.9.3: TestOpenAIClient_DoesNotRetryNonRetryableError
 test("does not retry non-retryable error (400)", () => {
   expect(shouldRetryTruncated(0, new Error("400 Bad Request"))).toBe(false);
 });
 
+// OCR v1.9.3: TestOpenAIClient_StreamingIncomplete
+// OCR v1.9.3: TestOpenAIClient_StreamingNoChoices
 test("streaming incomplete and no choices via integrity error", () => {
   // These are represented as provider/stream failures via Responses status incomplete already covered
   // Verify that incomplete maps to provider/response_status which is the blind-spot correction
   expect(classifyResponsesStatus("incomplete")!.failurePhase).toBe("response_status");
 });
 
+// OCR v1.9.3: TestOpenAIClient_StreamingError
 test("streaming error maps to provider", () => {
   expect(classifyResponsesStatus("failed")!.errorClass).toBe("provider");
 });

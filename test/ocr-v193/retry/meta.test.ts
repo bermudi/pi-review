@@ -21,7 +21,7 @@ function testMeta(): RequestMeta {
   };
 }
 
-// TestRequestMetaValid
+// OCR v1.9.3: TestRequestMetaValid
 test("RequestMeta valid cases", () => {
   type Mutable = { provider: string; model: string; filePath: string; taskType: string; requestNo: number };
   const cases: Array<{ name: string; mut: (m: Mutable) => void; want: boolean }> = [
@@ -44,6 +44,7 @@ test("RequestMeta valid cases", () => {
   }
 });
 
+// OCR v1.9.3: TestLogicalRequestIDIsDeterministic
 test("logicalRequestID is deterministic and 64 hex chars", () => {
   const m = testMeta();
   const a = logicalRequestID(m, "run-1");
@@ -53,6 +54,7 @@ test("logicalRequestID is deterministic and 64 hex chars", () => {
   expect(a).toMatch(/^[0-9a-f]{64}$/);
 });
 
+// OCR v1.9.3: TestLogicalRequestIDSeparatesFields
 test("logicalRequestID separates fields", () => {
   const base = testMeta();
   const shifted: RequestMeta = { ...base, provider: "anthropi", model: "cclaude-sonnet-4-6" };
@@ -62,22 +64,24 @@ test("logicalRequestID separates fields", () => {
   expect(logicalRequestID(swapped, "run-1")).not.toBe(want);
 });
 
+// OCR v1.9.3: TestLogicalRequestIDVariesWithRunIDAndRequestNo
 test("logicalRequestID varies with runId and requestNo", () => {
   const m = testMeta();
   const base = logicalRequestID(m, "run-1");
   expect(logicalRequestID(m, "run-2")).not.toBe(base);
   expect(logicalRequestID({ ...m, requestNo: 2 }, "run-1")).not.toBe(base);
-  // separator before request_no matters
   const a: RequestMeta = { ...m, taskType: "main_task1", requestNo: 2 };
   const b: RequestMeta = { ...m, taskType: "main_task", requestNo: 12 };
   expect(logicalRequestID(a, "run-1")).not.toBe(logicalRequestID(b, "run-1"));
 });
 
+// OCR v1.9.3: TestLogicalRequestIDCanonicalEncoding
 test("logicalRequestID canonical encoding", () => {
   const want = "14e212a5316c922ea2e0758da1a243255ac33f6360fd0d4e70af90ad1441516c";
   expect(logicalRequestID(testMeta(), "run-1")).toBe(want);
 });
 
+// OCR v1.9.3: TestRequestMetaDescribe
 test("describeRequestMeta contains file/task/request_no", () => {
   const got = describeRequestMeta(testMeta());
   expect(got).toContain("file=payment.go");
@@ -85,6 +89,7 @@ test("describeRequestMeta contains file/task/request_no", () => {
   expect(got).toContain("request_no=1");
 });
 
+// OCR v1.9.3: TestWithRequestMeta
 test("withRequestMeta round trip", () => {
   const m = testMeta();
   const ctx = withRequestMeta({}, m);
