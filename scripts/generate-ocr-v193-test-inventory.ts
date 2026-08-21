@@ -464,6 +464,202 @@ const notApplicableTests: ReadonlyMap<string, string> = new Map<string, string>(
     "Pi replaces OCR custom provider top-level model; not applicable via public Pi APIs.",
   ],
   [
+    "internal/llm/resolver_test.go::TestEnsureMessagesSuffix",
+    "Pi replaces OCR resolver dispatch with Pi createAgentSession model routing via agentDir and SettingsManager; not applicable via public Pi APIs.",
+  ],
+  [
+    "internal/llm/resolver_test.go::TestNewLLMClient_DefaultTimeout",
+    "Pi replaces OCR resolver dispatch with Pi createAgentSession model routing via agentDir and SettingsManager; not applicable via public Pi APIs.",
+  ],
+  [
+    "internal/llm/resolver_test.go::TestNewLLMClient_TimeoutForwarded",
+    "Pi replaces OCR resolver dispatch with Pi createAgentSession model routing via agentDir and SettingsManager; not applicable via public Pi APIs.",
+  ],
+  [
+    "internal/llm/resolver_test.go::TestResolveEndpoint_ConfigTimeoutSec",
+    "Pi replaces OCR resolver dispatch with Pi createAgentSession model routing via agentDir and SettingsManager; not applicable via public Pi APIs.",
+  ],
+  [
+    "internal/llm/resolver_test.go::TestResolveEndpoint_CustomProviderAnthropicVertexRejected",
+    "Pi replaces OCR resolver dispatch with Pi createAgentSession model routing via agentDir and SettingsManager; not applicable via public Pi APIs.",
+  ],
+  [
+    "internal/llm/resolver_test.go::TestResolveEndpoint_CustomProviderChatCompletionsProtocol",
+    "Pi replaces OCR resolver dispatch with Pi createAgentSession model routing via agentDir and SettingsManager; not applicable via public Pi APIs.",
+  ],
+  [
+    "internal/llm/resolver_test.go::TestResolveEndpoint_CustomProviderOpenAIAlias",
+    "Pi replaces OCR resolver dispatch with Pi createAgentSession model routing via agentDir and SettingsManager; not applicable via public Pi APIs.",
+  ],
+  [
+    "internal/llm/resolver_test.go::TestResolveEndpoint_CustomProviderResponsesProtocol",
+    "Pi replaces OCR resolver dispatch with Pi createAgentSession model routing via agentDir and SettingsManager; not applicable via public Pi APIs.",
+  ],
+  [
+    "internal/llm/resolver_test.go::TestResolveEndpoint_EnvTimeoutGlobalOverride",
+    "Pi replaces OCR resolver dispatch with Pi createAgentSession model routing via agentDir and SettingsManager; not applicable via public Pi APIs.",
+  ],
+  [
+    "internal/llm/resolver_test.go::TestResolveEndpoint_EnvTimeoutOverridesConfigTimeout",
+    "Pi replaces OCR resolver dispatch with Pi createAgentSession model routing via agentDir and SettingsManager; not applicable via public Pi APIs.",
+  ],
+  [
+    "internal/llm/resolver_test.go::TestResolveEndpoint_EnvTimeoutOverridesProviderTimeout",
+    "Pi replaces OCR resolver dispatch with Pi createAgentSession model routing via agentDir and SettingsManager; not applicable via public Pi APIs.",
+  ],
+  [
+    "internal/llm/resolver_test.go::TestResolveEndpoint_InvalidEnvTimeoutWithConfig",
+    "Pi replaces OCR resolver dispatch with Pi createAgentSession model routing via agentDir and SettingsManager; not applicable via public Pi APIs.",
+  ],
+  [
+    "internal/llm/resolver_test.go::TestResolveEndpoint_InvalidRetryCodes",
+    "Pi replaces OCR resolver dispatch with Pi createAgentSession model routing via agentDir and SettingsManager; not applicable via public Pi APIs.",
+  ],
+  [
+    "internal/llm/resolver_test.go::TestResolveEndpoint_LegacyLlmProtocolTakesPriorityOverUseAnthropic",
+    "Pi replaces OCR resolver dispatch with Pi createAgentSession model routing via agentDir and SettingsManager; not applicable via public Pi APIs.",
+  ],
+  [
+    "internal/llm/resolver_test.go::TestResolveEndpoint_LegacyLlmRetryCodes",
+    "Pi replaces OCR resolver dispatch with Pi createAgentSession model routing via agentDir and SettingsManager; not applicable via public Pi APIs.",
+  ],
+  [
+    "internal/llm/resolver_test.go::TestResolveEndpoint_LegacyLlmStillWorks",
+    "Pi replaces OCR resolver dispatch with Pi createAgentSession model routing via agentDir and SettingsManager; not applicable via public Pi APIs.",
+  ],
+  [
+    "internal/llm/resolver_test.go::TestResolveEndpoint_MiniMaxProviderEnvFallback",
+    "Pi replaces OCR resolver dispatch with Pi createAgentSession model routing via agentDir and SettingsManager; not applicable via public Pi APIs.",
+  ],
+  [
+    "internal/llm/resolver_test.go::TestResolveEndpoint_MiniMaxProviderRejectsOtherRegionEnv",
+    "Pi replaces OCR resolver dispatch with Pi createAgentSession model routing via agentDir and SettingsManager; not applicable via public Pi APIs.",
+  ],
+  [
+    "internal/llm/resolver_test.go::TestResolveEndpoint_NegativeConfigTimeoutSec",
+    "Pi replaces OCR resolver dispatch with Pi createAgentSession model routing via agentDir and SettingsManager; not applicable via public Pi APIs.",
+  ],
+  [
+    "internal/llm/resolver_test.go::TestResolveEndpoint_NegativeEnvTimeoutWithConfig",
+    "Pi replaces OCR resolver dispatch with Pi createAgentSession model routing via agentDir and SettingsManager; not applicable via public Pi APIs.",
+  ],
+  [
+    "internal/llm/resolver_test.go::TestResolveEndpoint_OCREnvProtocolAlias",
+    "Pi replaces OCR resolver dispatch with Pi createAgentSession model routing via agentDir and SettingsManager; not applicable via public Pi APIs.",
+  ],
+  [
+    "internal/llm/resolver_test.go::TestResolveEndpoint_OCREnvProtocolInvalid",
+    "Pi replaces OCR resolver dispatch with Pi createAgentSession model routing via agentDir and SettingsManager; not applicable via public Pi APIs.",
+  ],
+  [
+    "internal/llm/resolver_test.go::TestResolveEndpoint_OCREnvProtocolTakesPriorityOverUseAnthropic",
+    "Pi replaces OCR resolver dispatch with Pi createAgentSession model routing via agentDir and SettingsManager; not applicable via public Pi APIs.",
+  ],
+  [
+    "internal/llm/resolver_test.go::TestResolveEndpoint_ProviderAPIKeyEnvFallback",
+    "Pi replaces OCR resolver dispatch with Pi createAgentSession model routing via agentDir and SettingsManager; not applicable via public Pi APIs.",
+  ],
+  [
+    "internal/llm/resolver_test.go::TestResolveEndpoint_ProviderConfigNegativeTimeoutSec",
+    "Pi replaces OCR resolver dispatch with Pi createAgentSession model routing via agentDir and SettingsManager; not applicable via public Pi APIs.",
+  ],
+  [
+    "internal/llm/resolver_test.go::TestResolveEndpoint_ProviderConfigTimeoutSec",
+    "Pi replaces OCR resolver dispatch with Pi createAgentSession model routing via agentDir and SettingsManager; not applicable via public Pi APIs.",
+  ],
+  [
+    "internal/llm/resolver_test.go::TestResolveEndpoint_ProviderEntryModelOverridesDefault",
+    "Pi replaces OCR resolver dispatch with Pi createAgentSession model routing via agentDir and SettingsManager; not applicable via public Pi APIs.",
+  ],
+  [
+    "internal/llm/resolver_test.go::TestResolveEndpoint_ProviderMissingAPIKey",
+    "Pi replaces OCR resolver dispatch with Pi createAgentSession model routing via agentDir and SettingsManager; not applicable via public Pi APIs.",
+  ],
+  [
+    "internal/llm/resolver_test.go::TestResolveEndpoint_ProviderModelOverride",
+    "Pi replaces OCR resolver dispatch with Pi createAgentSession model routing via agentDir and SettingsManager; not applicable via public Pi APIs.",
+  ],
+  [
+    "internal/llm/resolver_test.go::TestResolveEndpoint_ProviderNotConfigured",
+    "Pi replaces OCR resolver dispatch with Pi createAgentSession model routing via agentDir and SettingsManager; not applicable via public Pi APIs.",
+  ],
+  [
+    "internal/llm/resolver_test.go::TestResolveEndpoint_ProviderRetryCodes",
+    "Pi replaces OCR resolver dispatch with Pi createAgentSession model routing via agentDir and SettingsManager; not applicable via public Pi APIs.",
+  ],
+  [
+    "internal/llm/resolver_test.go::TestResolveEndpoint_ResponsesURLNotMutated",
+    "Pi replaces OCR resolver dispatch with Pi createAgentSession model routing via agentDir and SettingsManager; not applicable via public Pi APIs.",
+  ],
+  [
+    "internal/llm/resolver_test.go::TestResolveEndpointWithModelOverride_CustomProviderWithoutConfiguredModel",
+    "Pi replaces OCR resolver dispatch with Pi createAgentSession model routing via agentDir and SettingsManager; not applicable via public Pi APIs.",
+  ],
+  [
+    "internal/llm/resolver_test.go::TestResolveEndpointWithModelOverride_InvalidModelInCustomProviderList",
+    "Pi replaces OCR resolver dispatch with Pi createAgentSession model routing via agentDir and SettingsManager; not applicable via public Pi APIs.",
+  ],
+  [
+    "internal/llm/resolver_test.go::TestResolveEndpointWithModelOverride_InvalidModelInPresetList",
+    "Pi replaces OCR resolver dispatch with Pi createAgentSession model routing via agentDir and SettingsManager; not applicable via public Pi APIs.",
+  ],
+  [
+    "internal/llm/resolver_test.go::TestResolveEndpointWithModelOverride_LegacyConfigNoValidation",
+    "Pi replaces OCR resolver dispatch with Pi createAgentSession model routing via agentDir and SettingsManager; not applicable via public Pi APIs.",
+  ],
+  [
+    "internal/llm/resolver_test.go::TestResolveEndpointWithModelOverride_MergesPresetAndEntryModels",
+    "Pi replaces OCR resolver dispatch with Pi createAgentSession model routing via agentDir and SettingsManager; not applicable via public Pi APIs.",
+  ],
+  [
+    "internal/llm/resolver_test.go::TestResolveEndpointWithModelOverride_NoValidationWhenNoModelList",
+    "Pi replaces OCR resolver dispatch with Pi createAgentSession model routing via agentDir and SettingsManager; not applicable via public Pi APIs.",
+  ],
+  [
+    "internal/llm/resolver_test.go::TestResolveEndpointWithModelOverride_ValidModelInCustomProviderList",
+    "Pi replaces OCR resolver dispatch with Pi createAgentSession model routing via agentDir and SettingsManager; not applicable via public Pi APIs.",
+  ],
+  [
+    "internal/llm/resolver_test.go::TestResolveEndpointWithModelOverride_ValidModelInPresetList",
+    "Pi replaces OCR resolver dispatch with Pi createAgentSession model routing via agentDir and SettingsManager; not applicable via public Pi APIs.",
+  ],
+  [
+    "internal/llm/resolver_test.go::TestResolveEndpointWithOptions_DifferentProviderDoesNotReuseTopLevelModel",
+    "Pi replaces OCR resolver dispatch with Pi createAgentSession model routing via agentDir and SettingsManager; not applicable via public Pi APIs.",
+  ],
+  [
+    "internal/llm/resolver_test.go::TestResolveEndpointWithOptions_ExplicitProvider",
+    "Pi replaces OCR resolver dispatch with Pi createAgentSession model routing via agentDir and SettingsManager; not applicable via public Pi APIs.",
+  ],
+  [
+    "internal/llm/resolver_test.go::TestResolveEndpointWithOptions_ExplicitProviderAndModel",
+    "Pi replaces OCR resolver dispatch with Pi createAgentSession model routing via agentDir and SettingsManager; not applicable via public Pi APIs.",
+  ],
+  [
+    "internal/llm/resolver_test.go::TestResolveEndpointWithOptions_ExplicitProviderUsesProviderAPIKeyEnvironmentFallback",
+    "Pi replaces OCR resolver dispatch with Pi createAgentSession model routing via agentDir and SettingsManager; not applicable via public Pi APIs.",
+  ],
+  [
+    "internal/llm/resolver_test.go::TestResolveEndpointWithOptions_ExplicitProviderWithoutConfigNamesSection",
+    "Pi replaces OCR resolver dispatch with Pi createAgentSession model routing via agentDir and SettingsManager; not applicable via public Pi APIs.",
+  ],
+  [
+    "internal/llm/resolver_test.go::TestResolveEndpointWithOptions_ModelOverrideBeatsEnvironmentModel",
+    "Pi replaces OCR resolver dispatch with Pi createAgentSession model routing via agentDir and SettingsManager; not applicable via public Pi APIs.",
+  ],
+  [
+    "internal/llm/resolver_test.go::TestResolveEndpointWithOptions_ModelOverrideCompletesOCREnvironment",
+    "Pi replaces OCR resolver dispatch with Pi createAgentSession model routing via agentDir and SettingsManager; not applicable via public Pi APIs.",
+  ],
+  [
+    "internal/llm/resolver_test.go::TestResolveEndpointWithOptions_SameProviderPreservesTopLevelModel",
+    "Pi replaces OCR resolver dispatch with Pi createAgentSession model routing via agentDir and SettingsManager; not applicable via public Pi APIs.",
+  ],
+  [
+    "internal/llm/resolver_test.go::TestResolveEndpointWithOptions_UnknownProviderFailsWithoutFallbackOrMutation",
+    "Pi replaces OCR resolver dispatch with Pi createAgentSession model routing via agentDir and SettingsManager; not applicable via public Pi APIs.",
+  ],
+  [
     "internal/llm/message_test.go::TestModelListContains",
     "Pi replaces OCR ModelListContains config helper with Pi SettingsManager model discovery; not applicable via public Pi APIs.",
   ],

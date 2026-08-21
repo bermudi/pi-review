@@ -8393,18 +8393,18 @@
       "tests": [
         {
           "name": "TestEnsureMessagesSuffix",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "not_applicable",
+          "reason": "Pi replaces OCR resolver dispatch with Pi createAgentSession model routing via agentDir and SettingsManager; not applicable via public Pi APIs."
         },
         {
           "name": "TestNewLLMClient_DefaultTimeout",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "not_applicable",
+          "reason": "Pi replaces OCR resolver dispatch with Pi createAgentSession model routing via agentDir and SettingsManager; not applicable via public Pi APIs."
         },
         {
           "name": "TestNewLLMClient_TimeoutForwarded",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "not_applicable",
+          "reason": "Pi replaces OCR resolver dispatch with Pi createAgentSession model routing via agentDir and SettingsManager; not applicable via public Pi APIs."
         },
         {
           "name": "TestParseExtraHeaders",
@@ -8468,8 +8468,8 @@
         },
         {
           "name": "TestResolveEndpoint_ConfigTimeoutSec",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "not_applicable",
+          "reason": "Pi replaces OCR resolver dispatch with Pi createAgentSession model routing via agentDir and SettingsManager; not applicable via public Pi APIs."
         },
         {
           "name": "TestResolveEndpoint_CustomProvider",
@@ -8478,13 +8478,13 @@
         },
         {
           "name": "TestResolveEndpoint_CustomProviderAnthropicVertexRejected",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "not_applicable",
+          "reason": "Pi replaces OCR resolver dispatch with Pi createAgentSession model routing via agentDir and SettingsManager; not applicable via public Pi APIs."
         },
         {
           "name": "TestResolveEndpoint_CustomProviderChatCompletionsProtocol",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "not_applicable",
+          "reason": "Pi replaces OCR resolver dispatch with Pi createAgentSession model routing via agentDir and SettingsManager; not applicable via public Pi APIs."
         },
         {
           "name": "TestResolveEndpoint_CustomProviderInvalidProtocol",
@@ -8503,13 +8503,13 @@
         },
         {
           "name": "TestResolveEndpoint_CustomProviderOpenAIAlias",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "not_applicable",
+          "reason": "Pi replaces OCR resolver dispatch with Pi createAgentSession model routing via agentDir and SettingsManager; not applicable via public Pi APIs."
         },
         {
           "name": "TestResolveEndpoint_CustomProviderResponsesProtocol",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "not_applicable",
+          "reason": "Pi replaces OCR resolver dispatch with Pi createAgentSession model routing via agentDir and SettingsManager; not applicable via public Pi APIs."
         },
         {
           "name": "TestResolveEndpoint_EnvExtraHeadersMergedWithConfigFile",
@@ -8518,18 +8518,18 @@
         },
         {
           "name": "TestResolveEndpoint_EnvTimeoutGlobalOverride",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "not_applicable",
+          "reason": "Pi replaces OCR resolver dispatch with Pi createAgentSession model routing via agentDir and SettingsManager; not applicable via public Pi APIs."
         },
         {
           "name": "TestResolveEndpoint_EnvTimeoutOverridesConfigTimeout",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "not_applicable",
+          "reason": "Pi replaces OCR resolver dispatch with Pi createAgentSession model routing via agentDir and SettingsManager; not applicable via public Pi APIs."
         },
         {
           "name": "TestResolveEndpoint_EnvTimeoutOverridesProviderTimeout",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "not_applicable",
+          "reason": "Pi replaces OCR resolver dispatch with Pi createAgentSession model routing via agentDir and SettingsManager; not applicable via public Pi APIs."
         },
         {
           "name": "TestResolveEndpoint_IncompleteConfigFallsBackToOCREnvironment",
@@ -8538,13 +8538,13 @@
         },
         {
           "name": "TestResolveEndpoint_InvalidEnvTimeoutWithConfig",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "not_applicable",
+          "reason": "Pi replaces OCR resolver dispatch with Pi createAgentSession model routing via agentDir and SettingsManager; not applicable via public Pi APIs."
         },
         {
           "name": "TestResolveEndpoint_InvalidRetryCodes",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "not_applicable",
+          "reason": "Pi replaces OCR resolver dispatch with Pi createAgentSession model routing via agentDir and SettingsManager; not applicable via public Pi APIs."
         },
         {
           "name": "TestResolveEndpoint_LegacyLlmExtraHeaders",
@@ -8553,38 +8553,38 @@
         },
         {
           "name": "TestResolveEndpoint_LegacyLlmProtocolTakesPriorityOverUseAnthropic",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "not_applicable",
+          "reason": "Pi replaces OCR resolver dispatch with Pi createAgentSession model routing via agentDir and SettingsManager; not applicable via public Pi APIs."
         },
         {
           "name": "TestResolveEndpoint_LegacyLlmRetryCodes",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "not_applicable",
+          "reason": "Pi replaces OCR resolver dispatch with Pi createAgentSession model routing via agentDir and SettingsManager; not applicable via public Pi APIs."
         },
         {
           "name": "TestResolveEndpoint_LegacyLlmStillWorks",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "not_applicable",
+          "reason": "Pi replaces OCR resolver dispatch with Pi createAgentSession model routing via agentDir and SettingsManager; not applicable via public Pi APIs."
         },
         {
           "name": "TestResolveEndpoint_MiniMaxProviderEnvFallback",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "not_applicable",
+          "reason": "Pi replaces OCR resolver dispatch with Pi createAgentSession model routing via agentDir and SettingsManager; not applicable via public Pi APIs."
         },
         {
           "name": "TestResolveEndpoint_MiniMaxProviderRejectsOtherRegionEnv",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "not_applicable",
+          "reason": "Pi replaces OCR resolver dispatch with Pi createAgentSession model routing via agentDir and SettingsManager; not applicable via public Pi APIs."
         },
         {
           "name": "TestResolveEndpoint_NegativeConfigTimeoutSec",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "not_applicable",
+          "reason": "Pi replaces OCR resolver dispatch with Pi createAgentSession model routing via agentDir and SettingsManager; not applicable via public Pi APIs."
         },
         {
           "name": "TestResolveEndpoint_NegativeEnvTimeoutWithConfig",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "not_applicable",
+          "reason": "Pi replaces OCR resolver dispatch with Pi createAgentSession model routing via agentDir and SettingsManager; not applicable via public Pi APIs."
         },
         {
           "name": "TestResolveEndpoint_OCREnvAuthHeader",
@@ -8618,18 +8618,18 @@
         },
         {
           "name": "TestResolveEndpoint_OCREnvProtocolAlias",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "not_applicable",
+          "reason": "Pi replaces OCR resolver dispatch with Pi createAgentSession model routing via agentDir and SettingsManager; not applicable via public Pi APIs."
         },
         {
           "name": "TestResolveEndpoint_OCREnvProtocolInvalid",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "not_applicable",
+          "reason": "Pi replaces OCR resolver dispatch with Pi createAgentSession model routing via agentDir and SettingsManager; not applicable via public Pi APIs."
         },
         {
           "name": "TestResolveEndpoint_OCREnvProtocolTakesPriorityOverUseAnthropic",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "not_applicable",
+          "reason": "Pi replaces OCR resolver dispatch with Pi createAgentSession model routing via agentDir and SettingsManager; not applicable via public Pi APIs."
         },
         {
           "name": "TestResolveEndpoint_OCREnvStripsModelSuffix",
@@ -8648,23 +8648,23 @@
         },
         {
           "name": "TestResolveEndpoint_ProviderAPIKeyEnvFallback",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "not_applicable",
+          "reason": "Pi replaces OCR resolver dispatch with Pi createAgentSession model routing via agentDir and SettingsManager; not applicable via public Pi APIs."
         },
         {
           "name": "TestResolveEndpoint_ProviderConfigNegativeTimeoutSec",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "not_applicable",
+          "reason": "Pi replaces OCR resolver dispatch with Pi createAgentSession model routing via agentDir and SettingsManager; not applicable via public Pi APIs."
         },
         {
           "name": "TestResolveEndpoint_ProviderConfigTimeoutSec",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "not_applicable",
+          "reason": "Pi replaces OCR resolver dispatch with Pi createAgentSession model routing via agentDir and SettingsManager; not applicable via public Pi APIs."
         },
         {
           "name": "TestResolveEndpoint_ProviderEntryModelOverridesDefault",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "not_applicable",
+          "reason": "Pi replaces OCR resolver dispatch with Pi createAgentSession model routing via agentDir and SettingsManager; not applicable via public Pi APIs."
         },
         {
           "name": "TestResolveEndpoint_ProviderExtraBody",
@@ -8678,18 +8678,18 @@
         },
         {
           "name": "TestResolveEndpoint_ProviderMissingAPIKey",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "not_applicable",
+          "reason": "Pi replaces OCR resolver dispatch with Pi createAgentSession model routing via agentDir and SettingsManager; not applicable via public Pi APIs."
         },
         {
           "name": "TestResolveEndpoint_ProviderModelOverride",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "not_applicable",
+          "reason": "Pi replaces OCR resolver dispatch with Pi createAgentSession model routing via agentDir and SettingsManager; not applicable via public Pi APIs."
         },
         {
           "name": "TestResolveEndpoint_ProviderNotConfigured",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "not_applicable",
+          "reason": "Pi replaces OCR resolver dispatch with Pi createAgentSession model routing via agentDir and SettingsManager; not applicable via public Pi APIs."
         },
         {
           "name": "TestResolveEndpoint_ProviderOpenAI",
@@ -8698,8 +8698,8 @@
         },
         {
           "name": "TestResolveEndpoint_ProviderRetryCodes",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "not_applicable",
+          "reason": "Pi replaces OCR resolver dispatch with Pi createAgentSession model routing via agentDir and SettingsManager; not applicable via public Pi APIs."
         },
         {
           "name": "TestResolveEndpoint_RedundantRetryCodesFiltered",
@@ -8708,8 +8708,8 @@
         },
         {
           "name": "TestResolveEndpoint_ResponsesURLNotMutated",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "not_applicable",
+          "reason": "Pi replaces OCR resolver dispatch with Pi createAgentSession model routing via agentDir and SettingsManager; not applicable via public Pi APIs."
         },
         {
           "name": "TestResolveEndpoint_SessionKeyPlaceholderPreserved",
@@ -8718,88 +8718,88 @@
         },
         {
           "name": "TestResolveEndpointWithModelOverride_CustomProviderWithoutConfiguredModel",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "not_applicable",
+          "reason": "Pi replaces OCR resolver dispatch with Pi createAgentSession model routing via agentDir and SettingsManager; not applicable via public Pi APIs."
         },
         {
           "name": "TestResolveEndpointWithModelOverride_InvalidModelInCustomProviderList",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "not_applicable",
+          "reason": "Pi replaces OCR resolver dispatch with Pi createAgentSession model routing via agentDir and SettingsManager; not applicable via public Pi APIs."
         },
         {
           "name": "TestResolveEndpointWithModelOverride_InvalidModelInPresetList",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "not_applicable",
+          "reason": "Pi replaces OCR resolver dispatch with Pi createAgentSession model routing via agentDir and SettingsManager; not applicable via public Pi APIs."
         },
         {
           "name": "TestResolveEndpointWithModelOverride_LegacyConfigNoValidation",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "not_applicable",
+          "reason": "Pi replaces OCR resolver dispatch with Pi createAgentSession model routing via agentDir and SettingsManager; not applicable via public Pi APIs."
         },
         {
           "name": "TestResolveEndpointWithModelOverride_MergesPresetAndEntryModels",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "not_applicable",
+          "reason": "Pi replaces OCR resolver dispatch with Pi createAgentSession model routing via agentDir and SettingsManager; not applicable via public Pi APIs."
         },
         {
           "name": "TestResolveEndpointWithModelOverride_NoValidationWhenNoModelList",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "not_applicable",
+          "reason": "Pi replaces OCR resolver dispatch with Pi createAgentSession model routing via agentDir and SettingsManager; not applicable via public Pi APIs."
         },
         {
           "name": "TestResolveEndpointWithModelOverride_ValidModelInCustomProviderList",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "not_applicable",
+          "reason": "Pi replaces OCR resolver dispatch with Pi createAgentSession model routing via agentDir and SettingsManager; not applicable via public Pi APIs."
         },
         {
           "name": "TestResolveEndpointWithModelOverride_ValidModelInPresetList",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "not_applicable",
+          "reason": "Pi replaces OCR resolver dispatch with Pi createAgentSession model routing via agentDir and SettingsManager; not applicable via public Pi APIs."
         },
         {
           "name": "TestResolveEndpointWithOptions_DifferentProviderDoesNotReuseTopLevelModel",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "not_applicable",
+          "reason": "Pi replaces OCR resolver dispatch with Pi createAgentSession model routing via agentDir and SettingsManager; not applicable via public Pi APIs."
         },
         {
           "name": "TestResolveEndpointWithOptions_ExplicitProvider",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "not_applicable",
+          "reason": "Pi replaces OCR resolver dispatch with Pi createAgentSession model routing via agentDir and SettingsManager; not applicable via public Pi APIs."
         },
         {
           "name": "TestResolveEndpointWithOptions_ExplicitProviderAndModel",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "not_applicable",
+          "reason": "Pi replaces OCR resolver dispatch with Pi createAgentSession model routing via agentDir and SettingsManager; not applicable via public Pi APIs."
         },
         {
           "name": "TestResolveEndpointWithOptions_ExplicitProviderUsesProviderAPIKeyEnvironmentFallback",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "not_applicable",
+          "reason": "Pi replaces OCR resolver dispatch with Pi createAgentSession model routing via agentDir and SettingsManager; not applicable via public Pi APIs."
         },
         {
           "name": "TestResolveEndpointWithOptions_ExplicitProviderWithoutConfigNamesSection",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "not_applicable",
+          "reason": "Pi replaces OCR resolver dispatch with Pi createAgentSession model routing via agentDir and SettingsManager; not applicable via public Pi APIs."
         },
         {
           "name": "TestResolveEndpointWithOptions_ModelOverrideBeatsEnvironmentModel",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "not_applicable",
+          "reason": "Pi replaces OCR resolver dispatch with Pi createAgentSession model routing via agentDir and SettingsManager; not applicable via public Pi APIs."
         },
         {
           "name": "TestResolveEndpointWithOptions_ModelOverrideCompletesOCREnvironment",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "not_applicable",
+          "reason": "Pi replaces OCR resolver dispatch with Pi createAgentSession model routing via agentDir and SettingsManager; not applicable via public Pi APIs."
         },
         {
           "name": "TestResolveEndpointWithOptions_SameProviderPreservesTopLevelModel",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "not_applicable",
+          "reason": "Pi replaces OCR resolver dispatch with Pi createAgentSession model routing via agentDir and SettingsManager; not applicable via public Pi APIs."
         },
         {
           "name": "TestResolveEndpointWithOptions_UnknownProviderFailsWithoutFallbackOrMutation",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "not_applicable",
+          "reason": "Pi replaces OCR resolver dispatch with Pi createAgentSession model routing via agentDir and SettingsManager; not applicable via public Pi APIs."
         },
         {
           "name": "TestStripModelSuffix",
