@@ -10,6 +10,8 @@ import type { LlmComment, LlmCommentJson } from "../model/review.js";
 import { llmCommentToJson } from "../model/review.js";
 import type { RunManifest } from "../session/manifest.js";
 import type { Preview } from "../model/preview.js";
+import type { RetryReport as DomainRetryReport } from "../retry/types.js";
+import { serializeRetryReport } from "../retry/serializer.js";
 
 // ---------------------------------------------------------------------------
 // Warning helpers — mirrors Go hasSubtaskErrors / warningsForOutput
@@ -418,7 +420,7 @@ export function outputJsonWithWarnings(opts: {
   manifest: RunManifest | null | undefined;
   budgetExceeded: boolean;
   llmIdentity: JsonLlmIdentity | undefined;
-  retryReport: unknown;
+  retryReport: DomainRetryReport | null | undefined;
 }): string {
   const publishedWarnings = warningsForOutput(opts.warnings, opts.manifest);
   const elapsed = formatDurationMs(opts.durationMs);
@@ -442,6 +444,7 @@ export function outputJsonWithWarnings(opts: {
   for (const v of Object.values(byTool)) total += v;
 
   const jsonComments = opts.comments.map(llmCommentToJson);
+  const serializedRetry = serializeRetryReport(opts.retryReport);
   const out: JsonOutput = {
     status: "success",
     llm: opts.llmIdentity,
@@ -452,7 +455,7 @@ export function outputJsonWithWarnings(opts: {
     resume: opts.resumeInfo ?? undefined,
     session_id: opts.sessionId !== "" ? opts.sessionId : undefined,
     manifest: opts.manifest ?? undefined,
-    retry_report: opts.retryReport ?? undefined,
+    retry_report: serializedRetry,
     tool_calls: { total, by_tool: byTool },
   };
 
@@ -492,31 +495,9 @@ export function outputJsonWithWarnings(opts: {
 // Retry report — mirrors Go outputRetryReportText / retryAttemptChain
 // ---------------------------------------------------------------------------
 
-export interface RetryAttempt {
-  outcome: string;
-  errorClass?: string;
-  statusCode?: number;
-}
+export type RetryReport = DomainRetryReport;
 
-export interface RetryRequestReport {
-  filePath: string;
-  taskType: string;
-  requestNo: number;
-  attempts: readonly RetryAttempt[];
-  outcome: string;
-}
-
-export interface RetryReport {
-  totalRequests: number;
-  retriedRequests: number;
-  totalRetries: number;
-  recoveredRequests: number;
-  failedRequests: number;
-  cancelledRequests: number;
-  requests: readonly RetryRequestReport[];
-}
-
-export function retryAttemptChain(r: RetryRequestReport): string {
+export function retryAttemptChain(r: DomainRetryReport["requests"][number]): string {
   const parts: string[] = [];
   for (const a of r.attempts) {
     if (a.outcome === "success") {
@@ -533,8 +514,8 @@ export function retryAttemptChain(r: RetryRequestReport): string {
   return parts.join(" -> ");
 }
 
-export function outputRetryReportText(report: RetryReport | null | undefined): string {
-  if (!report) return "";
+export function outputRetryReportText(report: DomainRetryReport | null | undefined): string {
+  if (report === null || report === undefined) return "";
   let out = "";
   const retryWord = report.totalRetries === 1 ? "retry" : "retries";
   out += `\nLLM retry report: ${String(report.retriedRequests)}/${String(report.totalRequests)} requests retried, ${String(report.totalRetries)} ${retryWord}, ${String(report.recoveredRequests)} recovered, ${String(report.failedRequests)} failed, ${String(report.cancelledRequests)} cancelled\n`;
@@ -557,7 +538,7 @@ export function emitFailureUsageText(
   elapsedMs: number,
   budgetExceeded: boolean,
   sessionId: string,
-  retryReport: RetryReport | null | undefined,
+  retryReport: DomainRetryReport | null | undefined,
   outputFormat: string,
   llmIdentity: JsonLlmIdentity | undefined,
 ): { stdout: string; stderr: string } {
@@ -574,6 +555,7 @@ export function emitFailureUsageText(
       budget_exceeded: budgetExceeded ? true : undefined,
     };
     if (!summary.budget_exceeded) delete (summary as unknown as Record<string, unknown>)["budget_exceeded"];
+    const serializedRetry = serializeRetryReport(retryReport);
     const out: JsonOutput = {
       status: "failed",
       llm: llmIdentity,
@@ -581,7 +563,7 @@ export function emitFailureUsageText(
       tool_calls: { total, by_tool: toolCalls },
       comments: [],
       session_id: sessionId !== "" ? sessionId : undefined,
-      retry_report: retryReport ?? undefined,
+      retry_report: serializedRetry,
     };
     if (!out.session_id) delete out.session_id;
     if (!out.retry_report) delete out.retry_report;

@@ -3144,58 +3144,135 @@
       "tests": [
         {
           "name": "TestOutputRetryReportText_CancelledSuffix",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "equivalent",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/cli/retry-report-render.test.ts",
+              "title": "outputRetryReportText cancelled suffix"
+            }
+          ],
+          "reason": "equivalent via test/ocr-v193/cli/retry-report-render.test.ts"
         },
         {
           "name": "TestOutputRetryReportText_NilWritesNothing",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "equivalent",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/cli/retry-report-render.test.ts",
+              "title": "outputRetryReportText nil writes nothing"
+            }
+          ],
+          "reason": "equivalent via test/ocr-v193/cli/retry-report-render.test.ts"
         },
         {
           "name": "TestOutputRetryReportText_RecoveredAndFailed",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "equivalent",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/cli/retry-report-render.test.ts",
+              "title": "outputRetryReportText recovered and failed"
+            }
+          ],
+          "reason": "equivalent via test/ocr-v193/cli/retry-report-render.test.ts"
         },
         {
           "name": "TestOutputRetryReportText_SanitizesControlChars",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "equivalent",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/cli/retry-report-render.test.ts",
+              "title": "outputRetryReportText sanitizes control chars"
+            }
+          ],
+          "reason": "equivalent via test/ocr-v193/cli/retry-report-render.test.ts"
         },
         {
           "name": "TestOutputRetryReportText_SingularRetry",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "equivalent",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/cli/retry-report-render.test.ts",
+              "title": "outputRetryReportText singular retry"
+            }
+          ],
+          "reason": "equivalent via test/ocr-v193/cli/retry-report-render.test.ts"
         },
         {
           "name": "TestOutputRetryReportText_SucceededAfterRetry",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "equivalent",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/cli/retry-report-render.test.ts",
+              "title": "outputRetryReportText succeeded after retry"
+            }
+          ],
+          "reason": "equivalent via test/ocr-v193/cli/retry-report-render.test.ts"
         },
         {
           "name": "TestRetryAttemptChain_CancelledAttemptNotDuplicated",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "equivalent",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/cli/retry-report-render.test.ts",
+              "title": "retryAttemptChain cancelled attempt not duplicated"
+            }
+          ],
+          "reason": "equivalent via test/ocr-v193/cli/retry-report-render.test.ts"
         },
         {
           "name": "TestRetryAttemptChain_NoStatusCode",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "equivalent",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/cli/retry-report-render.test.ts",
+              "title": "retryAttemptChain no status code"
+            }
+          ],
+          "reason": "equivalent via test/ocr-v193/cli/retry-report-render.test.ts"
         },
         {
           "name": "TestRetryReport_TerminalAndJSONReadSameFrozenResult",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "equivalent",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/cli/retry-report-render.test.ts",
+              "title": "retryReport terminal and JSON read same frozen result"
+            }
+          ],
+          "reason": "equivalent via test/ocr-v193/cli/retry-report-render.test.ts"
         },
         {
           "name": "TestRetryReportJSON_EmptyProviderKept",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "equivalent",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/cli/retry-report-render.test.ts",
+              "title": "retryReport JSON empty provider kept"
+            }
+          ],
+          "reason": "equivalent via test/ocr-v193/cli/retry-report-render.test.ts"
         },
         {
           "name": "TestRetryReportJSON_KeySetIsAllowlisted",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "equivalent",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/cli/retry-report-render.test.ts",
+              "title": "retryReport JSON key set is allowlisted"
+            }
+          ],
+          "reason": "equivalent via test/ocr-v193/cli/retry-report-render.test.ts"
         }
       ]
     },

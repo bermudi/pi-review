@@ -365,7 +365,6 @@ const equivalentTests: ReadonlyMap<string, readonly Evidence[]> = new Map<string
     "internal/llm/retry_boundary_test.go::TestBoundaryKeepsTruncationCorrectionWhenRecallIsCancelled",
     [{ kind: "bun-test-annotation", path: "test/ocr-v193/retry/boundary.test.ts", title: "truncation correction kept through cancellation semantics" }],
   ],
-  // ---- retry observer ----
   // ---- retry report ----
   [
     "internal/llm/retry_report_test.go::TestErrorClassAndFailurePhaseSets",
@@ -474,9 +473,51 @@ const equivalentTests: ReadonlyMap<string, readonly Evidence[]> = new Map<string
   [
     "internal/llm/retry_report_test.go::TestRecordAttemptDropsRequestsWithoutIdentity",
     [{ kind: "bun-test-annotation", path: "test/ocr-v193/retry/report.test.ts", title: "recordAttempt drops requests without identity" }],
+  ],  [
+    "cmd/opencodereview/retry_report_render_test.go::TestOutputRetryReportText_CancelledSuffix",
+    [{ kind: "bun-test-annotation", path: "test/ocr-v193/cli/retry-report-render.test.ts", title: "outputRetryReportText cancelled suffix" }],
   ],
-  // ---- resolver tail ----
-  // ---- client / responses tail ----
+  [
+    "cmd/opencodereview/retry_report_render_test.go::TestOutputRetryReportText_NilWritesNothing",
+    [{ kind: "bun-test-annotation", path: "test/ocr-v193/cli/retry-report-render.test.ts", title: "outputRetryReportText nil writes nothing" }],
+  ],
+  [
+    "cmd/opencodereview/retry_report_render_test.go::TestOutputRetryReportText_RecoveredAndFailed",
+    [{ kind: "bun-test-annotation", path: "test/ocr-v193/cli/retry-report-render.test.ts", title: "outputRetryReportText recovered and failed" }],
+  ],
+  [
+    "cmd/opencodereview/retry_report_render_test.go::TestOutputRetryReportText_SanitizesControlChars",
+    [{ kind: "bun-test-annotation", path: "test/ocr-v193/cli/retry-report-render.test.ts", title: "outputRetryReportText sanitizes control chars" }],
+  ],
+  [
+    "cmd/opencodereview/retry_report_render_test.go::TestOutputRetryReportText_SingularRetry",
+    [{ kind: "bun-test-annotation", path: "test/ocr-v193/cli/retry-report-render.test.ts", title: "outputRetryReportText singular retry" }],
+  ],
+  [
+    "cmd/opencodereview/retry_report_render_test.go::TestOutputRetryReportText_SucceededAfterRetry",
+    [{ kind: "bun-test-annotation", path: "test/ocr-v193/cli/retry-report-render.test.ts", title: "outputRetryReportText succeeded after retry" }],
+  ],
+  [
+    "cmd/opencodereview/retry_report_render_test.go::TestRetryAttemptChain_CancelledAttemptNotDuplicated",
+    [{ kind: "bun-test-annotation", path: "test/ocr-v193/cli/retry-report-render.test.ts", title: "retryAttemptChain cancelled attempt not duplicated" }],
+  ],
+  [
+    "cmd/opencodereview/retry_report_render_test.go::TestRetryAttemptChain_NoStatusCode",
+    [{ kind: "bun-test-annotation", path: "test/ocr-v193/cli/retry-report-render.test.ts", title: "retryAttemptChain no status code" }],
+  ],
+  [
+    "cmd/opencodereview/retry_report_render_test.go::TestRetryReport_TerminalAndJSONReadSameFrozenResult",
+    [{ kind: "bun-test-annotation", path: "test/ocr-v193/cli/retry-report-render.test.ts", title: "retryReport terminal and JSON read same frozen result" }],
+  ],
+  [
+    "cmd/opencodereview/retry_report_render_test.go::TestRetryReportJSON_EmptyProviderKept",
+    [{ kind: "bun-test-annotation", path: "test/ocr-v193/cli/retry-report-render.test.ts", title: "retryReport JSON empty provider kept" }],
+  ],
+  [
+    "cmd/opencodereview/retry_report_render_test.go::TestRetryReportJSON_KeySetIsAllowlisted",
+    [{ kind: "bun-test-annotation", path: "test/ocr-v193/cli/retry-report-render.test.ts", title: "retryReport JSON key set is allowlisted" }],
+  ],
+
 ]);
 
 const notApplicableTests: ReadonlyMap<string, string> = new Map<string, string>([

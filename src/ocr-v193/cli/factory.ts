@@ -29,7 +29,7 @@ import { Provider, ModeWorkspace, ModeRange, ModeCommit } from "../diff/git.js";
 import { Runner as GitRunner } from "../diff/runner.js";
 import { ManifestBuilder, ItemID, StatePartial, StateFailed, StateSkipped, FailureBudget, FailureTimeout, FailureUnknown } from "../session/manifest.js";
 import { RetryCollector } from "../retry/collector.js";
-import type { RetryReport as CollectorRetryReport } from "../retry/types.js";
+import type { RetryReport } from "../retry/types.js";
 import { SessionHistory, ReviewModeFullScan } from "../session/history.js";
 import { newJSONLWriter, type JsonlWriter } from "../session/persist.js";
 import { ResumeState, LoadResumeState } from "../session/resume.js";
@@ -253,12 +253,11 @@ export function createReviewRunnerFactory(
     const elapsedMs = Date.now() - startMs;
 
     // Freeze retry report at same boundary as manifest (after ag.Run joined background work).
-    let retryReport: CollectorRetryReport | null = null;
+    let retryReport: RetryReport | null = null;
     let freezeError: string | null = null;
     const frozen = retryCollector.freeze(runId);
     if (frozen.error !== null) {
       freezeError = frozen.error;
-      console.error(`[ocr] warning: freeze retry report: ${frozen.error} (retry report suppressed)`);
     } else {
       retryReport = frozen.report;
     }
@@ -323,7 +322,7 @@ export function createReviewRunnerFactory(
     const reviewRunner: ReviewRunner = {
       run: async (_sig?: AbortSignal): Promise<LlmComment[]> => comments,
       manifest: manifest ?? undefined,
-      warnings: warnings as unknown as never,
+      warnings,
       filesReviewed,
       inputTokens,
       outputTokens,
@@ -335,9 +334,9 @@ export function createReviewRunnerFactory(
       budgetExceeded: agent.budgetExceededFlag(),
       projectSummary: "",
       resumeInfo: undefined,
-      diffs: diffs as unknown as never,
-      retryReport: retryReport as unknown as never,
-      retryReportError: freezeError as unknown as never,
+      diffs,
+      retryReport,
+      retryReportError: freezeError,
     };
 
     return reviewRunner;
@@ -425,8 +424,7 @@ export function createScanRunnerFactory(
     const allMainToolDefs = mainTaskToolDefs();
     const mainToolDefs = allMainToolDefs.filter((t) => t.function.name !== "file_read_diff");
 
-    const retryCollector = new RetryCollector();
-    const transport = await createPiTransportForFile({ cwd, agentDir, tools: mainToolDefs, retryCollector });
+    const transport = await createPiTransportForFile({ cwd, agentDir, tools: mainToolDefs });
 
     const maxTokensBudget = opts.maxTokensBudget > 0 ? opts.maxTokensBudget : (template.MaxTokensBudget ?? 0);
 
@@ -479,20 +477,10 @@ export function createScanRunnerFactory(
     const toolCalls = agent.ToolCalls();
     const warnings = agent.Warnings();
 
-    let retryReport: CollectorRetryReport | null = null;
-    let freezeError: string | null = null;
-    const frozen = retryCollector.freeze(session.SessionID);
-    if (frozen.error !== null) {
-      freezeError = frozen.error;
-      console.error(`[ocr] warning: freeze retry report: ${frozen.error} (retry report suppressed)`);
-    } else {
-      retryReport = frozen.report;
-    }
-
     const scanRunner: ScanRunner = {
       run: async (_sig?: AbortSignal): Promise<LlmComment[]> => comments,
       manifest: null,
-      warnings: warnings as unknown as never,
+      warnings,
       filesReviewed: agent.FilesReviewed(),
       inputTokens,
       outputTokens,
@@ -505,8 +493,6 @@ export function createScanRunnerFactory(
       projectSummary: agent.ProjectSummary(),
       resumeInfo: agent.ResumeInfo,
       diffs: [],
-      retryReport: retryReport as unknown as never,
-      retryReportError: freezeError as unknown as never,
     };
 
     if (runError) {

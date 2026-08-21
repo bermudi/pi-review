@@ -23,6 +23,7 @@ import {
   type RetryReport,
 } from "./output.js";
 import { outputSarifText } from "./sarif.js";
+import { serializeRetryReport } from "../retry/serializer.js";
 
 // ---------------------------------------------------------------------------
 // ResultProvider seam — minimal surface both Agent types satisfy
@@ -123,7 +124,7 @@ export function emitRunResult(
   }
 
   if (outputFormat === "json") {
-    const resumeInfo = typeof provider.ResumeInfo === "function" ? (provider.ResumeInfo() as unknown) : undefined;
+    const resumeInfo = typeof provider.ResumeInfo === "function" ? provider.ResumeInfo() as unknown : undefined;
     const json = outputJsonWithWarnings({
       comments,
       warnings: provider.Warnings(),
@@ -249,8 +250,8 @@ export async function runReviewContext(ctx: ReviewContext): Promise<number> {
   const emitted = manifest !== null || runErr === null;
 
   // Resolve retry report from runner (production) or ctx (tests); surface freeze error.
-  const runnerRetryReport = (runner as unknown as { retryReport?: RetryReport | null })?.retryReport ?? null;
-  const runnerRetryError = (runner as unknown as { retryReportError?: string | null })?.retryReportError ?? null;
+  const runnerRetryReport = runner?.retryReport ?? null;
+  const runnerRetryError = runner?.retryReportError ?? null;
   const effectiveRetryReport = runnerRetryReport ?? retryReport ?? null;
   if (runnerRetryError) {
     io.stderr(`[ocr] warning: freeze retry report: ${runnerRetryError} (retry report suppressed)\n`);
@@ -324,6 +325,7 @@ export async function runReviewContext(ctx: ReviewContext): Promise<number> {
     // Text vs JSON handling is inside shared retry helper; here we do best-effort
     if (opts.outputFormat === "json") {
       const total = Object.values(failedProvider.ToolCalls()).reduce((a, b) => a + b, 0);
+      const serializedFailureReport = serializeRetryReport(failureReport);
       io.stderr(
         `${JSON.stringify(
           {
@@ -339,7 +341,7 @@ export async function runReviewContext(ctx: ReviewContext): Promise<number> {
             },
             tool_calls: { total, by_tool: failedProvider.ToolCalls() },
             session_id: failedProvider.SessionID() || undefined,
-            retry_report: failureReport ?? undefined,
+            retry_report: serializedFailureReport,
           },
           null,
           2,
