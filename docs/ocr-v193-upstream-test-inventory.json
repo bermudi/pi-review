@@ -5190,8 +5190,14 @@
       "tests": [
         {
           "name": "TestResolve_GitHubWorkflows",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/rules/resolve_github.test.ts",
+              "title": "TestResolve_GitHubWorkflows %s"
+            }
+          ]
         }
       ]
     },
@@ -5249,168 +5255,366 @@
         },
         {
           "name": "TestFileFilter_CaseInsensitive",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/rules/system_rules.test.ts",
+              "title": "FileFilter case-insensitive matching"
+            }
+          ]
         },
         {
           "name": "TestFileFilter_IsUserExcluded",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/rules/system_rules.test.ts",
+              "title": "FileFilter IsUserExcluded matches exclude patterns"
+            }
+          ]
         },
         {
           "name": "TestFileFilter_IsUserIncluded",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/rules/system_rules.test.ts",
+              "title": "FileFilter IsUserIncluded matches include patterns"
+            }
+          ]
         },
         {
           "name": "TestFileFilter_IsUserIncluded_EmptyInclude",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/rules/system_rules.test.ts",
+              "title": "FileFilter IsUserIncluded false when include is empty"
+            }
+          ]
         },
         {
           "name": "TestLoadGlobalRule",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/rules/system_rules.test.ts",
+              "title": "loadGlobalRule handles missing, directory, invalid, valid"
+            }
+          ]
         },
         {
           "name": "TestLoadRuleFile",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/rules/system_rules.test.ts",
+              "title": "loadRuleFile reads and validates"
+            }
+          ]
         },
         {
           "name": "TestLooksLikeFilePath_FileExtensions",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/rules/system_rules.test.ts",
+              "title": "looksLikeFilePath file extensions true"
+            }
+          ]
         },
         {
           "name": "TestLooksLikeFilePath_InlineContent",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/rules/system_rules.test.ts",
+              "title": "looksLikeFilePath inline content false"
+            }
+          ]
         },
         {
           "name": "TestLooksLikeFilePath_MultiLine",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/rules/system_rules.test.ts",
+              "title": "looksLikeFilePath multiline false"
+            }
+          ]
         },
         {
           "name": "TestLooksLikeFilePath_PathWithoutExtension",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/rules/system_rules.test.ts",
+              "title": "looksLikeFilePath path without extension false"
+            }
+          ]
         },
         {
           "name": "TestLooksLikeFilePath_WithSpaces",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/rules/system_rules.test.ts",
+              "title": "looksLikeFilePath with spaces false"
+            }
+          ]
         },
         {
           "name": "TestNewResolver_BraceExpansionInProjectRule",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/rules/system_rules.test.ts",
+              "title": "project rule brace expansion"
+            }
+          ]
         },
         {
           "name": "TestNewResolver_CustomOverridesProject",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/rules/system_rules.test.ts",
+              "title": "custom overrides project"
+            }
+          ]
         },
         {
           "name": "TestNewResolver_CustomRuleOverridesDefault",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/rules/system_rules.test.ts",
+              "title": "custom rule overrides default and falls through on miss"
+            }
+          ]
         },
         {
           "name": "TestNewResolver_DefaultOnly",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/rules/system_rules.test.ts",
+              "title": "NewResolver with no project rule resolves via system default"
+            }
+          ]
         },
         {
           "name": "TestNewResolver_EmptyRuleMergeSystemRuleReturnsSystemOnly",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/rules/system_rules.test.ts",
+              "title": "empty rule with merge_system_rule returns system only"
+            }
+          ]
         },
         {
           "name": "TestNewResolver_EmptyRuleSkippedAndFallsBack",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/rules/system_rules.test.ts",
+              "title": "empty rule is skipped and falls back"
+            }
+          ]
         },
         {
           "name": "TestNewResolver_FileFilterFallsToProject",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/rules/system_rules.test.ts",
+              "title": "FileFilter falls to project when custom has none"
+            }
+          ]
         },
         {
           "name": "TestNewResolver_FileFilterMerged",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/rules/system_rules.test.ts",
+              "title": "NewResolver merges FileFilter from project layer"
+            }
+          ]
         },
         {
           "name": "TestNewResolver_FileFilterNilWhenEmpty",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/rules/system_rules.test.ts",
+              "title": "NewResolver FileFilter nil when empty"
+            }
+          ]
         },
         {
           "name": "TestNewResolver_FileFilterPriorityOverride",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/rules/system_rules.test.ts",
+              "title": "FileFilter priority override custom over project"
+            }
+          ]
         },
         {
           "name": "TestNewResolver_MergeSystemRuleKeepsRulePriority",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/rules/system_rules.test.ts",
+              "title": "merge does not change layer priority"
+            }
+          ]
         },
         {
           "name": "TestNewResolver_ProjectFileMalformed",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/rules/system_rules.test.ts",
+              "title": "malformed project rule.json returns error"
+            }
+          ]
         },
         {
           "name": "TestNewResolver_ProjectFileMissing",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/rules/system_rules.test.ts",
+              "title": "NewResolver does not fail when project rule is missing"
+            }
+          ]
         },
         {
           "name": "TestNewResolver_ProjectRuleFallsBackToSystem",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/rules/system_rules.test.ts",
+              "title": "project rule falls back to system when not matched"
+            }
+          ]
         },
         {
           "name": "TestNewResolver_ProjectRuleFirstMatchWinsWithinFile",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/rules/system_rules.test.ts",
+              "title": "first matching project rule wins within file"
+            }
+          ]
         },
         {
           "name": "TestNewResolver_ProjectRuleHighestPriority",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/rules/system_rules.test.ts",
+              "title": "project rule has highest priority over system"
+            }
+          ]
         },
         {
           "name": "TestNewResolver_ProjectRuleMergesSystemRule",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/rules/system_rules.test.ts",
+              "title": "project rule merges system rule when requested"
+            }
+          ]
         },
         {
           "name": "TestNewResolver_ProjectRuleReplacesSystemRuleByDefault",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/rules/system_rules.test.ts",
+              "title": "project rule replaces system rule by default"
+            }
+          ]
         },
         {
           "name": "TestReadRuleFileSafe_Missing",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/rules/system_rules.test.ts",
+              "title": "readRuleFileSafe missing throws"
+            }
+          ]
         },
         {
           "name": "TestReadRuleFileSafe_NormalFile",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/rules/system_rules.test.ts",
+              "title": "readRuleFileSafe normal file"
+            }
+          ]
         },
         {
           "name": "TestReadRuleFileSafe_TooLarge",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/rules/system_rules.test.ts",
+              "title": "readRuleFileSafe too large throws"
+            }
+          ]
         },
         {
           "name": "TestReadRuleFileSafe_UnsupportedExt",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/rules/system_rules.test.ts",
+              "title": "readRuleFileSafe unsupported ext throws"
+            }
+          ]
         },
         {
           "name": "TestResolve_CaseInsensitive",
@@ -5469,128 +5673,278 @@
         },
         {
           "name": "TestResolveDetail_CustomOverridesAll",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/rules/system_rules.test.ts",
+              "title": "ResolveDetail custom overrides all"
+            }
+          ]
         },
         {
           "name": "TestResolveDetail_MergeSystemRule",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/rules/system_rules.test.ts",
+              "title": "ResolveDetail merge system rule"
+            }
+          ]
         },
         {
           "name": "TestResolveDetail_ProjectOverridesSystem",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/rules/system_rules.test.ts",
+              "title": "ResolveDetail project overrides system"
+            }
+          ]
         },
         {
           "name": "TestResolveDetail_SystemComposerPatternPrecedesJSON",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/rules/system_rules.test.ts",
+              "title": "ResolveDetail SystemComposer %s"
+            }
+          ]
         },
         {
           "name": "TestResolveDetail_SystemDefault",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/rules/system_rules.test.ts",
+              "title": "ResolveDetail system default"
+            }
+          ]
         },
         {
           "name": "TestResolveDetail_SystemGoPatternMatch",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/rules/system_rules.test.ts",
+              "title": "ResolveDetail SystemGo %s"
+            }
+          ]
         },
         {
           "name": "TestResolveDetail_SystemPatternMatch",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/rules/system_rules.test.ts",
+              "title": "ResolveDetail system pattern match java"
+            }
+          ]
         },
         {
           "name": "TestResolveDetail_SystemPHPPatternMatch",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/rules/system_rules.test.ts",
+              "title": "ResolveDetail SystemPHP %s"
+            }
+          ]
         },
         {
           "name": "TestResolveDetail_SystemPrismaPatternMatch",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/rules/system_rules.test.ts",
+              "title": "ResolveDetail SystemPrisma %s"
+            }
+          ]
         },
         {
           "name": "TestResolveRuleEntries_AbsolutePath",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/rules/system_rules.test.ts",
+              "title": "resolveRuleEntries absolute path"
+            }
+          ]
         },
         {
           "name": "TestResolveRuleEntries_BasicFile",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/rules/system_rules.test.ts",
+              "title": "resolveRuleEntries basic file resolution"
+            }
+          ]
         },
         {
           "name": "TestResolveRuleEntries_EmptyRepoDirAbsolute",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/rules/system_rules.test.ts",
+              "title": "resolveRuleEntries empty repoDir absolute works"
+            }
+          ]
         },
         {
           "name": "TestResolveRuleEntries_EmptyRepoDirRelative",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/rules/system_rules.test.ts",
+              "title": "resolveRuleEntries empty repoDir relative rejected"
+            }
+          ]
         },
         {
           "name": "TestResolveRuleEntries_EmptyRule",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/rules/system_rules.test.ts",
+              "title": "resolveRuleEntries empty rules stay"
+            }
+          ]
         },
         {
           "name": "TestResolveRuleEntries_GlobalRuleFileResolution",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/rules/system_rules.test.ts",
+              "title": "resolveRuleEntries global rule file resolution"
+            }
+          ]
         },
         {
           "name": "TestResolveRuleEntries_MarkdownExtension",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/rules/system_rules.test.ts",
+              "title": "resolveRuleEntries .markdown is accepted"
+            }
+          ]
         },
         {
           "name": "TestResolveRuleEntries_MissingFile",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/rules/system_rules.test.ts",
+              "title": "resolveRuleEntries missing file clears rule"
+            }
+          ]
         },
         {
           "name": "TestResolveRuleEntries_MultiLineInline",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/rules/system_rules.test.ts",
+              "title": "resolveRuleEntries multi-line stays inline"
+            }
+          ]
         },
         {
           "name": "TestResolveRuleEntries_PathTraversalBlocked",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/rules/system_rules.test.ts",
+              "title": "resolveRuleEntries path traversal blocked"
+            }
+          ]
         },
         {
           "name": "TestResolveRuleEntries_RelativePath",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/rules/system_rules.test.ts",
+              "title": "resolveRuleEntries relative path at repo level"
+            }
+          ]
         },
         {
           "name": "TestResolveRuleEntries_SubdirectoryPath",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/rules/system_rules.test.ts",
+              "title": "resolveRuleEntries subdirectory path"
+            }
+          ]
         },
         {
           "name": "TestResolveRuleEntries_SymlinkSafety",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/rules/system_rules.test.ts",
+              "title": "resolveRuleEntries symlink to non-whitelisted is rejected"
+            }
+          ]
         },
         {
           "name": "TestResolveRuleEntries_TooLarge",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/rules/system_rules.test.ts",
+              "title": "resolveRuleEntries oversized file clears rule"
+            }
+          ]
         },
         {
           "name": "TestResolveRuleEntries_TxtExtension",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/rules/system_rules.test.ts",
+              "title": "resolveRuleEntries .txt is accepted"
+            }
+          ]
         },
         {
           "name": "TestSystemRulesIntegrity",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/rules/system_rules.test.ts",
+              "title": "SystemRulesIntegrity"
+            }
+          ]
         }
       ]
     },
