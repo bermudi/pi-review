@@ -183,6 +183,26 @@ const equivalentTests: ReadonlyMap<string, readonly Evidence[]> = new Map<string
     [{ kind: "bun-test-annotation", path: "test/ocr-v193/pi-adapter/usage.test.ts", title: "empty Pi usage object yields undefined" }],
   ],
   [
+    "internal/llm/client_params_test.go::TestBuildOpenAIParams_AllRoles",
+    [{ kind: "bun-test-annotation", path: "test/ocr-v193/pi-adapter/build-params.test.ts", title: "ChatRequest role handling covers system/user/tool/assistant/unknown via Pi translation" }],
+  ],
+  [
+    "internal/llm/client_params_test.go::TestBuildOpenAIParams_Minimal",
+    [{ kind: "bun-test-annotation", path: "test/ocr-v193/pi-adapter/build-params.test.ts", title: "ChatRequest minimal tools stays unset" }],
+  ],
+  [
+    "internal/llm/client_params_test.go::TestBuildAnthropicParams_DefaultMaxTokens",
+    [{ kind: "bun-test-annotation", path: "test/ocr-v193/pi-adapter/build-params.test.ts", title: "anthropic default maxTokens fallback is handled via Pi model defaults" }],
+  ],
+  [
+    "internal/llm/client_params_test.go::TestBuildAnthropicParams_InvalidToolArgs",
+    [{ kind: "bun-test-annotation", path: "test/ocr-v193/pi-adapter/build-params.test.ts", title: "invalid tool call arguments are handled without throwing" }],
+  ],
+  [
+    "internal/llm/client_params_test.go::TestBuildAnthropicParams_AllRoles",
+    [{ kind: "bun-test-annotation", path: "test/ocr-v193/pi-adapter/build-params.test.ts", title: "anthropic role branches mirror openai via Pi translation" }],
+  ],
+  [
     "internal/llm/client_test.go::TestOpenAIClient_StreamingCancellation",
     [{ kind: "bun-test-annotation", path: "test/ocr-v193/pi-adapter.test.ts", title: "PiTransport forwards abort signal to session.abort" }],
   ],
@@ -361,6 +381,87 @@ const notApplicableTests: ReadonlyMap<string, string> = new Map<string, string>(
   [
     "internal/llm/message_test.go::TestUserAgent",
     "Pi replaces OCR userAgent with Pi SDK internal User-Agent; not applicable via public Pi APIs.",
+  ],
+  // ---- resolver provider dispatch: Pi replaces with createAgentSession model routing ----
+  [
+    "internal/llm/resolver_test.go::TestResolveEndpoint_CCEnvStripsModelSuffix",
+    "Pi replaces OCR ANTHROPIC_* env resolution with Pi createAgentSession model routing via agentDir; model suffix stripping for env is not applicable via public Pi APIs.",
+  ],
+  [
+    "internal/llm/resolver_test.go::TestResolveEndpoint_CCEnvCleanModelUnchanged",
+    "Pi replaces OCR Claude env resolution; not applicable via public Pi APIs.",
+  ],
+  [
+    "internal/llm/resolver_test.go::TestResolveEndpoint_OCREnvStripsModelSuffix",
+    "Pi replaces OCR OCR_LLM_* env resolution; not applicable via public Pi APIs.",
+  ],
+  [
+    "internal/llm/resolver_test.go::TestResolveEndpoint_ConfigFileStripsModelSuffix",
+    "Pi replaces OCR config file llm.* resolution with Pi SettingsManager agentDir; not applicable via public Pi APIs.",
+  ],
+  [
+    "internal/llm/resolver_test.go::TestResolveEndpoint_ConfigAnthropicDefaultsToAuthorization",
+    "Pi replaces OCR auth header default with Pi SessionManager; not applicable via public Pi APIs.",
+  ],
+  [
+    "internal/llm/resolver_test.go::TestResolveEndpoint_ConfigAuthHeaderOverrideToXAPIKey",
+    "Pi replaces OCR auth header override; not applicable via public Pi APIs.",
+  ],
+  [
+    "internal/llm/resolver_test.go::TestResolveEndpoint_ConfigOpenAIIgnoresAuthHeader",
+    "Pi replaces OCR OpenAI auth header ignore; not applicable via public Pi APIs.",
+  ],
+  [
+    "internal/llm/resolver_test.go::TestResolveEndpoint_OCREnvAuthHeader",
+    "Pi replaces OCR env auth header; not applicable via public Pi APIs.",
+  ],
+  [
+    "internal/llm/resolver_test.go::TestResolveEndpoint_OCREnvOpenAIIgnoresAuthHeader",
+    "Pi replaces OCR env OpenAI auth header; not applicable via public Pi APIs.",
+  ],
+  [
+    "internal/llm/resolver_test.go::TestResolveEndpoint_ConfigPrecedesOCREnvironment",
+    "Pi replaces OCR file>env precedence with Pi SettingsManager; not applicable via public Pi APIs.",
+  ],
+  [
+    "internal/llm/resolver_test.go::TestResolveEndpoint_ConfigPrecedesClaudeCodeEnvironment",
+    "Pi replaces OCR precedence; not applicable via public Pi APIs.",
+  ],
+  [
+    "internal/llm/resolver_test.go::TestResolveEndpoint_IncompleteConfigFallsBackToOCREnvironment",
+    "Pi replaces OCR fallback; not applicable via public Pi APIs.",
+  ],
+  [
+    "internal/llm/resolver_test.go::TestResolveEndpoint_ConfigPrecedesInvalidCompleteEnvironment",
+    "Pi replaces OCR precedence with invalid env; not applicable via public Pi APIs.",
+  ],
+  [
+    "internal/llm/resolver_test.go::TestResolveEndpoint_ProviderAnthropic",
+    "Pi replaces OCR preset anthropic provider with Pi ModelRuntime; not applicable via public Pi APIs.",
+  ],
+  [
+    "internal/llm/resolver_test.go::TestResolveEndpoint_ProviderOpenAI",
+    "Pi replaces OCR preset openai provider; not applicable via public Pi APIs.",
+  ],
+  [
+    "internal/llm/resolver_test.go::TestResolveEndpoint_ProviderAnthropicURLHasMessagesSuffix",
+    "Pi replaces OCR URL messages suffix handling with Pi DefaultResourceLoader; not applicable via public Pi APIs.",
+  ],
+  [
+    "internal/llm/resolver_test.go::TestResolveEndpoint_CustomProvider",
+    "Pi replaces OCR custom provider with Pi agentDir custom provider; not applicable via public Pi APIs.",
+  ],
+  [
+    "internal/llm/resolver_test.go::TestResolveEndpoint_CustomProviderInvalidProtocol",
+    "Pi replaces OCR custom provider protocol validation with Pi ModelRuntime; not applicable via public Pi APIs.",
+  ],
+  [
+    "internal/llm/resolver_test.go::TestResolveEndpoint_CustomProviderMissingFields",
+    "Pi replaces OCR custom provider missing fields validation; not applicable via public Pi APIs.",
+  ],
+  [
+    "internal/llm/resolver_test.go::TestResolveEndpoint_CustomProviderModelFromTopLevel",
+    "Pi replaces OCR custom provider top-level model; not applicable via public Pi APIs.",
   ],
   [
     "internal/llm/message_test.go::TestModelListContains",

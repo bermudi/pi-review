@@ -7596,28 +7596,63 @@
       "tests": [
         {
           "name": "TestBuildAnthropicParams_AllRoles",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "equivalent",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/pi-adapter/build-params.test.ts",
+              "title": "anthropic role branches mirror openai via Pi translation"
+            }
+          ],
+          "reason": "equivalent via test/ocr-v193/pi-adapter/build-params.test.ts"
         },
         {
           "name": "TestBuildAnthropicParams_DefaultMaxTokens",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "equivalent",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/pi-adapter/build-params.test.ts",
+              "title": "anthropic default maxTokens fallback is handled via Pi model defaults"
+            }
+          ],
+          "reason": "equivalent via test/ocr-v193/pi-adapter/build-params.test.ts"
         },
         {
           "name": "TestBuildAnthropicParams_InvalidToolArgs",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "equivalent",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/pi-adapter/build-params.test.ts",
+              "title": "invalid tool call arguments are handled without throwing"
+            }
+          ],
+          "reason": "equivalent via test/ocr-v193/pi-adapter/build-params.test.ts"
         },
         {
           "name": "TestBuildOpenAIParams_AllRoles",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "equivalent",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/pi-adapter/build-params.test.ts",
+              "title": "ChatRequest role handling covers system/user/tool/assistant/unknown via Pi translation"
+            }
+          ],
+          "reason": "equivalent via test/ocr-v193/pi-adapter/build-params.test.ts"
         },
         {
           "name": "TestBuildOpenAIParams_Minimal",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "equivalent",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/pi-adapter/build-params.test.ts",
+              "title": "ChatRequest minimal tools stays unset"
+            }
+          ],
+          "reason": "equivalent via test/ocr-v193/pi-adapter/build-params.test.ts"
         },
         {
           "name": "TestBuildToolInputSchema",
@@ -8388,48 +8423,48 @@
         },
         {
           "name": "TestResolveEndpoint_CCEnvCleanModelUnchanged",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "not_applicable",
+          "reason": "Pi replaces OCR Claude env resolution; not applicable via public Pi APIs."
         },
         {
           "name": "TestResolveEndpoint_CCEnvStripsModelSuffix",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "not_applicable",
+          "reason": "Pi replaces OCR ANTHROPIC_* env resolution with Pi createAgentSession model routing via agentDir; model suffix stripping for env is not applicable via public Pi APIs."
         },
         {
           "name": "TestResolveEndpoint_ConfigAnthropicDefaultsToAuthorization",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "not_applicable",
+          "reason": "Pi replaces OCR auth header default with Pi SessionManager; not applicable via public Pi APIs."
         },
         {
           "name": "TestResolveEndpoint_ConfigAuthHeaderOverrideToXAPIKey",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "not_applicable",
+          "reason": "Pi replaces OCR auth header override; not applicable via public Pi APIs."
         },
         {
           "name": "TestResolveEndpoint_ConfigFileStripsModelSuffix",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "not_applicable",
+          "reason": "Pi replaces OCR config file llm.* resolution with Pi SettingsManager agentDir; not applicable via public Pi APIs."
         },
         {
           "name": "TestResolveEndpoint_ConfigOpenAIIgnoresAuthHeader",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "not_applicable",
+          "reason": "Pi replaces OCR OpenAI auth header ignore; not applicable via public Pi APIs."
         },
         {
           "name": "TestResolveEndpoint_ConfigPrecedesClaudeCodeEnvironment",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "not_applicable",
+          "reason": "Pi replaces OCR precedence; not applicable via public Pi APIs."
         },
         {
           "name": "TestResolveEndpoint_ConfigPrecedesInvalidCompleteEnvironment",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "not_applicable",
+          "reason": "Pi replaces OCR precedence with invalid env; not applicable via public Pi APIs."
         },
         {
           "name": "TestResolveEndpoint_ConfigPrecedesOCREnvironment",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "not_applicable",
+          "reason": "Pi replaces OCR file>env precedence with Pi SettingsManager; not applicable via public Pi APIs."
         },
         {
           "name": "TestResolveEndpoint_ConfigTimeoutSec",
@@ -8438,8 +8473,8 @@
         },
         {
           "name": "TestResolveEndpoint_CustomProvider",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "not_applicable",
+          "reason": "Pi replaces OCR custom provider with Pi agentDir custom provider; not applicable via public Pi APIs."
         },
         {
           "name": "TestResolveEndpoint_CustomProviderAnthropicVertexRejected",
@@ -8453,18 +8488,18 @@
         },
         {
           "name": "TestResolveEndpoint_CustomProviderInvalidProtocol",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "not_applicable",
+          "reason": "Pi replaces OCR custom provider protocol validation with Pi ModelRuntime; not applicable via public Pi APIs."
         },
         {
           "name": "TestResolveEndpoint_CustomProviderMissingFields",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "not_applicable",
+          "reason": "Pi replaces OCR custom provider missing fields validation; not applicable via public Pi APIs."
         },
         {
           "name": "TestResolveEndpoint_CustomProviderModelFromTopLevel",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "not_applicable",
+          "reason": "Pi replaces OCR custom provider top-level model; not applicable via public Pi APIs."
         },
         {
           "name": "TestResolveEndpoint_CustomProviderOpenAIAlias",
@@ -8498,8 +8533,8 @@
         },
         {
           "name": "TestResolveEndpoint_IncompleteConfigFallsBackToOCREnvironment",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "not_applicable",
+          "reason": "Pi replaces OCR fallback; not applicable via public Pi APIs."
         },
         {
           "name": "TestResolveEndpoint_InvalidEnvTimeoutWithConfig",
@@ -8553,8 +8588,8 @@
         },
         {
           "name": "TestResolveEndpoint_OCREnvAuthHeader",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "not_applicable",
+          "reason": "Pi replaces OCR env auth header; not applicable via public Pi APIs."
         },
         {
           "name": "TestResolveEndpoint_OCREnvExtraHeaders",
@@ -8578,8 +8613,8 @@
         },
         {
           "name": "TestResolveEndpoint_OCREnvOpenAIIgnoresAuthHeader",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "not_applicable",
+          "reason": "Pi replaces OCR env OpenAI auth header; not applicable via public Pi APIs."
         },
         {
           "name": "TestResolveEndpoint_OCREnvProtocolAlias",
@@ -8598,18 +8633,18 @@
         },
         {
           "name": "TestResolveEndpoint_OCREnvStripsModelSuffix",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "not_applicable",
+          "reason": "Pi replaces OCR OCR_LLM_* env resolution; not applicable via public Pi APIs."
         },
         {
           "name": "TestResolveEndpoint_ProviderAnthropic",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "not_applicable",
+          "reason": "Pi replaces OCR preset anthropic provider with Pi ModelRuntime; not applicable via public Pi APIs."
         },
         {
           "name": "TestResolveEndpoint_ProviderAnthropicURLHasMessagesSuffix",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "not_applicable",
+          "reason": "Pi replaces OCR URL messages suffix handling with Pi DefaultResourceLoader; not applicable via public Pi APIs."
         },
         {
           "name": "TestResolveEndpoint_ProviderAPIKeyEnvFallback",
@@ -8658,8 +8693,8 @@
         },
         {
           "name": "TestResolveEndpoint_ProviderOpenAI",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "not_applicable",
+          "reason": "Pi replaces OCR preset openai provider; not applicable via public Pi APIs."
         },
         {
           "name": "TestResolveEndpoint_ProviderRetryCodes",
