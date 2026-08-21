@@ -397,11 +397,6 @@ test("freeze succeeded request with extra attempt", () => {
   expect(report!.requests[0]!.outcome).toBe("succeeded");
 });
 
-// OCR v1.9.3: TestNilCollectorIsInert
-test("nil collector is inert", () => {
-  expect(true).toBe(true);
-});
-
 test("recordAttempt accepts 200 with no error", () => {
   const c = new RetryCollector();
   const m = testMeta();

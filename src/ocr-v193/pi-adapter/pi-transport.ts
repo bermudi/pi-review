@@ -92,33 +92,6 @@ function toPiToolParameters(raw: unknown): unknown {
   return Type.Object({});
 }
 
-export function buildToolInputSchemaForTest(input: Record<string, unknown>): {
-  readonly Properties: Record<string, unknown> | undefined;
-  readonly Required: readonly string[] | undefined;
-  readonly ExtraFields: Record<string, unknown> | undefined;
-} {
-  let properties: Record<string, unknown> | undefined;
-  const rawProps = input["properties"];
-  if (rawProps !== null && typeof rawProps === "object" && !Array.isArray(rawProps)) {
-    properties = rawProps as Record<string, unknown>;
-  }
-  let required: string[] | undefined;
-  const rawReq = input["required"];
-  if (Array.isArray(rawReq)) {
-    const filtered = rawReq.filter((v): v is string => typeof v === "string");
-    if (filtered.length > 0) required = filtered;
-  }
-  let extraFields: Record<string, unknown> | undefined;
-  const reserved = new Set(["type", "properties", "required"]);
-  for (const [k, v] of Object.entries(input)) {
-    if (reserved.has(k)) continue;
-    if (extraFields === undefined) extraFields = {};
-    extraFields[k] = v;
-  }
-  if (extraFields !== undefined && Object.keys(extraFields).length === 0) extraFields = undefined;
-  return { Properties: properties, Required: required, ExtraFields: extraFields };
-}
-
 function createAbortError(): Error {
   try {
     return new DOMException("Aborted", "AbortError");
@@ -534,13 +507,15 @@ export class PiTransport implements TranscriptLlmTransport {
           if (sessAny.state !== undefined && "messages" in sessAny.state) {
             (sessAny.state as { messages: unknown[] }).messages = msgs;
           }
-        } catch {
-          // ignore
+        } catch (error: unknown) {
+          console.warn("[pi-adapter] setStateMessages state failed stage=history_sync", error);
         }
         // Fallback for alternate shape exposed by some SDK builds
         try {
           if (Array.isArray(sessAny.messages)) (sessAny as unknown as { messages: unknown[] }).messages = msgs;
-        } catch {}
+        } catch (error: unknown) {
+          console.warn("[pi-adapter] setStateMessages fallback failed stage=history_sync", error);
+        }
       };
 
       if (req.messages.length > 0 && typeof sessAny.subscribe === "function" && typeof sessAny.prompt === "function") {
@@ -816,8 +791,8 @@ export async function createPiTransportForFile(
     settingsManager.setPromptTemplatePaths([]);
     settingsManager.setThemePaths([]);
     settingsManager.setEnableSkillCommands(false);
-  } catch {
-    // ignore if not available
+  } catch (error: unknown) {
+    console.warn("[pi-adapter] settingsManager extension reset failed", error);
   }
 
   const promptRef = { current: undefined as string | undefined };

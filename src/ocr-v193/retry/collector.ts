@@ -1,28 +1,16 @@
 // SPDX-License-Identifier: Apache-2.0
 // Ported from internal/llm/retry_report.go + retry_observer.go at c35ddd7223f2b5540ce03aa43c9a25ef643fca27
 
-import { createHash } from "node:crypto";
 import { logicalRequestID, isValidRequestMeta, describeRequestMeta, type RequestMeta } from "./meta.js";
 import {
   AttemptError,
   AttemptSuccess,
-  ErrorClassCancelled,
-  ErrorClassNetwork,
-  ErrorClassProvider,
-  ErrorClassRateLimited,
-  FailurePhaseContext,
-  FailurePhaseHTTP,
-  FailurePhaseResponseDecode,
-  FailurePhaseResponseStatus,
-  FailurePhaseStream,
-  FailurePhaseTransport,
   OutcomeCancelled,
   OutcomeFailed,
   OutcomeRecovered,
   OutcomeSucceeded,
   RetryReportSchemaVersion,
   isErrorStatus,
-  classifyAttempt,
   isValidErrorClass,
   isValidFailurePhase,
   type AttemptRecord,
@@ -30,7 +18,6 @@ import {
   type FailurePhase,
   type Outcome,
   type RetryReport,
-  type RequestReport,
 } from "./types.js";
 
 type RequestKey = string;
@@ -55,31 +42,6 @@ function nonNegativeMillis(deltaMs: number): number {
 
 export class RetryCollector {
   private entries: Map<RequestKey, { meta: RequestMeta; entry: RequestEntry }> = new Map();
-  private mu: { locked: boolean } = { locked: false }; // cooperative; JS single-threaded but async interleaving needs lock
-
-  // Simple async mutex via promise chain — for test concurrency we use a real mutex.
-  private lockQueue: Array<() => void> = [];
-  private locked = false;
-
-  private acquire(): Promise<void> {
-    if (!this.locked) {
-      this.locked = true;
-      return Promise.resolve();
-    }
-    return new Promise<void>((resolve) => this.lockQueue.push(resolve));
-  }
-
-  private release(): void {
-    if (this.lockQueue.length > 0) {
-      const next = this.lockQueue.shift()!;
-      next();
-    } else {
-      this.locked = false;
-    }
-  }
-
-  // Synchronous versions for single-threaded tests (no await needed).
-  // We use sync critical sections via immediate lock assumption.
 
   recordAttempt(
     meta: RequestMeta,
@@ -133,11 +95,6 @@ export class RetryCollector {
     a.number = e.attempts.length + 1;
     e.attempts.push(a);
     e.lastAttemptEndMs = endedAtMs;
-  }
-
-  // Convenience for tests: untimed
-  recordAttemptUntimed(meta: RequestMeta, rec: AttemptRecord): void {
-    this.recordAttempt(meta, rec, 0, 0);
   }
 
   reviseLastAttempt(meta: RequestMeta, errorClass: ErrorClass, failurePhase: FailurePhase): void {
@@ -246,8 +203,8 @@ export class RetryCollector {
 }
 
 function validateReport(rep: RetryReport): string | null {
-  if (rep.schemaVersion !== RetryReportSchemaVersion) return `retry report: unexpected schema version "${rep.schemaVersion}"`;
-  if (rep.totalRequests < rep.requests.length) return `retry report: total_requests ${rep.totalRequests} below listed ${rep.requests.length}`;
+  if (rep.schemaVersion !== RetryReportSchemaVersion) return `retry report: unexpected schema version "${String(rep.schemaVersion)}"`;
+  if (rep.totalRequests < rep.requests.length) return `retry report: total_requests ${String(rep.totalRequests)} below listed ${String(rep.requests.length)}`;
   const seen = new Set<string>();
   let retries = 0, retried = 0, recovered = 0, failed = 0, cancelled = 0;
   for (const r of rep.requests) {
@@ -291,65 +248,4 @@ function validateReport(rep: RetryReport): string | null {
   return null;
 }
 
-// Observer helpers ported from retry_observer.go
 
-export function observeAttempt(
-  res: { status: number; headers: Record<string, string> } | null,
-  err: unknown,
-  endedAtMs: number,
-): Omit<AttemptRecord, "number" | "outcome" | "observedBackoffMs" | "durationToHeadersMs"> {
-  const a: Record<string, unknown> = {};
-  if (res !== null) {
-    a["statusCode"] = res.status;
-    a["requestId"] = responseRequestId(res.headers);
-    a["retryAfterMs"] = parseRetryAfterMs(res.headers, endedAtMs);
-    const directive = parseRetryDirective(res.headers);
-    if (directive !== undefined) a["sdkRetryDirective"] = directive;
-  }
-  const statusCode = (a["statusCode"] as number | undefined) ?? 0;
-  if (isErrorStatus(statusCode) || err !== null && err !== undefined) {
-    const { errorClass, failurePhase } = classifyAttempt({ statusCode, err });
-    a["errorClass"] = errorClass;
-    a["failurePhase"] = failurePhase;
-  }
-  return a as never;
-}
-
-export function responseRequestId(headers: Record<string, string>): string {
-  const lower: Record<string, string> = {};
-  for (const [k, v] of Object.entries(headers)) lower[k.toLowerCase()] = v;
-  if (lower["request-id"]) return lower["request-id"];
-  return lower["x-request-id"] ?? "";
-}
-
-export function parseRetryDirective(headers: Record<string, string>): boolean | undefined {
-  const lower: Record<string, string> = {};
-  for (const [k, v] of Object.entries(headers)) lower[k.toLowerCase()] = v;
-  const val = lower["x-should-retry"];
-  if (val === "true") return true;
-  if (val === "false") return false;
-  return undefined;
-}
-
-export function parseRetryAfterMs(headers: Record<string, string>, endedAtMs: number): number {
-  const lower: Record<string, string> = {};
-  for (const [k, v] of Object.entries(headers)) lower[k.toLowerCase()] = v;
-  for (const hdr of [
-    { name: "retry-after-ms", unit: 1 },
-    { name: "retry-after", unit: 1000, asRFC: true as const },
-  ]) {
-    const v = lower[hdr.name];
-    if (v === undefined || v === "") continue;
-    const num = Number.parseFloat(v);
-    if (!Number.isNaN(num) && Number.isFinite(num)) {
-      return Math.max(0, Math.floor(num * hdr.unit));
-    }
-    if ((hdr as { asRFC?: boolean }).asRFC) {
-      const t = Date.parse(v);
-      if (!Number.isNaN(t)) {
-        return Math.max(0, t - endedAtMs);
-      }
-    }
-  }
-  return 0;
-}

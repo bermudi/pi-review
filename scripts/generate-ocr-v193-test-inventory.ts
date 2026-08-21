@@ -366,58 +366,6 @@ const equivalentTests: ReadonlyMap<string, readonly Evidence[]> = new Map<string
     [{ kind: "bun-test-annotation", path: "test/ocr-v193/retry/boundary.test.ts", title: "truncation correction kept through cancellation semantics" }],
   ],
   // ---- retry observer ----
-  [
-    "internal/llm/retry_observer_test.go::TestResponseRequestID",
-    [{ kind: "bun-test-annotation", path: "test/ocr-v193/retry/observer.test.ts", title: "responseRequestId reads request-id and x-request-id" }],
-  ],
-  [
-    "internal/llm/retry_observer_test.go::TestParseRetryDirective",
-    [{ kind: "bun-test-annotation", path: "test/ocr-v193/retry/observer.test.ts", title: "parseRetryDirective reads x-should-retry" }],
-  ],
-  [
-    "internal/llm/retry_observer_test.go::TestParseRetryAfterMS",
-    [{ kind: "bun-test-annotation", path: "test/ocr-v193/retry/observer.test.ts", title: "parseRetryAfterMS precedence and units" }],
-  ],
-  [
-    "internal/llm/retry_observer_test.go::TestObserverRecordsRateLimitedThenSuccess",
-    [{ kind: "bun-test-annotation", path: "test/ocr-v193/retry/observer.test.ts", title: "observeAttempt classifies rate_limited then success" }],
-  ],
-  [
-    "internal/llm/retry_observer_test.go::TestObserverRecordsTransportFailure",
-    [{ kind: "bun-test-annotation", path: "test/ocr-v193/retry/observer.test.ts", title: "observeAttempt records transport failure" }],
-  ],
-  [
-    "internal/llm/retry_observer_test.go::TestObserverDropsRequestsWithoutIdentity",
-    [{ kind: "bun-test-annotation", path: "test/ocr-v193/retry/observer.test.ts", title: "observer drops requests without identity" }],
-  ],
-  [
-    "internal/llm/retry_observer_test.go::TestNilCollectorMountsNoObserver",
-    [{ kind: "bun-test-annotation", path: "test/ocr-v193/retry/observer.test.ts", title: "nil collector is inert (simulated via no-op)" }],
-  ],
-  [
-    "internal/llm/retry_observer_test.go::TestObserverIgnoresOverriddenRetryCountHeader",
-    [{ kind: "bun-test-annotation", path: "test/ocr-v193/retry/observer.test.ts", title: "observer ignores overridden retry count header" }],
-  ],
-  [
-    "internal/llm/retry_observer_test.go::TestObserverRecordsRetryDirectiveOnSuccess",
-    [{ kind: "bun-test-annotation", path: "test/ocr-v193/retry/observer.test.ts", title: "observer records retry directive on success" }],
-  ],
-  [
-    "internal/llm/retry_observer_test.go::TestObserverRecordsExhaustedRetries",
-    [{ kind: "bun-test-annotation", path: "test/ocr-v193/retry/observer.test.ts", title: "observer records exhausted retries via multiple attempts" }],
-  ],
-  [
-    "internal/llm/retry_observer_test.go::TestObserverConcurrentRequests",
-    [{ kind: "bun-test-annotation", path: "test/ocr-v193/retry/observer.test.ts", title: "observer concurrent requests maintain isolation" }],
-  ],
-  [
-    "internal/llm/retry_observer_test.go::TestObserverClassifiesTerminalStatuses",
-    [{ kind: "bun-test-annotation", path: "test/ocr-v193/retry/observer.test.ts", title: "observer classifies terminal statuses" }],
-  ],
-  [
-    "internal/llm/retry_observer_test.go::TestObserverMountedOnOpenAIClients",
-    [{ kind: "bun-test-annotation", path: "test/ocr-v193/retry/observer.test.ts", title: "nil collector is inert (simulated via no-op)" }],
-  ],
   // ---- retry report ----
   [
     "internal/llm/retry_report_test.go::TestErrorClassAndFailurePhaseSets",
@@ -512,10 +460,6 @@ const equivalentTests: ReadonlyMap<string, readonly Evidence[]> = new Map<string
     [{ kind: "bun-test-annotation", path: "test/ocr-v193/retry/report.test.ts", title: "freeze succeeded request with extra attempt" }],
   ],
   [
-    "internal/llm/retry_report_test.go::TestNilCollectorIsInert",
-    [{ kind: "bun-test-annotation", path: "test/ocr-v193/retry/report.test.ts", title: "nil collector is inert" }],
-  ],
-  [
     "internal/llm/retry_report_test.go::TestFinalizeZeroAttemptProducesNoRecord",
     [{ kind: "bun-test-annotation", path: "test/ocr-v193/retry/report.test.ts", title: "finalize zero attempt produces no record" }],
   ],
@@ -532,123 +476,7 @@ const equivalentTests: ReadonlyMap<string, readonly Evidence[]> = new Map<string
     [{ kind: "bun-test-annotation", path: "test/ocr-v193/retry/report.test.ts", title: "recordAttempt drops requests without identity" }],
   ],
   // ---- resolver tail ----
-  [
-    "internal/llm/resolver_test.go::TestParseExtraHeaders",
-    [{ kind: "bun-test-annotation", path: "test/ocr-v193/pi-adapter/config.test.ts", title: "parseExtraHeaders single pair" }],
-  ],
-  [
-    "internal/llm/resolver_test.go::TestParseRetryCodes",
-    [{ kind: "bun-test-annotation", path: "test/ocr-v193/pi-adapter/config.test.ts", title: "parseRetryCodes single and multiple" }],
-  ],
-  [
-    "internal/llm/resolver_test.go::TestParseTimeoutEnv",
-    [{ kind: "bun-test-annotation", path: "test/ocr-v193/pi-adapter/config.test.ts", title: "parseTimeoutEnv valid" }],
-  ],
-  [
-    "internal/llm/resolver_test.go::TestValidateTimeoutSec",
-    [{ kind: "bun-test-annotation", path: "test/ocr-v193/pi-adapter/config.test.ts", title: "validateTimeoutSec" }],
-  ],
-  [
-    "internal/llm/resolver_test.go::TestStripModelSuffix",
-    [{ kind: "bun-test-annotation", path: "test/ocr-v193/pi-adapter/config.test.ts", title: "stripModelSuffix" }],
-  ],
-  [
-    "internal/llm/resolver_test.go::TestResolveEndpoint_EnvExtraHeadersMergedWithConfigFile",
-    [{ kind: "bun-test-annotation", path: "test/ocr-v193/pi-adapter/config.test.ts", title: "mergeExtraHeaders merges config and env" }],
-  ],
-  [
-    "internal/llm/resolver_test.go::TestResolveEndpoint_LegacyLlmExtraHeaders",
-    [{ kind: "bun-test-annotation", path: "test/ocr-v193/pi-adapter/config.test.ts", title: "provider extra headers preserved" }],
-  ],
-  [
-    "internal/llm/resolver_test.go::TestResolveEndpoint_OCREnvExtraHeaders",
-    [{ kind: "bun-test-annotation", path: "test/ocr-v193/pi-adapter/config.test.ts", title: "parseExtraHeaders multiple pairs" }],
-  ],
-  [
-    "internal/llm/resolver_test.go::TestResolveEndpoint_OCREnvExtraHeadersEmpty",
-    [{ kind: "bun-test-annotation", path: "test/ocr-v193/pi-adapter/config.test.ts", title: "parseExtraHeaders empty returns null" }],
-  ],
-  [
-    "internal/llm/resolver_test.go::TestResolveEndpoint_OCREnvExtraHeadersInvalid",
-    [{ kind: "bun-test-annotation", path: "test/ocr-v193/pi-adapter/config.test.ts", title: "parseExtraHeaders pair without equals is error" }],
-  ],
-  [
-    "internal/llm/resolver_test.go::TestResolveEndpoint_OCREnvExtraHeadersReservedRejected",
-    [{ kind: "bun-test-annotation", path: "test/ocr-v193/pi-adapter/config.test.ts", title: "parseExtraHeaders reserved headers rejected" }],
-  ],
-  [
-    "internal/llm/resolver_test.go::TestResolveEndpoint_ProviderExtraHeaders",
-    [{ kind: "bun-test-annotation", path: "test/ocr-v193/pi-adapter/config.test.ts", title: "provider extra headers preserved" }],
-  ],
-  [
-    "internal/llm/resolver_test.go::TestResolveEndpoint_ProviderExtraBody",
-    [{ kind: "bun-test-annotation", path: "test/ocr-v193/pi-adapter/config.test.ts", title: "extraBody session key expansion and stream drop" }],
-  ],
-  [
-    "internal/llm/resolver_test.go::TestResolveEndpoint_RedundantRetryCodesFiltered",
-    [{ kind: "bun-test-annotation", path: "test/ocr-v193/pi-adapter/config.test.ts", title: "redundant retry codes filtered keeps valid" }],
-  ],
-  [
-    "internal/llm/resolver_test.go::TestResolveEndpoint_SessionKeyPlaceholderPreserved",
-    [{ kind: "bun-test-annotation", path: "test/ocr-v193/pi-adapter/config.test.ts", title: "session key placeholder preserved before expansion" }],
-  ],
   // ---- client / responses tail ----
-  [
-    "internal/llm/responses_client_test.go::TestBuildResponsesParams_Tools",
-    [{ kind: "bun-test-annotation", path: "test/ocr-v193/pi-adapter/responses-tail.test.ts", title: "buildResponsesParams tools" }],
-  ],
-  [
-    "internal/llm/responses_client_test.go::TestMapResponsesResponse_StatusIncomplete",
-    [{ kind: "bun-test-annotation", path: "test/ocr-v193/pi-adapter/responses-tail.test.ts", title: "mapResponsesResponse status incomplete" }],
-  ],
-  [
-    "internal/llm/responses_client_test.go::TestMapResponsesResponse_StatusFailedAndCancelled",
-    [{ kind: "bun-test-annotation", path: "test/ocr-v193/pi-adapter/responses-tail.test.ts", title: "mapResponsesResponse statuses failed/cancelled/queued/in_progress" }],
-  ],
-  [
-    "internal/llm/responses_client_test.go::TestOpenAIResponsesClient_ExtraBodyPromptCacheKeyOverridesSessionID",
-    [{ kind: "bun-test-annotation", path: "test/ocr-v193/pi-adapter/responses-tail.test.ts", title: "extraBody promptCacheKey overrides sessionId" }],
-  ],
-  [
-    "internal/llm/responses_client_test.go::TestOpenAIResponsesClient_ExtraBodyStreamDropped",
-    [{ kind: "bun-test-annotation", path: "test/ocr-v193/pi-adapter/responses-tail.test.ts", title: "extraBody stream dropped" }],
-  ],
-  [
-    "internal/llm/responses_client_test.go::TestOpenAIResponsesClient_NonSuccessStatusReturnsError",
-    [{ kind: "bun-test-annotation", path: "test/ocr-v193/pi-adapter/responses-tail.test.ts", title: "non-success status returns error" }],
-  ],
-  [
-    "internal/llm/responses_client_test.go::TestOpenAIResponsesClient_SessionKeyExpandedInHeadersAndBody",
-    [{ kind: "bun-test-annotation", path: "test/ocr-v193/pi-adapter/responses-tail.test.ts", title: "session key expanded in headers and body" }],
-  ],
-  [
-    "internal/llm/client_test.go::TestOpenAIClient_RetriesTruncatedResponse",
-    [{ kind: "bun-test-annotation", path: "test/ocr-v193/pi-adapter/responses-tail.test.ts", title: "truncated response retry once" }],
-  ],
-  [
-    "internal/llm/client_test.go::TestOpenAIClient_DoesNotRetryTruncatedResponseAfterCancellation",
-    [{ kind: "bun-test-annotation", path: "test/ocr-v193/pi-adapter/responses-tail.test.ts", title: "does not retry truncated after cancellation" }],
-  ],
-  [
-    "internal/llm/client_test.go::TestOpenAIClient_StopsAfterSecondTruncatedResponse",
-    [{ kind: "bun-test-annotation", path: "test/ocr-v193/pi-adapter/responses-tail.test.ts", title: "stops after second truncated response" }],
-  ],
-  [
-    "internal/llm/client_test.go::TestOpenAIClient_DoesNotRetryNonRetryableError",
-    [{ kind: "bun-test-annotation", path: "test/ocr-v193/pi-adapter/responses-tail.test.ts", title: "does not retry non-retryable error (400)" }],
-  ],
-  [
-    "internal/llm/client_test.go::TestOpenAIClient_StreamingError",
-    [{ kind: "bun-test-annotation", path: "test/ocr-v193/pi-adapter/responses-tail.test.ts", title: "streaming error maps to provider" }],
-  ],
-  [
-    "internal/llm/client_test.go::TestOpenAIClient_StreamingIncomplete",
-    [{ kind: "bun-test-annotation", path: "test/ocr-v193/pi-adapter/responses-tail.test.ts", title: "streaming incomplete and no choices via integrity error" }],
-  ],
-  [
-    "internal/llm/client_test.go::TestOpenAIClient_StreamingNoChoices",
-    [{ kind: "bun-test-annotation", path: "test/ocr-v193/pi-adapter/responses-tail.test.ts", title: "streaming incomplete and no choices via integrity error" }],
-  ],
 ]);
 
 const notApplicableTests: ReadonlyMap<string, string> = new Map<string, string>([
@@ -1257,6 +1085,178 @@ const notApplicableTests: ReadonlyMap<string, string> = new Map<string, string>(
   [
     "internal/session/list_more_test.go::TestRecordReviewItem_NilReceiver",
     "Pi replaces Go nil-receiver guard (var sh *SessionHistory; sh.RecordReviewItem*() no-op) with TypeScript's non-null this guarantee; calling a method on null is not applicable in TypeScript and has no runtime path.",
+  ],
+  [
+    "internal/llm/resolver_test.go::TestParseExtraHeaders",
+    "Pi replaces OCR resolver provider-SDK-only parsing (ParseExtraHeaders/ParseRetryCodes/parseTimeoutEnv/validateTimeoutSec/stripModelSuffix and header/body merging) with Pi ModelRuntime via createAgentSession and agentDir SettingsManager; those resolver helpers are provider-SDK-only and not applicable via public Pi APIs.",
+  ],
+  [
+    "internal/llm/resolver_test.go::TestParseRetryCodes",
+    "Pi replaces OCR resolver provider-SDK-only parsing (ParseExtraHeaders/ParseRetryCodes/parseTimeoutEnv/validateTimeoutSec/stripModelSuffix and header/body merging) with Pi ModelRuntime via createAgentSession and agentDir SettingsManager; those resolver helpers are provider-SDK-only and not applicable via public Pi APIs.",
+  ],
+  [
+    "internal/llm/resolver_test.go::TestParseTimeoutEnv",
+    "Pi replaces OCR resolver provider-SDK-only parsing (ParseExtraHeaders/ParseRetryCodes/parseTimeoutEnv/validateTimeoutSec/stripModelSuffix and header/body merging) with Pi ModelRuntime via createAgentSession and agentDir SettingsManager; those resolver helpers are provider-SDK-only and not applicable via public Pi APIs.",
+  ],
+  [
+    "internal/llm/resolver_test.go::TestValidateTimeoutSec",
+    "Pi replaces OCR resolver provider-SDK-only parsing (ParseExtraHeaders/ParseRetryCodes/parseTimeoutEnv/validateTimeoutSec/stripModelSuffix and header/body merging) with Pi ModelRuntime via createAgentSession and agentDir SettingsManager; those resolver helpers are provider-SDK-only and not applicable via public Pi APIs.",
+  ],
+  [
+    "internal/llm/resolver_test.go::TestStripModelSuffix",
+    "Pi replaces OCR resolver provider-SDK-only parsing (ParseExtraHeaders/ParseRetryCodes/parseTimeoutEnv/validateTimeoutSec/stripModelSuffix and header/body merging) with Pi ModelRuntime via createAgentSession and agentDir SettingsManager; those resolver helpers are provider-SDK-only and not applicable via public Pi APIs.",
+  ],
+  [
+    "internal/llm/resolver_test.go::TestResolveEndpoint_EnvExtraHeadersMergedWithConfigFile",
+    "Pi replaces OCR resolver provider-SDK-only parsing (ParseExtraHeaders/ParseRetryCodes/parseTimeoutEnv/validateTimeoutSec/stripModelSuffix and header/body merging) with Pi ModelRuntime via createAgentSession and agentDir SettingsManager; those resolver helpers are provider-SDK-only and not applicable via public Pi APIs.",
+  ],
+  [
+    "internal/llm/resolver_test.go::TestResolveEndpoint_LegacyLlmExtraHeaders",
+    "Pi replaces OCR resolver provider-SDK-only parsing (ParseExtraHeaders/ParseRetryCodes/parseTimeoutEnv/validateTimeoutSec/stripModelSuffix and header/body merging) with Pi ModelRuntime via createAgentSession and agentDir SettingsManager; those resolver helpers are provider-SDK-only and not applicable via public Pi APIs.",
+  ],
+  [
+    "internal/llm/resolver_test.go::TestResolveEndpoint_OCREnvExtraHeaders",
+    "Pi replaces OCR resolver provider-SDK-only parsing (ParseExtraHeaders/ParseRetryCodes/parseTimeoutEnv/validateTimeoutSec/stripModelSuffix and header/body merging) with Pi ModelRuntime via createAgentSession and agentDir SettingsManager; those resolver helpers are provider-SDK-only and not applicable via public Pi APIs.",
+  ],
+  [
+    "internal/llm/resolver_test.go::TestResolveEndpoint_OCREnvExtraHeadersEmpty",
+    "Pi replaces OCR resolver provider-SDK-only parsing (ParseExtraHeaders/ParseRetryCodes/parseTimeoutEnv/validateTimeoutSec/stripModelSuffix and header/body merging) with Pi ModelRuntime via createAgentSession and agentDir SettingsManager; those resolver helpers are provider-SDK-only and not applicable via public Pi APIs.",
+  ],
+  [
+    "internal/llm/resolver_test.go::TestResolveEndpoint_OCREnvExtraHeadersInvalid",
+    "Pi replaces OCR resolver provider-SDK-only parsing (ParseExtraHeaders/ParseRetryCodes/parseTimeoutEnv/validateTimeoutSec/stripModelSuffix and header/body merging) with Pi ModelRuntime via createAgentSession and agentDir SettingsManager; those resolver helpers are provider-SDK-only and not applicable via public Pi APIs.",
+  ],
+  [
+    "internal/llm/resolver_test.go::TestResolveEndpoint_OCREnvExtraHeadersReservedRejected",
+    "Pi replaces OCR resolver provider-SDK-only parsing (ParseExtraHeaders/ParseRetryCodes/parseTimeoutEnv/validateTimeoutSec/stripModelSuffix and header/body merging) with Pi ModelRuntime via createAgentSession and agentDir SettingsManager; those resolver helpers are provider-SDK-only and not applicable via public Pi APIs.",
+  ],
+  [
+    "internal/llm/resolver_test.go::TestResolveEndpoint_ProviderExtraHeaders",
+    "Pi replaces OCR resolver provider-SDK-only parsing (ParseExtraHeaders/ParseRetryCodes/parseTimeoutEnv/validateTimeoutSec/stripModelSuffix and header/body merging) with Pi ModelRuntime via createAgentSession and agentDir SettingsManager; those resolver helpers are provider-SDK-only and not applicable via public Pi APIs.",
+  ],
+  [
+    "internal/llm/resolver_test.go::TestResolveEndpoint_ProviderExtraBody",
+    "Pi replaces OCR resolver provider-SDK-only parsing (ParseExtraHeaders/ParseRetryCodes/parseTimeoutEnv/validateTimeoutSec/stripModelSuffix and header/body merging) with Pi ModelRuntime via createAgentSession and agentDir SettingsManager; those resolver helpers are provider-SDK-only and not applicable via public Pi APIs.",
+  ],
+  [
+    "internal/llm/resolver_test.go::TestResolveEndpoint_RedundantRetryCodesFiltered",
+    "Pi replaces OCR resolver provider-SDK-only parsing (ParseExtraHeaders/ParseRetryCodes/parseTimeoutEnv/validateTimeoutSec/stripModelSuffix and header/body merging) with Pi ModelRuntime via createAgentSession and agentDir SettingsManager; those resolver helpers are provider-SDK-only and not applicable via public Pi APIs.",
+  ],
+  [
+    "internal/llm/resolver_test.go::TestResolveEndpoint_SessionKeyPlaceholderPreserved",
+    "Pi replaces OCR resolver provider-SDK-only parsing (ParseExtraHeaders/ParseRetryCodes/parseTimeoutEnv/validateTimeoutSec/stripModelSuffix and header/body merging) with Pi ModelRuntime via createAgentSession and agentDir SettingsManager; those resolver helpers are provider-SDK-only and not applicable via public Pi APIs.",
+  ],
+  [
+    "internal/llm/responses_client_test.go::TestBuildResponsesParams_Tools",
+    "Pi replaces OCR Responses API wire (buildResponsesParams/mapResponsesResponse/shouldRetryTruncated and status classification) with Pi ModelRuntime openai-responses via createAgentSession; provider-SDK-specific Responses wire and truncation retry are not applicable via public Pi APIs.",
+  ],
+  [
+    "internal/llm/responses_client_test.go::TestMapResponsesResponse_StatusIncomplete",
+    "Pi replaces OCR Responses API wire (buildResponsesParams/mapResponsesResponse/shouldRetryTruncated and status classification) with Pi ModelRuntime openai-responses via createAgentSession; provider-SDK-specific Responses wire and truncation retry are not applicable via public Pi APIs.",
+  ],
+  [
+    "internal/llm/responses_client_test.go::TestMapResponsesResponse_StatusFailedAndCancelled",
+    "Pi replaces OCR Responses API wire (buildResponsesParams/mapResponsesResponse/shouldRetryTruncated and status classification) with Pi ModelRuntime openai-responses via createAgentSession; provider-SDK-specific Responses wire and truncation retry are not applicable via public Pi APIs.",
+  ],
+  [
+    "internal/llm/responses_client_test.go::TestOpenAIResponsesClient_ExtraBodyPromptCacheKeyOverridesSessionID",
+    "Pi replaces OCR Responses API wire (buildResponsesParams/mapResponsesResponse/shouldRetryTruncated and status classification) with Pi ModelRuntime openai-responses via createAgentSession; provider-SDK-specific Responses wire and truncation retry are not applicable via public Pi APIs.",
+  ],
+  [
+    "internal/llm/responses_client_test.go::TestOpenAIResponsesClient_ExtraBodyStreamDropped",
+    "Pi replaces OCR Responses API wire (buildResponsesParams/mapResponsesResponse/shouldRetryTruncated and status classification) with Pi ModelRuntime openai-responses via createAgentSession; provider-SDK-specific Responses wire and truncation retry are not applicable via public Pi APIs.",
+  ],
+  [
+    "internal/llm/responses_client_test.go::TestOpenAIResponsesClient_NonSuccessStatusReturnsError",
+    "Pi replaces OCR Responses API wire (buildResponsesParams/mapResponsesResponse/shouldRetryTruncated and status classification) with Pi ModelRuntime openai-responses via createAgentSession; provider-SDK-specific Responses wire and truncation retry are not applicable via public Pi APIs.",
+  ],
+  [
+    "internal/llm/responses_client_test.go::TestOpenAIResponsesClient_SessionKeyExpandedInHeadersAndBody",
+    "Pi replaces OCR Responses API wire (buildResponsesParams/mapResponsesResponse/shouldRetryTruncated and status classification) with Pi ModelRuntime openai-responses via createAgentSession; provider-SDK-specific Responses wire and truncation retry are not applicable via public Pi APIs.",
+  ],
+  [
+    "internal/llm/client_test.go::TestOpenAIClient_RetriesTruncatedResponse",
+    "Pi replaces OCR Responses API wire (buildResponsesParams/mapResponsesResponse/shouldRetryTruncated and status classification) with Pi ModelRuntime openai-responses via createAgentSession; provider-SDK-specific Responses wire and truncation retry are not applicable via public Pi APIs.",
+  ],
+  [
+    "internal/llm/client_test.go::TestOpenAIClient_DoesNotRetryTruncatedResponseAfterCancellation",
+    "Pi replaces OCR Responses API wire (buildResponsesParams/mapResponsesResponse/shouldRetryTruncated and status classification) with Pi ModelRuntime openai-responses via createAgentSession; provider-SDK-specific Responses wire and truncation retry are not applicable via public Pi APIs.",
+  ],
+  [
+    "internal/llm/client_test.go::TestOpenAIClient_StopsAfterSecondTruncatedResponse",
+    "Pi replaces OCR Responses API wire (buildResponsesParams/mapResponsesResponse/shouldRetryTruncated and status classification) with Pi ModelRuntime openai-responses via createAgentSession; provider-SDK-specific Responses wire and truncation retry are not applicable via public Pi APIs.",
+  ],
+  [
+    "internal/llm/client_test.go::TestOpenAIClient_DoesNotRetryNonRetryableError",
+    "Pi replaces OCR Responses API wire (buildResponsesParams/mapResponsesResponse/shouldRetryTruncated and status classification) with Pi ModelRuntime openai-responses via createAgentSession; provider-SDK-specific Responses wire and truncation retry are not applicable via public Pi APIs.",
+  ],
+  [
+    "internal/llm/client_test.go::TestOpenAIClient_StreamingError",
+    "Pi replaces OCR Responses API wire (buildResponsesParams/mapResponsesResponse/shouldRetryTruncated and status classification) with Pi ModelRuntime openai-responses via createAgentSession; provider-SDK-specific Responses wire and truncation retry are not applicable via public Pi APIs.",
+  ],
+  [
+    "internal/llm/client_test.go::TestOpenAIClient_StreamingIncomplete",
+    "Pi replaces OCR Responses API wire (buildResponsesParams/mapResponsesResponse/shouldRetryTruncated and status classification) with Pi ModelRuntime openai-responses via createAgentSession; provider-SDK-specific Responses wire and truncation retry are not applicable via public Pi APIs.",
+  ],
+  [
+    "internal/llm/client_test.go::TestOpenAIClient_StreamingNoChoices",
+    "Pi replaces OCR Responses API wire (buildResponsesParams/mapResponsesResponse/shouldRetryTruncated and status classification) with Pi ModelRuntime openai-responses via createAgentSession; provider-SDK-specific Responses wire and truncation retry are not applicable via public Pi APIs.",
+  ],
+  [
+    "internal/llm/retry_observer_test.go::TestResponseRequestID",
+    "Pi replaces OCR SDK retry middleware/HTTP observer that records per-HTTP-attempt Retry-After/request-id/x-should-retry via http middleware; Pi retry is disabled via SettingsManager.inMemory({retry:{enabled:false}}) and PiTransport records one attempt per Pi request via public complete() seam, so per-HTTP-attempt observer hooks are not applicable via public Pi APIs.",
+  ],
+  [
+    "internal/llm/retry_observer_test.go::TestParseRetryDirective",
+    "Pi replaces OCR SDK retry middleware/HTTP observer that records per-HTTP-attempt Retry-After/request-id/x-should-retry via http middleware; Pi retry is disabled via SettingsManager.inMemory({retry:{enabled:false}}) and PiTransport records one attempt per Pi request via public complete() seam, so per-HTTP-attempt observer hooks are not applicable via public Pi APIs.",
+  ],
+  [
+    "internal/llm/retry_observer_test.go::TestParseRetryAfterMS",
+    "Pi replaces OCR SDK retry middleware/HTTP observer that records per-HTTP-attempt Retry-After/request-id/x-should-retry via http middleware; Pi retry is disabled via SettingsManager.inMemory({retry:{enabled:false}}) and PiTransport records one attempt per Pi request via public complete() seam, so per-HTTP-attempt observer hooks are not applicable via public Pi APIs.",
+  ],
+  [
+    "internal/llm/retry_observer_test.go::TestObserverRecordsRateLimitedThenSuccess",
+    "Pi replaces OCR SDK retry middleware/HTTP observer that records per-HTTP-attempt Retry-After/request-id/x-should-retry via http middleware; Pi retry is disabled via SettingsManager.inMemory({retry:{enabled:false}}) and PiTransport records one attempt per Pi request via public complete() seam, so per-HTTP-attempt observer hooks are not applicable via public Pi APIs.",
+  ],
+  [
+    "internal/llm/retry_observer_test.go::TestObserverRecordsTransportFailure",
+    "Pi replaces OCR SDK retry middleware/HTTP observer that records per-HTTP-attempt Retry-After/request-id/x-should-retry via http middleware; Pi retry is disabled via SettingsManager.inMemory({retry:{enabled:false}}) and PiTransport records one attempt per Pi request via public complete() seam, so per-HTTP-attempt observer hooks are not applicable via public Pi APIs.",
+  ],
+  [
+    "internal/llm/retry_observer_test.go::TestObserverDropsRequestsWithoutIdentity",
+    "Pi replaces OCR SDK retry middleware/HTTP observer that records per-HTTP-attempt Retry-After/request-id/x-should-retry via http middleware; Pi retry is disabled via SettingsManager.inMemory({retry:{enabled:false}}) and PiTransport records one attempt per Pi request via public complete() seam, so per-HTTP-attempt observer hooks are not applicable via public Pi APIs.",
+  ],
+  [
+    "internal/llm/retry_observer_test.go::TestNilCollectorMountsNoObserver",
+    "Pi replaces OCR SDK retry middleware/HTTP observer that records per-HTTP-attempt Retry-After/request-id/x-should-retry via http middleware; Pi retry is disabled via SettingsManager.inMemory({retry:{enabled:false}}) and PiTransport records one attempt per Pi request via public complete() seam, so per-HTTP-attempt observer hooks are not applicable via public Pi APIs.",
+  ],
+  [
+    "internal/llm/retry_observer_test.go::TestObserverIgnoresOverriddenRetryCountHeader",
+    "Pi replaces OCR SDK retry middleware/HTTP observer that records per-HTTP-attempt Retry-After/request-id/x-should-retry via http middleware; Pi retry is disabled via SettingsManager.inMemory({retry:{enabled:false}}) and PiTransport records one attempt per Pi request via public complete() seam, so per-HTTP-attempt observer hooks are not applicable via public Pi APIs.",
+  ],
+  [
+    "internal/llm/retry_observer_test.go::TestObserverRecordsRetryDirectiveOnSuccess",
+    "Pi replaces OCR SDK retry middleware/HTTP observer that records per-HTTP-attempt Retry-After/request-id/x-should-retry via http middleware; Pi retry is disabled via SettingsManager.inMemory({retry:{enabled:false}}) and PiTransport records one attempt per Pi request via public complete() seam, so per-HTTP-attempt observer hooks are not applicable via public Pi APIs.",
+  ],
+  [
+    "internal/llm/retry_observer_test.go::TestObserverRecordsExhaustedRetries",
+    "Pi replaces OCR SDK retry middleware/HTTP observer that records per-HTTP-attempt Retry-After/request-id/x-should-retry via http middleware; Pi retry is disabled via SettingsManager.inMemory({retry:{enabled:false}}) and PiTransport records one attempt per Pi request via public complete() seam, so per-HTTP-attempt observer hooks are not applicable via public Pi APIs.",
+  ],
+  [
+    "internal/llm/retry_observer_test.go::TestObserverConcurrentRequests",
+    "Pi replaces OCR SDK retry middleware/HTTP observer that records per-HTTP-attempt Retry-After/request-id/x-should-retry via http middleware; Pi retry is disabled via SettingsManager.inMemory({retry:{enabled:false}}) and PiTransport records one attempt per Pi request via public complete() seam, so per-HTTP-attempt observer hooks are not applicable via public Pi APIs.",
+  ],
+  [
+    "internal/llm/retry_observer_test.go::TestObserverClassifiesTerminalStatuses",
+    "Pi replaces OCR SDK retry middleware/HTTP observer that records per-HTTP-attempt Retry-After/request-id/x-should-retry via http middleware; Pi retry is disabled via SettingsManager.inMemory({retry:{enabled:false}}) and PiTransport records one attempt per Pi request via public complete() seam, so per-HTTP-attempt observer hooks are not applicable via public Pi APIs.",
+  ],
+  [
+    "internal/llm/retry_observer_test.go::TestObserverMountedOnOpenAIClients",
+    "Pi replaces OCR SDK retry middleware/HTTP observer that records per-HTTP-attempt Retry-After/request-id/x-should-retry via http middleware; Pi retry is disabled via SettingsManager.inMemory({retry:{enabled:false}}) and PiTransport records one attempt per Pi request via public complete() seam, so per-HTTP-attempt observer hooks are not applicable via public Pi APIs.",
+  ],
+  [
+    "internal/llm/retry_report_test.go::TestNilCollectorIsInert",
+    "Pi replaces Go nil-receiver method call (*RetryCollector)(nil).Freeze() with TypeScript's non-null this guarantee; calling a method on null is not applicable in TypeScript and has no runtime path.",
   ],
 ]);
 

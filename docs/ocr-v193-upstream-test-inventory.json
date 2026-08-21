@@ -7833,27 +7833,13 @@
         },
         {
           "name": "TestOpenAIClient_DoesNotRetryNonRetryableError",
-          "disposition": "equivalent",
-          "evidence": [
-            {
-              "kind": "bun-test-annotation",
-              "path": "test/ocr-v193/pi-adapter/responses-tail.test.ts",
-              "title": "does not retry non-retryable error (400)"
-            }
-          ],
-          "reason": "equivalent via test/ocr-v193/pi-adapter/responses-tail.test.ts"
+          "disposition": "not_applicable",
+          "reason": "Pi replaces OCR Responses API wire (buildResponsesParams/mapResponsesResponse/shouldRetryTruncated and status classification) with Pi ModelRuntime openai-responses via createAgentSession; provider-SDK-specific Responses wire and truncation retry are not applicable via public Pi APIs."
         },
         {
           "name": "TestOpenAIClient_DoesNotRetryTruncatedResponseAfterCancellation",
-          "disposition": "equivalent",
-          "evidence": [
-            {
-              "kind": "bun-test-annotation",
-              "path": "test/ocr-v193/pi-adapter/responses-tail.test.ts",
-              "title": "does not retry truncated after cancellation"
-            }
-          ],
-          "reason": "equivalent via test/ocr-v193/pi-adapter/responses-tail.test.ts"
+          "disposition": "not_applicable",
+          "reason": "Pi replaces OCR Responses API wire (buildResponsesParams/mapResponsesResponse/shouldRetryTruncated and status classification) with Pi ModelRuntime openai-responses via createAgentSession; provider-SDK-specific Responses wire and truncation retry are not applicable via public Pi APIs."
         },
         {
           "name": "TestOpenAIClient_ExtraHeadersSent",
@@ -7879,15 +7865,8 @@
         },
         {
           "name": "TestOpenAIClient_RetriesTruncatedResponse",
-          "disposition": "equivalent",
-          "evidence": [
-            {
-              "kind": "bun-test-annotation",
-              "path": "test/ocr-v193/pi-adapter/responses-tail.test.ts",
-              "title": "truncated response retry once"
-            }
-          ],
-          "reason": "equivalent via test/ocr-v193/pi-adapter/responses-tail.test.ts"
+          "disposition": "not_applicable",
+          "reason": "Pi replaces OCR Responses API wire (buildResponsesParams/mapResponsesResponse/shouldRetryTruncated and status classification) with Pi ModelRuntime openai-responses via createAgentSession; provider-SDK-specific Responses wire and truncation retry are not applicable via public Pi APIs."
         },
         {
           "name": "TestOpenAIClient_RetryCodesTriggersRetry",
@@ -7932,15 +7911,8 @@
         },
         {
           "name": "TestOpenAIClient_StopsAfterSecondTruncatedResponse",
-          "disposition": "equivalent",
-          "evidence": [
-            {
-              "kind": "bun-test-annotation",
-              "path": "test/ocr-v193/pi-adapter/responses-tail.test.ts",
-              "title": "stops after second truncated response"
-            }
-          ],
-          "reason": "equivalent via test/ocr-v193/pi-adapter/responses-tail.test.ts"
+          "disposition": "not_applicable",
+          "reason": "Pi replaces OCR Responses API wire (buildResponsesParams/mapResponsesResponse/shouldRetryTruncated and status classification) with Pi ModelRuntime openai-responses via createAgentSession; provider-SDK-specific Responses wire and truncation retry are not applicable via public Pi APIs."
         },
         {
           "name": "TestOpenAIClient_StreamingCancellation",
@@ -7956,27 +7928,13 @@
         },
         {
           "name": "TestOpenAIClient_StreamingError",
-          "disposition": "equivalent",
-          "evidence": [
-            {
-              "kind": "bun-test-annotation",
-              "path": "test/ocr-v193/pi-adapter/responses-tail.test.ts",
-              "title": "streaming error maps to provider"
-            }
-          ],
-          "reason": "equivalent via test/ocr-v193/pi-adapter/responses-tail.test.ts"
+          "disposition": "not_applicable",
+          "reason": "Pi replaces OCR Responses API wire (buildResponsesParams/mapResponsesResponse/shouldRetryTruncated and status classification) with Pi ModelRuntime openai-responses via createAgentSession; provider-SDK-specific Responses wire and truncation retry are not applicable via public Pi APIs."
         },
         {
           "name": "TestOpenAIClient_StreamingIncomplete",
-          "disposition": "equivalent",
-          "evidence": [
-            {
-              "kind": "bun-test-annotation",
-              "path": "test/ocr-v193/pi-adapter/responses-tail.test.ts",
-              "title": "streaming incomplete and no choices via integrity error"
-            }
-          ],
-          "reason": "equivalent via test/ocr-v193/pi-adapter/responses-tail.test.ts"
+          "disposition": "not_applicable",
+          "reason": "Pi replaces OCR Responses API wire (buildResponsesParams/mapResponsesResponse/shouldRetryTruncated and status classification) with Pi ModelRuntime openai-responses via createAgentSession; provider-SDK-specific Responses wire and truncation retry are not applicable via public Pi APIs."
         },
         {
           "name": "TestOpenAIClient_StreamingInconsistentChunks",
@@ -7985,15 +7943,8 @@
         },
         {
           "name": "TestOpenAIClient_StreamingNoChoices",
-          "disposition": "equivalent",
-          "evidence": [
-            {
-              "kind": "bun-test-annotation",
-              "path": "test/ocr-v193/pi-adapter/responses-tail.test.ts",
-              "title": "streaming incomplete and no choices via integrity error"
-            }
-          ],
-          "reason": "equivalent via test/ocr-v193/pi-adapter/responses-tail.test.ts"
+          "disposition": "not_applicable",
+          "reason": "Pi replaces OCR Responses API wire (buildResponsesParams/mapResponsesResponse/shouldRetryTruncated and status classification) with Pi ModelRuntime openai-responses via createAgentSession; provider-SDK-specific Responses wire and truncation retry are not applicable via public Pi APIs."
         },
         {
           "name": "TestOpenAIClient_StreamingReasoningContent",
@@ -8534,39 +8485,18 @@
         },
         {
           "name": "TestParseExtraHeaders",
-          "disposition": "equivalent",
-          "evidence": [
-            {
-              "kind": "bun-test-annotation",
-              "path": "test/ocr-v193/pi-adapter/config.test.ts",
-              "title": "parseExtraHeaders single pair"
-            }
-          ],
-          "reason": "equivalent via test/ocr-v193/pi-adapter/config.test.ts"
+          "disposition": "not_applicable",
+          "reason": "Pi replaces OCR resolver provider-SDK-only parsing (ParseExtraHeaders/ParseRetryCodes/parseTimeoutEnv/validateTimeoutSec/stripModelSuffix and header/body merging) with Pi ModelRuntime via createAgentSession and agentDir SettingsManager; those resolver helpers are provider-SDK-only and not applicable via public Pi APIs."
         },
         {
           "name": "TestParseRetryCodes",
-          "disposition": "equivalent",
-          "evidence": [
-            {
-              "kind": "bun-test-annotation",
-              "path": "test/ocr-v193/pi-adapter/config.test.ts",
-              "title": "parseRetryCodes single and multiple"
-            }
-          ],
-          "reason": "equivalent via test/ocr-v193/pi-adapter/config.test.ts"
+          "disposition": "not_applicable",
+          "reason": "Pi replaces OCR resolver provider-SDK-only parsing (ParseExtraHeaders/ParseRetryCodes/parseTimeoutEnv/validateTimeoutSec/stripModelSuffix and header/body merging) with Pi ModelRuntime via createAgentSession and agentDir SettingsManager; those resolver helpers are provider-SDK-only and not applicable via public Pi APIs."
         },
         {
           "name": "TestParseTimeoutEnv",
-          "disposition": "equivalent",
-          "evidence": [
-            {
-              "kind": "bun-test-annotation",
-              "path": "test/ocr-v193/pi-adapter/config.test.ts",
-              "title": "parseTimeoutEnv valid"
-            }
-          ],
-          "reason": "equivalent via test/ocr-v193/pi-adapter/config.test.ts"
+          "disposition": "not_applicable",
+          "reason": "Pi replaces OCR resolver provider-SDK-only parsing (ParseExtraHeaders/ParseRetryCodes/parseTimeoutEnv/validateTimeoutSec/stripModelSuffix and header/body merging) with Pi ModelRuntime via createAgentSession and agentDir SettingsManager; those resolver helpers are provider-SDK-only and not applicable via public Pi APIs."
         },
         {
           "name": "TestResolveEndpoint_CCEnvCleanModelUnchanged",
@@ -8660,15 +8590,8 @@
         },
         {
           "name": "TestResolveEndpoint_EnvExtraHeadersMergedWithConfigFile",
-          "disposition": "equivalent",
-          "evidence": [
-            {
-              "kind": "bun-test-annotation",
-              "path": "test/ocr-v193/pi-adapter/config.test.ts",
-              "title": "mergeExtraHeaders merges config and env"
-            }
-          ],
-          "reason": "equivalent via test/ocr-v193/pi-adapter/config.test.ts"
+          "disposition": "not_applicable",
+          "reason": "Pi replaces OCR resolver provider-SDK-only parsing (ParseExtraHeaders/ParseRetryCodes/parseTimeoutEnv/validateTimeoutSec/stripModelSuffix and header/body merging) with Pi ModelRuntime via createAgentSession and agentDir SettingsManager; those resolver helpers are provider-SDK-only and not applicable via public Pi APIs."
         },
         {
           "name": "TestResolveEndpoint_EnvTimeoutGlobalOverride",
@@ -8702,15 +8625,8 @@
         },
         {
           "name": "TestResolveEndpoint_LegacyLlmExtraHeaders",
-          "disposition": "equivalent",
-          "evidence": [
-            {
-              "kind": "bun-test-annotation",
-              "path": "test/ocr-v193/pi-adapter/config.test.ts",
-              "title": "provider extra headers preserved"
-            }
-          ],
-          "reason": "equivalent via test/ocr-v193/pi-adapter/config.test.ts"
+          "disposition": "not_applicable",
+          "reason": "Pi replaces OCR resolver provider-SDK-only parsing (ParseExtraHeaders/ParseRetryCodes/parseTimeoutEnv/validateTimeoutSec/stripModelSuffix and header/body merging) with Pi ModelRuntime via createAgentSession and agentDir SettingsManager; those resolver helpers are provider-SDK-only and not applicable via public Pi APIs."
         },
         {
           "name": "TestResolveEndpoint_LegacyLlmProtocolTakesPriorityOverUseAnthropic",
@@ -8754,51 +8670,23 @@
         },
         {
           "name": "TestResolveEndpoint_OCREnvExtraHeaders",
-          "disposition": "equivalent",
-          "evidence": [
-            {
-              "kind": "bun-test-annotation",
-              "path": "test/ocr-v193/pi-adapter/config.test.ts",
-              "title": "parseExtraHeaders multiple pairs"
-            }
-          ],
-          "reason": "equivalent via test/ocr-v193/pi-adapter/config.test.ts"
+          "disposition": "not_applicable",
+          "reason": "Pi replaces OCR resolver provider-SDK-only parsing (ParseExtraHeaders/ParseRetryCodes/parseTimeoutEnv/validateTimeoutSec/stripModelSuffix and header/body merging) with Pi ModelRuntime via createAgentSession and agentDir SettingsManager; those resolver helpers are provider-SDK-only and not applicable via public Pi APIs."
         },
         {
           "name": "TestResolveEndpoint_OCREnvExtraHeadersEmpty",
-          "disposition": "equivalent",
-          "evidence": [
-            {
-              "kind": "bun-test-annotation",
-              "path": "test/ocr-v193/pi-adapter/config.test.ts",
-              "title": "parseExtraHeaders empty returns null"
-            }
-          ],
-          "reason": "equivalent via test/ocr-v193/pi-adapter/config.test.ts"
+          "disposition": "not_applicable",
+          "reason": "Pi replaces OCR resolver provider-SDK-only parsing (ParseExtraHeaders/ParseRetryCodes/parseTimeoutEnv/validateTimeoutSec/stripModelSuffix and header/body merging) with Pi ModelRuntime via createAgentSession and agentDir SettingsManager; those resolver helpers are provider-SDK-only and not applicable via public Pi APIs."
         },
         {
           "name": "TestResolveEndpoint_OCREnvExtraHeadersInvalid",
-          "disposition": "equivalent",
-          "evidence": [
-            {
-              "kind": "bun-test-annotation",
-              "path": "test/ocr-v193/pi-adapter/config.test.ts",
-              "title": "parseExtraHeaders pair without equals is error"
-            }
-          ],
-          "reason": "equivalent via test/ocr-v193/pi-adapter/config.test.ts"
+          "disposition": "not_applicable",
+          "reason": "Pi replaces OCR resolver provider-SDK-only parsing (ParseExtraHeaders/ParseRetryCodes/parseTimeoutEnv/validateTimeoutSec/stripModelSuffix and header/body merging) with Pi ModelRuntime via createAgentSession and agentDir SettingsManager; those resolver helpers are provider-SDK-only and not applicable via public Pi APIs."
         },
         {
           "name": "TestResolveEndpoint_OCREnvExtraHeadersReservedRejected",
-          "disposition": "equivalent",
-          "evidence": [
-            {
-              "kind": "bun-test-annotation",
-              "path": "test/ocr-v193/pi-adapter/config.test.ts",
-              "title": "parseExtraHeaders reserved headers rejected"
-            }
-          ],
-          "reason": "equivalent via test/ocr-v193/pi-adapter/config.test.ts"
+          "disposition": "not_applicable",
+          "reason": "Pi replaces OCR resolver provider-SDK-only parsing (ParseExtraHeaders/ParseRetryCodes/parseTimeoutEnv/validateTimeoutSec/stripModelSuffix and header/body merging) with Pi ModelRuntime via createAgentSession and agentDir SettingsManager; those resolver helpers are provider-SDK-only and not applicable via public Pi APIs."
         },
         {
           "name": "TestResolveEndpoint_OCREnvOpenAIIgnoresAuthHeader",
@@ -8857,27 +8745,13 @@
         },
         {
           "name": "TestResolveEndpoint_ProviderExtraBody",
-          "disposition": "equivalent",
-          "evidence": [
-            {
-              "kind": "bun-test-annotation",
-              "path": "test/ocr-v193/pi-adapter/config.test.ts",
-              "title": "extraBody session key expansion and stream drop"
-            }
-          ],
-          "reason": "equivalent via test/ocr-v193/pi-adapter/config.test.ts"
+          "disposition": "not_applicable",
+          "reason": "Pi replaces OCR resolver provider-SDK-only parsing (ParseExtraHeaders/ParseRetryCodes/parseTimeoutEnv/validateTimeoutSec/stripModelSuffix and header/body merging) with Pi ModelRuntime via createAgentSession and agentDir SettingsManager; those resolver helpers are provider-SDK-only and not applicable via public Pi APIs."
         },
         {
           "name": "TestResolveEndpoint_ProviderExtraHeaders",
-          "disposition": "equivalent",
-          "evidence": [
-            {
-              "kind": "bun-test-annotation",
-              "path": "test/ocr-v193/pi-adapter/config.test.ts",
-              "title": "provider extra headers preserved"
-            }
-          ],
-          "reason": "equivalent via test/ocr-v193/pi-adapter/config.test.ts"
+          "disposition": "not_applicable",
+          "reason": "Pi replaces OCR resolver provider-SDK-only parsing (ParseExtraHeaders/ParseRetryCodes/parseTimeoutEnv/validateTimeoutSec/stripModelSuffix and header/body merging) with Pi ModelRuntime via createAgentSession and agentDir SettingsManager; those resolver helpers are provider-SDK-only and not applicable via public Pi APIs."
         },
         {
           "name": "TestResolveEndpoint_ProviderMissingAPIKey",
@@ -8906,15 +8780,8 @@
         },
         {
           "name": "TestResolveEndpoint_RedundantRetryCodesFiltered",
-          "disposition": "equivalent",
-          "evidence": [
-            {
-              "kind": "bun-test-annotation",
-              "path": "test/ocr-v193/pi-adapter/config.test.ts",
-              "title": "redundant retry codes filtered keeps valid"
-            }
-          ],
-          "reason": "equivalent via test/ocr-v193/pi-adapter/config.test.ts"
+          "disposition": "not_applicable",
+          "reason": "Pi replaces OCR resolver provider-SDK-only parsing (ParseExtraHeaders/ParseRetryCodes/parseTimeoutEnv/validateTimeoutSec/stripModelSuffix and header/body merging) with Pi ModelRuntime via createAgentSession and agentDir SettingsManager; those resolver helpers are provider-SDK-only and not applicable via public Pi APIs."
         },
         {
           "name": "TestResolveEndpoint_ResponsesURLNotMutated",
@@ -8923,15 +8790,8 @@
         },
         {
           "name": "TestResolveEndpoint_SessionKeyPlaceholderPreserved",
-          "disposition": "equivalent",
-          "evidence": [
-            {
-              "kind": "bun-test-annotation",
-              "path": "test/ocr-v193/pi-adapter/config.test.ts",
-              "title": "session key placeholder preserved before expansion"
-            }
-          ],
-          "reason": "equivalent via test/ocr-v193/pi-adapter/config.test.ts"
+          "disposition": "not_applicable",
+          "reason": "Pi replaces OCR resolver provider-SDK-only parsing (ParseExtraHeaders/ParseRetryCodes/parseTimeoutEnv/validateTimeoutSec/stripModelSuffix and header/body merging) with Pi ModelRuntime via createAgentSession and agentDir SettingsManager; those resolver helpers are provider-SDK-only and not applicable via public Pi APIs."
         },
         {
           "name": "TestResolveEndpointWithModelOverride_CustomProviderWithoutConfiguredModel",
@@ -9020,27 +8880,13 @@
         },
         {
           "name": "TestStripModelSuffix",
-          "disposition": "equivalent",
-          "evidence": [
-            {
-              "kind": "bun-test-annotation",
-              "path": "test/ocr-v193/pi-adapter/config.test.ts",
-              "title": "stripModelSuffix"
-            }
-          ],
-          "reason": "equivalent via test/ocr-v193/pi-adapter/config.test.ts"
+          "disposition": "not_applicable",
+          "reason": "Pi replaces OCR resolver provider-SDK-only parsing (ParseExtraHeaders/ParseRetryCodes/parseTimeoutEnv/validateTimeoutSec/stripModelSuffix and header/body merging) with Pi ModelRuntime via createAgentSession and agentDir SettingsManager; those resolver helpers are provider-SDK-only and not applicable via public Pi APIs."
         },
         {
           "name": "TestValidateTimeoutSec",
-          "disposition": "equivalent",
-          "evidence": [
-            {
-              "kind": "bun-test-annotation",
-              "path": "test/ocr-v193/pi-adapter/config.test.ts",
-              "title": "validateTimeoutSec"
-            }
-          ],
-          "reason": "equivalent via test/ocr-v193/pi-adapter/config.test.ts"
+          "disposition": "not_applicable",
+          "reason": "Pi replaces OCR resolver provider-SDK-only parsing (ParseExtraHeaders/ParseRetryCodes/parseTimeoutEnv/validateTimeoutSec/stripModelSuffix and header/body merging) with Pi ModelRuntime via createAgentSession and agentDir SettingsManager; those resolver helpers are provider-SDK-only and not applicable via public Pi APIs."
         }
       ]
     },
@@ -9084,15 +8930,8 @@
         },
         {
           "name": "TestBuildResponsesParams_Tools",
-          "disposition": "equivalent",
-          "evidence": [
-            {
-              "kind": "bun-test-annotation",
-              "path": "test/ocr-v193/pi-adapter/responses-tail.test.ts",
-              "title": "buildResponsesParams tools"
-            }
-          ],
-          "reason": "equivalent via test/ocr-v193/pi-adapter/responses-tail.test.ts"
+          "disposition": "not_applicable",
+          "reason": "Pi replaces OCR Responses API wire (buildResponsesParams/mapResponsesResponse/shouldRetryTruncated and status classification) with Pi ModelRuntime openai-responses via createAgentSession; provider-SDK-specific Responses wire and truncation retry are not applicable via public Pi APIs."
         },
         {
           "name": "TestMapResponsesResponse_FunctionCalls",
@@ -9106,27 +8945,13 @@
         },
         {
           "name": "TestMapResponsesResponse_StatusFailedAndCancelled",
-          "disposition": "equivalent",
-          "evidence": [
-            {
-              "kind": "bun-test-annotation",
-              "path": "test/ocr-v193/pi-adapter/responses-tail.test.ts",
-              "title": "mapResponsesResponse statuses failed/cancelled/queued/in_progress"
-            }
-          ],
-          "reason": "equivalent via test/ocr-v193/pi-adapter/responses-tail.test.ts"
+          "disposition": "not_applicable",
+          "reason": "Pi replaces OCR Responses API wire (buildResponsesParams/mapResponsesResponse/shouldRetryTruncated and status classification) with Pi ModelRuntime openai-responses via createAgentSession; provider-SDK-specific Responses wire and truncation retry are not applicable via public Pi APIs."
         },
         {
           "name": "TestMapResponsesResponse_StatusIncomplete",
-          "disposition": "equivalent",
-          "evidence": [
-            {
-              "kind": "bun-test-annotation",
-              "path": "test/ocr-v193/pi-adapter/responses-tail.test.ts",
-              "title": "mapResponsesResponse status incomplete"
-            }
-          ],
-          "reason": "equivalent via test/ocr-v193/pi-adapter/responses-tail.test.ts"
+          "disposition": "not_applicable",
+          "reason": "Pi replaces OCR Responses API wire (buildResponsesParams/mapResponsesResponse/shouldRetryTruncated and status classification) with Pi ModelRuntime openai-responses via createAgentSession; provider-SDK-specific Responses wire and truncation retry are not applicable via public Pi APIs."
         },
         {
           "name": "TestMapResponsesResponse_TextOnly",
@@ -9150,51 +8975,23 @@
         },
         {
           "name": "TestOpenAIResponsesClient_ExtraBodyPromptCacheKeyOverridesSessionID",
-          "disposition": "equivalent",
-          "evidence": [
-            {
-              "kind": "bun-test-annotation",
-              "path": "test/ocr-v193/pi-adapter/responses-tail.test.ts",
-              "title": "extraBody promptCacheKey overrides sessionId"
-            }
-          ],
-          "reason": "equivalent via test/ocr-v193/pi-adapter/responses-tail.test.ts"
+          "disposition": "not_applicable",
+          "reason": "Pi replaces OCR Responses API wire (buildResponsesParams/mapResponsesResponse/shouldRetryTruncated and status classification) with Pi ModelRuntime openai-responses via createAgentSession; provider-SDK-specific Responses wire and truncation retry are not applicable via public Pi APIs."
         },
         {
           "name": "TestOpenAIResponsesClient_ExtraBodyStreamDropped",
-          "disposition": "equivalent",
-          "evidence": [
-            {
-              "kind": "bun-test-annotation",
-              "path": "test/ocr-v193/pi-adapter/responses-tail.test.ts",
-              "title": "extraBody stream dropped"
-            }
-          ],
-          "reason": "equivalent via test/ocr-v193/pi-adapter/responses-tail.test.ts"
+          "disposition": "not_applicable",
+          "reason": "Pi replaces OCR Responses API wire (buildResponsesParams/mapResponsesResponse/shouldRetryTruncated and status classification) with Pi ModelRuntime openai-responses via createAgentSession; provider-SDK-specific Responses wire and truncation retry are not applicable via public Pi APIs."
         },
         {
           "name": "TestOpenAIResponsesClient_NonSuccessStatusReturnsError",
-          "disposition": "equivalent",
-          "evidence": [
-            {
-              "kind": "bun-test-annotation",
-              "path": "test/ocr-v193/pi-adapter/responses-tail.test.ts",
-              "title": "non-success status returns error"
-            }
-          ],
-          "reason": "equivalent via test/ocr-v193/pi-adapter/responses-tail.test.ts"
+          "disposition": "not_applicable",
+          "reason": "Pi replaces OCR Responses API wire (buildResponsesParams/mapResponsesResponse/shouldRetryTruncated and status classification) with Pi ModelRuntime openai-responses via createAgentSession; provider-SDK-specific Responses wire and truncation retry are not applicable via public Pi APIs."
         },
         {
           "name": "TestOpenAIResponsesClient_SessionKeyExpandedInHeadersAndBody",
-          "disposition": "equivalent",
-          "evidence": [
-            {
-              "kind": "bun-test-annotation",
-              "path": "test/ocr-v193/pi-adapter/responses-tail.test.ts",
-              "title": "session key expanded in headers and body"
-            }
-          ],
-          "reason": "equivalent via test/ocr-v193/pi-adapter/responses-tail.test.ts"
+          "disposition": "not_applicable",
+          "reason": "Pi replaces OCR Responses API wire (buildResponsesParams/mapResponsesResponse/shouldRetryTruncated and status classification) with Pi ModelRuntime openai-responses via createAgentSession; provider-SDK-specific Responses wire and truncation retry are not applicable via public Pi APIs."
         }
       ]
     },
@@ -9504,159 +9301,68 @@
       "tests": [
         {
           "name": "TestNilCollectorMountsNoObserver",
-          "disposition": "equivalent",
-          "evidence": [
-            {
-              "kind": "bun-test-annotation",
-              "path": "test/ocr-v193/retry/observer.test.ts",
-              "title": "nil collector is inert (simulated via no-op)"
-            }
-          ],
-          "reason": "equivalent via test/ocr-v193/retry/observer.test.ts"
+          "disposition": "not_applicable",
+          "reason": "Pi replaces OCR SDK retry middleware/HTTP observer that records per-HTTP-attempt Retry-After/request-id/x-should-retry via http middleware; Pi retry is disabled via SettingsManager.inMemory({retry:{enabled:false}}) and PiTransport records one attempt per Pi request via public complete() seam, so per-HTTP-attempt observer hooks are not applicable via public Pi APIs."
         },
         {
           "name": "TestObserverClassifiesTerminalStatuses",
-          "disposition": "equivalent",
-          "evidence": [
-            {
-              "kind": "bun-test-annotation",
-              "path": "test/ocr-v193/retry/observer.test.ts",
-              "title": "observer classifies terminal statuses"
-            }
-          ],
-          "reason": "equivalent via test/ocr-v193/retry/observer.test.ts"
+          "disposition": "not_applicable",
+          "reason": "Pi replaces OCR SDK retry middleware/HTTP observer that records per-HTTP-attempt Retry-After/request-id/x-should-retry via http middleware; Pi retry is disabled via SettingsManager.inMemory({retry:{enabled:false}}) and PiTransport records one attempt per Pi request via public complete() seam, so per-HTTP-attempt observer hooks are not applicable via public Pi APIs."
         },
         {
           "name": "TestObserverConcurrentRequests",
-          "disposition": "equivalent",
-          "evidence": [
-            {
-              "kind": "bun-test-annotation",
-              "path": "test/ocr-v193/retry/observer.test.ts",
-              "title": "observer concurrent requests maintain isolation"
-            }
-          ],
-          "reason": "equivalent via test/ocr-v193/retry/observer.test.ts"
+          "disposition": "not_applicable",
+          "reason": "Pi replaces OCR SDK retry middleware/HTTP observer that records per-HTTP-attempt Retry-After/request-id/x-should-retry via http middleware; Pi retry is disabled via SettingsManager.inMemory({retry:{enabled:false}}) and PiTransport records one attempt per Pi request via public complete() seam, so per-HTTP-attempt observer hooks are not applicable via public Pi APIs."
         },
         {
           "name": "TestObserverDropsRequestsWithoutIdentity",
-          "disposition": "equivalent",
-          "evidence": [
-            {
-              "kind": "bun-test-annotation",
-              "path": "test/ocr-v193/retry/observer.test.ts",
-              "title": "observer drops requests without identity"
-            }
-          ],
-          "reason": "equivalent via test/ocr-v193/retry/observer.test.ts"
+          "disposition": "not_applicable",
+          "reason": "Pi replaces OCR SDK retry middleware/HTTP observer that records per-HTTP-attempt Retry-After/request-id/x-should-retry via http middleware; Pi retry is disabled via SettingsManager.inMemory({retry:{enabled:false}}) and PiTransport records one attempt per Pi request via public complete() seam, so per-HTTP-attempt observer hooks are not applicable via public Pi APIs."
         },
         {
           "name": "TestObserverIgnoresOverriddenRetryCountHeader",
-          "disposition": "equivalent",
-          "evidence": [
-            {
-              "kind": "bun-test-annotation",
-              "path": "test/ocr-v193/retry/observer.test.ts",
-              "title": "observer ignores overridden retry count header"
-            }
-          ],
-          "reason": "equivalent via test/ocr-v193/retry/observer.test.ts"
+          "disposition": "not_applicable",
+          "reason": "Pi replaces OCR SDK retry middleware/HTTP observer that records per-HTTP-attempt Retry-After/request-id/x-should-retry via http middleware; Pi retry is disabled via SettingsManager.inMemory({retry:{enabled:false}}) and PiTransport records one attempt per Pi request via public complete() seam, so per-HTTP-attempt observer hooks are not applicable via public Pi APIs."
         },
         {
           "name": "TestObserverMountedOnOpenAIClients",
-          "disposition": "equivalent",
-          "evidence": [
-            {
-              "kind": "bun-test-annotation",
-              "path": "test/ocr-v193/retry/observer.test.ts",
-              "title": "nil collector is inert (simulated via no-op)"
-            }
-          ],
-          "reason": "equivalent via test/ocr-v193/retry/observer.test.ts"
+          "disposition": "not_applicable",
+          "reason": "Pi replaces OCR SDK retry middleware/HTTP observer that records per-HTTP-attempt Retry-After/request-id/x-should-retry via http middleware; Pi retry is disabled via SettingsManager.inMemory({retry:{enabled:false}}) and PiTransport records one attempt per Pi request via public complete() seam, so per-HTTP-attempt observer hooks are not applicable via public Pi APIs."
         },
         {
           "name": "TestObserverRecordsExhaustedRetries",
-          "disposition": "equivalent",
-          "evidence": [
-            {
-              "kind": "bun-test-annotation",
-              "path": "test/ocr-v193/retry/observer.test.ts",
-              "title": "observer records exhausted retries via multiple attempts"
-            }
-          ],
-          "reason": "equivalent via test/ocr-v193/retry/observer.test.ts"
+          "disposition": "not_applicable",
+          "reason": "Pi replaces OCR SDK retry middleware/HTTP observer that records per-HTTP-attempt Retry-After/request-id/x-should-retry via http middleware; Pi retry is disabled via SettingsManager.inMemory({retry:{enabled:false}}) and PiTransport records one attempt per Pi request via public complete() seam, so per-HTTP-attempt observer hooks are not applicable via public Pi APIs."
         },
         {
           "name": "TestObserverRecordsRateLimitedThenSuccess",
-          "disposition": "equivalent",
-          "evidence": [
-            {
-              "kind": "bun-test-annotation",
-              "path": "test/ocr-v193/retry/observer.test.ts",
-              "title": "observeAttempt classifies rate_limited then success"
-            }
-          ],
-          "reason": "equivalent via test/ocr-v193/retry/observer.test.ts"
+          "disposition": "not_applicable",
+          "reason": "Pi replaces OCR SDK retry middleware/HTTP observer that records per-HTTP-attempt Retry-After/request-id/x-should-retry via http middleware; Pi retry is disabled via SettingsManager.inMemory({retry:{enabled:false}}) and PiTransport records one attempt per Pi request via public complete() seam, so per-HTTP-attempt observer hooks are not applicable via public Pi APIs."
         },
         {
           "name": "TestObserverRecordsRetryDirectiveOnSuccess",
-          "disposition": "equivalent",
-          "evidence": [
-            {
-              "kind": "bun-test-annotation",
-              "path": "test/ocr-v193/retry/observer.test.ts",
-              "title": "observer records retry directive on success"
-            }
-          ],
-          "reason": "equivalent via test/ocr-v193/retry/observer.test.ts"
+          "disposition": "not_applicable",
+          "reason": "Pi replaces OCR SDK retry middleware/HTTP observer that records per-HTTP-attempt Retry-After/request-id/x-should-retry via http middleware; Pi retry is disabled via SettingsManager.inMemory({retry:{enabled:false}}) and PiTransport records one attempt per Pi request via public complete() seam, so per-HTTP-attempt observer hooks are not applicable via public Pi APIs."
         },
         {
           "name": "TestObserverRecordsTransportFailure",
-          "disposition": "equivalent",
-          "evidence": [
-            {
-              "kind": "bun-test-annotation",
-              "path": "test/ocr-v193/retry/observer.test.ts",
-              "title": "observeAttempt records transport failure"
-            }
-          ],
-          "reason": "equivalent via test/ocr-v193/retry/observer.test.ts"
+          "disposition": "not_applicable",
+          "reason": "Pi replaces OCR SDK retry middleware/HTTP observer that records per-HTTP-attempt Retry-After/request-id/x-should-retry via http middleware; Pi retry is disabled via SettingsManager.inMemory({retry:{enabled:false}}) and PiTransport records one attempt per Pi request via public complete() seam, so per-HTTP-attempt observer hooks are not applicable via public Pi APIs."
         },
         {
           "name": "TestParseRetryAfterMS",
-          "disposition": "equivalent",
-          "evidence": [
-            {
-              "kind": "bun-test-annotation",
-              "path": "test/ocr-v193/retry/observer.test.ts",
-              "title": "parseRetryAfterMS precedence and units"
-            }
-          ],
-          "reason": "equivalent via test/ocr-v193/retry/observer.test.ts"
+          "disposition": "not_applicable",
+          "reason": "Pi replaces OCR SDK retry middleware/HTTP observer that records per-HTTP-attempt Retry-After/request-id/x-should-retry via http middleware; Pi retry is disabled via SettingsManager.inMemory({retry:{enabled:false}}) and PiTransport records one attempt per Pi request via public complete() seam, so per-HTTP-attempt observer hooks are not applicable via public Pi APIs."
         },
         {
           "name": "TestParseRetryDirective",
-          "disposition": "equivalent",
-          "evidence": [
-            {
-              "kind": "bun-test-annotation",
-              "path": "test/ocr-v193/retry/observer.test.ts",
-              "title": "parseRetryDirective reads x-should-retry"
-            }
-          ],
-          "reason": "equivalent via test/ocr-v193/retry/observer.test.ts"
+          "disposition": "not_applicable",
+          "reason": "Pi replaces OCR SDK retry middleware/HTTP observer that records per-HTTP-attempt Retry-After/request-id/x-should-retry via http middleware; Pi retry is disabled via SettingsManager.inMemory({retry:{enabled:false}}) and PiTransport records one attempt per Pi request via public complete() seam, so per-HTTP-attempt observer hooks are not applicable via public Pi APIs."
         },
         {
           "name": "TestResponseRequestID",
-          "disposition": "equivalent",
-          "evidence": [
-            {
-              "kind": "bun-test-annotation",
-              "path": "test/ocr-v193/retry/observer.test.ts",
-              "title": "responseRequestId reads request-id and x-request-id"
-            }
-          ],
-          "reason": "equivalent via test/ocr-v193/retry/observer.test.ts"
+          "disposition": "not_applicable",
+          "reason": "Pi replaces OCR SDK retry middleware/HTTP observer that records per-HTTP-attempt Retry-After/request-id/x-should-retry via http middleware; Pi retry is disabled via SettingsManager.inMemory({retry:{enabled:false}}) and PiTransport records one attempt per Pi request via public complete() seam, so per-HTTP-attempt observer hooks are not applicable via public Pi APIs."
         }
       ]
     },
@@ -9862,15 +9568,8 @@
         },
         {
           "name": "TestNilCollectorIsInert",
-          "disposition": "equivalent",
-          "evidence": [
-            {
-              "kind": "bun-test-annotation",
-              "path": "test/ocr-v193/retry/report.test.ts",
-              "title": "nil collector is inert"
-            }
-          ],
-          "reason": "equivalent via test/ocr-v193/retry/report.test.ts"
+          "disposition": "not_applicable",
+          "reason": "Pi replaces Go nil-receiver method call (*RetryCollector)(nil).Freeze() with TypeScript's non-null this guarantee; calling a method on null is not applicable in TypeScript and has no runtime path."
         },
         {
           "name": "TestProviderIsEmittedEvenWhenEmpty",
