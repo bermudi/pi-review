@@ -67,10 +67,6 @@ export {
   newResolver,
   NewResolver,
   LoadDefaultResolver,
-  looksLikeFilePath,
-  readRuleFileSafe,
-  tryReadRuleFile,
-  resolveRuleEntries,
 } from "./system_rules.js";
 export { sha256Hex as sha256HexSystem } from "./system_rules.js";
 export type { LoadOptions } from "./system_rules.js";

@@ -20,15 +20,17 @@ import {
   loadGlobalRule,
   loadProjectRule,
   loadRuleFile,
-  looksLikeFilePath,
   newResolver,
-  readRuleFileSafe,
-  resolveRuleEntries,
   resolveSystemRule,
   type FileFilter,
   type ProjectRuleEntry,
   type SystemRule,
 } from "../../../src/ocr-v193/rules/index.js";
+import {
+  looksLikeFilePath,
+  readRuleFileSafe,
+  resolveRuleEntries,
+} from "../../../src/ocr-v193/rules/system_rules.js";
 
 // ---------------------------------------------------------------------------
 // Helpers — mirrors Go's t.TempDir / t.Setenv
