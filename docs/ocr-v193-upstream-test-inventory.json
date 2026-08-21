@@ -11743,14 +11743,8 @@
         },
         {
           "name": "TestManifest_NilReceiver",
-          "disposition": "covered",
-          "evidence": [
-            {
-              "kind": "bun-test-annotation",
-              "path": "test/ocr-v193/session/list-more.test.ts",
-              "title": "Manifest nil receiver"
-            }
-          ]
+          "disposition": "not_applicable",
+          "reason": "Pi replaces Go nil-receiver guard (var sh *SessionHistory; sh.Manifest() == nil) with TypeScript's non-null this guarantee; calling a method on null is not applicable in TypeScript and has no runtime path."
         },
         {
           "name": "TestParseRecordTime",
@@ -11776,14 +11770,8 @@
         },
         {
           "name": "TestRecordReviewItem_NilReceiver",
-          "disposition": "covered",
-          "evidence": [
-            {
-              "kind": "bun-test-annotation",
-              "path": "test/ocr-v193/session/list-more.test.ts",
-              "title": "RecordReviewItem nil receiver"
-            }
-          ]
+          "disposition": "not_applicable",
+          "reason": "Pi replaces Go nil-receiver guard (var sh *SessionHistory; sh.RecordReviewItem*() no-op) with TypeScript's non-null this guarantee; calling a method on null is not applicable in TypeScript and has no runtime path."
         },
         {
           "name": "TestSessionsDir_HomeUnset",

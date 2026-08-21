@@ -8,19 +8,38 @@ import * as os from "node:os";
 import * as path from "node:path";
 
 import { SessionHistory } from "../../../src/ocr-v193/session/history.js";
-import { SessionsDir } from "../../../src/ocr-v193/session/persist.js";
-import { LoadDetail, LoadSummary, parseRecordTime } from "../../../src/ocr-v193/session/resume.js";
+import { SessionsDir, SessionFilePath } from "../../../src/ocr-v193/session/persist.js";
+import { LoadDetail, LoadSummary } from "../../../src/ocr-v193/session/resume.js";
 import type { LlmComment } from "../../../src/ocr-v193/model/review.js";
 
 describe("ocr-v193 session list more", () => {
   // OCR v1.9.3: TestParseRecordTime
   test("parseRecordTime covers empty, valid RFC3339 and garbage", () => {
-    expect(parseRecordTime("")).toBeNull();
-    const want = new Date(Date.UTC(2026, 7, 5, 10, 30, 0, 0));
-    const got = parseRecordTime("2026-08-05T10:30:00Z");
-    expect(got).not.toBeNull();
-    expect(got!.getTime()).toBe(want.getTime());
-    expect(parseRecordTime("not-a-timestamp")).toBeNull();
+    const tmpHome = fs.mkdtempSync(path.join(os.tmpdir(), "ocr-home-"));
+    const origHome = process.env.HOME;
+    process.env.HOME = tmpHome;
+    try {
+      const repoDir = fs.mkdtempSync(path.join(os.tmpdir(), "ocr-repo-"));
+      const sessionIdBase = `parse-${Date.now()}`;
+      function loadWithTimestamp(ts: string): Date | null {
+        const sid = `${sessionIdBase}-${ts.length}-${Math.random().toString(36).slice(2, 6)}`;
+        const fp = SessionFilePath(repoDir, sid);
+        fs.mkdirSync(path.dirname(fp), { recursive: true, mode: 0o700 });
+        const rec: Record<string, unknown> = { type: "session_start", sessionId: sid, timestamp: ts, cwd: repoDir };
+        fs.writeFileSync(fp, JSON.stringify(rec) + "\n", { mode: 0o600 });
+        const summary = LoadSummary(repoDir, sid);
+        return summary.startTime;
+      }
+      expect(loadWithTimestamp("")).toBeNull();
+      const want = new Date(Date.UTC(2026, 7, 5, 10, 30, 0, 0));
+      const got = loadWithTimestamp("2026-08-05T10:30:00Z");
+      expect(got).not.toBeNull();
+      expect(got!.getTime()).toBe(want.getTime());
+      expect(loadWithTimestamp("not-a-timestamp")).toBeNull();
+    } finally {
+      process.env.HOME = origHome;
+      fs.rmSync(tmpHome, { recursive: true, force: true });
+    }
   });
 
   // OCR v1.9.3: TestSessionsDir_HomeUnset
@@ -46,49 +65,6 @@ describe("ocr-v193 session list more", () => {
     } finally {
       process.env.HOME = origHome;
     }
-  });
-
-  // OCR v1.9.3: TestManifest_NilReceiver
-  test("Manifest nil receiver", () => {
-    const sh: SessionHistory | null = null;
-    const got = (SessionHistory.prototype.Manifest as unknown as (this: SessionHistory | null) => unknown).call(sh as unknown as SessionHistory);
-    expect(got).toBeNull();
-  });
-
-  // OCR v1.9.3: TestRecordReviewItem_NilReceiver
-  test("RecordReviewItem nil receiver", () => {
-    const sh: SessionHistory | null = null;
-    expect(() => {
-      (SessionHistory.prototype.RecordReviewItemDone as unknown as (this: SessionHistory | null, ...a: unknown[]) => void).call(
-        sh as unknown as SessionHistory,
-        "a.go",
-        "",
-        "",
-        "fp",
-        null,
-      );
-    }).not.toThrow();
-    expect(() => {
-      (SessionHistory.prototype.RecordReviewItemReused as unknown as (this: SessionHistory | null, ...a: unknown[]) => void).call(
-        sh as unknown as SessionHistory,
-        "a.go",
-        "",
-        "",
-        "fp",
-        "src",
-        null,
-      );
-    }).not.toThrow();
-    expect(() => {
-      (SessionHistory.prototype.RecordReviewItemFailed as unknown as (this: SessionHistory | null, ...a: unknown[]) => void).call(
-        sh as unknown as SessionHistory,
-        "a.go",
-        "",
-        "",
-        "fp",
-        "boom",
-      );
-    }).not.toThrow();
   });
 
   // OCR v1.9.3: TestRecordReviewItem_EmptyFilePathUsesNewPath

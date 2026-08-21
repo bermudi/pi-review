@@ -98,6 +98,14 @@ const notApplicableTests: ReadonlyMap<string, string> = new Map<string, string>(
     "internal/agent/getters_test.go::TestAgentGettersNilSafe",
     "Pi replaces Go nil-receiver guard (a := (*Agent)(nil)) with TypeScript's type system where `this` is always valid; not applicable to TypeScript, verified via normal empty-agent behavior instead.",
   ],
+  [
+    "internal/session/list_more_test.go::TestManifest_NilReceiver",
+    "Pi replaces Go nil-receiver guard (var sh *SessionHistory; sh.Manifest() == nil) with TypeScript's non-null this guarantee; calling a method on null is not applicable in TypeScript and has no runtime path.",
+  ],
+  [
+    "internal/session/list_more_test.go::TestRecordReviewItem_NilReceiver",
+    "Pi replaces Go nil-receiver guard (var sh *SessionHistory; sh.RecordReviewItem*() no-op) with TypeScript's non-null this guarantee; calling a method on null is not applicable in TypeScript and has no runtime path.",
+  ],
 ]);
 
 // Explicit scope decisions for paths that would otherwise be needs_decision.

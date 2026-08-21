@@ -527,7 +527,7 @@ function applyRecordToSummary(s: Summary, rec: Record<string, unknown>): void {
   }
 }
 
-export function recordToItem(rec: Record<string, unknown>): ItemDetail | null {
+function recordToItem(rec: Record<string, unknown>): ItemDetail | null {
   const type = String(rec["type"] ?? "");
   if (type !== "review_item_done" && type !== "review_item_reused" && type !== "review_item_failed") return null;
   const kind = type.replace("review_item_", "");
@@ -556,7 +556,7 @@ function parseTime(s: string): Date | null {
   return Number.isNaN(t.getTime()) ? null : t;
 }
 
-export function parseRecordTime(s: string): Date | null {
+function parseRecordTime(s: string): Date | null {
   return parseTime(s);
 }
 

@@ -158,10 +158,7 @@ export class SessionHistory {
   get StartTime(): Date { return this.startTime; }
   get EndTime(): Date | null { return this.endTime; }
 
-  Manifest(): ManifestBuilder | null {
-    if ((this as unknown) === null || (this as unknown) === undefined) return null;
-    return this.manifest;
-  }
+  Manifest(): ManifestBuilder | null { return this.manifest; }
 
   SetFinalManifest(m: RunManifest | null): void {
     if ((this as unknown as SessionHistory | null) === null || (this as unknown as SessionHistory | null) === undefined) return;
@@ -194,7 +191,6 @@ export class SessionHistory {
     fingerprint: string,
     comments: LlmComment[],
   ): void {
-    if ((this as unknown) === null || (this as unknown) === undefined) return;
     if (filePath === "") filePath = newPath;
     if (filePath !== "") this.GetOrCreateFileSession(filePath);
     this.persist?.writeReviewItemDone(filePath, oldPath, newPath, fingerprint, comments);
@@ -208,7 +204,6 @@ export class SessionHistory {
     sourceSessionId: string,
     comments: LlmComment[],
   ): void {
-    if ((this as unknown) === null || (this as unknown) === undefined) return;
     if (filePath === "") filePath = newPath;
     if (filePath !== "") this.GetOrCreateFileSession(filePath);
     this.persist?.writeReviewItemReused(filePath, oldPath, newPath, fingerprint, sourceSessionId, comments);
@@ -226,7 +221,6 @@ export class SessionHistory {
     fingerprint: string,
     errorMsg: string,
   ): void {
-    if ((this as unknown) === null || (this as unknown) === undefined) return;
     if (filePath === "") filePath = newPath;
     if (filePath !== "") this.GetOrCreateFileSession(filePath);
     this.persist?.writeReviewItemFailed(filePath, oldPath, newPath, fingerprint, errorMsg);
