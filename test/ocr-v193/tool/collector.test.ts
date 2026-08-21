@@ -44,6 +44,7 @@ describe("ocr-v193 CommentCollector (ported)", () => {
     expect(c.CommentsForPath("nonexist.go").length).toBe(0);
   });
 
+  // OCR v1.9.3: TestCommentCollector_SnapshotAndSince
   test("Snapshot and Since", () => {
     const c = NewCommentCollector();
     c.Add(cm("a.go", "old"));
@@ -54,6 +55,7 @@ describe("ocr-v193 CommentCollector (ported)", () => {
     const since = c.Since(snap);
     expect(since!.length).toBe(2);
     expect(since![0]!.path).toBe("b.go");
+    expect(since![1]!.path).toBe("c.go");
   });
 
   // OCR v1.9.3: TestCommentCollector_SinceEdgeCases
@@ -101,11 +103,33 @@ describe("ocr-v193 CommentCollector (ported)", () => {
     expect(paths).toEqual(["b.go:b0", "a.go:a1", "b.go:b1"]);
   });
 
+  // OCR v1.9.3: TestCommentCollector_RemoveByPathAndIndices_NoMatch
   test("RemoveByPathAndIndices no match", () => {
     const c = NewCommentCollector();
     c.Add(cm("a.go", "x"));
-    c.RemoveByPathAndIndices("a.go", new Map([[99, {}]]));
+    c.RemoveByPathAndIndices("b.go", new Map([[0, {}]]));
     expect(c.Comments().length).toBe(1);
+  });
+
+  // OCR v1.9.3: TestCommentCollector_ReplaceSince_NegativeSnap
+  test("ReplaceSince negative snap", () => {
+    const c = NewCommentCollector();
+    c.Add(cm("a.go", "keep"));
+    c.ReplaceSince(-1, [cm("new.go", "replaced")]);
+    const got = c.Comments();
+    expect(got.length).toBe(1);
+    expect(got[0]!.path).toBe("new.go");
+  });
+
+  // OCR v1.9.3: TestCommentCollector_ReplaceSince_Zero
+  test("ReplaceSince zero", () => {
+    const c = NewCommentCollector();
+    c.Add(cm("a.go", "x"));
+    c.Add(cm("b.go", "y"));
+    c.ReplaceSince(0, [cm("only.go", "z")]);
+    const got = c.Comments();
+    expect(got.length).toBe(1);
+    expect(got[0]!.path).toBe("only.go");
   });
 
   test("RemoveByPath (convenience) removes all for path", () => {
@@ -123,25 +147,6 @@ describe("ocr-v193 CommentCollector (ported)", () => {
     for (let i = 0; i < 5; i++) c.Add(cm(`file${i}.go`, `issue ${i}`));
     const got = c.Comments();
     for (let i = 0; i < 5; i++) expect(got[i]!.path).toBe(`file${i}.go`);
-  });
-
-  test("ReplaceSince_NegativeSnap", () => {
-    const c = NewCommentCollector();
-    c.Add(cm("a.go", "keep"));
-    c.ReplaceSince(-5, [cm("b.go", "replaced")]);
-    const got = c.Comments();
-    expect(got.length).toBe(1);
-    expect(got[0]!.path).toBe("b.go");
-  });
-
-  test("ReplaceSince_Zero", () => {
-    const c = NewCommentCollector();
-    c.Add(cm("a.go", "old1"));
-    c.Add(cm("b.go", "old2"));
-    c.ReplaceSince(0, [cm("c.go", "new")]);
-    const got = c.Comments();
-    expect(got.length).toBe(1);
-    expect(got[0]!.path).toBe("c.go");
   });
 
   test("Since negative returns all", () => {

@@ -14164,8 +14164,14 @@
         },
         {
           "name": "TestCommentCollector_RemoveByPathAndIndices_NoMatch",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/tool/collector.test.ts",
+              "title": "RemoveByPathAndIndices no match"
+            }
+          ]
         },
         {
           "name": "TestCommentCollector_ReplaceSince",
@@ -14180,13 +14186,25 @@
         },
         {
           "name": "TestCommentCollector_ReplaceSince_NegativeSnap",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/tool/collector.test.ts",
+              "title": "ReplaceSince negative snap"
+            }
+          ]
         },
         {
           "name": "TestCommentCollector_ReplaceSince_Zero",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/tool/collector.test.ts",
+              "title": "ReplaceSince zero"
+            }
+          ]
         },
         {
           "name": "TestCommentCollector_ReplaceSinceOutOfBounds",
@@ -14212,8 +14230,14 @@
         },
         {
           "name": "TestCommentCollector_SnapshotAndSince",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/tool/collector.test.ts",
+              "title": "Snapshot and Since"
+            }
+          ]
         }
       ]
     },
