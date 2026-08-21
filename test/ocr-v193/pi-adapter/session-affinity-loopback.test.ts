@@ -13,7 +13,14 @@ import { sessionTaskKey } from "../../../src/ocr-v193/pi-adapter/session-key.js"
 import { createPiTransportForFile } from "../../../src/ocr-v193/pi-adapter/pi-transport.js";
 import { newTextMessage } from "../../../src/ocr-v193/llmloop/compression.js";
 
-// OCR v1.9.3: TestSessionTaskKey + session affinity via public seam
+// OCR v1.9.3: TestAnthropicClient_ContextSessionKeyOverridesFallback
+// OCR v1.9.3: TestAnthropicClient_SessionKeyExpandedInExtraHeadersAndBody
+// OCR v1.9.3: TestNewLLMClient_ExpandsSessionKeyInExtraBody
+// OCR v1.9.3: TestOpenAIClient_ContextSessionKeyOverridesFallback
+// OCR v1.9.3: TestOpenAIClient_SessionKeyExpandedInExtraBody
+// OCR v1.9.3: TestOpenAIClient_SessionKeyExpandedInExtraHeaders
+// OCR v1.9.3: TestOpenAIClient_SessionKeyGeneratedWhenEmpty
+// OCR v1.9.3: TestOpenAIClient_NoInjectionWithoutPlaceholder
 test("session affinity via SessionManager id reaches provider request (loopback)", async () => {
   const runId = randomUUID();
   const filePath = "src/foo.ts";

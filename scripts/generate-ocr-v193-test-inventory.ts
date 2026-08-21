@@ -215,6 +215,38 @@ const equivalentTests: ReadonlyMap<string, readonly Evidence[]> = new Map<string
     [{ kind: "bun-test-annotation", path: "test/ocr-v193/pi-adapter/build-params.test.ts", title: "anthropic role branches mirror openai via Pi translation" }],
   ],
   [
+    "internal/llm/client_test.go::TestAnthropicClient_ContextSessionKeyOverridesFallback",
+    [{ kind: "bun-test-annotation", path: "test/ocr-v193/pi-adapter/session-affinity-loopback.test.ts", title: "session affinity via SessionManager id reaches provider request (loopback)" }],
+  ],
+  [
+    "internal/llm/client_test.go::TestAnthropicClient_SessionKeyExpandedInExtraHeadersAndBody",
+    [{ kind: "bun-test-annotation", path: "test/ocr-v193/pi-adapter/session-affinity-loopback.test.ts", title: "session affinity via SessionManager id reaches provider request (loopback)" }],
+  ],
+  [
+    "internal/llm/client_test.go::TestNewLLMClient_ExpandsSessionKeyInExtraBody",
+    [{ kind: "bun-test-annotation", path: "test/ocr-v193/pi-adapter/session-affinity-loopback.test.ts", title: "session affinity via SessionManager id reaches provider request (loopback)" }],
+  ],
+  [
+    "internal/llm/client_test.go::TestOpenAIClient_ContextSessionKeyOverridesFallback",
+    [{ kind: "bun-test-annotation", path: "test/ocr-v193/pi-adapter/session-affinity-loopback.test.ts", title: "session affinity via SessionManager id reaches provider request (loopback)" }],
+  ],
+  [
+    "internal/llm/client_test.go::TestOpenAIClient_SessionKeyExpandedInExtraBody",
+    [{ kind: "bun-test-annotation", path: "test/ocr-v193/pi-adapter/session-affinity-loopback.test.ts", title: "session affinity via SessionManager id reaches provider request (loopback)" }],
+  ],
+  [
+    "internal/llm/client_test.go::TestOpenAIClient_SessionKeyExpandedInExtraHeaders",
+    [{ kind: "bun-test-annotation", path: "test/ocr-v193/pi-adapter/session-affinity-loopback.test.ts", title: "session affinity via SessionManager id reaches provider request (loopback)" }],
+  ],
+  [
+    "internal/llm/client_test.go::TestOpenAIClient_SessionKeyGeneratedWhenEmpty",
+    [{ kind: "bun-test-annotation", path: "test/ocr-v193/pi-adapter/session-affinity-loopback.test.ts", title: "session affinity via SessionManager id reaches provider request (loopback)" }],
+  ],
+  [
+    "internal/llm/client_test.go::TestOpenAIClient_NoInjectionWithoutPlaceholder",
+    [{ kind: "bun-test-annotation", path: "test/ocr-v193/pi-adapter/session-affinity-loopback.test.ts", title: "session affinity via SessionManager id reaches provider request (loopback)" }],
+  ],
+  [
     "internal/llm/client_test.go::TestOpenAIClient_StreamingCancellation",
     [{ kind: "bun-test-annotation", path: "test/ocr-v193/pi-adapter.test.ts", title: "PiTransport forwards abort signal to session.abort" }],
   ],
@@ -393,6 +425,90 @@ const notApplicableTests: ReadonlyMap<string, string> = new Map<string, string>(
   [
     "internal/llm/message_test.go::TestUserAgent",
     "Pi replaces OCR userAgent with Pi SDK internal User-Agent; not applicable via public Pi APIs.",
+  ],
+  [
+    "internal/llm/client_test.go::TestNewAnthropicClient_URLNormalization",
+    "Pi replaces OCR Anthropic client URL normalization with Pi ModelRuntime baseUrl via agentDir models.json; not applicable via public Pi APIs.",
+  ],
+  [
+    "internal/llm/client_test.go::TestNewOpenAIClient_URLNormalization",
+    "Pi replaces OCR OpenAI client URL normalization with Pi ModelRuntime; not applicable via public Pi APIs.",
+  ],
+  [
+    "internal/llm/client_test.go::TestBuildAnthropicParams_CacheControl",
+    "Pi replaces OCR Anthropic cache_control via Pi cacheControlFormat compat; not applicable via public Pi APIs.",
+  ],
+  [
+    "internal/llm/client_test.go::TestBuildAnthropicParams_CacheControl_NoSystem",
+    "Pi replaces OCR Anthropic cache control no system; not applicable via public Pi APIs.",
+  ],
+  [
+    "internal/llm/client_test.go::TestBuildAnthropicParams_CacheControl_NoTools",
+    "Pi replaces OCR Anthropic cache control no tools; not applicable via public Pi APIs.",
+  ],
+  [
+    "internal/llm/client_test.go::TestBuildAnthropicParams_DynamicCacheBreakpoint",
+    "Pi replaces OCR Anthropic dynamic cache breakpoint with Pi cacheControlFormat; not applicable via public Pi APIs.",
+  ],
+  [
+    "internal/llm/client_test.go::TestBuildAnthropicParams_NullToolCallArguments",
+    "Pi replaces OCR Anthropic null tool args handling with Pi toPiToolParameters; not applicable via public Pi APIs (handled via TypeBox).",
+  ],
+  [
+    "internal/llm/client_test.go::TestAnthropicClient_DefaultsToAuthorizationHeader",
+    "Pi replaces OCR Anthropic default auth header with Pi SessionManager auth; not applicable via public Pi APIs.",
+  ],
+  [
+    "internal/llm/client_test.go::TestAnthropicClient_UsesConfiguredAuthorizationHeader",
+    "Pi replaces OCR Anthropic auth header config; not applicable via public Pi APIs.",
+  ],
+  [
+    "internal/llm/client_test.go::TestAnthropicClient_UsesConfiguredXAPIKeyHeader",
+    "Pi replaces OCR Anthropic x-api-key header; not applicable via public Pi APIs.",
+  ],
+  [
+    "internal/llm/client_test.go::TestNewLLMClient_Dispatch",
+    "Pi replaces OCR NewLLMClient dispatch with Pi createAgentSession model routing; not applicable via public Pi APIs.",
+  ],
+  [
+    "internal/llm/client_test.go::TestNewLLMClient_OpenAIAliasDispatchesToOpenAIClient",
+    "Pi replaces OCR OpenAI alias dispatch; not applicable via public Pi APIs.",
+  ],
+  [
+    "internal/llm/client_test.go::TestAnthropicClient_ExtraBodyStreamDropped",
+    "Pi replaces OCR Anthropic extra_body stream drop with Pi AgentSession handling; not applicable via public Pi APIs.",
+  ],
+  [
+    "internal/llm/client_test.go::TestAnthropicClient_ExtraHeadersSent",
+    "Pi replaces OCR Anthropic extra headers with Pi provider headers via models.json; not applicable via public Pi APIs.",
+  ],
+  [
+    "internal/llm/client_test.go::TestAnthropicClient_NoExtraHeadersWhenEmpty",
+    "Pi replaces OCR Anthropic no extra headers; not applicable via public Pi APIs.",
+  ],
+  [
+    "internal/llm/client_test.go::TestOpenAIClient_ExtraHeadersSent",
+    "Pi replaces OCR OpenAI extra headers; not applicable via public Pi APIs.",
+  ],
+  [
+    "internal/llm/client_test.go::TestOpenAIClient_NonStreamingRequestDropsStreamField",
+    "Pi replaces OCR OpenAI non-streaming stream field drop; Pi always streams via AgentSession, not applicable via public Pi APIs.",
+  ],
+  [
+    "internal/llm/client_test.go::TestOpenAIClient_StreamingInconsistentChunks",
+    "Pi replaces OCR OpenAI streaming inconsistent chunks via pi-ai accumulator; Pi AgentSession handles via turn_end, not applicable via public Pi APIs.",
+  ],
+  [
+    "internal/llm/client_test.go::TestOpenAIClient_StreamingReasoningContent",
+    "Pi replaces OCR OpenAI streaming reasoning_content extra field with Pi thinking blocks; not applicable via public Pi APIs.",
+  ],
+  [
+    "internal/llm/client_test.go::TestOpenAIClient_StreamingToolCall",
+    "Pi replaces OCR OpenAI streaming tool call delta merging with Pi toolCall blocks; not applicable via public Pi APIs.",
+  ],
+  [
+    "internal/llm/client_test.go::TestOpenAIClient_StreamOnlyGateway",
+    "Pi replaces OCR stream-only gateway with Pi ModelRuntime; not applicable via public Pi APIs.",
   ],
   [
     "internal/llm/message_test.go::TestParseShellRC",
