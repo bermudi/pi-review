@@ -4308,88 +4308,190 @@
       "tests": [
         {
           "name": "TestRunSession_UnknownSubcommand",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/cli/session-cmd.test.ts",
+              "title": "runSession unknown subcommand"
+            }
+          ]
         },
         {
           "name": "TestRunSessionComments_JSON",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/cli/session-cmd.test.ts",
+              "title": "runSessionComments JSON"
+            }
+          ]
         },
         {
           "name": "TestRunSessionComments_JSONEmptyIsArray",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/cli/session-cmd.test.ts",
+              "title": "runSessionComments JSON empty is array"
+            }
+          ]
         },
         {
           "name": "TestRunSessionComments_NoCommentsMessage",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/cli/session-cmd.test.ts",
+              "title": "runSessionComments no comments message"
+            }
+          ]
         },
         {
           "name": "TestRunSessionComments_SeverityFilter",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/cli/session-cmd.test.ts",
+              "title": "runSessionComments severity filter"
+            }
+          ]
         },
         {
           "name": "TestRunSessionComments_TextRendersLikeReview",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/cli/session-cmd.test.ts",
+              "title": "runSessionComments text renders like review"
+            }
+          ]
         },
         {
           "name": "TestRunSessionList_EmptyRepo",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/cli/session-cmd.test.ts",
+              "title": "runSessionList empty repo"
+            }
+          ]
         },
         {
           "name": "TestRunSessionList_JSON",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/cli/session-cmd.test.ts",
+              "title": "runSessionList JSON"
+            }
+          ]
         },
         {
           "name": "TestRunSessionList_TextIncludesSessionID",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/cli/session-cmd.test.ts",
+              "title": "runSessionList text includes session ID"
+            }
+          ]
         },
         {
           "name": "TestRunSessionShow_JSON",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/cli/session-cmd.test.ts",
+              "title": "runSessionShow JSON"
+            }
+          ]
         },
         {
           "name": "TestRunSessionShow_MissingID",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/cli/session-cmd.test.ts",
+              "title": "runSessionShow missing ID"
+            }
+          ]
         },
         {
           "name": "TestRunSessionShow_Text",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/cli/session-cmd.test.ts",
+              "title": "runSessionShow text"
+            }
+          ]
         },
         {
           "name": "TestSessionDisplayDoesNotInferLegacyComplete",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/cli/session-cmd.test.ts",
+              "title": "session display does not infer legacy complete"
+            }
+          ]
         },
         {
           "name": "TestSessionDisplayUsesManifestStatusAndCoverage",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/cli/session-cmd.test.ts",
+              "title": "session display uses manifest status and coverage"
+            }
+          ]
         },
         {
           "name": "TestSessionDisplayUsesUnknownForInvalidManifestStatus",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/cli/session-cmd.test.ts",
+              "title": "session display uses unknown for invalid manifest status"
+            }
+          ]
         },
         {
           "name": "TestTruncate",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/cli/session-cmd.test.ts",
+              "title": "truncate branches"
+            }
+          ]
         },
         {
           "name": "TestTruncateUnicode",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/cli/session-cmd.test.ts",
+              "title": "truncate unicode"
+            }
+          ]
         }
       ]
     },
@@ -4403,8 +4505,14 @@
       "tests": [
         {
           "name": "TestCompleteSessionIDs_WithSession",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/cli/session-complete.test.ts",
+              "title": "completeSessionIDs with session"
+            }
+          ]
         }
       ]
     },
@@ -4418,28 +4526,58 @@
       "tests": [
         {
           "name": "TestCompleteEnum",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/cli/session-display.test.ts",
+              "title": "completeEnum closure returns values with directive"
+            }
+          ]
         },
         {
           "name": "TestDescribeFilesNoManifest",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/cli/session-display.test.ts",
+              "title": "describeFiles no manifest"
+            }
+          ]
         },
         {
           "name": "TestDescribeRange",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/cli/session-display.test.ts",
+              "title": "describeRange covers each review-mode branch"
+            }
+          ]
         },
         {
           "name": "TestDescribeStart",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/cli/session-display.test.ts",
+              "title": "describeStart zero and formatted branches"
+            }
+          ]
         },
         {
           "name": "TestDisplayMode",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/cli/session-display.test.ts",
+              "title": "displayMode empty and non-empty branches"
+            }
+          ]
         }
       ]
     },

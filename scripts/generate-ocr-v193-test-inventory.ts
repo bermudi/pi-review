@@ -1650,6 +1650,18 @@ const localCoverage: readonly LocalCoverage[] = [
     localPath: "test/ocr-v193/cli/retry-e2e.test.ts",
     upstreamPaths: ["cmd/opencodereview/retry_report_e2e_test.go"],
   },
+  {
+    localPath: "test/ocr-v193/cli/session-cmd.test.ts",
+    upstreamPaths: ["cmd/opencodereview/session_cmd_test.go"],
+  },
+  {
+    localPath: "test/ocr-v193/cli/session-display.test.ts",
+    upstreamPaths: ["cmd/opencodereview/session_display_more_test.go"],
+  },
+  {
+    localPath: "test/ocr-v193/cli/session-complete.test.ts",
+    upstreamPaths: ["cmd/opencodereview/session_complete_test.go"],
+  },
 ];
 
 function git(...args: readonly string[]): string {
