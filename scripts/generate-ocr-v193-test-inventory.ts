@@ -86,10 +86,98 @@ interface LocalCoverage {
 // Keep this table explicit — hidden source-code rules are not allowed
 // to silently decide these categories.
 const equivalentTests: ReadonlyMap<string, readonly Evidence[]> = new Map<string, readonly Evidence[]>([
-  // Example: "internal/tool/filereader_test.go::TestFoo": [{ kind: "bun-test-annotation", path: "test/ocr-v193/tool/stub.test.ts", title: "..." }]
+  [
+    "internal/llm/protocol_test.go::TestNormalizeProtocol",
+    [{ kind: "bun-test-annotation", path: "test/ocr-v193/pi-adapter/protocol.test.ts", title: "normalizeProtocol canonicalizes known protocols case-insensitively and trims" }],
+  ],
+  [
+    "internal/llm/protocol_test.go::TestValidateProtocol",
+    [{ kind: "bun-test-annotation", path: "test/ocr-v193/pi-adapter/protocol.test.ts", title: "validateProtocol accepts canonical names and rejects others" }],
+  ],
+  [
+    "internal/llm/protocol_test.go::TestValidateProtocol_ErrorMessageListsAllProtocols",
+    [{ kind: "bun-test-annotation", path: "test/ocr-v193/pi-adapter/protocol.test.ts", title: "validateProtocol error message enumerates every canonical protocol" }],
+  ],
+  [
+    "internal/llm/client_test.go::TestStripThinkTags",
+    [{ kind: "bun-test-annotation", path: "test/ocr-v193/pi-adapter/strip-think-tags.test.ts", title: "stripThinkTags removes think wrapper tags globally" }],
+  ],
+  [
+    "internal/llm/message_test.go::TestChatResponse_Content_StripsThinkTags",
+    [{ kind: "bun-test-annotation", path: "test/ocr-v193/pi-adapter/strip-think-tags.test.ts", title: "ChatResponse content strips think tags before trimming" }],
+  ],
+  [
+    "internal/llm/message_test.go::TestChatResponse_Content_FallbackToReasoning",
+    [{ kind: "bun-test-annotation", path: "test/ocr-v193/pi-adapter/strip-think-tags.test.ts", title: "content empty falls back to reasoning content" }],
+  ],
+  [
+    "internal/llm/client_params_test.go::TestBuildToolInputSchema",
+    [{ kind: "bun-test-annotation", path: "test/ocr-v193/pi-adapter/tool-schema.test.ts", title: "buildToolInputSchema preserves object-root guarantees and filters required" }],
+  ],
+  [
+    "internal/llm/client_params_test.go::TestBuildToolInputSchema_Empty",
+    [{ kind: "bun-test-annotation", path: "test/ocr-v193/pi-adapter/tool-schema.test.ts", title: "buildToolInputSchema empty input stays empty" }],
+  ],
 ]);
 
 const notApplicableTests: ReadonlyMap<string, string> = new Map<string, string>([
+  // ---- pi-adapter provider registry: Pi replaces OCR static registry with Pi ModelRuntime ----
+  [
+    "internal/llm/providers_test.go::TestLookupProvider_KnownProviders",
+    "Pi replaces OCR provider registry LookupProvider with Pi ModelRuntime and SettingsManager model discovery via agentDir models.json and createAgentSession; OCR static registry is not applicable via public Pi APIs.",
+  ],
+  [
+    "internal/llm/providers_test.go::TestLookupProvider_MiniMaxDetails",
+    "Pi replaces OCR provider registry MiniMax details with Pi ModelRuntime; provider BaseURL and EnvVar are Pi model discovery details not applicable via public Pi APIs.",
+  ],
+  [
+    "internal/llm/providers_test.go::TestLookupProvider_Unknown",
+    "Pi replaces OCR provider registry LookupProvider unknown handling with Pi ModelRuntime; not applicable via public Pi APIs.",
+  ],
+  [
+    "internal/llm/providers_test.go::TestListProviders_Order",
+    "Pi replaces OCR provider registry ListProviders ordering with Pi ModelRuntime model list; OCR static sorted provider order is not applicable via public Pi APIs.",
+  ],
+  [
+    "internal/llm/providers_test.go::TestListProviders_ReturnsCopy",
+    "Pi replaces OCR provider registry copy semantics with Pi ModelRuntime; provider list copy guard is not applicable via public Pi APIs.",
+  ],
+  [
+    "internal/llm/providers_test.go::TestLookupProvider_ReturnsCopyOfModels",
+    "Pi replaces OCR provider registry model copy with Pi ModelRuntime; not applicable via public Pi APIs.",
+  ],
+  [
+    "internal/llm/providers_test.go::TestLookupProvider_PreservesModelOrder",
+    "Pi replaces OCR provider registry model order preservation with Pi ModelRuntime; not applicable via public Pi APIs.",
+  ],
+  [
+    "internal/llm/providers_test.go::TestListProviders_ReturnsSortedProviders",
+    "Pi replaces OCR provider registry sorted guarantee with Pi ModelRuntime; not applicable via public Pi APIs.",
+  ],
+  [
+    "internal/llm/providers_test.go::TestLookupProvider_AnthropicDetails",
+    "Pi replaces OCR provider registry Anthropic details with Pi ModelRuntime; protocol AuthHeader EnvVar are Pi model discovery not applicable via public Pi APIs.",
+  ],
+  [
+    "internal/llm/providers_test.go::TestLookupProvider_OpenAIDetails",
+    "Pi replaces OCR provider registry OpenAI details with Pi ModelRuntime; not applicable via public Pi APIs.",
+  ],
+  [
+    "internal/llm/providers_test.go::TestLookupProvider_OllamaCloudDetails",
+    "Pi replaces OCR provider registry OllamaCloud details with Pi ModelRuntime; not applicable via public Pi APIs.",
+  ],
+  [
+    "internal/llm/providers_test.go::TestLookupProvider_LiteLLMDetails",
+    "Pi replaces OCR provider registry LiteLLM details with Pi ModelRuntime; not applicable via public Pi APIs.",
+  ],
+  [
+    "internal/llm/providers_test.go::TestLookupProvider_MistralDetails",
+    "Pi replaces OCR provider registry Mistral details with Pi ModelRuntime; not applicable via public Pi APIs.",
+  ],
+  [
+    "internal/llm/providers_test.go::TestProviders_AllProtocolsCanonical",
+    "Pi replaces OCR provider registry protocol canonical check with Pi ModelRuntime; not applicable via public Pi APIs.",
+  ],
   [
     "internal/agent/agent_test.go::TestAgentGettersNil",
     "Pi replaces Go nil-receiver method call (*Agent)(nil).SessionID() with TypeScript's non-null this guarantee; calling a method on null is not applicable in TypeScript and has no runtime path.",

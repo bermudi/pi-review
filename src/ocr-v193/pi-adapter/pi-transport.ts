@@ -27,6 +27,7 @@ import { Type } from "typebox";
 import type { Message, ToolCall } from "../llmloop/compression.js";
 import type { ChatRequest, ChatResponse, ToolDef, UsageInfo } from "../llmloop/types.js";
 import type { LlmTransport as TranscriptLlmTransport } from "../llmloop/transcript.js";
+import { stripThinkTags } from "./strip-think-tags.js";
 
 // ---------------------------------------------------------------------------
 // Pi session type — derived from public factory return without deep import.
@@ -61,13 +62,61 @@ function toPiToolParameters(raw: unknown): unknown {
   if (raw === undefined || raw === null) {
     return Type.Object({});
   }
-  if (typeof raw === "object" && raw !== null) {
+  if (typeof raw === "object" && raw !== null && !Array.isArray(raw)) {
     const rec = raw as Record<string, unknown>;
-    if (typeof rec["type"] === "string" || typeof rec["properties"] === "object") {
-      return raw;
+    const hasType = typeof rec["type"] === "string";
+    const hasProps = typeof rec["properties"] === "object" && rec["properties"] !== null;
+    if (hasType || hasProps) {
+      // Preserve object-root schema with required filtering (non-string dropped) and extra field passthrough
+      // Mirrors Go buildToolInputSchema behavior for required/extra fields
+      const out: Record<string, unknown> = {};
+      if (typeof rec["type"] === "string") out["type"] = rec["type"];
+      if (hasProps) out["properties"] = rec["properties"];
+      if (Array.isArray(rec["required"])) {
+        const filtered = (rec["required"] as unknown[]).filter((v): v is string => typeof v === "string");
+        if (filtered.length > 0) out["required"] = filtered;
+      }
+      for (const [k, v] of Object.entries(rec)) {
+        if (k === "type" || k === "properties" || k === "required") continue;
+        out[k] = v;
+      }
+      // Ensure we still produce an object-root TypeBox schema if raw was already shape-correct
+      // but we need to guarantee the returned schema is valid TypeBox. If raw had extra fields,
+      // we have incorporated them above. Return as TypeBox-compatible object.
+      if (Object.keys(out).length === 0) return Type.Object({});
+      // If out is already a valid JSON schema object, return it directly (Pi SDK accepts plain objects)
+      // Otherwise wrap. For simplicity, return the raw object when it looks like a schema, else Type.Object.
+      return out;
     }
   }
   return Type.Object({});
+}
+
+export function buildToolInputSchemaForTest(input: Record<string, unknown>): {
+  readonly Properties: Record<string, unknown> | undefined;
+  readonly Required: readonly string[] | undefined;
+  readonly ExtraFields: Record<string, unknown> | undefined;
+} {
+  let properties: Record<string, unknown> | undefined;
+  const rawProps = input["properties"];
+  if (rawProps !== null && typeof rawProps === "object" && !Array.isArray(rawProps)) {
+    properties = rawProps as Record<string, unknown>;
+  }
+  let required: string[] | undefined;
+  const rawReq = input["required"];
+  if (Array.isArray(rawReq)) {
+    const filtered = rawReq.filter((v): v is string => typeof v === "string");
+    if (filtered.length > 0) required = filtered;
+  }
+  let extraFields: Record<string, unknown> | undefined;
+  const reserved = new Set(["type", "properties", "required"]);
+  for (const [k, v] of Object.entries(input)) {
+    if (reserved.has(k)) continue;
+    if (extraFields === undefined) extraFields = {};
+    extraFields[k] = v;
+  }
+  if (extraFields !== undefined && Object.keys(extraFields).length === 0) extraFields = undefined;
+  return { Properties: properties, Required: required, ExtraFields: extraFields };
 }
 
 function createAbortError(): Error {
@@ -86,16 +135,16 @@ function createAbortError(): Error {
 
 function extractOcrText(msg: Message): string {
   const c = msg.content;
-  if (typeof c === "string") return c;
+  if (typeof c === "string") return stripThinkTags(c);
   if (Array.isArray(c)) {
     let out = "";
     for (const block of c as readonly { readonly type: string; readonly text?: string; readonly content?: readonly unknown[] }[]) {
       if (typeof block.text === "string") {
-        out += block.text;
+        out += stripThinkTags(block.text);
       } else if (Array.isArray((block as unknown as { content?: unknown }).content)) {
         // Nested content blocks (recursive)
         for (const nested of (block as unknown as { content: readonly { readonly text?: string }[] }).content) {
-          out += nested.text ?? "";
+          out += stripThinkTags(nested.text ?? "");
         }
       }
     }
@@ -105,9 +154,9 @@ function extractOcrText(msg: Message): string {
 }
 
 function extractOcrTextFromContent(content: string | readonly { readonly type: string; readonly text?: string }[]): string {
-  if (typeof content === "string") return content;
+  if (typeof content === "string") return stripThinkTags(content);
   let out = "";
-  for (const b of content) out += b.text ?? "";
+  for (const b of content) out += stripThinkTags(b.text ?? "");
   return out;
 }
 
@@ -189,6 +238,7 @@ function ocrMessagesToPiMessages(messages: readonly Message[]): unknown[] {
 
 interface PiAssistantObservation {
   readonly text: string;
+  readonly reasoningText: string;
   readonly toolCalls: ToolCall[];
   readonly toolBlocks: number;
   readonly invalidToolBlocks: number;
@@ -214,19 +264,31 @@ function safeStopReason(value: unknown): string {
  * reasoning, tool names/arguments, prompts, errors, or provider payloads.
  */
 function inspectPiAssistant(msg: unknown): PiAssistantObservation {
-  const m = msg as { content?: unknown };
+  const m = msg as { content?: unknown; reasoningContent?: unknown; reasoning?: unknown };
   const c = m.content;
   let text = "";
+  let reasoningText = "";
+  // Reasoning may be in separate field (compat) or as thinking blocks
+  if (typeof m.reasoningContent === "string" && m.reasoningContent.length > 0) {
+    reasoningText += stripThinkTags(m.reasoningContent);
+  }
+  if (typeof m.reasoning === "string" && m.reasoning.length > 0) {
+    reasoningText += stripThinkTags(m.reasoning);
+  }
   const out: ToolCall[] = [];
   let toolBlocks = 0;
   let invalidToolBlocks = 0;
 
   if (typeof c === "string") {
-    text = c;
+    text = stripThinkTags(c);
   } else if (Array.isArray(c)) {
-    for (const block of c as readonly { type?: string; text?: string; id?: string; name?: string; arguments?: unknown }[]) {
+    for (const block of c as readonly { type?: string; text?: string; id?: string; name?: string; arguments?: unknown; content?: unknown }[]) {
       if (block.type === "text" && typeof block.text === "string") {
-        text += block.text;
+        text += stripThinkTags(block.text);
+        continue;
+      }
+      if ((block.type === "thinking" || block.type === "reasoning") && typeof block.text === "string") {
+        reasoningText += stripThinkTags(block.text);
         continue;
       }
       if (block.type !== "toolCall") continue;
@@ -251,6 +313,7 @@ function inspectPiAssistant(msg: unknown): PiAssistantObservation {
 
   return {
     text,
+    reasoningText,
     toolCalls: out,
     toolBlocks,
     invalidToolBlocks,
@@ -535,6 +598,7 @@ export class PiTransport implements TranscriptLlmTransport {
       let turnEnded = false;
       const stateMessageCountBeforeDrive = getStateMessages().length;
 
+      let capturedReasoning = "";
       const captureAssistant = (
         message: unknown,
         source: "turn_end" | "agent_end" | "state",
@@ -542,7 +606,12 @@ export class PiTransport implements TranscriptLlmTransport {
         const observation = inspectPiAssistant(message);
         assistantObservation = observation;
         assistantSource = source;
-        capturedContent = observation.text;
+        // OCR ChatResponse.Content() fallback: empty content falls back to reasoningContent, with think-tag stripping
+        let text = observation.text.trim() === "" ? observation.reasoningText : observation.text;
+        // Ensure think tags stripped on fallback path as well (inspect already does)
+        text = text.trim() === "" ? "" : text;
+        capturedContent = text;
+        capturedReasoning = observation.reasoningText;
         capturedToolCalls = observation.toolCalls;
         capturedUsage = mapPiUsage((message as Record<string, unknown>)["usage"]);
       };
@@ -678,6 +747,7 @@ export class PiTransport implements TranscriptLlmTransport {
 
         const response: ChatResponse = {
           content: capturedContent,
+          reasoningContent: capturedReasoning !== "" ? capturedReasoning : undefined,
           toolCalls: capturedToolCalls,
           usage: capturedUsage,
         };

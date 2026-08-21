@@ -7621,13 +7621,27 @@
         },
         {
           "name": "TestBuildToolInputSchema",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "equivalent",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/pi-adapter/tool-schema.test.ts",
+              "title": "buildToolInputSchema preserves object-root guarantees and filters required"
+            }
+          ],
+          "reason": "equivalent via test/ocr-v193/pi-adapter/tool-schema.test.ts"
         },
         {
           "name": "TestBuildToolInputSchema_Empty",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "equivalent",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/pi-adapter/tool-schema.test.ts",
+              "title": "buildToolInputSchema empty input stays empty"
+            }
+          ],
+          "reason": "equivalent via test/ocr-v193/pi-adapter/tool-schema.test.ts"
         }
       ]
     },
@@ -7876,8 +7890,15 @@
         },
         {
           "name": "TestStripThinkTags",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "equivalent",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/pi-adapter/strip-think-tags.test.ts",
+              "title": "stripThinkTags removes think wrapper tags globally"
+            }
+          ],
+          "reason": "equivalent via test/ocr-v193/pi-adapter/strip-think-tags.test.ts"
         }
       ]
     },
@@ -7951,8 +7972,15 @@
         },
         {
           "name": "TestChatResponse_Content_FallbackToReasoning",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "equivalent",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/pi-adapter/strip-think-tags.test.ts",
+              "title": "content empty falls back to reasoning content"
+            }
+          ],
+          "reason": "equivalent via test/ocr-v193/pi-adapter/strip-think-tags.test.ts"
         },
         {
           "name": "TestChatResponse_Content_NilContent",
@@ -7961,8 +7989,15 @@
         },
         {
           "name": "TestChatResponse_Content_StripsThinkTags",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "equivalent",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/pi-adapter/strip-think-tags.test.ts",
+              "title": "ChatResponse content strips think tags before trimming"
+            }
+          ],
+          "reason": "equivalent via test/ocr-v193/pi-adapter/strip-think-tags.test.ts"
         },
         {
           "name": "TestChatResponse_ToolCalls",
@@ -8066,18 +8101,39 @@
       "tests": [
         {
           "name": "TestNormalizeProtocol",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "equivalent",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/pi-adapter/protocol.test.ts",
+              "title": "normalizeProtocol canonicalizes known protocols case-insensitively and trims"
+            }
+          ],
+          "reason": "equivalent via test/ocr-v193/pi-adapter/protocol.test.ts"
         },
         {
           "name": "TestValidateProtocol",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "equivalent",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/pi-adapter/protocol.test.ts",
+              "title": "validateProtocol accepts canonical names and rejects others"
+            }
+          ],
+          "reason": "equivalent via test/ocr-v193/pi-adapter/protocol.test.ts"
         },
         {
           "name": "TestValidateProtocol_ErrorMessageListsAllProtocols",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "equivalent",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/pi-adapter/protocol.test.ts",
+              "title": "validateProtocol error message enumerates every canonical protocol"
+            }
+          ],
+          "reason": "equivalent via test/ocr-v193/pi-adapter/protocol.test.ts"
         }
       ]
     },
@@ -8091,73 +8147,73 @@
       "tests": [
         {
           "name": "TestListProviders_Order",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "not_applicable",
+          "reason": "Pi replaces OCR provider registry ListProviders ordering with Pi ModelRuntime model list; OCR static sorted provider order is not applicable via public Pi APIs."
         },
         {
           "name": "TestListProviders_ReturnsCopy",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "not_applicable",
+          "reason": "Pi replaces OCR provider registry copy semantics with Pi ModelRuntime; provider list copy guard is not applicable via public Pi APIs."
         },
         {
           "name": "TestListProviders_ReturnsSortedProviders",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "not_applicable",
+          "reason": "Pi replaces OCR provider registry sorted guarantee with Pi ModelRuntime; not applicable via public Pi APIs."
         },
         {
           "name": "TestLookupProvider_AnthropicDetails",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "not_applicable",
+          "reason": "Pi replaces OCR provider registry Anthropic details with Pi ModelRuntime; protocol AuthHeader EnvVar are Pi model discovery not applicable via public Pi APIs."
         },
         {
           "name": "TestLookupProvider_KnownProviders",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "not_applicable",
+          "reason": "Pi replaces OCR provider registry LookupProvider with Pi ModelRuntime and SettingsManager model discovery via agentDir models.json and createAgentSession; OCR static registry is not applicable via public Pi APIs."
         },
         {
           "name": "TestLookupProvider_LiteLLMDetails",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "not_applicable",
+          "reason": "Pi replaces OCR provider registry LiteLLM details with Pi ModelRuntime; not applicable via public Pi APIs."
         },
         {
           "name": "TestLookupProvider_MiniMaxDetails",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "not_applicable",
+          "reason": "Pi replaces OCR provider registry MiniMax details with Pi ModelRuntime; provider BaseURL and EnvVar are Pi model discovery details not applicable via public Pi APIs."
         },
         {
           "name": "TestLookupProvider_MistralDetails",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "not_applicable",
+          "reason": "Pi replaces OCR provider registry Mistral details with Pi ModelRuntime; not applicable via public Pi APIs."
         },
         {
           "name": "TestLookupProvider_OllamaCloudDetails",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "not_applicable",
+          "reason": "Pi replaces OCR provider registry OllamaCloud details with Pi ModelRuntime; not applicable via public Pi APIs."
         },
         {
           "name": "TestLookupProvider_OpenAIDetails",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "not_applicable",
+          "reason": "Pi replaces OCR provider registry OpenAI details with Pi ModelRuntime; not applicable via public Pi APIs."
         },
         {
           "name": "TestLookupProvider_PreservesModelOrder",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "not_applicable",
+          "reason": "Pi replaces OCR provider registry model order preservation with Pi ModelRuntime; not applicable via public Pi APIs."
         },
         {
           "name": "TestLookupProvider_ReturnsCopyOfModels",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "not_applicable",
+          "reason": "Pi replaces OCR provider registry model copy with Pi ModelRuntime; not applicable via public Pi APIs."
         },
         {
           "name": "TestLookupProvider_Unknown",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "not_applicable",
+          "reason": "Pi replaces OCR provider registry LookupProvider unknown handling with Pi ModelRuntime; not applicable via public Pi APIs."
         },
         {
           "name": "TestProviders_AllProtocolsCanonical",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "not_applicable",
+          "reason": "Pi replaces OCR provider registry protocol canonical check with Pi ModelRuntime; not applicable via public Pi APIs."
         }
       ]
     },
