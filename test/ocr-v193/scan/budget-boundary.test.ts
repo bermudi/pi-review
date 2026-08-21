@@ -111,7 +111,6 @@ describe("ocr-v193 scan budget boundary — black-box exit code", () => {
         opts: { outputFormat: "json", preview: false, resume: "", model: "test", maxTokensBudget: 120000 } as unknown as import("../../../src/ocr-v193/cli/shared.js").ScanOptions,
         traceId: "test-trace",
         llmIdentity: undefined,
-        retryReport: null,
         startMs: Date.now(),
         runnerFactory: async () => cachedRunner,
       });
@@ -168,7 +167,6 @@ describe("ocr-v193 scan budget boundary — black-box exit code", () => {
         opts: { outputFormat: "json", preview: false, resume: "", model: "test" } as unknown as import("../../../src/ocr-v193/cli/shared.js").ScanOptions,
         traceId: "test-trace",
         llmIdentity: undefined,
-        retryReport: null,
         startMs: Date.now(),
         runnerFactory: async () => runner,
       });

@@ -16,11 +16,9 @@ import {
   outputJsonWithWarnings,
   outputJsonNoFiles,
   outputPreview,
-  outputRetryReportText,
   traceSummaryText,
   type AgentWarning,
   type JsonLlmIdentity,
-  type RetryReport,
 } from "./output.js";
 import { outputSarifText } from "./sarif.js";
 import type { ResultProvider } from "./review.js";
@@ -56,7 +54,6 @@ export interface ScanContext {
   opts: ScanOptions;
   traceId: string;
   llmIdentity: JsonLlmIdentity | undefined;
-  retryReport: RetryReport | null | undefined;
   startMs: number;
   signal?: AbortSignal;
   previewFactory?: ScanPreviewFactory;
@@ -74,7 +71,6 @@ function emitScanResult(
   outputFormat: string,
   traceId: string,
   llmIdentity: JsonLlmIdentity | undefined,
-  retryReport: RetryReport | null | undefined,
   io: Pick<CliIo, "stdout" | "stderr">,
 ): void {
   const manifest = provider.RunManifest() ?? null;
@@ -107,7 +103,7 @@ function emitScanResult(
         manifest,
         budgetExceeded: provider.BudgetExceeded(),
         llmIdentity,
-        retryReport,
+        retryReport: null,
       }),
     );
     return;
@@ -132,8 +128,6 @@ function emitScanResult(
   });
   io.stdout(`${summary}${stdout}`);
   if (stderr !== "") io.stderr(stderr);
-  const retryText = outputRetryReportText(retryReport);
-  if (retryText !== "") io.stdout(retryText);
   const projectSummary = provider.ProjectSummary();
   if (projectSummary !== "") io.stdout(`\n\n──────── Project Summary ────────\n\n${projectSummary}\n`);
 }
@@ -206,7 +200,7 @@ export async function runScanContext(ctx: ScanContext): Promise<number> {
       ResumeInfo: () => runner!.resumeInfo,
     };
     try {
-      emitScanResult(provider, comments, durationMs, opts.outputFormat, traceId, effectiveLlmIdentity, null, io);
+      emitScanResult(provider, comments, durationMs, opts.outputFormat, traceId, effectiveLlmIdentity, io);
     } catch (err) {
       emitErr = err instanceof Error ? err : new Error(String(err));
     }

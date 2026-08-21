@@ -553,7 +553,6 @@ export async function runCli(
         opts,
         traceId: deps.traceId ?? "",
         llmIdentity: deps.llmIdentity,
-        retryReport: deps.retryReport ?? null,
         startMs,
         previewFactory: scanPreviewFactory,
         runnerFactory: deps.scanRunnerFactory ? (sig) => deps.scanRunnerFactory?.(opts, sig) as Promise<ScanRunner> : undefined,
