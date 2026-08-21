@@ -214,6 +214,10 @@ const localCoverage: readonly LocalCoverage[] = [
     upstreamPaths: ["internal/config/rules/system_rules_test.go"],
   },
   {
+    localPath: "test/ocr-v193/rules/resolve_github.test.ts",
+    upstreamPaths: ["internal/config/rules/resolve_github_test.go"],
+  },
+  {
     localPath: "test/ocr-v193/rules/system_rules_unmarshal.test.ts",
     upstreamPaths: ["internal/config/rules/system_rules_unmarshal_test.go"],
   },

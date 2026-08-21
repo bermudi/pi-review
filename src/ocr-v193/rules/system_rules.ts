@@ -413,14 +413,14 @@ export const IsUserIncluded = isUserIncluded;
 
 const ALLOWED_RULE_EXTS: ReadonlySet<string> = new Set([".md", ".txt", ".markdown"]);
 
-function looksLikeFilePath(s: string): boolean {
+export function looksLikeFilePath(s: string): boolean {
   if (s.includes("\n")) return false;
   if (s.includes(" ")) return false;
   const ext = path.extname(s).toLowerCase();
   return ALLOWED_RULE_EXTS.has(ext);
 }
 
-function readRuleFileSafe(filePath: string): string {
+export function readRuleFileSafe(filePath: string): string {
   const maxSize = 512 * 1024;
   let resolved: string;
   try {
@@ -445,7 +445,7 @@ function readRuleFileSafe(filePath: string): string {
   return trimTrailingCRLF(content);
 }
 
-function tryReadRuleFile(rule: string, repoDir: string): string | null {
+export function tryReadRuleFile(rule: string, repoDir: string): string | null {
   if (repoDir === "") {
     if (!path.isAbsolute(rule)) {
       console.error(`[pi-review] WARNING: cannot resolve relative rule path ${JSON.stringify(rule)} without a repo dir`);
@@ -479,7 +479,7 @@ function tryReadRuleFile(rule: string, repoDir: string): string | null {
   }
 }
 
-function resolveRuleEntries(entries: ProjectRuleEntry[], repoDir: string): void {
+export function resolveRuleEntries(entries: ProjectRuleEntry[], repoDir: string): void {
   for (const entry of entries) {
     if (entry.Rule.trim() === "" || !looksLikeFilePath(entry.Rule)) continue;
     const content = tryReadRuleFile(entry.Rule, repoDir);
@@ -563,7 +563,8 @@ export function loadProjectRule(repoDir: string): ProjectRule | null {
 export function loadGlobalRule(): ProjectRule | null {
   let home: string;
   try {
-    home = os.homedir();
+    const envHome = process.env.HOME ?? process.env.USERPROFILE ?? "";
+    home = envHome !== "" ? envHome : os.homedir();
   } catch {
     return null;
   }
