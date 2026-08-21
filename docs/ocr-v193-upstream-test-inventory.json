@@ -8047,8 +8047,15 @@
         },
         {
           "name": "TestChatResponse_Content_NilContent",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "equivalent",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/pi-adapter/message.test.ts",
+              "title": "ChatResponse nil content falls back to reasoning"
+            }
+          ],
+          "reason": "equivalent via test/ocr-v193/pi-adapter/message.test.ts"
         },
         {
           "name": "TestChatResponse_Content_StripsThinkTags",
@@ -8076,8 +8083,15 @@
         },
         {
           "name": "TestChatResponse_ToolCalls_Empty",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "equivalent",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/pi-adapter/message.test.ts",
+              "title": "ChatResponse empty toolCalls returns empty array"
+            }
+          ],
+          "reason": "equivalent via test/ocr-v193/pi-adapter/message.test.ts"
         },
         {
           "name": "TestDefaultAuthHeader",
@@ -8098,8 +8112,15 @@
         },
         {
           "name": "TestExtractText_Default",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "equivalent",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/pi-adapter/message.test.ts",
+              "title": "extractText default non-string returns empty"
+            }
+          ],
+          "reason": "equivalent via test/ocr-v193/pi-adapter/message.test.ts"
         },
         {
           "name": "TestExtractText_NestedContentBlocks",
@@ -8192,23 +8213,23 @@
         },
         {
           "name": "TestParseShellRC",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "not_applicable",
+          "reason": "Pi replaces OCR shell RC parsing with Pi DefaultResourceLoader; not applicable via public Pi APIs."
         },
         {
           "name": "TestParseShellRC_Incomplete",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "not_applicable",
+          "reason": "Pi replaces OCR shell RC parsing; not applicable via public Pi APIs."
         },
         {
           "name": "TestParseShellRC_ModelOverride",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "not_applicable",
+          "reason": "Pi replaces OCR shell RC model override parsing; not applicable via public Pi APIs."
         },
         {
           "name": "TestParseShellRC_NonexistentFile",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "not_applicable",
+          "reason": "Pi replaces OCR shell RC file handling; not applicable via public Pi APIs."
         },
         {
           "name": "TestUserAgent",

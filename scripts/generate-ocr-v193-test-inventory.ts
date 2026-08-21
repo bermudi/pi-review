@@ -183,6 +183,18 @@ const equivalentTests: ReadonlyMap<string, readonly Evidence[]> = new Map<string
     [{ kind: "bun-test-annotation", path: "test/ocr-v193/pi-adapter/usage.test.ts", title: "empty Pi usage object yields undefined" }],
   ],
   [
+    "internal/llm/message_test.go::TestChatResponse_Content_NilContent",
+    [{ kind: "bun-test-annotation", path: "test/ocr-v193/pi-adapter/message.test.ts", title: "ChatResponse nil content falls back to reasoning" }],
+  ],
+  [
+    "internal/llm/message_test.go::TestChatResponse_ToolCalls_Empty",
+    [{ kind: "bun-test-annotation", path: "test/ocr-v193/pi-adapter/message.test.ts", title: "ChatResponse empty toolCalls returns empty array" }],
+  ],
+  [
+    "internal/llm/message_test.go::TestExtractText_Default",
+    [{ kind: "bun-test-annotation", path: "test/ocr-v193/pi-adapter/message.test.ts", title: "extractText default non-string returns empty" }],
+  ],
+  [
     "internal/llm/client_params_test.go::TestBuildOpenAIParams_AllRoles",
     [{ kind: "bun-test-annotation", path: "test/ocr-v193/pi-adapter/build-params.test.ts", title: "ChatRequest role handling covers system/user/tool/assistant/unknown via Pi translation" }],
   ],
@@ -381,6 +393,22 @@ const notApplicableTests: ReadonlyMap<string, string> = new Map<string, string>(
   [
     "internal/llm/message_test.go::TestUserAgent",
     "Pi replaces OCR userAgent with Pi SDK internal User-Agent; not applicable via public Pi APIs.",
+  ],
+  [
+    "internal/llm/message_test.go::TestParseShellRC",
+    "Pi replaces OCR shell RC parsing with Pi DefaultResourceLoader; not applicable via public Pi APIs.",
+  ],
+  [
+    "internal/llm/message_test.go::TestParseShellRC_Incomplete",
+    "Pi replaces OCR shell RC parsing; not applicable via public Pi APIs.",
+  ],
+  [
+    "internal/llm/message_test.go::TestParseShellRC_ModelOverride",
+    "Pi replaces OCR shell RC model override parsing; not applicable via public Pi APIs.",
+  ],
+  [
+    "internal/llm/message_test.go::TestParseShellRC_NonexistentFile",
+    "Pi replaces OCR shell RC file handling; not applicable via public Pi APIs.",
   ],
   // ---- resolver provider dispatch: Pi replaces with createAgentSession model routing ----
   [

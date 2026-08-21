@@ -130,3 +130,63 @@ test("ChatResponse toolCalls extracted from toolCall blocks", async () => {
   expect(res.toolCalls).toHaveLength(1);
   expect(res.toolCalls[0]!.function.name).toBe("code_comment");
 });
+
+// OCR v1.9.3: TestChatResponse_Content_NilContent
+test("ChatResponse nil content falls back to reasoning", async () => {
+  const { PiTransport } = await import("../../../src/ocr-v193/pi-adapter/pi-transport.js");
+  let listener: ((e: unknown) => void) | undefined;
+  const session = {
+    state: { messages: [] as unknown[] },
+    messages: [] as unknown[],
+    agent: { state: { messages: [] as unknown[] } },
+    isIdle: true,
+    isStreaming: false,
+    sessionId: "s",
+    setActiveToolsByName: () => {},
+    subscribe: (next: (e: unknown) => void) => { listener = next; return () => {}; },
+    prompt: async () => {
+      listener?.({ type: "turn_end", message: { role: "assistant", content: "", reasoningContent: "fallback", stopReason: "stop" } });
+    },
+    waitForIdle: async () => {},
+    abort: async () => {},
+  };
+  const transport = new PiTransport(session as never);
+  const res = await transport.complete({ model: "m", messages: [newTextMessage("user", "hi")], maxTokens: 10 } as never, AbortSignal.timeout(1000) as never);
+  expect(res.content).toBe("fallback");
+});
+
+// OCR v1.9.3: TestChatResponse_ToolCalls_Empty
+test("ChatResponse empty toolCalls returns empty array", async () => {
+  const { PiTransport } = await import("../../../src/ocr-v193/pi-adapter/pi-transport.js");
+  let listener: ((e: unknown) => void) | undefined;
+  const session = {
+    state: { messages: [] as unknown[] },
+    messages: [] as unknown[],
+    agent: { state: { messages: [] as unknown[] } },
+    isIdle: true,
+    isStreaming: false,
+    sessionId: "s",
+    setActiveToolsByName: () => {},
+    subscribe: (next: (e: unknown) => void) => { listener = next; return () => {}; },
+    prompt: async () => {
+      listener?.({ type: "turn_end", message: { role: "assistant", content: [{ type: "text", text: "no tools" }], stopReason: "stop" } });
+    },
+    waitForIdle: async () => {},
+    abort: async () => {},
+  };
+  const transport = new PiTransport(session as never);
+  const res = await transport.complete({ model: "m", messages: [newTextMessage("user", "hi")], maxTokens: 10 } as never, AbortSignal.timeout(1000) as never);
+  expect(res.toolCalls).toHaveLength(0);
+});
+
+// OCR v1.9.3: TestExtractText_Default
+test("extractText default non-string returns empty", () => {
+  const m = { role: "user", content: 42 as unknown as string } as unknown as Message;
+  expect(extractText(m)).toBe("");
+});
+
+// extra coverage for undefined
+test("extractText undefined content returns empty for coverage", () => {
+  const m = { role: "user", content: undefined as unknown as string } as unknown as Message;
+  expect(extractText(m)).toBe("");
+});
