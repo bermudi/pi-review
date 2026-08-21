@@ -7725,18 +7725,18 @@
         },
         {
           "name": "TestCountTokens",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "not_applicable",
+          "reason": "Pi replaces OCR tiktoken counting with deterministic bytes/4 fallback in src/ocr-v193/llmloop/compression.ts countTokens; tiktoken-precise counts are not applicable via public Pi APIs (documented deviation)."
         },
         {
           "name": "TestCountTokensForModel",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "not_applicable",
+          "reason": "Pi replaces OCR model-sensitive tiktoken counting with model-agnostic bytes/4 fallback; not applicable via public Pi APIs (documented deviation)."
         },
         {
           "name": "TestEncodingForModel",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "not_applicable",
+          "reason": "Pi replaces OCR tiktoken encoding selection (cl100k vs o200k) with absence; encoding table is not applicable via public Pi APIs (documented deviation)."
         },
         {
           "name": "TestNewAnthropicClient_URLNormalization",
@@ -7860,8 +7860,15 @@
         },
         {
           "name": "TestOpenAIClient_StreamingUsage",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "equivalent",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/pi-adapter/usage.test.ts",
+              "title": "PiTransport captures streaming usage via turn_end assistant message"
+            }
+          ],
+          "reason": "equivalent via test/ocr-v193/pi-adapter/usage.test.ts"
         },
         {
           "name": "TestOpenAIClient_StreamOnlyGateway",
@@ -7912,43 +7919,43 @@
       "tests": [
         {
           "name": "TestInitEmbeddedLoader",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "not_applicable",
+          "reason": "Pi replaces OCR InitEmbeddedLoader global tiktoken loader with absence; not applicable via public Pi APIs."
         },
         {
           "name": "TestLoadTiktokenBpe_KnownURL",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "not_applicable",
+          "reason": "Pi replaces OCR LoadTiktokenBpe URL mapping with bytes/4 fallback; not applicable via public Pi APIs."
         },
         {
           "name": "TestLoadTiktokenBpe_UnknownURL",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "not_applicable",
+          "reason": "Pi replaces OCR LoadTiktokenBpe unknown URL error with bytes/4 fallback; not applicable via public Pi APIs."
         },
         {
           "name": "TestParseBpeData_EmptyLines",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "not_applicable",
+          "reason": "Pi replaces OCR tiktoken BPE parsing with bytes/4 fallback; not applicable via public Pi APIs."
         },
         {
           "name": "TestParseBpeData_InvalidBase64",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "not_applicable",
+          "reason": "Pi replaces OCR tiktoken BPE parsing with bytes/4 fallback; not applicable via public Pi APIs."
         },
         {
           "name": "TestParseBpeData_InvalidLine",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "not_applicable",
+          "reason": "Pi replaces OCR tiktoken BPE parsing with bytes/4 fallback; not applicable via public Pi APIs."
         },
         {
           "name": "TestParseBpeData_InvalidRank",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "not_applicable",
+          "reason": "Pi replaces OCR tiktoken BPE parsing with bytes/4 fallback; not applicable via public Pi APIs."
         },
         {
           "name": "TestParseBpeData_Valid",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "not_applicable",
+          "reason": "Pi replaces OCR tiktoken BPE parsing with bytes/4 fallback; LoadTiktokenBpe and embedded bpe_data are not applicable via public Pi APIs (documented deviation)."
         }
       ]
     },
@@ -7962,13 +7969,27 @@
       "tests": [
         {
           "name": "TestChatResponse_Content",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "equivalent",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/pi-adapter/message.test.ts",
+              "title": "ChatResponse content mirrors extractText for assistant message"
+            }
+          ],
+          "reason": "equivalent via test/ocr-v193/pi-adapter/message.test.ts"
         },
         {
           "name": "TestChatResponse_Content_Empty",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "equivalent",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/pi-adapter/usage.test.ts",
+              "title": "empty Pi usage object yields undefined"
+            }
+          ],
+          "reason": "equivalent via test/ocr-v193/pi-adapter/usage.test.ts"
         },
         {
           "name": "TestChatResponse_Content_FallbackToReasoning",
@@ -8001,8 +8022,15 @@
         },
         {
           "name": "TestChatResponse_ToolCalls",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "equivalent",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/pi-adapter/message.test.ts",
+              "title": "ChatResponse toolCalls extracted from toolCall blocks"
+            }
+          ],
+          "reason": "equivalent via test/ocr-v193/pi-adapter/message.test.ts"
         },
         {
           "name": "TestChatResponse_ToolCalls_Empty",
@@ -8011,13 +8039,20 @@
         },
         {
           "name": "TestDefaultAuthHeader",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "not_applicable",
+          "reason": "Pi replaces OCR defaultAuthHeader with Pi SDK SessionManager/SettingsManager auth handling; header name selection is not applicable via public Pi APIs."
         },
         {
           "name": "TestExtractText_ContentBlocks",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "equivalent",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/pi-adapter/message.test.ts",
+              "title": "extractText concatenates content blocks"
+            }
+          ],
+          "reason": "equivalent via test/ocr-v193/pi-adapter/message.test.ts"
         },
         {
           "name": "TestExtractText_Default",
@@ -8026,43 +8061,92 @@
         },
         {
           "name": "TestExtractText_NestedContentBlocks",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "equivalent",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/pi-adapter/message.test.ts",
+              "title": "extractText handles nested content blocks"
+            }
+          ],
+          "reason": "equivalent via test/ocr-v193/pi-adapter/message.test.ts"
         },
         {
           "name": "TestExtractText_NilContent",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "equivalent",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/pi-adapter/message.test.ts",
+              "title": "extractText empty content returns empty"
+            }
+          ],
+          "reason": "equivalent via test/ocr-v193/pi-adapter/message.test.ts"
         },
         {
           "name": "TestExtractText_String",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "equivalent",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/pi-adapter/message.test.ts",
+              "title": "extractText returns string content verbatim"
+            }
+          ],
+          "reason": "equivalent via test/ocr-v193/pi-adapter/message.test.ts"
         },
         {
           "name": "TestModelListContains",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "not_applicable",
+          "reason": "Pi replaces OCR ModelListContains config helper with Pi SettingsManager model discovery; not applicable via public Pi APIs."
         },
         {
           "name": "TestNewTextMessage",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "equivalent",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/pi-adapter/message.test.ts",
+              "title": "newTextMessage creates user message with role and content"
+            }
+          ],
+          "reason": "equivalent via test/ocr-v193/pi-adapter/message.test.ts"
         },
         {
           "name": "TestNewToolCallMessage",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "equivalent",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/pi-adapter/message.test.ts",
+              "title": "tool call message preserves tool calls and copies"
+            }
+          ],
+          "reason": "equivalent via test/ocr-v193/pi-adapter/message.test.ts"
         },
         {
           "name": "TestNewToolCallMessage_NilCalls",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "equivalent",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/pi-adapter/message.test.ts",
+              "title": "tool call message with no tool_calls has undefined or empty"
+            }
+          ],
+          "reason": "equivalent via test/ocr-v193/pi-adapter/message.test.ts"
         },
         {
           "name": "TestNewToolResultMessage",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "equivalent",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/pi-adapter/message.test.ts",
+              "title": "tool result message has tool role and call id"
+            }
+          ],
+          "reason": "equivalent via test/ocr-v193/pi-adapter/message.test.ts"
         },
         {
           "name": "TestParseShellRC",
@@ -8086,8 +8170,8 @@
         },
         {
           "name": "TestUserAgent",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "not_applicable",
+          "reason": "Pi replaces OCR userAgent with Pi SDK internal User-Agent; not applicable via public Pi APIs."
         }
       ]
     },
@@ -9197,33 +9281,61 @@
       "tests": [
         {
           "name": "TestResolveUsageCacheCreationTokensPriority",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "not_applicable",
+          "reason": "Pi replaces OCR cache creation path priority with Pi SDK normalized usage.cacheWrite; not applicable via public Pi APIs."
         },
         {
           "name": "TestResolveUsageCacheReadPathPriority",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "not_applicable",
+          "reason": "Pi replaces OCR usage resolver path priority probing with Pi SDK normalized usage.cacheRead via createAgentSession; priority among raw JSON paths is not applicable via public Pi APIs, values covered by OpenAI compatible test."
         },
         {
           "name": "TestResolveUsageOpenAICompatibleCachedTokens",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "equivalent",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/pi-adapter/usage.test.ts",
+              "title": "mapPiUsage maps OpenAI cached tokens as cacheRead without double counting total"
+            }
+          ],
+          "reason": "equivalent via test/ocr-v193/pi-adapter/usage.test.ts"
         },
         {
           "name": "TestResolveUsageResponsesAPIFieldNames",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "equivalent",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/pi-adapter/usage.test.ts",
+              "title": "mapPiUsage handles Responses API via Pi normalized input/output"
+            }
+          ],
+          "reason": "equivalent via test/ocr-v193/pi-adapter/usage.test.ts"
         },
         {
           "name": "TestResolveUsageWrappedAnthropicCompatibleCacheTokens",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "equivalent",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/pi-adapter/usage.test.ts",
+              "title": "mapPiUsage maps Anthropic separate cache and total"
+            }
+          ],
+          "reason": "equivalent via test/ocr-v193/pi-adapter/usage.test.ts"
         },
         {
           "name": "TestResolveUsageWrappedCachedTokens",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "equivalent",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/pi-adapter/usage.test.ts",
+              "title": "mapPiUsage maps cache write via cacheWrite"
+            }
+          ],
+          "reason": "equivalent via test/ocr-v193/pi-adapter/usage.test.ts"
         }
       ]
     },

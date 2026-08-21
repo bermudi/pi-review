@@ -118,6 +118,70 @@ const equivalentTests: ReadonlyMap<string, readonly Evidence[]> = new Map<string
     "internal/llm/client_params_test.go::TestBuildToolInputSchema_Empty",
     [{ kind: "bun-test-annotation", path: "test/ocr-v193/pi-adapter/tool-schema.test.ts", title: "buildToolInputSchema empty input stays empty" }],
   ],
+  [
+    "internal/llm/message_test.go::TestNewTextMessage",
+    [{ kind: "bun-test-annotation", path: "test/ocr-v193/pi-adapter/message.test.ts", title: "newTextMessage creates user message with role and content" }],
+  ],
+  [
+    "internal/llm/message_test.go::TestNewToolCallMessage",
+    [{ kind: "bun-test-annotation", path: "test/ocr-v193/pi-adapter/message.test.ts", title: "tool call message preserves tool calls and copies" }],
+  ],
+  [
+    "internal/llm/message_test.go::TestNewToolCallMessage_NilCalls",
+    [{ kind: "bun-test-annotation", path: "test/ocr-v193/pi-adapter/message.test.ts", title: "tool call message with no tool_calls has undefined or empty" }],
+  ],
+  [
+    "internal/llm/message_test.go::TestNewToolResultMessage",
+    [{ kind: "bun-test-annotation", path: "test/ocr-v193/pi-adapter/message.test.ts", title: "tool result message has tool role and call id" }],
+  ],
+  [
+    "internal/llm/message_test.go::TestExtractText_String",
+    [{ kind: "bun-test-annotation", path: "test/ocr-v193/pi-adapter/message.test.ts", title: "extractText returns string content verbatim" }],
+  ],
+  [
+    "internal/llm/message_test.go::TestExtractText_ContentBlocks",
+    [{ kind: "bun-test-annotation", path: "test/ocr-v193/pi-adapter/message.test.ts", title: "extractText concatenates content blocks" }],
+  ],
+  [
+    "internal/llm/message_test.go::TestExtractText_NestedContentBlocks",
+    [{ kind: "bun-test-annotation", path: "test/ocr-v193/pi-adapter/message.test.ts", title: "extractText handles nested content blocks" }],
+  ],
+  [
+    "internal/llm/message_test.go::TestExtractText_NilContent",
+    [{ kind: "bun-test-annotation", path: "test/ocr-v193/pi-adapter/message.test.ts", title: "extractText empty content returns empty" }],
+  ],
+  [
+    "internal/llm/message_test.go::TestChatResponse_Content",
+    [{ kind: "bun-test-annotation", path: "test/ocr-v193/pi-adapter/message.test.ts", title: "ChatResponse content mirrors extractText for assistant message" }],
+  ],
+  [
+    "internal/llm/message_test.go::TestChatResponse_ToolCalls",
+    [{ kind: "bun-test-annotation", path: "test/ocr-v193/pi-adapter/message.test.ts", title: "ChatResponse toolCalls extracted from toolCall blocks" }],
+  ],
+  [
+    "internal/llm/usage_resolver_test.go::TestResolveUsageOpenAICompatibleCachedTokens",
+    [{ kind: "bun-test-annotation", path: "test/ocr-v193/pi-adapter/usage.test.ts", title: "mapPiUsage maps OpenAI cached tokens as cacheRead without double counting total" }],
+  ],
+  [
+    "internal/llm/usage_resolver_test.go::TestResolveUsageWrappedCachedTokens",
+    [{ kind: "bun-test-annotation", path: "test/ocr-v193/pi-adapter/usage.test.ts", title: "mapPiUsage maps cache write via cacheWrite" }],
+  ],
+  [
+    "internal/llm/usage_resolver_test.go::TestResolveUsageWrappedAnthropicCompatibleCacheTokens",
+    [{ kind: "bun-test-annotation", path: "test/ocr-v193/pi-adapter/usage.test.ts", title: "mapPiUsage maps Anthropic separate cache and total" }],
+  ],
+  [
+    "internal/llm/usage_resolver_test.go::TestResolveUsageResponsesAPIFieldNames",
+    [{ kind: "bun-test-annotation", path: "test/ocr-v193/pi-adapter/usage.test.ts", title: "mapPiUsage handles Responses API via Pi normalized input/output" }],
+  ],
+  [
+    "internal/llm/client_test.go::TestOpenAIClient_StreamingUsage",
+    [{ kind: "bun-test-annotation", path: "test/ocr-v193/pi-adapter/usage.test.ts", title: "PiTransport captures streaming usage via turn_end assistant message" }],
+  ],
+  [
+    "internal/llm/message_test.go::TestChatResponse_Content_Empty",
+    [{ kind: "bun-test-annotation", path: "test/ocr-v193/pi-adapter/usage.test.ts", title: "empty Pi usage object yields undefined" }],
+  ],
 ]);
 
 const notApplicableTests: ReadonlyMap<string, string> = new Map<string, string>([
@@ -177,6 +241,72 @@ const notApplicableTests: ReadonlyMap<string, string> = new Map<string, string>(
   [
     "internal/llm/providers_test.go::TestProviders_AllProtocolsCanonical",
     "Pi replaces OCR provider registry protocol canonical check with Pi ModelRuntime; not applicable via public Pi APIs.",
+  ],
+  // ---- tiktoken & counting: Pi replaces with bytes/4 fallback ----
+  [
+    "internal/llm/client_test.go::TestCountTokens",
+    "Pi replaces OCR tiktoken counting with deterministic bytes/4 fallback in src/ocr-v193/llmloop/compression.ts countTokens; tiktoken-precise counts are not applicable via public Pi APIs (documented deviation).",
+  ],
+  [
+    "internal/llm/client_test.go::TestCountTokensForModel",
+    "Pi replaces OCR model-sensitive tiktoken counting with model-agnostic bytes/4 fallback; not applicable via public Pi APIs (documented deviation).",
+  ],
+  [
+    "internal/llm/client_test.go::TestEncodingForModel",
+    "Pi replaces OCR tiktoken encoding selection (cl100k vs o200k) with absence; encoding table is not applicable via public Pi APIs (documented deviation).",
+  ],
+  [
+    "internal/llm/embedded_loader_test.go::TestParseBpeData_Valid",
+    "Pi replaces OCR tiktoken BPE parsing with bytes/4 fallback; LoadTiktokenBpe and embedded bpe_data are not applicable via public Pi APIs (documented deviation).",
+  ],
+  [
+    "internal/llm/embedded_loader_test.go::TestParseBpeData_EmptyLines",
+    "Pi replaces OCR tiktoken BPE parsing with bytes/4 fallback; not applicable via public Pi APIs.",
+  ],
+  [
+    "internal/llm/embedded_loader_test.go::TestParseBpeData_InvalidLine",
+    "Pi replaces OCR tiktoken BPE parsing with bytes/4 fallback; not applicable via public Pi APIs.",
+  ],
+  [
+    "internal/llm/embedded_loader_test.go::TestParseBpeData_InvalidBase64",
+    "Pi replaces OCR tiktoken BPE parsing with bytes/4 fallback; not applicable via public Pi APIs.",
+  ],
+  [
+    "internal/llm/embedded_loader_test.go::TestParseBpeData_InvalidRank",
+    "Pi replaces OCR tiktoken BPE parsing with bytes/4 fallback; not applicable via public Pi APIs.",
+  ],
+  [
+    "internal/llm/embedded_loader_test.go::TestLoadTiktokenBpe_KnownURL",
+    "Pi replaces OCR LoadTiktokenBpe URL mapping with bytes/4 fallback; not applicable via public Pi APIs.",
+  ],
+  [
+    "internal/llm/embedded_loader_test.go::TestLoadTiktokenBpe_UnknownURL",
+    "Pi replaces OCR LoadTiktokenBpe unknown URL error with bytes/4 fallback; not applicable via public Pi APIs.",
+  ],
+  [
+    "internal/llm/embedded_loader_test.go::TestInitEmbeddedLoader",
+    "Pi replaces OCR InitEmbeddedLoader global tiktoken loader with absence; not applicable via public Pi APIs.",
+  ],
+  // ---- header/user-agent wiring replaced by Pi SDK internals ----
+  [
+    "internal/llm/message_test.go::TestDefaultAuthHeader",
+    "Pi replaces OCR defaultAuthHeader with Pi SDK SessionManager/SettingsManager auth handling; header name selection is not applicable via public Pi APIs.",
+  ],
+  [
+    "internal/llm/message_test.go::TestUserAgent",
+    "Pi replaces OCR userAgent with Pi SDK internal User-Agent; not applicable via public Pi APIs.",
+  ],
+  [
+    "internal/llm/message_test.go::TestModelListContains",
+    "Pi replaces OCR ModelListContains config helper with Pi SettingsManager model discovery; not applicable via public Pi APIs.",
+  ],
+  [
+    "internal/llm/usage_resolver_test.go::TestResolveUsageCacheReadPathPriority",
+    "Pi replaces OCR usage resolver path priority probing with Pi SDK normalized usage.cacheRead via createAgentSession; priority among raw JSON paths is not applicable via public Pi APIs, values covered by OpenAI compatible test.",
+  ],
+  [
+    "internal/llm/usage_resolver_test.go::TestResolveUsageCacheCreationTokensPriority",
+    "Pi replaces OCR cache creation path priority with Pi SDK normalized usage.cacheWrite; not applicable via public Pi APIs.",
   ],
   [
     "internal/agent/agent_test.go::TestAgentGettersNil",

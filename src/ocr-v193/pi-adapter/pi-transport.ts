@@ -321,7 +321,7 @@ function inspectPiAssistant(msg: unknown): PiAssistantObservation {
   };
 }
 
-function mapPiUsage(usage: unknown): UsageInfo | undefined {
+export function mapPiUsage(usage: unknown): UsageInfo | undefined {
   if (usage === undefined || usage === null || typeof usage !== "object") return undefined;
   const u = usage as Record<string, unknown>;
   const input = typeof u["input"] === "number" ? (u["input"] as number) : 0;
