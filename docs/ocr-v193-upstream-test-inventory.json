@@ -7833,13 +7833,15 @@
         },
         {
           "name": "TestOpenAIClient_DoesNotRetryNonRetryableError",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "equivalent",
+          "reason": "OCR-derived test translation has not been recorded",
+          "via": "equivalent via test/ocr-v193/pi-adapter/responses-tail.test.ts"
         },
         {
           "name": "TestOpenAIClient_DoesNotRetryTruncatedResponseAfterCancellation",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "equivalent",
+          "reason": "OCR-derived test translation has not been recorded",
+          "via": "equivalent via test/ocr-v193/pi-adapter/responses-tail.test.ts"
         },
         {
           "name": "TestOpenAIClient_ExtraHeadersSent",
@@ -7865,8 +7867,9 @@
         },
         {
           "name": "TestOpenAIClient_RetriesTruncatedResponse",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "equivalent",
+          "reason": "OCR-derived test translation has not been recorded",
+          "via": "equivalent via test/ocr-v193/pi-adapter/responses-tail.test.ts"
         },
         {
           "name": "TestOpenAIClient_RetryCodesTriggersRetry",
@@ -7911,8 +7914,9 @@
         },
         {
           "name": "TestOpenAIClient_StopsAfterSecondTruncatedResponse",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "equivalent",
+          "reason": "OCR-derived test translation has not been recorded",
+          "via": "equivalent via test/ocr-v193/pi-adapter/responses-tail.test.ts"
         },
         {
           "name": "TestOpenAIClient_StreamingCancellation",
@@ -7928,13 +7932,15 @@
         },
         {
           "name": "TestOpenAIClient_StreamingError",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "equivalent",
+          "reason": "OCR-derived test translation has not been recorded",
+          "via": "equivalent via test/ocr-v193/pi-adapter/responses-tail.test.ts"
         },
         {
           "name": "TestOpenAIClient_StreamingIncomplete",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "equivalent",
+          "reason": "OCR-derived test translation has not been recorded",
+          "via": "equivalent via test/ocr-v193/pi-adapter/responses-tail.test.ts"
         },
         {
           "name": "TestOpenAIClient_StreamingInconsistentChunks",
@@ -7943,8 +7949,9 @@
         },
         {
           "name": "TestOpenAIClient_StreamingNoChoices",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "equivalent",
+          "reason": "OCR-derived test translation has not been recorded",
+          "via": "equivalent via test/ocr-v193/pi-adapter/responses-tail.test.ts"
         },
         {
           "name": "TestOpenAIClient_StreamingReasoningContent",
@@ -8485,18 +8492,21 @@
         },
         {
           "name": "TestParseExtraHeaders",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "equivalent",
+          "reason": "OCR-derived test translation has not been recorded",
+          "via": "equivalent via test/ocr-v193/pi-adapter/config.test.ts"
         },
         {
           "name": "TestParseRetryCodes",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "equivalent",
+          "reason": "OCR-derived test translation has not been recorded",
+          "via": "equivalent via test/ocr-v193/pi-adapter/config.test.ts"
         },
         {
           "name": "TestParseTimeoutEnv",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "equivalent",
+          "reason": "OCR-derived test translation has not been recorded",
+          "via": "equivalent via test/ocr-v193/pi-adapter/config.test.ts"
         },
         {
           "name": "TestResolveEndpoint_CCEnvCleanModelUnchanged",
@@ -8590,8 +8600,9 @@
         },
         {
           "name": "TestResolveEndpoint_EnvExtraHeadersMergedWithConfigFile",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "equivalent",
+          "reason": "OCR-derived test translation has not been recorded",
+          "via": "equivalent via test/ocr-v193/pi-adapter/config.test.ts"
         },
         {
           "name": "TestResolveEndpoint_EnvTimeoutGlobalOverride",
@@ -8625,8 +8636,9 @@
         },
         {
           "name": "TestResolveEndpoint_LegacyLlmExtraHeaders",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "equivalent",
+          "reason": "OCR-derived test translation has not been recorded",
+          "via": "equivalent via test/ocr-v193/pi-adapter/config.test.ts"
         },
         {
           "name": "TestResolveEndpoint_LegacyLlmProtocolTakesPriorityOverUseAnthropic",
@@ -8670,23 +8682,27 @@
         },
         {
           "name": "TestResolveEndpoint_OCREnvExtraHeaders",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "equivalent",
+          "reason": "OCR-derived test translation has not been recorded",
+          "via": "equivalent via test/ocr-v193/pi-adapter/config.test.ts"
         },
         {
           "name": "TestResolveEndpoint_OCREnvExtraHeadersEmpty",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "equivalent",
+          "reason": "OCR-derived test translation has not been recorded",
+          "via": "equivalent via test/ocr-v193/pi-adapter/config.test.ts"
         },
         {
           "name": "TestResolveEndpoint_OCREnvExtraHeadersInvalid",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "equivalent",
+          "reason": "OCR-derived test translation has not been recorded",
+          "via": "equivalent via test/ocr-v193/pi-adapter/config.test.ts"
         },
         {
           "name": "TestResolveEndpoint_OCREnvExtraHeadersReservedRejected",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "equivalent",
+          "reason": "OCR-derived test translation has not been recorded",
+          "via": "equivalent via test/ocr-v193/pi-adapter/config.test.ts"
         },
         {
           "name": "TestResolveEndpoint_OCREnvOpenAIIgnoresAuthHeader",
@@ -8745,13 +8761,15 @@
         },
         {
           "name": "TestResolveEndpoint_ProviderExtraBody",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "equivalent",
+          "reason": "OCR-derived test translation has not been recorded",
+          "via": "equivalent via test/ocr-v193/pi-adapter/config.test.ts"
         },
         {
           "name": "TestResolveEndpoint_ProviderExtraHeaders",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "equivalent",
+          "reason": "OCR-derived test translation has not been recorded",
+          "via": "equivalent via test/ocr-v193/pi-adapter/config.test.ts"
         },
         {
           "name": "TestResolveEndpoint_ProviderMissingAPIKey",
@@ -8780,8 +8798,9 @@
         },
         {
           "name": "TestResolveEndpoint_RedundantRetryCodesFiltered",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "equivalent",
+          "reason": "OCR-derived test translation has not been recorded",
+          "via": "equivalent via test/ocr-v193/pi-adapter/config.test.ts"
         },
         {
           "name": "TestResolveEndpoint_ResponsesURLNotMutated",
@@ -8790,8 +8809,9 @@
         },
         {
           "name": "TestResolveEndpoint_SessionKeyPlaceholderPreserved",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "equivalent",
+          "reason": "OCR-derived test translation has not been recorded",
+          "via": "equivalent via test/ocr-v193/pi-adapter/config.test.ts"
         },
         {
           "name": "TestResolveEndpointWithModelOverride_CustomProviderWithoutConfiguredModel",
@@ -8880,13 +8900,15 @@
         },
         {
           "name": "TestStripModelSuffix",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "equivalent",
+          "reason": "OCR-derived test translation has not been recorded",
+          "via": "equivalent via test/ocr-v193/pi-adapter/config.test.ts"
         },
         {
           "name": "TestValidateTimeoutSec",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "equivalent",
+          "reason": "OCR-derived test translation has not been recorded",
+          "via": "equivalent via test/ocr-v193/pi-adapter/config.test.ts"
         }
       ]
     },
@@ -8930,8 +8952,9 @@
         },
         {
           "name": "TestBuildResponsesParams_Tools",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "equivalent",
+          "reason": "OCR-derived test translation has not been recorded",
+          "via": "equivalent via test/ocr-v193/pi-adapter/responses-tail.test.ts"
         },
         {
           "name": "TestMapResponsesResponse_FunctionCalls",
@@ -8945,13 +8968,15 @@
         },
         {
           "name": "TestMapResponsesResponse_StatusFailedAndCancelled",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "equivalent",
+          "reason": "OCR-derived test translation has not been recorded",
+          "via": "equivalent via test/ocr-v193/pi-adapter/responses-tail.test.ts"
         },
         {
           "name": "TestMapResponsesResponse_StatusIncomplete",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "equivalent",
+          "reason": "OCR-derived test translation has not been recorded",
+          "via": "equivalent via test/ocr-v193/pi-adapter/responses-tail.test.ts"
         },
         {
           "name": "TestMapResponsesResponse_TextOnly",
@@ -8975,23 +9000,27 @@
         },
         {
           "name": "TestOpenAIResponsesClient_ExtraBodyPromptCacheKeyOverridesSessionID",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "equivalent",
+          "reason": "OCR-derived test translation has not been recorded",
+          "via": "equivalent via test/ocr-v193/pi-adapter/responses-tail.test.ts"
         },
         {
           "name": "TestOpenAIResponsesClient_ExtraBodyStreamDropped",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "equivalent",
+          "reason": "OCR-derived test translation has not been recorded",
+          "via": "equivalent via test/ocr-v193/pi-adapter/responses-tail.test.ts"
         },
         {
           "name": "TestOpenAIResponsesClient_NonSuccessStatusReturnsError",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "equivalent",
+          "reason": "OCR-derived test translation has not been recorded",
+          "via": "equivalent via test/ocr-v193/pi-adapter/responses-tail.test.ts"
         },
         {
           "name": "TestOpenAIResponsesClient_SessionKeyExpandedInHeadersAndBody",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "equivalent",
+          "reason": "OCR-derived test translation has not been recorded",
+          "via": "equivalent via test/ocr-v193/pi-adapter/responses-tail.test.ts"
         }
       ]
     },
@@ -9005,83 +9034,99 @@
       "tests": [
         {
           "name": "TestBoundaryCancelDuringBackoffIsCancelled",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "equivalent",
+          "reason": "OCR-derived test translation has not been recorded",
+          "via": "equivalent via test/ocr-v193/retry/boundary.test.ts"
         },
         {
           "name": "TestBoundaryCorrectsDecodeFailure",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "equivalent",
+          "reason": "OCR-derived test translation has not been recorded",
+          "via": "equivalent via test/ocr-v193/retry/boundary.test.ts"
         },
         {
           "name": "TestBoundaryCorrectsMidStreamFailure",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "equivalent",
+          "reason": "OCR-derived test translation has not been recorded",
+          "via": "equivalent via test/ocr-v193/retry/boundary.test.ts"
         },
         {
           "name": "TestBoundaryCorrectsResponsesStatus",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "equivalent",
+          "reason": "OCR-derived test translation has not been recorded",
+          "via": "equivalent via test/ocr-v193/retry/boundary.test.ts"
         },
         {
           "name": "TestBoundaryCorrectsTruncatedResponse",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "equivalent",
+          "reason": "OCR-derived test translation has not been recorded",
+          "via": "equivalent via test/ocr-v193/retry/boundary.test.ts"
         },
         {
           "name": "TestBoundaryDeadlineExceededIsFailed",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "equivalent",
+          "reason": "OCR-derived test translation has not been recorded",
+          "via": "equivalent via test/ocr-v193/retry/boundary.test.ts"
         },
         {
           "name": "TestBoundaryHelpersAreInertWithoutCollectorOrMeta",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "equivalent",
+          "reason": "OCR-derived test translation has not been recorded",
+          "via": "equivalent via test/ocr-v193/retry/boundary.test.ts"
         },
         {
           "name": "TestBoundaryKeepsHTTPClassOnCorruptErrorBody",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "equivalent",
+          "reason": "OCR-derived test translation has not been recorded",
+          "via": "equivalent via test/ocr-v193/retry/boundary.test.ts"
         },
         {
           "name": "TestBoundaryKeepsHTTPClassOnStreamThatNeverOpened",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "equivalent",
+          "reason": "OCR-derived test translation has not been recorded",
+          "via": "equivalent via test/ocr-v193/retry/boundary.test.ts"
         },
         {
           "name": "TestBoundaryKeepsTruncationCorrectionWhenRecallIsCancelled",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "equivalent",
+          "reason": "OCR-derived test translation has not been recorded",
+          "via": "equivalent via test/ocr-v193/retry/boundary.test.ts"
         },
         {
           "name": "TestBoundaryRetryAfterOutlivingAttemptTimeoutIsFailed",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "equivalent",
+          "reason": "OCR-derived test translation has not been recorded",
+          "via": "equivalent via test/ocr-v193/retry/boundary.test.ts"
         },
         {
           "name": "TestBoundarySkipsRequestWithoutAttempt",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "equivalent",
+          "reason": "OCR-derived test translation has not been recorded",
+          "via": "equivalent via test/ocr-v193/retry/boundary.test.ts"
         },
         {
           "name": "TestClassifyBoundaryError",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "equivalent",
+          "reason": "OCR-derived test translation has not been recorded",
+          "via": "equivalent via test/ocr-v193/retry/boundary.test.ts"
         },
         {
           "name": "TestClassifyStreamError",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "equivalent",
+          "reason": "OCR-derived test translation has not been recorded",
+          "via": "equivalent via test/ocr-v193/retry/boundary.test.ts"
         },
         {
           "name": "TestFinalizeRequestWithPanicSentinel",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "equivalent",
+          "reason": "OCR-derived test translation has not been recorded",
+          "via": "equivalent via test/ocr-v193/retry/boundary.test.ts"
         },
         {
           "name": "TestStreamIntegrityErrorMessage",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "equivalent",
+          "reason": "OCR-derived test translation has not been recorded",
+          "via": "equivalent via test/ocr-v193/retry/boundary.test.ts"
         }
       ]
     },
@@ -9095,38 +9140,45 @@
       "tests": [
         {
           "name": "TestLogicalRequestIDCanonicalEncoding",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "equivalent",
+          "reason": "OCR-derived test translation has not been recorded",
+          "via": "equivalent via test/ocr-v193/retry/meta.test.ts"
         },
         {
           "name": "TestLogicalRequestIDIsDeterministic",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "equivalent",
+          "reason": "OCR-derived test translation has not been recorded",
+          "via": "equivalent via test/ocr-v193/retry/meta.test.ts"
         },
         {
           "name": "TestLogicalRequestIDSeparatesFields",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "equivalent",
+          "reason": "OCR-derived test translation has not been recorded",
+          "via": "equivalent via test/ocr-v193/retry/meta.test.ts"
         },
         {
           "name": "TestLogicalRequestIDVariesWithRunIDAndRequestNo",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "equivalent",
+          "reason": "OCR-derived test translation has not been recorded",
+          "via": "equivalent via test/ocr-v193/retry/meta.test.ts"
         },
         {
           "name": "TestRequestMetaDescribe",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "equivalent",
+          "reason": "OCR-derived test translation has not been recorded",
+          "via": "equivalent via test/ocr-v193/retry/meta.test.ts"
         },
         {
           "name": "TestRequestMetaValid",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "equivalent",
+          "reason": "OCR-derived test translation has not been recorded",
+          "via": "equivalent via test/ocr-v193/retry/meta.test.ts"
         },
         {
           "name": "TestWithRequestMeta",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "equivalent",
+          "reason": "OCR-derived test translation has not been recorded",
+          "via": "equivalent via test/ocr-v193/retry/meta.test.ts"
         }
       ]
     },
@@ -9140,68 +9192,81 @@
       "tests": [
         {
           "name": "TestNilCollectorMountsNoObserver",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "equivalent",
+          "reason": "OCR-derived test translation has not been recorded",
+          "via": "equivalent via test/ocr-v193/retry/observer.test.ts"
         },
         {
           "name": "TestObserverClassifiesTerminalStatuses",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "equivalent",
+          "reason": "OCR-derived test translation has not been recorded",
+          "via": "equivalent via test/ocr-v193/retry/observer.test.ts"
         },
         {
           "name": "TestObserverConcurrentRequests",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "equivalent",
+          "reason": "OCR-derived test translation has not been recorded",
+          "via": "equivalent via test/ocr-v193/retry/observer.test.ts"
         },
         {
           "name": "TestObserverDropsRequestsWithoutIdentity",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "equivalent",
+          "reason": "OCR-derived test translation has not been recorded",
+          "via": "equivalent via test/ocr-v193/retry/observer.test.ts"
         },
         {
           "name": "TestObserverIgnoresOverriddenRetryCountHeader",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "equivalent",
+          "reason": "OCR-derived test translation has not been recorded",
+          "via": "equivalent via test/ocr-v193/retry/observer.test.ts"
         },
         {
           "name": "TestObserverMountedOnOpenAIClients",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "equivalent",
+          "reason": "OCR-derived test translation has not been recorded",
+          "via": "equivalent via test/ocr-v193/retry/observer.test.ts"
         },
         {
           "name": "TestObserverRecordsExhaustedRetries",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "equivalent",
+          "reason": "OCR-derived test translation has not been recorded",
+          "via": "equivalent via test/ocr-v193/retry/observer.test.ts"
         },
         {
           "name": "TestObserverRecordsRateLimitedThenSuccess",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "equivalent",
+          "reason": "OCR-derived test translation has not been recorded",
+          "via": "equivalent via test/ocr-v193/retry/observer.test.ts"
         },
         {
           "name": "TestObserverRecordsRetryDirectiveOnSuccess",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "equivalent",
+          "reason": "OCR-derived test translation has not been recorded",
+          "via": "equivalent via test/ocr-v193/retry/observer.test.ts"
         },
         {
           "name": "TestObserverRecordsTransportFailure",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "equivalent",
+          "reason": "OCR-derived test translation has not been recorded",
+          "via": "equivalent via test/ocr-v193/retry/observer.test.ts"
         },
         {
           "name": "TestParseRetryAfterMS",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "equivalent",
+          "reason": "OCR-derived test translation has not been recorded",
+          "via": "equivalent via test/ocr-v193/retry/observer.test.ts"
         },
         {
           "name": "TestParseRetryDirective",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "equivalent",
+          "reason": "OCR-derived test translation has not been recorded",
+          "via": "equivalent via test/ocr-v193/retry/observer.test.ts"
         },
         {
           "name": "TestResponseRequestID",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "equivalent",
+          "reason": "OCR-derived test translation has not been recorded",
+          "via": "equivalent via test/ocr-v193/retry/observer.test.ts"
         }
       ]
     },
@@ -9215,143 +9280,171 @@
       "tests": [
         {
           "name": "TestClassifyAttempt",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "equivalent",
+          "reason": "OCR-derived test translation has not been recorded",
+          "via": "equivalent via test/ocr-v193/retry/report.test.ts"
         },
         {
           "name": "TestClassifyAttemptTwoHundredFallsThroughToError",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "equivalent",
+          "reason": "OCR-derived test translation has not been recorded",
+          "via": "equivalent via test/ocr-v193/retry/report.test.ts"
         },
         {
           "name": "TestCollectorRejectsInvalidInput",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "equivalent",
+          "reason": "OCR-derived test translation has not been recorded",
+          "via": "equivalent via test/ocr-v193/retry/report.test.ts"
         },
         {
           "name": "TestErrorClassAndFailurePhaseSets",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "equivalent",
+          "reason": "OCR-derived test translation has not been recorded",
+          "via": "equivalent via test/ocr-v193/retry/report.test.ts"
         },
         {
           "name": "TestFinalizeDecisionOrder",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "equivalent",
+          "reason": "OCR-derived test translation has not been recorded",
+          "via": "equivalent via test/ocr-v193/retry/report.test.ts"
         },
         {
           "name": "TestFinalizeZeroAttemptProducesNoRecord",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "equivalent",
+          "reason": "OCR-derived test translation has not been recorded",
+          "via": "equivalent via test/ocr-v193/retry/report.test.ts"
         },
         {
           "name": "TestFreezeAggregatesAndSorts",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "equivalent",
+          "reason": "OCR-derived test translation has not been recorded",
+          "via": "equivalent via test/ocr-v193/retry/report.test.ts"
         },
         {
           "name": "TestFreezeErrorIdentifiesTheRequest",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "equivalent",
+          "reason": "OCR-derived test translation has not been recorded",
+          "via": "equivalent via test/ocr-v193/retry/report.test.ts"
         },
         {
           "name": "TestFreezeErrorIsDeterministic",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "equivalent",
+          "reason": "OCR-derived test translation has not been recorded",
+          "via": "equivalent via test/ocr-v193/retry/report.test.ts"
         },
         {
           "name": "TestFreezeListsCancelledRequestWithoutErrorAttempt",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "equivalent",
+          "reason": "OCR-derived test translation has not been recorded",
+          "via": "equivalent via test/ocr-v193/retry/report.test.ts"
         },
         {
           "name": "TestFreezeRefusesEntryWithNoAttempt",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "equivalent",
+          "reason": "OCR-derived test translation has not been recorded",
+          "via": "equivalent via test/ocr-v193/retry/report.test.ts"
         },
         {
           "name": "TestFreezeRejectsInvalidRunID",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "equivalent",
+          "reason": "OCR-derived test translation has not been recorded",
+          "via": "equivalent via test/ocr-v193/retry/report.test.ts"
         },
         {
           "name": "TestFreezeRejectsOrderingViolations",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "equivalent",
+          "reason": "OCR-derived test translation has not been recorded",
+          "via": "equivalent via test/ocr-v193/retry/report.test.ts"
         },
         {
           "name": "TestFreezeReturnsNothingWhenNoRetryHappened",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "equivalent",
+          "reason": "OCR-derived test translation has not been recorded",
+          "via": "equivalent via test/ocr-v193/retry/report.test.ts"
         },
         {
           "name": "TestFreezeSucceededRequestWithExtraAttempt",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "equivalent",
+          "reason": "OCR-derived test translation has not been recorded",
+          "via": "equivalent via test/ocr-v193/retry/report.test.ts"
         },
         {
           "name": "TestFreezeSuppressesReportWhenValidationFails",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "equivalent",
+          "reason": "OCR-derived test translation has not been recorded",
+          "via": "equivalent via test/ocr-v193/retry/report.test.ts"
         },
         {
           "name": "TestNilCollectorIsInert",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "equivalent",
+          "reason": "OCR-derived test translation has not been recorded",
+          "via": "equivalent via test/ocr-v193/retry/report.test.ts"
         },
         {
           "name": "TestProviderIsEmittedEvenWhenEmpty",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "equivalent",
+          "reason": "OCR-derived test translation has not been recorded",
+          "via": "equivalent via test/ocr-v193/retry/report.test.ts"
         },
         {
           "name": "TestRecordAttemptAcceptsUnclassifiedSuccessStatus",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "equivalent",
+          "reason": "OCR-derived test translation has not been recorded",
+          "via": "equivalent via test/ocr-v193/retry/report.test.ts"
         },
         {
           "name": "TestRecordAttemptDerivesTimings",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "equivalent",
+          "reason": "OCR-derived test translation has not been recorded",
+          "via": "equivalent via test/ocr-v193/retry/report.test.ts"
         },
         {
           "name": "TestRecordAttemptDropsRequestsWithoutIdentity",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "equivalent",
+          "reason": "OCR-derived test translation has not been recorded",
+          "via": "equivalent via test/ocr-v193/retry/report.test.ts"
         },
         {
           "name": "TestRecordAttemptFloorsInvertedTimestamps",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "equivalent",
+          "reason": "OCR-derived test translation has not been recorded",
+          "via": "equivalent via test/ocr-v193/retry/report.test.ts"
         },
         {
           "name": "TestRecordAttemptNumbersAndDerivesOutcome",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "equivalent",
+          "reason": "OCR-derived test translation has not been recorded",
+          "via": "equivalent via test/ocr-v193/retry/report.test.ts"
         },
         {
           "name": "TestRecordAttemptRejectsUnclassifiedErrorStatus",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "equivalent",
+          "reason": "OCR-derived test translation has not been recorded",
+          "via": "equivalent via test/ocr-v193/retry/report.test.ts"
         },
         {
           "name": "TestRetryCollectorConcurrentUse",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "equivalent",
+          "reason": "OCR-derived test translation has not been recorded",
+          "via": "equivalent via test/ocr-v193/retry/report.test.ts"
         },
         {
           "name": "TestRetryReportHasNoUnexpectedTextFields",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "equivalent",
+          "reason": "OCR-derived test translation has not been recorded",
+          "via": "equivalent via test/ocr-v193/retry/report.test.ts"
         },
         {
           "name": "TestReviseLastAttempt",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "equivalent",
+          "reason": "OCR-derived test translation has not been recorded",
+          "via": "equivalent via test/ocr-v193/retry/report.test.ts"
         },
         {
           "name": "TestValidateReportCatchesInconsistency",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "equivalent",
+          "reason": "OCR-derived test translation has not been recorded",
+          "via": "equivalent via test/ocr-v193/retry/report.test.ts"
         }
       ]
     },
