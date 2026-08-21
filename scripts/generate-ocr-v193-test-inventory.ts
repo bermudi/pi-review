@@ -1614,6 +1614,30 @@ const localCoverage: readonly LocalCoverage[] = [
     localPath: "test/ocr-v193/session/list-error.test.ts",
     upstreamPaths: ["internal/session/list_error_test.go"],
   },
+  {
+    localPath: "test/ocr-v193/cli/output-helpers.test.ts",
+    upstreamPaths: ["cmd/opencodereview/output_helpers_test.go"],
+  },
+  {
+    localPath: "test/ocr-v193/cli/output-manifest.test.ts",
+    upstreamPaths: ["cmd/opencodereview/output_manifest_test.go"],
+  },
+  {
+    localPath: "test/ocr-v193/cli/output.test.ts",
+    upstreamPaths: ["cmd/opencodereview/output_test.go"],
+  },
+  {
+    localPath: "test/ocr-v193/cli/shared.test.ts",
+    upstreamPaths: ["cmd/opencodereview/shared_test.go"],
+  },
+  {
+    localPath: "test/ocr-v193/cli/shared-llmruntime.test.ts",
+    upstreamPaths: ["cmd/opencodereview/shared_llmruntime_test.go"],
+  },
+  {
+    localPath: "test/ocr-v193/cli/sarif.test.ts",
+    upstreamPaths: ["cmd/opencodereview/sarif_test.go"],
+  },
 ];
 
 function git(...args: readonly string[]): string {

@@ -1315,133 +1315,289 @@
       "tests": [
         {
           "name": "TestBuildDiffLines",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/cli/output-helpers.test.ts",
+              "title": "buildDiffLines computes diff"
+            }
+          ]
         },
         {
           "name": "TestHasSubtaskErrors",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/cli/output-helpers.test.ts",
+              "title": "hasSubtaskErrors detects subtask types"
+            }
+          ]
         },
         {
           "name": "TestOutputJSON",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/cli/output-helpers.test.ts",
+              "title": "outputJsonWithWarnings success status"
+            }
+          ]
         },
         {
           "name": "TestOutputJSON_NoComments",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/cli/output-helpers.test.ts",
+              "title": "outputJsonWithWarnings no comments message"
+            }
+          ]
         },
         {
           "name": "TestOutputJSONNoFiles",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/cli/output-helpers.test.ts",
+              "title": "outputJsonNoFiles skipped"
+            }
+          ]
         },
         {
           "name": "TestOutputJSONWithWarnings",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/cli/output-helpers.test.ts",
+              "title": "outputJsonWithWarnings with warnings and trace"
+            }
+          ]
         },
         {
           "name": "TestOutputJSONWithWarnings_NoCommentsNoErrors",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/cli/output-helpers.test.ts",
+              "title": "outputJsonWithWarnings no comments warning status"
+            }
+          ]
         },
         {
           "name": "TestOutputJSONWithWarnings_NoCommentsSubtaskError",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/cli/output-helpers.test.ts",
+              "title": "outputJsonWithWarnings no comments subtask error"
+            }
+          ]
         },
         {
           "name": "TestOutputPreviewText_NoFiles",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/cli/output-helpers.test.ts",
+              "title": "outputPreviewText no files"
+            }
+          ]
         },
         {
           "name": "TestOutputPreviewText_WithExcludedFiles",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/cli/output-helpers.test.ts",
+              "title": "outputPreviewText excluded files"
+            }
+          ]
         },
         {
           "name": "TestOutputPreviewText_WithReviewableFiles",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/cli/output-helpers.test.ts",
+              "title": "outputPreviewText reviewable files"
+            }
+          ]
         },
         {
           "name": "TestOutputText_NoComments",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/cli/output-helpers.test.ts",
+              "title": "outputText no comments"
+            }
+          ]
         },
         {
           "name": "TestOutputText_WithComments",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/cli/output-helpers.test.ts",
+              "title": "outputText with comments"
+            }
+          ]
         },
         {
           "name": "TestOutputTextWithWarnings_NoCommentsNoErrors",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/cli/output-helpers.test.ts",
+              "title": "outputTextWithWarnings no comments no errors"
+            }
+          ]
         },
         {
           "name": "TestOutputTextWithWarnings_NoCommentsWithSubtaskError",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/cli/output-helpers.test.ts",
+              "title": "outputTextWithWarnings subtask error message"
+            }
+          ]
         },
         {
           "name": "TestOutputTextWithWarnings_WithComments",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/cli/output-helpers.test.ts",
+              "title": "outputTextWithWarnings with comments"
+            }
+          ]
         },
         {
           "name": "TestPrintDiffLine",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/cli/output-helpers.test.ts",
+              "title": "printDiffLine formats"
+            }
+          ]
         },
         {
           "name": "TestRenderComment_ContentOnly",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/cli/output-helpers.test.ts",
+              "title": "renderComment content only"
+            }
+          ]
         },
         {
           "name": "TestRenderComment_EmptyContentNoDiff",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/cli/output-helpers.test.ts",
+              "title": "renderComment empty returns empty"
+            }
+          ]
         },
         {
           "name": "TestRenderComment_WithDiff",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/cli/output-helpers.test.ts",
+              "title": "renderComment with diff"
+            }
+          ]
         },
         {
           "name": "TestRuneWrapCut",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/cli/output-helpers.test.ts",
+              "title": "runeWrapCut boundaries"
+            }
+          ]
         },
         {
           "name": "TestSplitToLines",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/cli/output-helpers.test.ts",
+              "title": "splitToLines handling"
+            }
+          ]
         },
         {
           "name": "TestStatusBadge",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/cli/output-helpers.test.ts",
+              "title": "statusBadge mapping"
+            }
+          ]
         },
         {
           "name": "TestVisibleRunesLen",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/cli/output-helpers.test.ts",
+              "title": "visibleRunesLen counts printable"
+            }
+          ]
         },
         {
           "name": "TestWrapByRunes",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/cli/output-helpers.test.ts",
+              "title": "wrapByRunes line counting"
+            }
+          ]
         },
         {
           "name": "TestWrapSingleRuneLine",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/cli/output-helpers.test.ts",
+              "title": "wrapSingleRuneLine wraps at space and fallback"
+            }
+          ]
         }
       ]
     },
@@ -1455,13 +1611,25 @@
       "tests": [
         {
           "name": "TestManifestMessage",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/cli/output-manifest.test.ts",
+              "title": "manifestMessage branches"
+            }
+          ]
         },
         {
           "name": "TestWarningsForOutput",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/cli/output-manifest.test.ts",
+              "title": "warningsForOutput filtering"
+            }
+          ]
         }
       ]
     },
@@ -1475,23 +1643,47 @@
       "tests": [
         {
           "name": "TestBuildBadge",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/cli/output.test.ts",
+              "title": "buildBadge categorization"
+            }
+          ]
         },
         {
           "name": "TestRenderComment_BadgeInline",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/cli/output.test.ts",
+              "title": "renderComment badge inline colorization"
+            }
+          ]
         },
         {
           "name": "TestSanitizeTerminal",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/cli/output.test.ts",
+              "title": "sanitizeTerminal strips controls and preserves unicode"
+            }
+          ]
         },
         {
           "name": "TestSeverityColor",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/cli/output.test.ts",
+              "title": "severityColor distinct mapping"
+            }
+          ]
         }
       ]
     },
@@ -3423,128 +3615,278 @@
       "tests": [
         {
           "name": "TestAddOutputFlags_IncludesSarif",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/cli/sarif.test.ts",
+              "title": "addOutputFlags includes sarif"
+            }
+          ]
         },
         {
           "name": "TestEmitRunResult_Sarif",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/cli/sarif.test.ts",
+              "title": "emitRunResult sarif via buildSarifReport"
+            }
+          ]
         },
         {
           "name": "TestEmitRunResult_SarifNoFiles",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/cli/sarif.test.ts",
+              "title": "sarif no files via buildSarifReport"
+            }
+          ]
         },
         {
           "name": "TestNewQuietHandle_Sarif",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/cli/sarif.test.ts",
+              "title": "newQuietHandle sarif silences"
+            }
+          ]
         },
         {
           "name": "TestOutputPreview_SarifRejects",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/cli/sarif.test.ts",
+              "title": "outputPreview sarif rejects"
+            }
+          ]
         },
         {
           "name": "TestOutputSARIF_BasicStructure",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/cli/sarif.test.ts",
+              "title": "sarif basic structure"
+            }
+          ]
         },
         {
           "name": "TestOutputSARIF_EmptyCategory",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/cli/sarif.test.ts",
+              "title": "sarif empty category defaults to other"
+            }
+          ]
         },
         {
           "name": "TestOutputSARIF_EmptyComments",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/cli/sarif.test.ts",
+              "title": "sarif empty comments empty results"
+            }
+          ]
         },
         {
           "name": "TestOutputSARIF_FullFieldMapping",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/cli/sarif.test.ts",
+              "title": "sarif full field mapping"
+            }
+          ]
         },
         {
           "name": "TestOutputSARIF_JSONFormatting",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/cli/sarif.test.ts",
+              "title": "sarif json formatting trailing newline and indent"
+            }
+          ]
         },
         {
           "name": "TestOutputSARIF_MultipleComments",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/cli/sarif.test.ts",
+              "title": "sarif multiple comments"
+            }
+          ]
         },
         {
           "name": "TestOutputSARIF_NoFixes",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/cli/sarif.test.ts",
+              "title": "sarif no fixes when suggestion or existing empty"
+            }
+          ]
         },
         {
           "name": "TestOutputSARIF_SchemaCompliance",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/cli/sarif.test.ts",
+              "title": "sarif schema compliance"
+            }
+          ]
         },
         {
           "name": "TestOutputSARIF_ZeroLineNumbers",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/cli/sarif.test.ts",
+              "title": "sarif zero line numbers omit region and fixes"
+            }
+          ]
         },
         {
           "name": "TestSarifFingerprints_EmptyExistingCodeFallback",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/cli/sarif.test.ts",
+              "title": "sarifFingerprints empty existing fallback to startLine"
+            }
+          ]
         },
         {
           "name": "TestSarifFingerprints_Stable",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/cli/sarif.test.ts",
+              "title": "sarifFingerprints stable"
+            }
+          ]
         },
         {
           "name": "TestSarifInvocation_ExecutionSuccessful",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/cli/sarif.test.ts",
+              "title": "sarifInvocation executionSuccessful"
+            }
+          ]
         },
         {
           "name": "TestSarifInvocation_NonCompleteAddsManifestNotification",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/cli/sarif.test.ts",
+              "title": "sarifInvocation non-complete adds manifest notification"
+            }
+          ]
         },
         {
           "name": "TestSarifInvocation_WarningsAsNotifications",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/cli/sarif.test.ts",
+              "title": "sarifInvocation warnings as notifications"
+            }
+          ]
         },
         {
           "name": "TestSarifResultFromComment_EmptyPath",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/cli/sarif.test.ts",
+              "title": "sarifResultFromComment empty path omits locations and fixes"
+            }
+          ]
         },
         {
           "name": "TestSarifResultFromComment_FixesWithEmptyPath",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/cli/sarif.test.ts",
+              "title": "sarifResultFromComment fixes with empty path"
+            }
+          ]
         },
         {
           "name": "TestSarifResultFromComment_InvertedLineNumbers",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/cli/sarif.test.ts",
+              "title": "sarifResultFromComment inverted line numbers"
+            }
+          ]
         },
         {
           "name": "TestSarifResults_DuplicateFingerprints",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/cli/sarif.test.ts",
+              "title": "sarifResults duplicate fingerprints get suffix"
+            }
+          ]
         },
         {
           "name": "TestSarifRules",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/cli/sarif.test.ts",
+              "title": "sarifRules completeness"
+            }
+          ]
         },
         {
           "name": "TestSarifSeverityLevel",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/cli/sarif.test.ts",
+              "title": "sarifSeverityLevel mapping"
+            }
+          ]
         }
       ]
     },
@@ -3853,23 +4195,47 @@
       "tests": [
         {
           "name": "TestLoadLLMRuntime_BadAppConfig",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/cli/shared-llmruntime.test.ts",
+              "title": "loadLLMRuntime bad app config"
+            }
+          ]
         },
         {
           "name": "TestLoadLLMRuntime_BadToolConfig",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/cli/shared-llmruntime.test.ts",
+              "title": "loadLLMRuntime bad tool config"
+            }
+          ]
         },
         {
           "name": "TestLoadLLMRuntime_Success",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/cli/shared-llmruntime.test.ts",
+              "title": "loadLLMRuntime success resolves env"
+            }
+          ]
         },
         {
           "name": "TestLoadLLMRuntime_UnresolvableEndpoint",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/cli/shared-llmruntime.test.ts",
+              "title": "loadLLMRuntime unresolvable endpoint"
+            }
+          ]
         }
       ]
     },
@@ -3883,78 +4249,168 @@
       "tests": [
         {
           "name": "TestApplyCLIExcludes_AppendsPatterns",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/cli/shared.test.ts",
+              "title": "applyCLIExcludes appends"
+            }
+          ]
         },
         {
           "name": "TestApplyCLIExcludes_Empty",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/cli/shared.test.ts",
+              "title": "applyCLIExcludes empty no-op"
+            }
+          ]
         },
         {
           "name": "TestApplyCLIExcludes_NilFileFilter",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/cli/shared.test.ts",
+              "title": "applyCLIExcludes creates FileFilter when nil"
+            }
+          ]
         },
         {
           "name": "TestNewQuietHandle_Agent",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/cli/shared.test.ts",
+              "title": "newQuietHandle agent silences text"
+            }
+          ]
         },
         {
           "name": "TestNewQuietHandle_JSON",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/cli/shared.test.ts",
+              "title": "newQuietHandle json silences"
+            }
+          ]
         },
         {
           "name": "TestNewQuietHandle_NoOp",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/cli/shared.test.ts",
+              "title": "newQuietHandle no-op for text/developer"
+            }
+          ]
         },
         {
           "name": "TestQuietHandle_IdempotentRestore",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/cli/shared.test.ts",
+              "title": "QuietHandle idempotent restore"
+            }
+          ]
         },
         {
           "name": "TestQuietHandle_NilReceiver",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/cli/shared.test.ts",
+              "title": "QuietHandle nil receiver"
+            }
+          ]
         },
         {
           "name": "TestResolveMaxTokensPrecedence",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/cli/shared.test.ts",
+              "title": "resolveMaxTokens precedence"
+            }
+          ]
         },
         {
           "name": "TestResolveWorkingDir_BareRepoFailsLoudly",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/cli/shared.test.ts",
+              "title": "resolveWorkingDir bare repo fails"
+            }
+          ]
         },
         {
           "name": "TestResolveWorkingDir_CurrentDir",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/cli/shared.test.ts",
+              "title": "resolveWorkingDir current dir"
+            }
+          ]
         },
         {
           "name": "TestResolveWorkingDir_GitRepo",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/cli/shared.test.ts",
+              "title": "resolveWorkingDir git repo detection"
+            }
+          ]
         },
         {
           "name": "TestResolveWorkingDir_MonorepoSubdir",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/cli/shared.test.ts",
+              "title": "resolveWorkingDir monorepo subdir hoisting"
+            }
+          ]
         },
         {
           "name": "TestResolveWorkingDir_NonExistent",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/cli/shared.test.ts",
+              "title": "resolveWorkingDir non-existent"
+            }
+          ]
         },
         {
           "name": "TestResolveWorkingDir_RequireGitFails",
-          "disposition": "pending",
-          "reason": "OCR-derived test translation has not been recorded"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/cli/shared.test.ts",
+              "title": "resolveWorkingDir requireGit fails on non-git"
+            }
+          ]
         }
       ]
     },

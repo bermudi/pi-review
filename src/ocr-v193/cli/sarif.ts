@@ -157,7 +157,7 @@ export function sarifSeverityLevel(severity: string | undefined): string {
 // Fingerprint — mirrors Go sarifFingerprints
 // ---------------------------------------------------------------------------
 
-function sarifFingerprints(comment: LlmComment, category: string): Record<string, string> {
+export function sarifFingerprints(comment: LlmComment, category: string): Record<string, string> {
   const trimmed = (comment.existingCode ?? "").trim();
   let source: string;
   if (trimmed !== "") {
@@ -174,7 +174,7 @@ function sarifFingerprints(comment: LlmComment, category: string): Record<string
 // Result conversion — mirrors Go sarifResultFromComment / sarifResults
 // ---------------------------------------------------------------------------
 
-function sarifResultFromComment(comment: LlmComment): SarifResult {
+export function sarifResultFromComment(comment: LlmComment): SarifResult {
   const category = comment.category !== undefined && comment.category !== "" ? comment.category : "other";
   const hasRegion = (comment.startLine ?? 0) > 0 && (comment.endLine ?? 0) >= (comment.startLine ?? 0);
 

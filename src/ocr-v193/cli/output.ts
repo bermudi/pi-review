@@ -27,18 +27,20 @@ export function isSubtaskErrorType(t: string): boolean {
   return t === "subtask_error" || t === "scan_subtask_error";
 }
 
-export function hasSubtaskErrors(warnings: readonly AgentWarning[]): boolean {
+export function hasSubtaskErrors(warnings: readonly AgentWarning[] | null | undefined): boolean {
+  if (!warnings || warnings.length === 0) return false;
   for (const w of warnings) if (isSubtaskErrorType(w.type)) return true;
   return false;
 }
 
 export function warningsForOutput(
-  warnings: readonly AgentWarning[],
+  warnings: readonly AgentWarning[] | null | undefined,
   manifest: RunManifest | null | undefined,
 ): AgentWarning[] {
-  if (!manifest || warnings.length === 0) return [...warnings];
+  const ws = (warnings ?? []) as readonly AgentWarning[];
+  if (!manifest || ws.length === 0) return [...ws];
   const filtered: AgentWarning[] = [];
-  for (const w of warnings) if (!isSubtaskErrorType(w.type)) filtered.push(w);
+  for (const w of ws) if (!isSubtaskErrorType(w.type)) filtered.push(w);
   return filtered.length === 0 ? [] : filtered;
 }
 
@@ -81,8 +83,8 @@ export function sanitizeTerminal(s: string): string {
       out += ch;
       continue;
     }
-    // Drop other control chars (0x00-0x1F, 0x7F)
-    if (code < 32 || code === 127) continue;
+    // Drop C0 controls (0x00-0x1F), DEL (0x7F), and C1 controls (0x80-0x9F)
+    if (code < 32 || code === 127 || (code >= 0x80 && code <= 0x9f)) continue;
     out += ch;
   }
   return out;
@@ -92,7 +94,7 @@ export function sanitizeTerminal(s: string): string {
 // Wrapping — mirrors Go wrapByRunes / wrapSingleRuneLine / runeWrapCut
 // ---------------------------------------------------------------------------
 
-function visibleRunesLen(runes: string[]): number {
+export function visibleRunesLen(runes: string[]): number {
   let n = 0;
   for (const r of runes) {
     const code = r.codePointAt(0) ?? 0;
@@ -101,7 +103,7 @@ function visibleRunesLen(runes: string[]): number {
   return n;
 }
 
-function runeWrapCut(runes: string[], maxW: number): number {
+export function runeWrapCut(runes: string[], maxW: number): number {
   if (visibleRunesLen(runes) <= maxW) return runes.length;
   let best = maxW;
   if (best >= runes.length) return runes.length;
@@ -111,7 +113,7 @@ function runeWrapCut(runes: string[], maxW: number): number {
   return best;
 }
 
-function wrapSingleRuneLine(line: string, maxW: number): string[] {
+export function wrapSingleRuneLine(line: string, maxW: number): string[] {
   const runes = [...line];
   if (visibleRunesLen(runes) <= maxW) return [line];
   const result: string[] = [];
@@ -138,7 +140,7 @@ export function wrapByRunes(text: string, maxW: number): string[] {
 // Diff suggest — mirrors Go buildDiffLines / splitToLines / suggestdiff
 // ---------------------------------------------------------------------------
 
-function splitToLines(s: string): string[] {
+export function splitToLines(s: string): string[] {
   const lines = s.replaceAll("\r\n", "\n").split("\n");
   if (lines.length > 0 && lines[lines.length - 1] === "") lines.pop();
   return lines;
@@ -225,8 +227,11 @@ export function severityColor(severity: string | undefined): string {
   }
 }
 
-function printDiffLine(prefix: string, content: string, fgColor: string, bgColor: string): string {
+export function printDiffLine(prefix: string, content: string, fgColor: string, bgColor: string): string {
   return `${fgColor}${bgColor}${prefix}\u001b[0m${bgColor} ${content}\u001b[0m\n`;
+}
+export function statusBadge(status: string): string {
+  return previewStatusBadge(status);
 }
 
 // ---------------------------------------------------------------------------
@@ -580,7 +585,7 @@ export function emitFailureUsageText(
 // Preview text — mirrors Go outputPreview / outputPreviewText / outputPreviewJSON
 // ---------------------------------------------------------------------------
 
-function previewStatusBadge(status: string): string {
+export function previewStatusBadge(status: string): string {
   switch (status) {
     case "added":
       return "\u001b[32m[A]\u001b[0m";

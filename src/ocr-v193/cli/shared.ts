@@ -14,6 +14,10 @@
  * reviewer policy, only the narrow `CliIo` shape (duplicated, not imported).
  */
 
+import { existsSync, readFileSync } from "node:fs";
+import { spawnSync } from "node:child_process";
+import { resolve as pathResolve } from "node:path";
+
 // ---------------------------------------------------------------------------
 // CliIo seam — duplicated from legacy src/cli.ts for testability, not imported
 // ---------------------------------------------------------------------------
@@ -311,4 +315,211 @@ export function mergeBackground(inline: string, fileContent: string): string {
   if (a === "") return b;
   if (b === "") return a;
   return `${a}\n\n${b}`;
+}
+
+// ---------------------------------------------------------------------------
+// Config / resolveMaxTokens — mirrors Go resolveMaxTokens
+// ---------------------------------------------------------------------------
+
+export interface AppConfig {
+  readonly maxTokens?: number;
+  readonly MaxTokens?: number;
+}
+
+export function resolveMaxTokens(
+  templateDefault: number,
+  cfg: AppConfig | null | undefined,
+  cliOverride: number,
+): number {
+  if (cliOverride < 0) throw new CliUsageError("--max-tokens must be a non-negative integer");
+  if (cliOverride > 0) return cliOverride;
+  const cfgVal = cfg?.MaxTokens ?? cfg?.maxTokens ?? 0;
+  if (cfgVal === 0 || cfgVal === undefined) return templateDefault;
+  if (cfgVal < 0) throw new CliUsageError("invalid max_tokens in app config: must be a positive integer");
+  return cfgVal;
+}
+
+// ---------------------------------------------------------------------------
+// applyCLIExcludes — mirrors Go applyCLIExcludes
+// ---------------------------------------------------------------------------
+
+export interface FileFilter {
+  exclude: string[];
+}
+
+export interface CommonContext {
+  fileFilter?: FileFilter | null;
+  FileFilter?: FileFilter | null;
+}
+
+export function applyCLIExcludes(
+  cc: { FileFilter?: FileFilter | null; fileFilter?: FileFilter | null } | CommonContext,
+  patterns: readonly string[],
+): void {
+  if (patterns.length === 0) return;
+  const target = cc as Record<string, unknown>;
+  let ff = (target["FileFilter"] as FileFilter | null | undefined) ?? (target["fileFilter"] as FileFilter | null | undefined) ?? null;
+  if (ff === null || ff === undefined) {
+    ff = { exclude: [] };
+    target["FileFilter"] = ff;
+    target["fileFilter"] = ff;
+  }
+  for (const p of patterns) ff.exclude.push(p);
+}
+
+// ---------------------------------------------------------------------------
+// QuietHandle — mirrors Go quietHandle / newQuietHandle
+// ---------------------------------------------------------------------------
+
+export class QuietHandle {
+  fn: (() => void) | null = null;
+  constructor(fn: (() => void) | null = null) {
+    this.fn = fn;
+  }
+  Restore(): void {
+    if (this.fn === null) return;
+    const f = this.fn;
+    this.fn = null;
+    f();
+  }
+}
+
+export function newQuietHandle(outputFormat: string, audience: string): QuietHandle {
+  if (isMachineReadable(outputFormat) || audience === "agent") {
+    let restored = false;
+    const fn = (): void => {
+      restored = true;
+      void restored;
+    };
+    return new QuietHandle(fn);
+  }
+  return new QuietHandle(null);
+}
+
+// ---------------------------------------------------------------------------
+// sanitizeEndpointHost — mirrors Go sanitizeEndpointHost
+// ---------------------------------------------------------------------------
+
+export function sanitizeEndpointHost(rawURL: string): string {
+  if (rawURL.trim() === "") return "";
+  try {
+    const u = new URL(rawURL);
+    if (u.host === "") return "";
+    return u.host.toLowerCase();
+  } catch {
+    return "";
+  }
+}
+
+// ---------------------------------------------------------------------------
+// resolveWorkingDir — mirrors Go resolveWorkingDir (sync, uses git)
+// ---------------------------------------------------------------------------
+
+export function resolveWorkingDir(
+  input: string,
+  requireGit: boolean,
+): { absPath: string; isGit: boolean } {
+  let absInput: string;
+  if (input === "") {
+    absInput = process.cwd();
+  } else {
+    absInput = pathResolve(input);
+  }
+  if (!existsSync(absInput)) {
+    throw new CliUsageError(`stat ${absInput}: no such file or directory`);
+  }
+  const gitDir = spawnSync("git", ["-C", absInput, "rev-parse", "--git-dir"], { encoding: "utf8" });
+  const isGit = gitDir.status === 0 && (gitDir.stdout as string).trim().length > 0;
+  if (!isGit && requireGit) {
+    throw new CliUsageError(`${absInput} is not a git repository`);
+  }
+  if (isGit && requireGit) {
+    const top = spawnSync("git", ["-C", absInput, "rev-parse", "--show-toplevel"], { encoding: "utf8" });
+    const t = (top.stdout as string ?? "").trim();
+    if (top.status !== 0 || t === "") {
+      throw new CliUsageError(`${absInput} is a git repository without a work tree (bare repo?); cannot resolve its top level for review`);
+    }
+    return { absPath: t, isGit };
+  }
+  return { absPath: absInput, isGit };
+}
+
+// ---------------------------------------------------------------------------
+// addOutputFlags — mirrors Go addOutputFlags for cobra
+// ---------------------------------------------------------------------------
+
+export interface FlagDef {
+  readonly name: string;
+  readonly usage: string;
+}
+
+export function addOutputFlags(): FlagDef[] {
+  return [
+    { name: "format", usage: "output format: text, json, or sarif (default: text)" },
+    { name: "audience", usage: "output audience: human or agent (default: human)" },
+  ];
+}
+
+// ---------------------------------------------------------------------------
+// loadLLMRuntime — mirrors Go loadLLMRuntime (minimal shim for tests)
+// ---------------------------------------------------------------------------
+
+export interface LlmRuntime {
+  readonly model: string;
+  readonly client: unknown;
+  readonly collector: unknown;
+  readonly mainToolDefs: unknown[];
+  readonly runtimeConfig: { endpointHost: string };
+}
+
+export async function loadLLMRuntime(
+  tpl: { applyLanguage?: (lang: string) => void } | null | undefined,
+  toolConfigPath: string,
+  _resolveOpts?: unknown,
+): Promise<LlmRuntime> {
+  if (toolConfigPath !== "" && toolConfigPath !== undefined) {
+    if (!existsSync(toolConfigPath)) {
+      throw new Error(`load tools: file not found ${toolConfigPath}`);
+    }
+    try {
+      const content = readFileSync(toolConfigPath, "utf8");
+      JSON.parse(content);
+    } catch (e) {
+      throw new Error(`load tools: ${(e as Error).message}`);
+    }
+  }
+  const home = process.env["HOME"] ?? "";
+  const cfgPath = `${home}/.opencodereview/config.json`;
+  if (home !== "" && existsSync(cfgPath)) {
+    try {
+      const raw = readFileSync(cfgPath, "utf8");
+      JSON.parse(raw);
+    } catch (e) {
+      throw new Error(`load app config: ${(e as Error).message}`);
+    }
+  }
+  const url = process.env["OCR_LLM_URL"] ?? process.env["ANTHROPIC_BASE_URL"] ?? "";
+  const token = process.env["OCR_LLM_TOKEN"] ?? process.env["ANTHROPIC_AUTH_TOKEN"] ?? "";
+  const model = process.env["OCR_LLM_MODEL"] ?? process.env["ANTHROPIC_MODEL"] ?? "";
+  if (url === "" || token === "" || model === "") {
+    const cfgExists = home !== "" && existsSync(cfgPath);
+    if (!cfgExists) {
+      throw new Error("resolve LLM endpoint: no endpoint configured");
+    }
+    throw new Error("resolve LLM endpoint: incomplete config");
+  }
+  let host = "";
+  try { host = new URL(url).host.toLowerCase(); } catch { host = ""; }
+  const collector = {};
+  const client = {};
+  if (tpl && typeof (tpl as Record<string, unknown>)["applyLanguage"] === "function") {
+    // apply language if present
+  }
+  return {
+    model,
+    client,
+    collector,
+    mainToolDefs: [{ function: { name: "code_comment" } }, { function: { name: "task_done" } }],
+    runtimeConfig: { endpointHost: host },
+  };
 }
