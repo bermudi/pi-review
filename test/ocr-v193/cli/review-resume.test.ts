@@ -8,7 +8,7 @@ import * as path from "node:path";
 import { spawnSync } from "node:child_process";
 import { ReviewMode } from "../../../src/ocr-v193/tool/filereader.js";
 import { fileReadRef, loadReviewResumeState } from "../../../src/ocr-v193/cli/review.js";
-import { SessionHistory } from "../../../src/ocr-v193/session/history.js";
+import { SessionHistory, type PersistHandle } from "../../../src/ocr-v193/session/history.js";
 import { JsonlWriter } from "../../../src/ocr-v193/session/persist.js";
 import { ManifestBuilder } from "../../../src/ocr-v193/session/manifest.js";
 import { ResumeState } from "../../../src/ocr-v193/session/resume.js";
@@ -38,14 +38,27 @@ function withTempHome<T>(fn: () => T): T {
   }
 }
 function writeRangeSession(repoDir: string, files: string[] = []): string {
-  const sh = new SessionHistory(repoDir, "feature", "fake", { reviewMode: "range", diffFrom: "main", diffTo: "feature" } as never);
+  const sh = new SessionHistory(repoDir, "feature", "fake", { reviewMode: "range", diffFrom: "main", diffTo: "feature" });
   if (!(sh as unknown as { HasPersistence?: () => boolean }).HasPersistence?.()) {
-    const w = new JsonlWriter(sh.sessionId, sh.repoDir, sh.gitBranch, sh.model, { reviewMode: (sh as unknown as { reviewMode: string }).reviewMode, diffFrom: (sh as unknown as { diffFrom: string }).diffFrom, diffTo: (sh as unknown as { diffTo: string }).diffTo } as never);
+    const w = new JsonlWriter(sh.sessionId, sh.repoDir, sh.gitBranch, sh.model, {
+      reviewMode: sh.reviewMode,
+      diffFrom: sh.diffFrom,
+      diffTo: sh.diffTo,
+    });
     w.open();
-    w.WriteSessionStart((sh as unknown as { startTime: Date }).startTime);
-    // @ts-ignore spread of unknown[] into tuple
-    const handle = { writeReviewItemDone: (...a: unknown[]) => w.WriteReviewItemDone(...a), writeReviewItemReused: (...a: unknown[]) => w.WriteReviewItemReused(...a), writeReviewItemFailed: (...a: unknown[]) => w.WriteReviewItemFailed(...a), writeResumeLineage: (l: never) => w.WriteResumeLineage(l), writeSessionEnd: (...a: unknown[]) => w.WriteSessionEnd(...a) } as unknown as never;
-    (sh as unknown as { _attachPersist: (h: unknown) => void })._attachPersist(handle);
+    w.WriteSessionStart(sh.startTime);
+    const handle: PersistHandle = {
+      writeReviewItemDone: (...args) => { w.WriteReviewItemDone(...args); },
+      writeReviewItemReused: (...args) => { w.WriteReviewItemReused(...args); },
+      writeReviewItemFailed: (...args) => { w.WriteReviewItemFailed(...args); },
+      writeResumeLineage: (lineage) => { w.WriteResumeLineage(lineage); },
+      writeSessionEnd: (...args) => w.WriteSessionEnd(...args),
+      writeLLMRequest: (...args) => { w.WriteLLMRequest(...args); },
+      writeLLMResponse: (...args) => { w.WriteLLMResponse(...args); },
+      writeLLMError: (...args) => { w.WriteLLMError(...args); },
+      writeToolCall: (...args) => { w.WriteToolCall(...args); },
+    };
+    sh._attachPersist(handle);
   }
   for (const f of files) sh.RecordReviewItemDone(f, "", f, `fp-${f}`, []);
   sh.Finalize();

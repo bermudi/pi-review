@@ -50,15 +50,15 @@ function attachTestWriter(sh: SessionHistory): void {
 function captureStdout(fn: () => void): string {
   let out = "";
   const orig = process.stdout.write;
-  // @ts-ignore monkey patch for capture
-  process.stdout.write = (chunk: unknown) => {
+  const captureWrite = (chunk: unknown): boolean => {
     out += String(chunk);
     return true;
   };
+  Object.defineProperty(process.stdout, "write", { configurable: true, value: captureWrite });
   try {
     fn();
   } finally {
-    process.stdout.write = orig as typeof process.stdout.write;
+    Object.defineProperty(process.stdout, "write", { configurable: true, value: orig });
   }
   return out;
 }
