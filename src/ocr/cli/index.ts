@@ -31,6 +31,7 @@ import {
 } from "./background.js";
 import { resolveRepoDir, validateReviewRefs } from "./git.js";
 import { flagErrorWithSuggestion } from "./flag-suggest.js";
+import { colorModeError, resolveColor, validateColorMode } from "./color.js";
 
 // ---------------------------------------------------------------------------
 // Version / help text — mirrors Go root.go + version.go
@@ -163,6 +164,7 @@ type FlagSpec = {
 };
 
 const REVIEW_FLAGS: readonly FlagSpec[] = [
+  { name: "color", takesValue: true },
   { name: "repo", takesValue: true },
   { name: "rule", takesValue: true },
   { name: "from", takesValue: true },
@@ -189,6 +191,7 @@ const REVIEW_FLAGS: readonly FlagSpec[] = [
 ];
 
 const SCAN_FLAGS: readonly FlagSpec[] = [
+  { name: "color", takesValue: true },
   { name: "repo", takesValue: true },
   { name: "rule", takesValue: true },
   { name: "path", takesValue: true },
@@ -348,6 +351,7 @@ export function parseReviewFlags(argv: readonly string[]): ReviewOptions {
   // Treat -h as help that should not error; mimic Go's cobra help handling for test
   if (map.get("help") === true) return buildReviewOptions(map);
   const opts = buildReviewOptions(map);
+  if (!validateColorMode(opts.color)) throw new CliUsageError(colorModeError(opts.color).message);
   validateReviewOptions(opts);
   if (opts.from !== "" && opts.to === "") throw new CliUsageError("--to is required when --from is specified");
   if (opts.to !== "" && opts.from === "") throw new CliUsageError("--from is required when --to is specified");
@@ -358,6 +362,7 @@ export function parseScanFlags(argv: readonly string[]): ScanOptions {
   const map = parseFlags(argv, SCAN_FLAGS);
   if (map.get("help") === true) return buildScanOptions(map);
   const opts = buildScanOptions(map);
+  if (!validateColorMode(opts.color)) throw new CliUsageError(colorModeError(opts.color).message);
   validateScanOptions(opts);
   return opts;
 }
@@ -374,6 +379,7 @@ function buildReviewOptions(map: Map<string, string | boolean>): ReviewOptions {
     resume: flagVal(map, "resume") ?? base.resume,
     excludes: flagVal(map, "exclude") ?? base.excludes,
     outputFormat: (flagVal(map, "format") as ReviewOptions["outputFormat"]) ?? base.outputFormat,
+    color: (flagVal(map, "color") as ReviewOptions["color"]) ?? base.color,
     audience: (flagVal(map, "audience") as ReviewOptions["audience"]) ?? base.audience,
     background: flagVal(map, "background") ?? base.background,
     backgroundFile: flagVal(map, "background-file") ?? base.backgroundFile,
@@ -405,6 +411,7 @@ function buildScanOptions(map: Map<string, string | boolean>): ScanOptions {
     paths: flagVal(map, "path") ?? base.paths,
     excludes: flagVal(map, "exclude") ?? base.excludes,
     outputFormat: (flagVal(map, "format") as ScanOptions["outputFormat"]) ?? base.outputFormat,
+    color: (flagVal(map, "color") as ScanOptions["color"]) ?? base.color,
     audience: (flagVal(map, "audience") as ScanOptions["audience"]) ?? base.audience,
     background: flagVal(map, "background") ?? base.background,
     concurrency: flagVal(map, "concurrency") !== undefined ? parseIntStrict(flagVal(map, "concurrency") as string, "concurrency") : base.concurrency,
@@ -437,7 +444,7 @@ export async function runCli(
   deps: OcrCliDependencies = {},
 ): Promise<number> {
   const io = makeIo(deps.io);
-  const args: string[] = (() => {
+  let args: string[] = (() => {
     const parsed: string[] = [];
     for (const a of argv) {
       if (typeof a !== "string") throw new CliUsageError("Arguments must be strings.");
@@ -445,6 +452,22 @@ export async function runCli(
     }
     return parsed;
   })();
+
+  // Cobra's persistent root flag may precede the subcommand. Normalize that
+  // single placement into the subcommand option bag; post-command --color is
+  // handled by the ordinary flag parser below.
+  let rootColor: string | undefined;
+  if (args[0]?.startsWith("--color=")) {
+    rootColor = args[0]!.slice("--color=".length);
+    args = args.slice(1);
+  } else if (args[0] === "--color") {
+    rootColor = args[1];
+    args = args.slice(2);
+  }
+  if (rootColor !== undefined && !validateColorMode(rootColor)) {
+    io.stderr(`Error: ${colorModeError(rootColor).message}\n`);
+    return 1;
+  }
 
   // Root flags: --version / -V / --help before subcommand
   if (args.length === 0) {
@@ -455,7 +478,13 @@ export async function runCli(
   const first = args[0] ?? "";
   if (first === "--version" || first === "-V" || first === "version") {
     // Allow `pi-review version` or `pi-review --version` or `pi-review -V`
-    if (first === "version" && args.length > 1) {
+    if (first === "version" && args.length === 2 && args[1]?.startsWith("--color=")) {
+      const mode = args[1]!.slice("--color=".length);
+      if (!validateColorMode(mode)) {
+        io.stderr(`Error: ${colorModeError(mode).message}\n`);
+        return 1;
+      }
+    } else if (first === "version" && args.length > 1) {
       const extra = args[1] ?? "";
       io.stderr(`Error: unknown command "${extra}" for "pi-review version"\n\n${HELP_TEXT}`);
       return 1;
@@ -490,6 +519,7 @@ export async function runCli(
     let opts: ReviewOptions;
     try {
       opts = buildReviewOptions(map);
+      if (rootColor !== undefined) opts = { ...opts, color: rootColor as ReviewOptions["color"] };
       validateReviewOptions(opts);
     } catch (err) {
       if (err instanceof CliUsageError) io.stderr(`Error: ${err.message}\n\n${HELP_TEXT}`);
@@ -553,6 +583,7 @@ export async function runCli(
     io.onSignal("SIGINT", onInterrupt);
     io.onSignal("SIGTERM", onInterrupt);
     const signal = abortController.signal;
+    const colorEnabled = resolveColor(opts.color, io.env()["TERM"], io.stdoutIsTTY?.() ?? false);
     const startMs = Date.now();
 
     const reviewRunnerFactory = deps.reviewRunnerFactory;
@@ -580,6 +611,7 @@ export async function runCli(
         retryReport: deps.retryReport ?? null,
         startMs,
         signal,
+        colorEnabled,
         previewFactory,
         runnerFactory: reviewRunnerFactory ? (sig) => reviewRunnerFactory(opts, sig) : undefined,
       });
@@ -609,6 +641,7 @@ export async function runCli(
     let opts: ScanOptions;
     try {
       opts = buildScanOptions(map);
+      if (rootColor !== undefined) opts = { ...opts, color: rootColor as ScanOptions["color"] };
       validateScanOptions(opts);
     } catch (err) {
       if (err instanceof CliUsageError) io.stderr(`Error: ${err.message}\n\n${HELP_TEXT}`);
@@ -625,6 +658,7 @@ export async function runCli(
     }
 
     const startMs = Date.now();
+    const colorEnabled = resolveColor(opts.color, io.env()["TERM"], io.stdoutIsTTY?.() ?? false);
     const scanPreviewFactory: ScanPreviewFactory | undefined = deps.scanPreviewFactory
       ?? (async (): Promise<Preview> => ({
         entries: [],
@@ -642,6 +676,7 @@ export async function runCli(
         traceId: deps.traceId ?? "",
         llmIdentity: deps.llmIdentity,
         startMs,
+        colorEnabled,
         previewFactory: scanPreviewFactory,
         runnerFactory: deps.scanRunnerFactory ? (sig) => deps.scanRunnerFactory?.(opts, sig) as Promise<ScanRunner> : undefined,
       });

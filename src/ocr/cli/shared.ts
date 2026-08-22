@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright 2026 alibaba/open-code-review Contributors
 //
-// Ported from cmd/opencodereview/shared.go, shared_flags.go at c35ddd7223f2b5540ce03aa43c9a25ef643fca27.
+// Ported from cmd/opencodereview/shared.go, shared_flags.go at c35ddd7223f2b5540ce03aa43c9a25ef643fca27;
+// stdout TTY color policy follows OCR v1.9.8 commit 756203c.
 // Modifications are distributed as part of pi-reviewer under
 // GPL-3.0-or-later;
 // see LICENSES/Apache-2.0.txt and THIRD_PARTY_NOTICES.md.
@@ -17,6 +18,7 @@
 import { existsSync, readFileSync } from "node:fs";
 import { spawnSync } from "node:child_process";
 import { resolve as pathResolve } from "node:path";
+import type { ColorMode } from "./color.js";
 
 // ---------------------------------------------------------------------------
 // CliIo seam — duplicated from legacy src/cli.ts for testability, not imported
@@ -32,6 +34,7 @@ export interface CliIo {
   readonly stderr: (text: string) => void;
   readonly onSignal: (signal: SignalName, listener: SignalListener) => void;
   readonly offSignal: (signal: SignalName, listener: SignalListener) => void;
+  readonly stdoutIsTTY?: () => boolean;
 }
 
 export interface CliIoOverrides {
@@ -41,6 +44,7 @@ export interface CliIoOverrides {
   readonly stderr?: (text: string) => void;
   readonly onSignal?: (signal: SignalName, listener: SignalListener) => void;
   readonly offSignal?: (signal: SignalName, listener: SignalListener) => void;
+  readonly stdoutIsTTY?: () => boolean;
 }
 
 export function defaultIo(): CliIo {
@@ -59,6 +63,7 @@ export function defaultIo(): CliIo {
     offSignal: (signal, listener) => {
       process.off(signal, listener);
     },
+    stdoutIsTTY: () => process.stdout.isTTY === true,
   };
 }
 
@@ -71,6 +76,7 @@ export function makeIo(overrides: CliIoOverrides | undefined): CliIo {
     stderr: overrides?.stderr ?? defaults.stderr,
     onSignal: overrides?.onSignal ?? defaults.onSignal,
     offSignal: overrides?.offSignal ?? defaults.offSignal,
+    stdoutIsTTY: overrides?.stdoutIsTTY ?? defaults.stdoutIsTTY,
   };
 }
 
@@ -119,6 +125,7 @@ export interface ReviewOptions {
   readonly resume: string;
   readonly excludes: string;
   readonly outputFormat: OutputFormat;
+  readonly color: ColorMode;
   readonly audience: Audience;
   readonly background: string;
   readonly backgroundFile: string;
@@ -146,6 +153,7 @@ export interface ScanOptions {
   readonly paths: string;
   readonly excludes: string;
   readonly outputFormat: OutputFormat;
+  readonly color: ColorMode;
   readonly audience: Audience;
   readonly background: string;
   readonly concurrency: number;
@@ -179,6 +187,7 @@ export function defaultReviewOptions(): ReviewOptions {
     resume: "",
     excludes: "",
     outputFormat: "text",
+    color: "auto",
     audience: "human",
     background: "",
     backgroundFile: "",
@@ -203,6 +212,7 @@ export function defaultScanOptions(): ScanOptions {
     paths: "",
     excludes: "",
     outputFormat: "text",
+    color: "auto",
     audience: "human",
     background: "",
     concurrency: 8,

@@ -30,7 +30,7 @@ test("severityColor distinct mapping", () => {
   expect(severityColor(undefined)).toBe("\u001b[2m");
 });
 
-// OCR v1.9.3: TestRenderComment_BadgeInline
+// OCR v1.9.9: TestRenderComment_BadgeInline
 test("renderComment badge inline colorization", () => {
   const out = renderComment({
     path: "internal/mcp/client.go",
@@ -39,7 +39,7 @@ test("renderComment badge inline colorization", () => {
     content: "Potential environment variable leak.",
     category: "security",
     severity: "high",
-  });
+  }, true);
   expect(out).toContain("[security · high]");
   expect(out).toContain("\u001b[91m[security · high]\u001b[0m");
   expect(out).toContain("Potential environment variable leak.");

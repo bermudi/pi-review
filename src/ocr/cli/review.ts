@@ -89,6 +89,7 @@ export interface ReviewContext {
   retryReport: RetryReport | null | undefined;
   startMs: number;
   signal?: AbortSignal;
+  colorEnabled?: boolean;
   previewFactory?: PreviewFactory;
   runnerFactory?: (signal?: AbortSignal) => Promise<ReviewRunner>;
 }
@@ -107,6 +108,7 @@ export function emitRunResult(
   llmIdentity: JsonLlmIdentity | undefined,
   retryReport: RetryReport | null | undefined,
   io: Pick<CliIo, "stdout" | "stderr">,
+  colorEnabled = false,
 ): void {
   const manifest = provider.RunManifest() ?? null;
   const isMachine = isMachineReadable(outputFormat);
@@ -159,7 +161,7 @@ export function emitRunResult(
   }
 
   // Text audience: diagnostics already handled via io.stderr above
-  const { stdout, stderr } = outputTextWithWarnings([...comments] as LlmComment[], provider.Warnings(), manifest);
+  const { stdout, stderr } = outputTextWithWarnings([...comments] as LlmComment[], provider.Warnings(), manifest, colorEnabled);
   const summary = traceSummaryText({
     filesReviewed: provider.FilesReviewed(),
     comments: comments.length,
@@ -291,7 +293,7 @@ export async function runReviewContext(ctx: ReviewContext): Promise<number> {
   if (opts.preview) {
     if (!ctx.previewFactory) throw new Error("previewFactory required for preview run");
     const preview = await ctx.previewFactory(opts, ctx.signal);
-    const { stdout, error } = outputPreview(preview, opts.outputFormat);
+    const { stdout, error } = outputPreview(preview, opts.outputFormat, ctx.colorEnabled ?? false);
     if (error) throw new CliUsageError(error);
     io.stdout(stdout);
     return 0;
@@ -347,7 +349,7 @@ export async function runReviewContext(ctx: ReviewContext): Promise<number> {
       ResumeInfo: () => runner!.resumeInfo,
     };
     try {
-      emitRunResult(provider, comments, durationMs, opts.outputFormat, opts.audience, traceId, effectiveLlmIdentity, effectiveRetryReport, io);
+      emitRunResult(provider, comments, durationMs, opts.outputFormat, opts.audience, traceId, effectiveLlmIdentity, effectiveRetryReport, io, ctx.colorEnabled ?? false);
     } catch (err) {
       emitErr = err instanceof Error ? err : new Error(String(err));
     }

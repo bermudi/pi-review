@@ -525,40 +525,75 @@
       "path": "cmd/opencodereview/color_test.go",
       "blob": "28d4eed12d85ccfbd827f43a67bb6469210b7cbe",
       "scope": {
-        "kind": "needs_decision",
-        "area": "cmd/opencodereview",
-        "reason": "not yet classified by the OCR v1.9.3 core-port source map"
+        "kind": "in_scope",
+        "area": "cli-output",
+        "reason": "ANSI mode validation and terminal-boundary output policy are core CLI rendering behavior"
       },
       "tests": [
         {
           "name": "TestAddColorFlags",
           "delta": "added",
-          "disposition": "pending",
-          "reason": "OCR v1.9.9 added requires explicit new evidence or revalidation; prior v1.9.3 coverage is not inherited."
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr/cli/color.test.ts",
+              "title": "TestAddColorFlags",
+              "ocrVersion": "v1.9.9"
+            }
+          ]
         },
         {
           "name": "TestColorFlagsThroughRootCmd",
           "delta": "added",
-          "disposition": "pending",
-          "reason": "OCR v1.9.9 added requires explicit new evidence or revalidation; prior v1.9.3 coverage is not inherited."
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr/cli/color.test.ts",
+              "title": "TestColorFlagsThroughRootCmd",
+              "ocrVersion": "v1.9.9"
+            }
+          ]
         },
         {
           "name": "TestColorize",
           "delta": "added",
-          "disposition": "pending",
-          "reason": "OCR v1.9.9 added requires explicit new evidence or revalidation; prior v1.9.3 coverage is not inherited."
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr/cli/color.test.ts",
+              "title": "TestColorize",
+              "ocrVersion": "v1.9.9"
+            }
+          ]
         },
         {
           "name": "TestResolveColor",
           "delta": "added",
-          "disposition": "pending",
-          "reason": "OCR v1.9.9 added requires explicit new evidence or revalidation; prior v1.9.3 coverage is not inherited."
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr/cli/color.test.ts",
+              "title": "TestResolveColor",
+              "ocrVersion": "v1.9.9"
+            }
+          ]
         },
         {
           "name": "TestValidateColorMode",
           "delta": "added",
-          "disposition": "pending",
-          "reason": "OCR v1.9.9 added requires explicit new evidence or revalidation; prior v1.9.3 coverage is not inherited."
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr/cli/color.test.ts",
+              "title": "TestValidateColorMode",
+              "ocrVersion": "v1.9.9"
+            }
+          ]
         }
       ]
     },
@@ -2354,50 +2389,106 @@
         {
           "name": "TestOutputPreviewText_ColorEmitsEscapes",
           "delta": "added",
-          "disposition": "pending",
-          "reason": "OCR v1.9.9 added requires explicit new evidence or revalidation; prior v1.9.3 coverage is not inherited."
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr/cli/output-color.test.ts",
+              "title": "TestOutputPreviewText_ColorEmitsEscapes",
+              "ocrVersion": "v1.9.9"
+            }
+          ]
         },
         {
           "name": "TestOutputPreviewText_ColumnsAlign",
           "delta": "added",
-          "disposition": "pending",
-          "reason": "OCR v1.9.9 added requires explicit new evidence or revalidation; prior v1.9.3 coverage is not inherited."
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr/cli/output-color.test.ts",
+              "title": "TestOutputPreviewText_ColumnsAlign",
+              "ocrVersion": "v1.9.9"
+            }
+          ]
         },
         {
           "name": "TestOutputPreviewText_NoColorIsPlain",
           "delta": "added",
-          "disposition": "pending",
-          "reason": "OCR v1.9.9 added requires explicit new evidence or revalidation; prior v1.9.3 coverage is not inherited."
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr/cli/output-color.test.ts",
+              "title": "TestOutputPreviewText_NoColorIsPlain",
+              "ocrVersion": "v1.9.9"
+            }
+          ]
         },
         {
           "name": "TestPrintDiffLine_NoColor",
           "delta": "added",
-          "disposition": "pending",
-          "reason": "OCR v1.9.9 added requires explicit new evidence or revalidation; prior v1.9.3 coverage is not inherited."
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr/cli/output-color.test.ts",
+              "title": "TestPrintDiffLine_NoColor",
+              "ocrVersion": "v1.9.9"
+            }
+          ]
         },
         {
           "name": "TestRenderComment_ColorEmitsEscapes",
           "delta": "added",
-          "disposition": "pending",
-          "reason": "OCR v1.9.9 added requires explicit new evidence or revalidation; prior v1.9.3 coverage is not inherited."
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr/cli/output-color.test.ts",
+              "title": "TestRenderComment_ColorEmitsEscapes",
+              "ocrVersion": "v1.9.9"
+            }
+          ]
         },
         {
           "name": "TestRenderComment_NoColorIsPlain",
           "delta": "added",
-          "disposition": "pending",
-          "reason": "OCR v1.9.9 added requires explicit new evidence or revalidation; prior v1.9.3 coverage is not inherited."
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr/cli/output-color.test.ts",
+              "title": "TestRenderComment_NoColorIsPlain",
+              "ocrVersion": "v1.9.9"
+            }
+          ]
         },
         {
           "name": "TestStatusBadge_Color",
           "delta": "added",
-          "disposition": "pending",
-          "reason": "OCR v1.9.9 added requires explicit new evidence or revalidation; prior v1.9.3 coverage is not inherited."
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr/cli/output-color.test.ts",
+              "title": "TestStatusBadge_Color",
+              "ocrVersion": "v1.9.9"
+            }
+          ]
         },
         {
           "name": "TestStatusBadge_NoColor",
           "delta": "added",
-          "disposition": "pending",
-          "reason": "OCR v1.9.9 added requires explicit new evidence or revalidation; prior v1.9.3 coverage is not inherited."
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr/cli/output-color.test.ts",
+              "title": "TestStatusBadge_NoColor",
+              "ocrVersion": "v1.9.9"
+            }
+          ]
         }
       ]
     },
@@ -2809,8 +2900,15 @@
         {
           "name": "TestRenderComment_BadgeInline",
           "delta": "changed_body",
-          "disposition": "pending",
-          "reason": "OCR v1.9.9 changed body requires explicit new evidence or revalidation; prior v1.9.3 coverage is not inherited."
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr/cli/output.test.ts",
+              "title": "renderComment badge inline colorization",
+              "ocrVersion": "v1.9.9"
+            }
+          ]
         },
         {
           "name": "TestSanitizeTerminal",

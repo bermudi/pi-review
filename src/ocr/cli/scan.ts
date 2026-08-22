@@ -58,6 +58,7 @@ export interface ScanContext {
   llmIdentity: JsonLlmIdentity | undefined;
   startMs: number;
   signal?: AbortSignal;
+  colorEnabled?: boolean;
   previewFactory?: ScanPreviewFactory;
   runnerFactory?: (signal?: AbortSignal) => Promise<ScanRunner>;
 }
@@ -105,6 +106,7 @@ function emitScanResult(
   traceId: string,
   llmIdentity: JsonLlmIdentity | undefined,
   io: Pick<CliIo, "stdout" | "stderr">,
+  colorEnabled = false,
 ): void {
   const manifest = provider.RunManifest() ?? null;
   const isMachine = isMachineReadable(outputFormat);
@@ -147,7 +149,7 @@ function emitScanResult(
     return;
   }
 
-  const { stdout, stderr } = outputTextWithWarnings([...comments] as LlmComment[], provider.Warnings(), manifest);
+  const { stdout, stderr } = outputTextWithWarnings([...comments] as LlmComment[], provider.Warnings(), manifest, colorEnabled);
   const summary = traceSummaryText({
     filesReviewed: provider.FilesReviewed(),
     comments: comments.length,
@@ -188,7 +190,7 @@ export async function runScanContext(ctx: ScanContext): Promise<number> {
   if (opts.preview) {
     if (!ctx.previewFactory) throw new Error("previewFactory required for preview run");
     const preview = await ctx.previewFactory(opts, ctx.signal);
-    const { stdout, error } = outputPreview(preview, opts.outputFormat);
+    const { stdout, error } = outputPreview(preview, opts.outputFormat, ctx.colorEnabled ?? false);
     if (error) throw new CliUsageError(error);
     io.stdout(stdout);
     return 0;
@@ -233,7 +235,7 @@ export async function runScanContext(ctx: ScanContext): Promise<number> {
       ResumeInfo: () => runner!.resumeInfo,
     };
     try {
-      emitScanResult(provider, comments, durationMs, opts.outputFormat, traceId, effectiveLlmIdentity, io);
+      emitScanResult(provider, comments, durationMs, opts.outputFormat, traceId, effectiveLlmIdentity, io, ctx.colorEnabled ?? false);
     } catch (err) {
       emitErr = err instanceof Error ? err : new Error(String(err));
     }

@@ -2,8 +2,8 @@
 // Copyright 2026 alibaba/open-code-review Contributors
 //
 // Ported from cmd/opencodereview/output.go and internal/suggestdiff/diff.go at c35ddd7223f2b5540ce03aa43c9a25ef643fca27;
-// scan budget summary reporting follows OCR v1.9.5 commit
-// 75cb3d0c45cb322495133a688de5620258a30849.
+// scan budget summary follows OCR v1.9.5 commit 75cb3d0c45cb322495133a688de5620258a30849;
+// ANSI rendering follows OCR v1.9.8 commit 756203c through v1.9.9.
 // Modifications are distributed as part of pi-reviewer under
 // GPL-3.0-or-later;
 // see LICENSES/Apache-2.0.txt and THIRD_PARTY_NOTICES.md.
@@ -12,6 +12,7 @@ import type { LlmComment, LlmCommentJson } from "../model/review.js";
 import { llmCommentToJson } from "../model/review.js";
 import type { RunManifest } from "../session/manifest.js";
 import type { Preview } from "../model/preview.js";
+import { AnsiReset, colorize } from "./color.js";
 import type { RetryReport as DomainRetryReport } from "../retry/types.js";
 import { serializeRetryReport } from "../retry/serializer.js";
 
@@ -231,22 +232,23 @@ export function severityColor(severity: string | undefined): string {
   }
 }
 
-export function printDiffLine(prefix: string, content: string, fgColor: string, bgColor: string): string {
-  return `${fgColor}${bgColor}${prefix}\u001b[0m${bgColor} ${content}\u001b[0m\n`;
+export function printDiffLine(prefix: string, content: string, fgColor: string, bgColor: string, colorEnabled = false): string {
+  if (!colorEnabled) return `${prefix} ${content}\n`;
+  return `${fgColor}${bgColor}${prefix}${AnsiReset}${bgColor} ${content}${AnsiReset}\n`;
 }
-export function statusBadge(status: string): string {
-  return previewStatusBadge(status);
+export function statusBadge(status: string, colorEnabled = false): string {
+  return previewStatusBadge(status, colorEnabled);
 }
 
 // ---------------------------------------------------------------------------
 // Comment rendering — mirrors Go renderComment; returns string
 // ---------------------------------------------------------------------------
 
-export function renderComment(comment: LlmComment): string {
+export function renderComment(comment: LlmComment, colorEnabled = false): string {
   const lines = buildDiffLines(comment);
   if (lines.length === 0 && (comment.content ?? "") === "") return "";
   let out = "";
-  out += `\n\u001b[2m─── ${sanitizeTerminal(comment.path)}:${String(comment.startLine ?? 0)}-${String(comment.endLine ?? 0)} ───\u001b[0m\n`;
+  out += `\n${colorize(colorEnabled, "\u001b[2m", `─── ${sanitizeTerminal(comment.path)}:${String(comment.startLine ?? 0)}-${String(comment.endLine ?? 0)} ───`)}\n`;
   if (comment.content !== "") {
     const badge = buildBadge(comment);
     let content = sanitizeTerminal(comment.content);
@@ -256,7 +258,7 @@ export function renderComment(comment: LlmComment): string {
       let ln = wrapped[idx] ?? "";
       if (idx === 0 && badge !== "" && ln.startsWith(badge)) {
         const color = severityColor(comment.severity);
-        ln = `${color}${badge}\u001b[0m${ln.slice(badge.length)}`;
+        ln = `${colorize(colorEnabled, color, badge)}${ln.slice(badge.length)}`;
       }
       out += `${ln}\n`;
     }
@@ -266,13 +268,13 @@ export function renderComment(comment: LlmComment): string {
     for (const dl of lines) {
       switch (dl.type) {
         case DiffAdded:
-          out += printDiffLine("+", sanitizeTerminal(dl.content), "\u001b[92m", "\u001b[48;2;0;60;0m");
+          out += printDiffLine("+", sanitizeTerminal(dl.content), "\u001b[92m", "\u001b[48;2;0;60;0m", colorEnabled);
           break;
         case DiffDeleted:
-          out += printDiffLine("-", sanitizeTerminal(dl.content), "\u001b[91m", "\u001b[48;2;70;0;0m");
+          out += printDiffLine("-", sanitizeTerminal(dl.content), "\u001b[91m", "\u001b[48;2;70;0;0m", colorEnabled);
           break;
         case DiffContext:
-          out += printDiffLine(" ", sanitizeTerminal(dl.content), "\u001b[2m", "\u001b[48;2;38;38;38m");
+          out += printDiffLine(" ", sanitizeTerminal(dl.content), "\u001b[2m", "\u001b[48;2;38;38;38m", colorEnabled);
           break;
       }
     }
@@ -285,10 +287,10 @@ export function renderComment(comment: LlmComment): string {
 // Text output — mirrors Go outputText / outputTextWithWarnings
 // ---------------------------------------------------------------------------
 
-export function outputText(comments: readonly LlmComment[]): string {
+export function outputText(comments: readonly LlmComment[], colorEnabled = false): string {
   if (comments.length === 0) return "No comments generated. Looks good to me.\n";
   let out = "";
-  for (const c of comments) out += renderComment(c);
+  for (const c of comments) out += renderComment(c, colorEnabled);
   return out;
 }
 
@@ -324,13 +326,14 @@ export function outputTextWithWarnings(
   comments: readonly LlmComment[],
   warnings: readonly AgentWarning[],
   manifest: RunManifest | null | undefined,
+  colorEnabled = false,
 ): { stdout: string; stderr: string } {
   let stdout = "";
   let stderr = "";
 
   if (manifest) {
     stdout += `${manifestMessage(manifest, comments.length)}\n`;
-    for (const c of comments) stdout += renderComment(c);
+    for (const c of comments) stdout += renderComment(c, colorEnabled);
   } else if (comments.length === 0) {
     if (hasSubtaskErrors(warnings)) {
       stdout += "Some files could not be reviewed due to errors (see warnings below).\n";
@@ -338,7 +341,7 @@ export function outputTextWithWarnings(
       stdout += "No comments generated. Looks good to me.\n";
     }
   } else {
-    for (const c of comments) stdout += renderComment(c);
+    for (const c of comments) stdout += renderComment(c, colorEnabled);
   }
 
   for (const w of warnings) {
@@ -589,48 +592,48 @@ export function emitFailureUsageText(
 // Preview text — mirrors Go outputPreview / outputPreviewText / outputPreviewJSON
 // ---------------------------------------------------------------------------
 
-export function previewStatusBadge(status: string): string {
+export function previewStatusBadge(status: string, colorEnabled = false): string {
   switch (status) {
     case "added":
-      return "\u001b[32m[A]\u001b[0m";
+      return colorize(colorEnabled, "\u001b[32m", "[A]");
     case "modified":
-      return "\u001b[33m[M]\u001b[0m";
+      return colorize(colorEnabled, "\u001b[33m", "[M]");
     case "deleted":
-      return "\u001b[31m[D]\u001b[0m";
+      return colorize(colorEnabled, "\u001b[31m", "[D]");
     case "renamed":
-      return "\u001b[36m[R]\u001b[0m";
+      return colorize(colorEnabled, "\u001b[36m", "[R]");
     case "binary":
-      return "\u001b[35m[B]\u001b[0m";
+      return colorize(colorEnabled, "\u001b[35m", "[B]");
     case "scan":
-      return "\u001b[34m[S]\u001b[0m";
+      return colorize(colorEnabled, "\u001b[34m", "[S]");
     default:
       return "[?]";
   }
 }
 
-export function outputPreviewText(p: Preview): string {
+export function outputPreviewText(p: Preview, colorEnabled = false): string {
   if (p.totalFiles === 0) return "No files changed.\n";
   let maxPathLen = 20;
   for (const e of p.entries) {
     const n = sanitizeTerminal(e.path).length;
     if (n > maxPathLen) maxPathLen = n;
   }
-  let out = `\nPreview: ${String(p.totalFiles)} file(s) changed  |  \u001b[32m+${String(p.totalInsertions)}\u001b[0m  \u001b[31m-${String(p.totalDeletions)}\u001b[0m\n`;
+  let out = `\nPreview: ${String(p.totalFiles)} file(s) changed  |  ${colorize(colorEnabled, "\u001b[32m", `+${String(p.totalInsertions)}`)}  ${colorize(colorEnabled, "\u001b[31m", `-${String(p.totalDeletions)}`)}\n`;
   if (p.reviewableCount > 0) {
-    out += `\n\u001b[1mWill review (${String(p.reviewableCount)}):\u001b[0m\n`;
+    out += `\n${colorize(colorEnabled, "\u001b[1m", `Will review (${String(p.reviewableCount)}):`)}\n`;
     for (const e of p.entries) {
       if (!e.willReview) continue;
       const pathPadded = sanitizeTerminal(e.path).padEnd(maxPathLen, " ");
-      out += `  ${previewStatusBadge(e.status)}  ${pathPadded} \u001b[32m+${String(e.insertions).padEnd(4, " ")}\u001b[0m \u001b[31m-${String(e.deletions).padEnd(4, " ")}\u001b[0m\n`;
+      out += `  ${previewStatusBadge(e.status, colorEnabled)}  ${pathPadded} ${colorize(colorEnabled, "\u001b[32m", `+${String(e.insertions).padEnd(4, " ")}`)} ${colorize(colorEnabled, "\u001b[31m", `-${String(e.deletions).padEnd(4, " ")}`)}\n`;
     }
   }
   if (p.excludedCount > 0) {
-    out += `\n\u001b[1mExcluded from review (${String(p.excludedCount)}):\u001b[0m\n`;
+    out += `\n${colorize(colorEnabled, "\u001b[1m", `Excluded from review (${String(p.excludedCount)}):`)}\n`;
     for (const e of p.entries) {
       if (e.willReview) continue;
       const pathPadded = sanitizeTerminal(e.path).padEnd(maxPathLen, " ");
       const reason = sanitizeTerminal(String(e.excludeReason ?? ""));
-      out += `  ${previewStatusBadge(e.status)}  ${pathPadded} \u001b[2m(${reason})\u001b[0m\n`;
+      out += `  ${previewStatusBadge(e.status, colorEnabled)}  ${pathPadded} ${colorize(colorEnabled, "\u001b[2m", `(${reason})`)}\n`;
     }
   }
   out += "\n";
@@ -660,10 +663,11 @@ export function outputPreviewJson(p: Preview): string {
 export function outputPreview(
   p: Preview,
   outputFormat: string,
+  colorEnabled = false,
 ): { stdout: string; error?: string } {
   if (outputFormat === "sarif") {
     return { stdout: "", error: "--format sarif is not supported with --preview: SARIF output requires completed review findings" };
   }
   if (outputFormat === "json") return { stdout: outputPreviewJson(p) };
-  return { stdout: outputPreviewText(p) };
+  return { stdout: outputPreviewText(p, colorEnabled) };
 }

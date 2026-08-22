@@ -1914,6 +1914,14 @@ const scopeOverrides: ReadonlyMap<string, Scope> = new Map<string, Scope>([
     },
   ],
   [
+    "cmd/opencodereview/color_test.go",
+    {
+      kind: "in_scope",
+      area: "cli-output",
+      reason: "ANSI mode validation and terminal-boundary output policy are core CLI rendering behavior",
+    },
+  ],
+  [
     "cmd/opencodereview/git_test.go",
     {
       kind: "in_scope",
@@ -2389,6 +2397,14 @@ const localCoverage: readonly LocalCoverage[] = [
   {
     localPath: "test/ocr/cli/output.test.ts",
     upstreamPaths: ["cmd/opencodereview/output_test.go"],
+  },
+  {
+    localPath: "test/ocr/cli/color.test.ts",
+    upstreamPaths: ["cmd/opencodereview/color_test.go"],
+  },
+  {
+    localPath: "test/ocr/cli/output-color.test.ts",
+    upstreamPaths: ["cmd/opencodereview/output_color_test.go"],
   },
   {
     localPath: "test/ocr/cli/shared.test.ts",

@@ -51,6 +51,10 @@ writer creation cannot advertise a resumable session. Its completed manifest is
 still emitted once on stdout while the delivery error makes the command fail on
 stderr. Remaining inventory work is still pending.
 
+The color/text-rendering tranche translates fourteen v1.9.9 cases. ANSI is
+TTY-aware and injectable at the CLI boundary; text receives OCR styling while
+JSON and SARIF remain machine-clean. Remaining inventory work is still pending.
+
 Existing `src/ocr` code is **candidate implementation**, not proven
 parity. Do not delete or rewrite it merely because its old verifiers were
 unsound. Reuse it only when a new gate proves its behavior.
