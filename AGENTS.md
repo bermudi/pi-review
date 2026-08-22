@@ -30,6 +30,62 @@ If Pi `0.84.2` cannot provide OCR round accounting, dynamic terminal-only
 tools, one restricted grace request, and OCR-controlled compression through
 public APIs, stop and report the blocker.
 
+## Upstream Releases and Upgrade Policy
+
+`pi-reviewer` supports exactly one pinned OCR behavioral baseline at a time.
+The current package line is `0.2.x`, based on OCR `v1.9.3`. A newer OCR release
+does not retroactively make that baseline incomplete; it starts a separate,
+explicit upgrade. Do not opportunistically sync OCR `main` or mix behavior
+from multiple OCR releases.
+
+Package and OCR versions are related but independent:
+
+- package patches fix the current OCR baseline without changing it;
+- changing the pinned OCR baseline requires at least a package minor release
+  (`v0.3.0` is the intended line for an OCR `v1.9.9` upgrade);
+- normal SemVer rules still govern public CLI/library breaking changes; and
+- an annotated package release tag must point at the exact commit whose full
+  inventory and packed-install gates passed. Creating or pushing a release tag
+  still requires explicit user approval.
+
+Use this upgrade procedure:
+
+1. Preserve the current baseline with its package release tag before changing
+   the OCR reference.
+2. Fetch the specific OCR release tag into `../open-code-review`, verify its
+   signed tag, and record the tag name, tag-object hash, and peeled commit.
+   Never use OCR `main` as parity evidence.
+3. Diff the new pinned commit against the old pinned commit: commits, source
+   files, Go test declarations, prompts, templates, schemas, and fixtures.
+   Upgrade from that delta; do not restart the port from scratch.
+4. Update the pinned-reference metadata, source map, inventory generator,
+   migration plan, and provenance records. All duplicated reference metadata
+   must agree.
+5. Classify every added, changed, renamed, and removed upstream test. Existing
+   exclusions do not carry forward automatically: re-check that each
+   provider/config/runtime exclusion still has the same concrete mechanism.
+6. Port every changed in-scope behavior and add OCR-derived tests. Keep Pi
+   runtime adaptation behind the domain seam; replacing OCR's provider runtime
+   is not permission to change review semantics.
+7. Run focused tests, the full suite, strict typechecking, the build, the
+   zero-pending inventory verifier, differential fixtures, and every black-box
+   gate. Final evidence is valid only for the exact final commit and packed
+   archive.
+8. Update user docs and `pi-review version` so both the package version and
+   pinned OCR compatibility version are visible, then create the next package
+   release tag.
+
+Keep one implementation tree. Do not add `src/ocr-v199`, an OCR-version
+switch, or another retained engine. At the next baseline upgrade, migrate
+`src/ocr-v193` and `test/ocr-v193` once to stable `src/ocr` and `test/ocr`
+paths (with corresponding docs/scripts updates); subsequent upgrades modify
+that stable tree. Old baselines remain available through Git release tags and
+history, not runtime branches.
+
+“Port complete” means the pinned baseline has zero unclassified inventory
+cases and all required gates pass. It does not mean full OCR command-surface
+parity when provider/config/MCP/telemetry shells are explicitly excluded.
+
 ## Stack
 
 - Strict TypeScript on Bun
@@ -74,9 +130,9 @@ closed by explicit removal approval and the cutover verifier now proves absence.
   calls. Do not substitute a tool-start budget.
 - Compatibility mode uses OCR's incremental `code_comment` collector,
   `task_done`, post-processing, review filter, and restricted grace round.
-- The legacy atomic `submit_review`, deterministic change map, and mandatory
-  citation verifier are not part of the default parity path. They may survive
-  only as documented opt-in extensions after parity.
+- The removed atomic `submit_review`, deterministic change map, and mandatory
+  citation verifier are not part of the parity path and must not be
+  reintroduced as defaults.
 - Preserve partial comments, completion state, coverage, usage, and stop
   reasons according to OCR behavior; incomplete work must not become a clean
   review.
@@ -117,7 +173,9 @@ filesystem, forcing a full dependency copy. Do not add independent
 ## Constraints & Red Lines
 
 - Ported OCR source, prompts, templates, schemas, and fixtures must identify
-  their v1.9.3 provenance and retain required Apache-2.0 attribution.
+  their exact OCR-version provenance and retain required Apache-2.0
+  attribution. Unchanged v1.9.3-derived files keep their original provenance;
+  files changed for a later baseline record the new pinned source.
 - Do not advance beyond the active evidence gate or replace it with a
   test-count/status-document claim.
 - Never use private/deep Pi imports or transitive `pi-agent-core` access to make
