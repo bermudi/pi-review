@@ -14,7 +14,7 @@ does not justify changing review semantics.
 The legacy precision-oriented engine has been removed by explicit user
 approval; `src/ocr-v193` is now the sole engine. Open Code Review v1.9.3
 remains the pinned behavioral reference. Inventory classification complete —
-0 pending (1895 cases; 324 not-applicable, 475 out-of-scope decisions
+0 pending (1895 cases; 321 not-applicable, 475 out-of-scope decisions
 remain); the `config`/`provider`/`login`/`MCP`/`telemetry`/`test-connection`
 command surfaces are intentionally not ported (omitted boundary; Pi's external
 auth/model configuration is at `~/.pi/agent` and is only resolved/loaded via

@@ -175,7 +175,7 @@ There is no model-visible shell, edit, or write tool.
 - Resume is per-session (`--resume ID`); it requires the same target/options and resumes a single prior session, not cross-run coverage merging.
 - Workspace evidence is live and may change during a long review; range/commit evidence is pinned.
 - The CLI requires an explicit `review` or `scan` subcommand.
-- Inventory classification complete (0 pending, 1895 cases; 324
+- Inventory classification complete (0 pending, 1895 cases; 321
   not-applicable, 475 out-of-scope): `config`/`provider`/`MCP`/`telemetry`/
   `test-connection` command surfaces intentionally not ported (omitted
   boundary; Pi's external auth/model configuration lives at `~/.pi/agent` and
