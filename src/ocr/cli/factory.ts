@@ -360,6 +360,7 @@ export function createReviewRunnerFactory(
       concurrentTaskTimeoutMinutes,
       background,
       model: modelId,
+      provider: identity.provider,
       maxTokensBudget: opts.maxTokensBudget > 0 ? opts.maxTokensBudget : undefined,
       skipFilter: opts.noFilter,
       runtimeConfig: { protocol: "openai", endpointHost: "", language: "English", timeoutMs: 30000 },
