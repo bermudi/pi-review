@@ -17089,8 +17089,15 @@
         {
           "name": "TestListSessions_DirIsFile",
           "delta": "changed_body",
-          "disposition": "pending",
-          "reason": "OCR v1.9.9 changed body requires explicit new evidence or revalidation; prior v1.9.3 coverage is not inherited."
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr/session/list-error.test.ts",
+              "title": "ListSessions DirIsFile",
+              "ocrVersion": "v1.9.9"
+            }
+          ]
         },
         {
           "name": "TestRecordToItem",
@@ -17924,8 +17931,15 @@
         {
           "name": "TestFinalizeSurfacesWriterCreationErrorWithoutStdout",
           "delta": "changed_body",
-          "disposition": "pending",
-          "reason": "OCR v1.9.9 changed body requires explicit new evidence or revalidation; prior v1.9.3 coverage is not inherited."
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr/session/persist.test.ts",
+              "title": "Finalize surfaces writer creation error without stdout",
+              "ocrVersion": "v1.9.9"
+            }
+          ]
         },
         {
           "name": "TestFinalizeWritesSessionEndExactlyOnce",

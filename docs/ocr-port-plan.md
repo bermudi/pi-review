@@ -45,6 +45,11 @@ scan budget truncation remains warning-derived JSON status while exposing
 `budget_exceeded`; unreadable binary-sniff candidates are skipped without
 disturbing remaining ordered files. Remaining inventory work is still pending.
 
+The session filesystem/finalization tranche translates two v1.9.9 cases.
+Malformed sessions directories fail rather than looking empty, and failed
+writer creation cannot advertise a resumable session or produce stdout output.
+Remaining inventory work is still pending.
+
 Existing `src/ocr` code is **candidate implementation**, not proven
 parity. Do not delete or rewrite it merely because its old verifiers were
 unsound. Reuse it only when a new gate proves its behavior.

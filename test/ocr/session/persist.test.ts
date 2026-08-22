@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright 2026 alibaba/open-code-review Contributors
-// Ported from internal/session/persist_test.go at c35ddd7223f2b5540ce03aa43c9a25ef643fca27; modifications under GPL-3.0-or-later.
+// Ported from internal/session/persist_test.go at c35ddd7223f2b5540ce03aa43c9a25ef643fca27;
+// writer-creation failure behavior revalidated against OCR v1.9.9.
 import { describe, expect, test } from "bun:test";
 import * as fs from "node:fs";
 import * as os from "node:os";
@@ -145,11 +146,12 @@ describe("ocr session persist", () => {
     }
   });
 
-  // OCR v1.9.3: TestFinalizeSurfacesWriterCreationErrorWithoutStdout
+  // OCR v1.9.9: TestFinalizeSurfacesWriterCreationErrorWithoutStdout
   test("Finalize surfaces writer creation error without stdout", () => {
     const tmpHome = fs.mkdtempSync(path.join(os.tmpdir(), "ocr-home-"));
     const origHome = process.env.HOME;
         process.env.HOME = tmpHome;
+        process.env.USERPROFILE = tmpHome;
         try {
       fs.writeFileSync(path.join(tmpHome, ".opencodereview"), "blocked", { mode: 0o600 });
       const sh = new SessionHistory(fs.mkdtempSync(path.join(os.tmpdir(), "ocr-repo-")), "main", "test-model", { reviewMode: "workspace" } as unknown as import("../../../src/ocr/session/history.ts").SessionOptions);

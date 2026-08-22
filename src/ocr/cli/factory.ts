@@ -171,7 +171,8 @@ export function createReviewRunnerFactory(
       });
       session._attachPersist(jsonlWriterToPersistHandle(writer));
     } catch (err) {
-      session._setPersistInitErr(err instanceof Error ? err : new Error(String(err)));
+      const cause = err instanceof Error ? err : new Error(String(err));
+      session._setPersistInitErr(new Error(`create session writer: ${cause.message}`, { cause }));
     }
 
     const maxConcurrency = opts.concurrency > 0 ? opts.concurrency : 8;
@@ -231,7 +232,9 @@ export function createReviewRunnerFactory(
         if (runError !== null) throw runError;
         return comments;
       },
-      manifest: agent.RunManifest() ?? undefined,
+      // A failed session_end cannot be resumed; do not publish a partial
+      // result on stdout as though it were a durable review session.
+      manifest: session.HasPersistence() ? agent.RunManifest() ?? undefined : undefined,
       warnings,
       filesReviewed: agent.FilesReviewed(),
       inputTokens: agent.TotalInputTokens(),
