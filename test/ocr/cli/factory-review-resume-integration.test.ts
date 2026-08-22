@@ -70,12 +70,55 @@ test("real review factory persists and reuses a completed range checkpoint", asy
     const childComments = await child.run();
     expect(childCalls.value).toBe(0);
     expect(childComments).toHaveLength(1);
+    expect(childComments[0]?.content).toBe(parentComments[0]?.content);
     expect(child.resumeInfo).toMatchObject({ resumedFrom: parent.sessionId, reusedFiles: 1, rerunFiles: 0 });
     expect(child.manifest?.parentRunId).toBe(parent.sessionId);
     const childText = fs.readFileSync(SessionFilePath(repo, child.sessionId), "utf8");
     expect(childText).toContain(`"resumedFrom":"${parent.sessionId}"`);
     expect((childText.match(/"type":"resume_lineage"/g) ?? [])).toHaveLength(1);
     expect(childText.indexOf('"type":"resume_lineage"')).toBeLessThan(childText.indexOf('"type":"review_item_reused"'));
+    const childEnd = childText.trim().split("\n").map((line) => JSON.parse(line) as { type?: string; run_manifest?: unknown })
+      .find((record) => record.type === "session_end");
+    expect(childEnd?.run_manifest).toEqual(child.manifest);
+
+    const sessionDir = path.dirname(SessionFilePath(repo, parent.sessionId));
+    const beforeReject = fs.readdirSync(sessionDir).sort();
+    let identityDisposed = 0;
+    await expect(createReviewRunnerFactory(
+      { ...opts, resume: parent.sessionId },
+      repo,
+      { createTransport: async () => ({
+        ...scripted({ value: 0 }, true),
+        dispose: async () => { identityDisposed += 1; },
+        modelIdentity: () => ({ provider: "other-provider", model: "other-model" }),
+      }) },
+    )()).rejects.toThrow("--provider");
+    expect(identityDisposed).toBe(1);
+    expect(fs.readdirSync(sessionDir).sort()).toEqual(beforeReject);
+
+    let workspaceCreated = 0;
+    await expect(createReviewRunnerFactory(
+      { ...opts, from: "", to: "", resume: parent.sessionId },
+      repo,
+      { createTransport: async () => { workspaceCreated += 1; return scripted({ value: 0 }); } },
+    )()).rejects.toThrow("workspace resume is not supported");
+    expect(workspaceCreated).toBe(0);
+    expect(fs.readdirSync(sessionDir).sort()).toEqual(beforeReject);
+
+    fs.writeFileSync(path.join(repo, "main.go"), "package main\n// changed again\n");
+    git(repo, ["add", "."]);
+    git(repo, ["commit", "-qm", "new head"]);
+    let changedDisposed = 0;
+    await expect(createReviewRunnerFactory(
+      { ...opts, resume: parent.sessionId },
+      repo,
+      { createTransport: async () => ({
+        ...scripted({ value: 0 }, true),
+        dispose: async () => { changedDisposed += 1; },
+      }) },
+    )()).rejects.toThrow("reviewed input changed");
+    expect(changedDisposed).toBe(1);
+    expect(fs.readdirSync(sessionDir).sort()).toEqual(beforeReject);
   } finally {
     process.env.HOME = priorHome;
     fs.rmSync(repo, { recursive: true, force: true });
