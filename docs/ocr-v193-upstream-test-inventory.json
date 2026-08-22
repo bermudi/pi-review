@@ -10,15 +10,15 @@
       "path": "cmd/opencodereview/apply_provider_field_test.go",
       "blob": "1b9a6e34dc35a2bafaf835a57f3b6cd3cf1dc484",
       "scope": {
-        "kind": "needs_decision",
+        "kind": "in_scope",
         "area": "cmd/opencodereview",
-        "reason": "not yet classified by the OCR v1.9.3 core-port source map"
+        "reason": "provider field switch is examined per-test via Pi SettingsManager"
       },
       "tests": [
         {
           "name": "TestApplyProviderField",
-          "disposition": "pending_scope",
-          "reason": "not yet classified by the OCR v1.9.3 core-port source map"
+          "disposition": "not_applicable",
+          "reason": "Pi replaces OCR applyProviderField per-field switch (api_key/url/model/models/protocol/auth_header/extra_body/extra_headers) via ProviderEntry mutation with Pi SettingsManager ~/.pi/agent validation; not applicable via review/scan --provider/--model"
         }
       ]
     },
@@ -395,510 +395,510 @@
       "path": "cmd/opencodereview/config_cmd_test.go",
       "blob": "1995c80a23944121dcee54183a32defb53d8ab0e",
       "scope": {
-        "kind": "needs_decision",
+        "kind": "in_scope",
         "area": "cmd/opencodereview",
-        "reason": "not yet classified by the OCR v1.9.3 core-port source map"
+        "reason": "config provider/model/MCP/telemetry dispatch and persistence are examined per-test; Pi replaces with SettingsManager but each cluster needs distinct disposition"
       },
       "tests": [
         {
           "name": "TestActiveModelForProvider",
-          "disposition": "pending_scope",
-          "reason": "not yet classified by the OCR v1.9.3 core-port source map"
+          "disposition": "not_applicable",
+          "reason": "Pi replaces OCR activeModelForProvider helper that prefers entry Model over cfg Model when provider matches with Pi SettingsManager ~/.pi/agent lookup via review/scan --provider/--model; not applicable"
         },
         {
           "name": "TestConfigRoundTripPreservesTimeoutSec",
-          "disposition": "pending_scope",
-          "reason": "not yet classified by the OCR v1.9.3 core-port source map"
+          "disposition": "not_applicable",
+          "reason": "Pi replaces OCR saveConfig/loadOrCreateConfig round-trip preserving providers.*.timeout_sec/custom_providers.*.timeout_sec/llm.timeout_sec with Pi SettingsManager; Go file round-trip not applicable"
         },
         {
           "name": "TestDeleteCustomProvider_NotFound",
-          "disposition": "pending_scope",
-          "reason": "not yet classified by the OCR v1.9.3 core-port source map"
+          "disposition": "not_applicable",
+          "reason": "Pi replaces OCR deleteCustomProvider nil map vs missing entry error via CustomProviders with Pi SettingsManager custom provider delete; not applicable"
         },
         {
           "name": "TestEnsureModelInList",
-          "disposition": "pending_scope",
-          "reason": "not yet classified by the OCR v1.9.3 core-port source map"
+          "disposition": "not_applicable",
+          "reason": "Pi replaces OCR ensureModelInList that appends new-model without reordering with Pi SettingsManager model list ensure; not applicable"
         },
         {
           "name": "TestEnsureTelemetry",
-          "disposition": "pending_scope",
-          "reason": "not yet classified by the OCR v1.9.3 core-port source map"
+          "disposition": "not_applicable",
+          "reason": "deferred: ensureTelemetry nil->non-nil init for Telemetry is explicitly deferred; Pi telemetry export is deferred, not applicable"
         },
         {
           "name": "TestLegacyLLMShadowWarning",
-          "disposition": "pending_scope",
-          "reason": "not yet classified by the OCR v1.9.3 core-port source map"
+          "disposition": "not_applicable",
+          "reason": "deferred: legacyLLMShadowWarning for active provider shadowing llm.* (dashscope -> providers.dashscope.<field>) is omitted; Pi has no llm.* legacy config, not applicable"
         },
         {
           "name": "TestLoadAppConfig_InvalidJSON",
-          "disposition": "pending_scope",
-          "reason": "not yet classified by the OCR v1.9.3 core-port source map"
+          "disposition": "not_applicable",
+          "reason": "Pi replaces OCR LoadAppConfig invalid JSON error via os.WriteFile {invalid with Pi SettingsManager DefaultResourceLoader parse error; not applicable"
         },
         {
           "name": "TestLoadAppConfig_NotExist",
-          "disposition": "pending_scope",
-          "reason": "not yet classified by the OCR v1.9.3 core-port source map"
+          "disposition": "not_applicable",
+          "reason": "Pi replaces OCR LoadAppConfig nil for nonexistent file with Pi SettingsManager inMemory defaults for ~/.pi/agent; not applicable"
         },
         {
           "name": "TestLoadOrCreateConfig_InvalidJSON",
-          "disposition": "pending_scope",
-          "reason": "not yet classified by the OCR v1.9.3 core-port source map"
+          "disposition": "not_applicable",
+          "reason": "Pi replaces OCR loadOrCreateConfig invalid JSON error propagation with Pi SettingsManager; not applicable"
         },
         {
           "name": "TestLoadOrCreateConfig_NewFile",
-          "disposition": "pending_scope",
-          "reason": "not yet classified by the OCR v1.9.3 core-port source map"
+          "disposition": "not_applicable",
+          "reason": "Pi replaces OCR loadOrCreateConfig new-file non-nil Config creation with Pi SettingsManager.inMemory ~/.pi/agent; not applicable"
         },
         {
           "name": "TestMaxTokensConfigRoundTrip",
-          "disposition": "pending_scope",
-          "reason": "not yet classified by the OCR v1.9.3 core-port source map"
+          "disposition": "not_applicable",
+          "reason": "Pi replaces OCR saveConfig/LoadAppConfig round-trip for MaxTokens 200000 with Pi SettingsManager and Budget handling; not applicable via Go file"
         },
         {
           "name": "TestMergeModelLists",
-          "disposition": "pending_scope",
-          "reason": "not yet classified by the OCR v1.9.3 core-port source map"
+          "disposition": "not_applicable",
+          "reason": "Pi replaces OCR mergeModelLists dedup/empty-string filter merging of [][]string with Pi SettingsManager model list dedup; helper not applicable via Pi APIs"
         },
         {
           "name": "TestNormalizeModelList",
-          "disposition": "pending_scope",
-          "reason": "not yet classified by the OCR v1.9.3 core-port source map"
+          "disposition": "not_applicable",
+          "reason": "Pi replaces OCR normalizeModelList trim+dedup+empty filter with Pi SettingsManager normalize via ~/.pi/agent; not applicable"
         },
         {
           "name": "TestParseModelListValue",
-          "disposition": "pending_scope",
-          "reason": "not yet classified by the OCR v1.9.3 core-port source map"
+          "disposition": "not_applicable",
+          "reason": "Pi replaces OCR parseModelListValue (JSON array / comma / [a,b] unquoted) with Pi SettingsManager model list parsing; not applicable"
         },
         {
           "name": "TestResolveConfigPath_Default",
-          "disposition": "pending_scope",
-          "reason": "not yet classified by the OCR v1.9.3 core-port source map"
+          "disposition": "not_applicable",
+          "reason": "Pi replaces OCR resolveConfigPath default ~/.config/open-code-review/config.json via OCR_CONFIG_PATH with Pi SettingsManager DefaultResourceLoader ~/.pi/agent path; not applicable"
         },
         {
           "name": "TestResolveConfigPath_Env",
-          "disposition": "pending_scope",
-          "reason": "not yet classified by the OCR v1.9.3 core-port source map"
+          "disposition": "not_applicable",
+          "reason": "Pi replaces OCR resolveConfigPath OCR_CONFIG_PATH=/tmp/test-config.json env override with Pi SettingsManager agentDir resolution; not applicable"
         },
         {
           "name": "TestRunConfig_EmptyArgs",
-          "disposition": "pending_scope",
-          "reason": "not yet classified by the OCR v1.9.3 core-port source map"
+          "disposition": "not_applicable",
+          "reason": "deferred: runConfig nil args prints usage is omitted; Pi CLI has no config subcommand, review/scan are only surface, not applicable"
         },
         {
           "name": "TestRunConfig_ModelWithArgs",
-          "disposition": "pending_scope",
-          "reason": "not yet classified by the OCR v1.9.3 core-port source map"
+          "disposition": "not_applicable",
+          "reason": "deferred: runConfig `model extra` arg error is omitted; Pi model is --model flag, not applicable"
         },
         {
           "name": "TestRunConfig_ProviderWithArgs",
-          "disposition": "pending_scope",
-          "reason": "not yet classified by the OCR v1.9.3 core-port source map"
+          "disposition": "not_applicable",
+          "reason": "deferred: runConfig `provider extra` arg count error is omitted; Pi provider selection is --provider flag, not applicable"
         },
         {
           "name": "TestRunConfigSetWarnsWhenActiveProviderShadowsLegacyLLMConfig",
-          "disposition": "pending_scope",
-          "reason": "not yet classified by the OCR v1.9.3 core-port source map"
+          "disposition": "not_applicable",
+          "reason": "deferred: runConfigSet warning when active provider shadows legacy llm.url via captureConfigStderr is omitted; Pi has no llm.* precedence, not applicable"
         },
         {
           "name": "TestRunConfigUnset_InvalidKey",
-          "disposition": "pending_scope",
-          "reason": "not yet classified by the OCR v1.9.3 core-port source map"
+          "disposition": "not_applicable",
+          "reason": "deferred: runConfigUnset custom_providers. empty name error is omitted; Pi has no config unset, not applicable"
         },
         {
           "name": "TestRunConfigUnset_UnknownPrefix",
-          "disposition": "pending_scope",
-          "reason": "not yet classified by the OCR v1.9.3 core-port source map"
+          "disposition": "not_applicable",
+          "reason": "deferred: runConfigUnset providers.anthropic unsupported prefix error is omitted; not applicable via Pi SettingsManager"
         },
         {
           "name": "TestRunConfigUnsetProviderClearsSelectionAndKeepsProviderEntries",
-          "disposition": "pending_scope",
-          "reason": "not yet classified by the OCR v1.9.3 core-port source map"
+          "disposition": "not_applicable",
+          "reason": "Pi replaces OCR runConfigUnset `provider` that clears Provider/Model but keeps Providers[\"dashscope\"].APIKey via saveConfig/loadOrCreateConfig with Pi SettingsManager ~/.pi/agent; not applicable via Cobra"
         },
         {
           "name": "TestSetConfigValueAuthHeaderNormalizesKnownValues",
-          "disposition": "pending_scope",
-          "reason": "not yet classified by the OCR v1.9.3 core-port source map"
+          "disposition": "not_applicable",
+          "reason": "Pi replaces OCR setConfigValue `llm.auth_header` bearer -> authorization normalization via AuthHeader field with Pi SessionManager auth header handling; not applicable via SettingsManager"
         },
         {
           "name": "TestSetConfigValueAuthHeaderRejectsCustomHeader",
-          "disposition": "pending_scope",
-          "reason": "not yet classified by the OCR v1.9.3 core-port source map"
+          "disposition": "not_applicable",
+          "reason": "Pi replaces OCR auth_header X-Custom-Auth rejection via setConfigValue with Pi SDK allowed Authorization/x-api-key; not applicable"
         },
         {
           "name": "TestSetConfigValueCustomProviderExtraHeaders",
-          "disposition": "pending_scope",
-          "reason": "not yet classified by the OCR v1.9.3 core-port source map"
+          "disposition": "not_applicable",
+          "reason": "Pi replaces OCR custom_providers.my-gateway.extra_headers X-Gateway=secret via ProviderEntry with Pi SettingsManager; not applicable"
         },
         {
           "name": "TestSetConfigValueLanguage",
-          "disposition": "pending_scope",
-          "reason": "not yet classified by the OCR v1.9.3 core-port source map"
+          "disposition": "not_applicable",
+          "reason": "Pi replaces OCR setConfigValue `language` English via cfg.Language with Pi template language and SettingsManager; not applicable via Go config"
         },
         {
           "name": "TestSetConfigValueLlmAuthToken",
-          "disposition": "pending_scope",
-          "reason": "not yet classified by the OCR v1.9.3 core-port source map"
+          "disposition": "not_applicable",
+          "reason": "Pi replaces OCR setConfigValue `llm.auth_token` tok-123 via Llm.AuthToken with Pi SettingsManager secret via ~/.pi/agent; legacy llm.* not applicable"
         },
         {
           "name": "TestSetConfigValueLlmExtraBody",
-          "disposition": "pending_scope",
-          "reason": "not yet classified by the OCR v1.9.3 core-port source map"
+          "disposition": "not_applicable",
+          "reason": "Pi replaces OCR setConfigValue `llm.extra_body` {\"key\":\"val\"} JSON via Llm.ExtraBody with Pi agentDir models.json extra body; not applicable via public Pi APIs"
         },
         {
           "name": "TestSetConfigValueLlmExtraBodyInvalid",
-          "disposition": "pending_scope",
-          "reason": "not yet classified by the OCR v1.9.3 core-port source map"
+          "disposition": "not_applicable",
+          "reason": "Pi replaces OCR llm.extra_body not-json rejection via setConfigValue with Pi SettingsManager JSON validation; not applicable"
         },
         {
           "name": "TestSetConfigValueLlmExtraHeaders",
-          "disposition": "pending_scope",
-          "reason": "not yet classified by the OCR v1.9.3 core-port source map"
+          "disposition": "not_applicable",
+          "reason": "Pi replaces OCR setConfigValue `llm.extra_headers` X-Custom=val1 parsing via Llm.ExtraHeaders map with Pi SettingsManager headers; not applicable"
         },
         {
           "name": "TestSetConfigValueLlmExtraHeadersInvalid",
-          "disposition": "pending_scope",
-          "reason": "not yet classified by the OCR v1.9.3 core-port source map"
+          "disposition": "not_applicable",
+          "reason": "Pi replaces OCR llm.extra_headers no-equals rejection with Pi SettingsManager header parse; not applicable"
         },
         {
           "name": "TestSetConfigValueLlmExtraHeadersReservedRejected",
-          "disposition": "pending_scope",
-          "reason": "not yet classified by the OCR v1.9.3 core-port source map"
+          "disposition": "not_applicable",
+          "reason": "Pi replaces OCR llm.extra_headers Authorization=bad reserved rejection with Pi SDK reserved header guard; not applicable"
         },
         {
           "name": "TestSetConfigValueLlmModel",
-          "disposition": "pending_scope",
-          "reason": "not yet classified by the OCR v1.9.3 core-port source map"
+          "disposition": "not_applicable",
+          "reason": "Pi replaces OCR setConfigValue `llm.model` my-model via Llm.Model with Pi review/scan --model flag; legacy llm.* not applicable"
         },
         {
           "name": "TestSetConfigValueLlmProtocol",
-          "disposition": "pending_scope",
-          "reason": "not yet classified by the OCR v1.9.3 core-port source map"
+          "disposition": "not_applicable",
+          "reason": "Pi replaces OCR setConfigValue `llm.protocol` anthropic/openai/openai-responses mirroring UseAnthropic with Pi ModelRuntime protocol via createAgentSession; not applicable"
         },
         {
           "name": "TestSetConfigValueLlmRetryCodesNoWarningForValidCodes",
-          "disposition": "pending_scope",
-          "reason": "not yet classified by the OCR v1.9.3 core-port source map"
+          "disposition": "not_applicable",
+          "reason": "Pi replaces OCR llm.retry_codes 403,400 no-warning path via setConfigValue with Pi SettingsManager retry disabled (enabled:false); not applicable"
         },
         {
           "name": "TestSetConfigValueLlmRetryCodesRedundantWarning",
-          "disposition": "pending_scope",
-          "reason": "not yet classified by the OCR v1.9.3 core-port source map"
+          "disposition": "not_applicable",
+          "reason": "Pi replaces OCR llm.retry_codes 429,403 redundant 429 warning via captureConfigStderr with Pi SettingsManager filtering 429/408; not applicable"
         },
         {
           "name": "TestSetConfigValueLlmURL",
-          "disposition": "pending_scope",
-          "reason": "not yet classified by the OCR v1.9.3 core-port source map"
+          "disposition": "not_applicable",
+          "reason": "Pi replaces OCR setConfigValue `llm.url` https://example.com/v1 via Llm.URL with Pi agentDir models.json baseUrl; not applicable"
         },
         {
           "name": "TestSetConfigValueLlmUseAnthropic",
-          "disposition": "pending_scope",
-          "reason": "not yet classified by the OCR v1.9.3 core-port source map"
+          "disposition": "not_applicable",
+          "reason": "Pi replaces OCR setConfigValue `llm.use_anthropic` true/false mirroring Protocol anthropic/openai with Pi ModelRuntime; not applicable"
         },
         {
           "name": "TestSetConfigValueLlmUseAnthropicInvalid",
-          "disposition": "pending_scope",
-          "reason": "not yet classified by the OCR v1.9.3 core-port source map"
+          "disposition": "not_applicable",
+          "reason": "Pi replaces OCR llm.use_anthropic notbool rejection with Pi SettingsManager; not applicable"
         },
         {
           "name": "TestSetConfigValueMaxTokens",
-          "disposition": "pending_scope",
-          "reason": "not yet classified by the OCR v1.9.3 core-port source map"
+          "disposition": "not_applicable",
+          "reason": "Pi replaces OCR setConfigValue `max_tokens` 200000 via cfg.MaxTokens with Pi Budget maxTokens handling; not applicable via Go config"
         },
         {
           "name": "TestSetConfigValueMaxTokensRejectsInvalidValues",
-          "disposition": "pending_scope",
-          "reason": "not yet classified by the OCR v1.9.3 core-port source map"
+          "disposition": "not_applicable",
+          "reason": "Pi replaces OCR max_tokens 0/-1/not-a-number rejection via setConfigValue with Pi Budget validation; not applicable"
         },
         {
           "name": "TestSetConfigValueMCPServer",
-          "disposition": "pending_scope",
-          "reason": "not yet classified by the OCR v1.9.3 core-port source map"
+          "disposition": "not_applicable",
+          "reason": "deferred: setConfigValue `mcp_servers.my-server.command` npx via setMCPServerValue is deferred; MCP servers are not ported, not applicable"
         },
         {
           "name": "TestSetConfigValueModel",
-          "disposition": "pending_scope",
-          "reason": "not yet classified by the OCR v1.9.3 core-port source map"
+          "disposition": "not_applicable",
+          "reason": "Pi replaces OCR setConfigValue `model` claude-opus-4-6 via cfg.Model with Pi review/scan --model and SettingsManager; not applicable"
         },
         {
           "name": "TestSetConfigValueModelWithCustomProvider",
-          "disposition": "pending_scope",
-          "reason": "not yet classified by the OCR v1.9.3 core-port source map"
+          "disposition": "not_applicable",
+          "reason": "Pi replaces OCR setConfigValue `model` when Provider=my-gateway writes to CustomProviders[my-gateway].Model with Pi SettingsManager custom provider model; not applicable"
         },
         {
           "name": "TestSetConfigValueModelWithProvider",
-          "disposition": "pending_scope",
-          "reason": "not yet classified by the OCR v1.9.3 core-port source map"
+          "disposition": "not_applicable",
+          "reason": "Pi replaces OCR setConfigValue `model` when Provider=anthropic writes to Providers[anthropic].Model with Pi SettingsManager; not applicable"
         },
         {
           "name": "TestSetConfigValueProvider",
-          "disposition": "pending_scope",
-          "reason": "not yet classified by the OCR v1.9.3 core-port source map"
+          "disposition": "not_applicable",
+          "reason": "Pi replaces OCR setConfigValue `provider` anthropic via cfg.Provider with Pi review/scan --provider; not applicable via Go config"
         },
         {
           "name": "TestSetConfigValueProviderClearsModel",
-          "disposition": "pending_scope",
-          "reason": "not yet classified by the OCR v1.9.3 core-port source map"
+          "disposition": "not_applicable",
+          "reason": "Pi replaces OCR setConfigValue `provider` clears Model on provider change (old-provider->new-provider) with Pi SettingsManager provider switch; not applicable"
         },
         {
           "name": "TestSetConfigValueProviderEntry",
-          "disposition": "pending_scope",
-          "reason": "not yet classified by the OCR v1.9.3 core-port source map"
+          "disposition": "not_applicable",
+          "reason": "Pi replaces OCR setConfigValue `providers.anthropic.api_key/model` via ProviderEntry with Pi SettingsManager provider entry; not applicable"
         },
         {
           "name": "TestSetConfigValueProviderEntryExtraBody",
-          "disposition": "pending_scope",
-          "reason": "not yet classified by the OCR v1.9.3 core-port source map"
+          "disposition": "not_applicable",
+          "reason": "Pi replaces OCR providers.anthropic.extra_body {\"thinking\":...} JSON via ProviderEntry.ExtraBody with Pi agentDir extra body; not applicable"
         },
         {
           "name": "TestSetConfigValueProviderEntryInvalidKey",
-          "disposition": "pending_scope",
-          "reason": "not yet classified by the OCR v1.9.3 core-port source map"
+          "disposition": "not_applicable",
+          "reason": "Pi replaces OCR providers.anthropic.unknown_field rejection via applyProviderField with Pi SettingsManager field validation; not applicable"
         },
         {
           "name": "TestSetConfigValueProviderEntryInvalidPath",
-          "disposition": "pending_scope",
-          "reason": "not yet classified by the OCR v1.9.3 core-port source map"
+          "disposition": "not_applicable",
+          "reason": "Pi replaces OCR providers.anthropic incomplete path (no field) rejection with Pi SettingsManager path validation; not applicable"
         },
         {
           "name": "TestSetConfigValueProviderEntryModelsCommaSeparated",
-          "disposition": "pending_scope",
-          "reason": "not yet classified by the OCR v1.9.3 core-port source map"
+          "disposition": "not_applicable",
+          "reason": "Pi replaces OCR custom_providers.my-gateway.models comma \" llama-3-70b, llama-3-8b\" parsing via parseModelListValue with Pi SettingsManager; not applicable"
         },
         {
           "name": "TestSetConfigValueProviderEntryModelsJSON",
-          "disposition": "pending_scope",
-          "reason": "not yet classified by the OCR v1.9.3 core-port source map"
+          "disposition": "not_applicable",
+          "reason": "Pi replaces OCR custom_providers.my-gateway.models [\"llama-3-70b\",\"llama-3-8b\"] JSON dedup via parseModelListValue with Pi SettingsManager; not applicable"
         },
         {
           "name": "TestSetConfigValueProviderEntryModelsUnquotedBracketList",
-          "disposition": "pending_scope",
-          "reason": "not yet classified by the OCR v1.9.3 core-port source map"
+          "disposition": "not_applicable",
+          "reason": "Pi replaces OCR custom_providers models [llama-3-70b,llama-3-8b] unquoted bracket parsing with Pi SettingsManager; not applicable"
         },
         {
           "name": "TestSetConfigValueProviderEntryNonPresetWritesCustomProvider",
-          "disposition": "pending_scope",
-          "reason": "not yet classified by the OCR v1.9.3 core-port source map"
+          "disposition": "not_applicable",
+          "reason": "Pi replaces OCR providers.my-gateway.url non-preset writes to CustomProviders[my-gateway].URL (not Providers) via setConfigValue with Pi SettingsManager; not applicable"
         },
         {
           "name": "TestSetConfigValueProviderEntryProtocol",
-          "disposition": "pending_scope",
-          "reason": "not yet classified by the OCR v1.9.3 core-port source map"
+          "disposition": "not_applicable",
+          "reason": "Pi replaces OCR custom_providers.custom.protocol openai alias -> ProtocolOpenAIChatCompletions validation with Pi ModelRuntime protocol; not applicable"
         },
         {
           "name": "TestSetConfigValueProviderExtraHeaders",
-          "disposition": "pending_scope",
-          "reason": "not yet classified by the OCR v1.9.3 core-port source map"
+          "disposition": "not_applicable",
+          "reason": "Pi replaces OCR providers.anthropic.extra_headers X-Custom=val1 parsing via ProviderEntry.ExtraHeaders with Pi agentDir headers; not applicable"
         },
         {
           "name": "TestSetConfigValueProviderExtraHeadersInvalid",
-          "disposition": "pending_scope",
-          "reason": "not yet classified by the OCR v1.9.3 core-port source map"
+          "disposition": "not_applicable",
+          "reason": "Pi replaces OCR providers.anthropic.extra_headers =missing-key rejection with Pi header validation; not applicable"
         },
         {
           "name": "TestSetConfigValueProviderRetryCodesRedundantWarning",
-          "disposition": "pending_scope",
-          "reason": "not yet classified by the OCR v1.9.3 core-port source map"
+          "disposition": "not_applicable",
+          "reason": "Pi replaces OCR custom_providers.test.retry_codes 408,400 redundant 408 warning via captureConfigStderr with Pi SettingsManager retry disabled; not applicable"
         },
         {
           "name": "TestSetConfigValueTelemetryContentLogging",
-          "disposition": "pending_scope",
-          "reason": "not yet classified by the OCR v1.9.3 core-port source map"
+          "disposition": "not_applicable",
+          "reason": "deferred: telemetry.content_logging bool is deferred; Pi content logging is not ported, not applicable"
         },
         {
           "name": "TestSetConfigValueTelemetryContentLoggingInvalid",
-          "disposition": "pending_scope",
-          "reason": "not yet classified by the OCR v1.9.3 core-port source map"
+          "disposition": "not_applicable",
+          "reason": "deferred: telemetry.content_logging notbool rejection is deferred; not applicable"
         },
         {
           "name": "TestSetConfigValueTelemetryEnabled",
-          "disposition": "pending_scope",
-          "reason": "not yet classified by the OCR v1.9.3 core-port source map"
+          "disposition": "not_applicable",
+          "reason": "deferred: setConfigValue `telemetry.enabled` true bool via ensureTelemetry is deferred; Pi telemetry is not configurable via config, not applicable"
         },
         {
           "name": "TestSetConfigValueTelemetryEnabledInvalid",
-          "disposition": "pending_scope",
-          "reason": "not yet classified by the OCR v1.9.3 core-port source map"
+          "disposition": "not_applicable",
+          "reason": "deferred: telemetry.enabled notbool rejection is deferred; not applicable via Pi SettingsManager"
         },
         {
           "name": "TestSetConfigValueTelemetryExporter",
-          "disposition": "pending_scope",
-          "reason": "not yet classified by the OCR v1.9.3 core-port source map"
+          "disposition": "not_applicable",
+          "reason": "deferred: telemetry.exporter otlp string is deferred; not applicable"
         },
         {
           "name": "TestSetConfigValueTelemetryOTLPEndpoint",
-          "disposition": "pending_scope",
-          "reason": "not yet classified by the OCR v1.9.3 core-port source map"
+          "disposition": "not_applicable",
+          "reason": "deferred: telemetry.otlp_endpoint localhost:4317 is deferred; not applicable"
         },
         {
           "name": "TestSetConfigValueUnknownKey",
-          "disposition": "pending_scope",
-          "reason": "not yet classified by the OCR v1.9.3 core-port source map"
+          "disposition": "not_applicable",
+          "reason": "Pi replaces OCR setConfigValue unknown.key rejection via supportedConfigKeys with Pi SettingsManager schema; not applicable"
         },
         {
           "name": "TestSetConfigValueUnknownKeyMessage",
-          "disposition": "pending_scope",
-          "reason": "not yet classified by the OCR v1.9.3 core-port source map"
+          "disposition": "not_applicable",
+          "reason": "Pi replaces OCR unknown-key message byte-identical check from supportedConfigKeys/supportedProviderFields/protocol values generation with Pi SettingsManager; not applicable"
         },
         {
           "name": "TestSetMCPServerValue_Args",
-          "disposition": "pending_scope",
-          "reason": "not yet classified by the OCR v1.9.3 core-port source map"
+          "disposition": "not_applicable",
+          "reason": "deferred: setMCPServerValue mcp_servers.my-server.args [\"--port\",\"8080\"] JSON is deferred; MCP servers are not ported, not applicable"
         },
         {
           "name": "TestSetMCPServerValue_ArgsInvalidJSON",
-          "disposition": "pending_scope",
-          "reason": "not yet classified by the OCR v1.9.3 core-port source map"
+          "disposition": "not_applicable",
+          "reason": "deferred: mcp_servers args not-json rejection is deferred; not applicable"
         },
         {
           "name": "TestSetMCPServerValue_Command",
-          "disposition": "pending_scope",
-          "reason": "not yet classified by the OCR v1.9.3 core-port source map"
+          "disposition": "not_applicable",
+          "reason": "deferred: setMCPServerValue mcp_servers.my-server.command npx is deferred; Pi has no MCP command, not applicable"
         },
         {
           "name": "TestSetMCPServerValue_CommandEmpty",
-          "disposition": "pending_scope",
-          "reason": "not yet classified by the OCR v1.9.3 core-port source map"
+          "disposition": "not_applicable",
+          "reason": "deferred: mcp_servers command empty rejection is deferred; not applicable"
         },
         {
           "name": "TestSetMCPServerValue_Env",
-          "disposition": "pending_scope",
-          "reason": "not yet classified by the OCR v1.9.3 core-port source map"
+          "disposition": "not_applicable",
+          "reason": "deferred: mcp_servers.my-server.env [\"FOO=bar\"] is deferred; not applicable"
         },
         {
           "name": "TestSetMCPServerValue_EnvInvalidFormat",
-          "disposition": "pending_scope",
-          "reason": "not yet classified by the OCR v1.9.3 core-port source map"
+          "disposition": "not_applicable",
+          "reason": "deferred: mcp_servers env NOEQUALS format rejection is deferred; not applicable"
         },
         {
           "name": "TestSetMCPServerValue_EnvInvalidJSON",
-          "disposition": "pending_scope",
-          "reason": "not yet classified by the OCR v1.9.3 core-port source map"
+          "disposition": "not_applicable",
+          "reason": "deferred: mcp_servers env not-json rejection is deferred; not applicable"
         },
         {
           "name": "TestSetMCPServerValue_ExistingServer",
-          "disposition": "pending_scope",
-          "reason": "not yet classified by the OCR v1.9.3 core-port source map"
+          "disposition": "not_applicable",
+          "reason": "deferred: setMCPServerValue existing srv old-cmd->new-cmd via MCPServers map is deferred; not applicable"
         },
         {
           "name": "TestSetMCPServerValue_Headers",
-          "disposition": "pending_scope",
-          "reason": "not yet classified by the OCR v1.9.3 core-port source map"
+          "disposition": "not_applicable",
+          "reason": "deferred: mcp_servers.gh.headers {\"Authorization\":\"Bearer $TOKEN\"} is deferred; Pi has no MCP headers, not applicable"
         },
         {
           "name": "TestSetMCPServerValue_HeadersEmptyName",
-          "disposition": "pending_scope",
-          "reason": "not yet classified by the OCR v1.9.3 core-port source map"
+          "disposition": "not_applicable",
+          "reason": "deferred: mcp_servers headers empty name rejection is deferred; not applicable"
         },
         {
           "name": "TestSetMCPServerValue_HeadersEmptyValue",
-          "disposition": "pending_scope",
-          "reason": "not yet classified by the OCR v1.9.3 core-port source map"
+          "disposition": "not_applicable",
+          "reason": "deferred: mcp_servers headers empty value rejection is deferred; not applicable"
         },
         {
           "name": "TestSetMCPServerValue_HeadersInvalidJSON",
-          "disposition": "pending_scope",
-          "reason": "not yet classified by the OCR v1.9.3 core-port source map"
+          "disposition": "not_applicable",
+          "reason": "deferred: mcp_servers headers not-json rejection is deferred; not applicable"
         },
         {
           "name": "TestSetMCPServerValue_InvalidKey",
-          "disposition": "pending_scope",
-          "reason": "not yet classified by the OCR v1.9.3 core-port source map"
+          "disposition": "not_applicable",
+          "reason": "deferred: setMCPServerValue mcp_servers malformed key (no field) is deferred; not applicable"
         },
         {
           "name": "TestSetMCPServerValue_Setup",
-          "disposition": "pending_scope",
-          "reason": "not yet classified by the OCR v1.9.3 core-port source map"
+          "disposition": "not_applicable",
+          "reason": "deferred: mcp_servers.my-server.setup init-script.sh is deferred; not applicable"
         },
         {
           "name": "TestSetMCPServerValue_Tools",
-          "disposition": "pending_scope",
-          "reason": "not yet classified by the OCR v1.9.3 core-port source map"
+          "disposition": "not_applicable",
+          "reason": "deferred: mcp_servers.my-server.tools [\"search\",\"read\"] dedup via setMCPServerValue is deferred; not applicable"
         },
         {
           "name": "TestSetMCPServerValue_ToolsEmptyName",
-          "disposition": "pending_scope",
-          "reason": "not yet classified by the OCR v1.9.3 core-port source map"
+          "disposition": "not_applicable",
+          "reason": "deferred: mcp_servers tools empty name rejection is deferred; not applicable"
         },
         {
           "name": "TestSetMCPServerValue_ToolsInvalidJSON",
-          "disposition": "pending_scope",
-          "reason": "not yet classified by the OCR v1.9.3 core-port source map"
+          "disposition": "not_applicable",
+          "reason": "deferred: mcp_servers tools not-json rejection is deferred; not applicable"
         },
         {
           "name": "TestSetMCPServerValue_Type",
-          "disposition": "pending_scope",
-          "reason": "not yet classified by the OCR v1.9.3 core-port source map"
+          "disposition": "not_applicable",
+          "reason": "deferred: setMCPServerValue mcp_servers.gh.type remote is deferred; Pi has no MCP type, not applicable"
         },
         {
           "name": "TestSetMCPServerValue_TypeInvalid",
-          "disposition": "pending_scope",
-          "reason": "not yet classified by the OCR v1.9.3 core-port source map"
+          "disposition": "not_applicable",
+          "reason": "deferred: mcp_servers type invalid rejection is deferred; not applicable"
         },
         {
           "name": "TestSetMCPServerValue_UnknownField",
-          "disposition": "pending_scope",
-          "reason": "not yet classified by the OCR v1.9.3 core-port source map"
+          "disposition": "not_applicable",
+          "reason": "deferred: mcp_servers unknown field rejection is deferred; not applicable"
         },
         {
           "name": "TestSetMCPServerValue_URL",
-          "disposition": "pending_scope",
-          "reason": "not yet classified by the OCR v1.9.3 core-port source map"
+          "disposition": "not_applicable",
+          "reason": "deferred: mcp_servers.gh.url https://api.example.com/mcp is deferred; not applicable"
         },
         {
           "name": "TestSetMCPServerValue_URLEmpty",
-          "disposition": "pending_scope",
-          "reason": "not yet classified by the OCR v1.9.3 core-port source map"
+          "disposition": "not_applicable",
+          "reason": "deferred: mcp_servers url empty rejection is deferred; not applicable"
         },
         {
           "name": "TestSetMCPServerValue_URLInvalidScheme",
-          "disposition": "pending_scope",
-          "reason": "not yet classified by the OCR v1.9.3 core-port source map"
+          "disposition": "not_applicable",
+          "reason": "deferred: mcp_servers url ftp:// scheme rejection is deferred; not applicable"
         },
         {
           "name": "TestSetMCPServerValue_URLNoHost",
-          "disposition": "pending_scope",
-          "reason": "not yet classified by the OCR v1.9.3 core-port source map"
+          "disposition": "not_applicable",
+          "reason": "deferred: mcp_servers url http:// no-host rejection is deferred; not applicable"
         },
         {
           "name": "TestSetMCPServerValue_URLParseError",
-          "disposition": "pending_scope",
-          "reason": "not yet classified by the OCR v1.9.3 core-port source map"
+          "disposition": "not_applicable",
+          "reason": "deferred: mcp_servers url ://bad parse error is deferred; not applicable"
         },
         {
           "name": "TestUnsetActiveCustomProvider",
-          "disposition": "pending_scope",
-          "reason": "not yet classified by the OCR v1.9.3 core-port source map"
+          "disposition": "not_applicable",
+          "reason": "Pi replaces OCR unsetCustomProvider when Provider=my-gateway active clears Provider/Model and keeps other-gateway via saveConfig with Pi SettingsManager; not applicable via Go file"
         },
         {
           "name": "TestUnsetCustomProvider",
-          "disposition": "pending_scope",
-          "reason": "not yet classified by the OCR v1.9.3 core-port source map"
+          "disposition": "not_applicable",
+          "reason": "Pi replaces OCR unsetCustomProvider that deletes CustomProviders[my-gateway] via saveConfig with Pi SettingsManager custom provider removal; not applicable"
         },
         {
           "name": "TestUnsetInvalidKey",
-          "disposition": "pending_scope",
-          "reason": "not yet classified by the OCR v1.9.3 core-port source map"
+          "disposition": "not_applicable",
+          "reason": "Pi replaces OCR unsetCustomProvider my-gateway ok vs nonexistent error via CustomProviders map with Pi SettingsManager; not applicable"
         },
         {
           "name": "TestUnsetMaxTokens",
-          "disposition": "pending_scope",
-          "reason": "not yet classified by the OCR v1.9.3 core-port source map"
+          "disposition": "not_applicable",
+          "reason": "Pi replaces OCR unsetMaxTokens that removes max_tokens key and omits from JSON via saveConfig/loadOrCreateConfig with Pi SettingsManager; not applicable"
         },
         {
           "name": "TestUnsetMCPServer",
-          "disposition": "pending_scope",
-          "reason": "not yet classified by the OCR v1.9.3 core-port source map"
+          "disposition": "not_applicable",
+          "reason": "deferred: unsetMCPServer deleting srv1 keeps srv2 via saveConfig is deferred; MCP is not ported, not applicable"
         },
         {
           "name": "TestUnsetMCPServer_LastEntry",
-          "disposition": "pending_scope",
-          "reason": "not yet classified by the OCR v1.9.3 core-port source map"
+          "disposition": "not_applicable",
+          "reason": "deferred: unsetMCPServer deleting last entry nils MCPServers map is deferred; not applicable"
         },
         {
           "name": "TestUnsetMCPServer_NotFound",
-          "disposition": "pending_scope",
-          "reason": "not yet classified by the OCR v1.9.3 core-port source map"
+          "disposition": "not_applicable",
+          "reason": "deferred: unsetMCPServer nonexistent error is deferred; not applicable"
         }
       ]
     },
@@ -906,25 +906,25 @@
       "path": "cmd/opencodereview/config_dispatch_test.go",
       "blob": "cbd1bdc6c365f222f9b29b274b27e7c6f48435c4",
       "scope": {
-        "kind": "needs_decision",
+        "kind": "in_scope",
         "area": "cmd/opencodereview",
-        "reason": "not yet classified by the OCR v1.9.3 core-port source map"
+        "reason": "config dispatch validation is examined per-test; Pi has no config subtree"
       },
       "tests": [
         {
           "name": "TestRunConfig_InvalidSetMissingValue",
-          "disposition": "pending_scope",
-          "reason": "not yet classified by the OCR v1.9.3 core-port source map"
+          "disposition": "not_applicable",
+          "reason": "deferred: runConfig `config set` missing value arg validation via Cobra is omitted; Pi replaces config set with SettingsManager and review/scan --provider/--model, not applicable"
         },
         {
           "name": "TestRunConfig_InvalidUnsetMissingKey",
-          "disposition": "pending_scope",
-          "reason": "not yet classified by the OCR v1.9.3 core-port source map"
+          "disposition": "not_applicable",
+          "reason": "deferred: runConfig `config unset` missing key validation via Cobra is omitted; Pi has no config unset, uses SettingsManager ~/.pi/agent, not applicable"
         },
         {
           "name": "TestRunConfig_UnknownSubcommand",
-          "disposition": "pending_scope",
-          "reason": "not yet classified by the OCR v1.9.3 core-port source map"
+          "disposition": "not_applicable",
+          "reason": "deferred: runConfig dispatch unknown subcommand via Cobra is omitted; Pi has no `config` subtree and routes only review/scan/version via SettingsManager ~/.pi/agent, not applicable"
         }
       ]
     },
@@ -932,20 +932,20 @@
       "path": "cmd/opencodereview/config_runset_test.go",
       "blob": "37b2644bb7d4305e390e09a6a41caed6ecd79f4d",
       "scope": {
-        "kind": "needs_decision",
+        "kind": "in_scope",
         "area": "cmd/opencodereview",
-        "reason": "not yet classified by the OCR v1.9.3 core-port source map"
+        "reason": "run-set persistence and masking are examined per-test via Pi SettingsManager"
       },
       "tests": [
         {
           "name": "TestRunConfigSetPersists",
-          "disposition": "pending_scope",
-          "reason": "not yet classified by the OCR v1.9.3 core-port source map"
+          "disposition": "not_applicable",
+          "reason": "Pi replaces OCR runConfigSet that calls setConfigValue + saveConfig 0600 with captureStdout masking via maskKey with Pi SettingsManager ~/.pi/agent persistence; Go file write and api_key masking not applicable via Pi APIs"
         },
         {
           "name": "TestRunConfigUnsetPaths",
-          "disposition": "pending_scope",
-          "reason": "not yet classified by the OCR v1.9.3 core-port source map"
+          "disposition": "not_applicable",
+          "reason": "deferred: runConfigUnset dispatch for `provider`/`custom_providers.<name>`/`mcp_servers.<name>` with captureStdout is omitted; Pi replaces unset* via SettingsManager, not applicable via Cobra"
         }
       ]
     },
@@ -953,15 +953,15 @@
       "path": "cmd/opencodereview/config_unset_error_test.go",
       "blob": "793e9f416ead6969a789efd8cba279b9fee2c812",
       "scope": {
-        "kind": "needs_decision",
+        "kind": "in_scope",
         "area": "cmd/opencodereview",
-        "reason": "not yet classified by the OCR v1.9.3 core-port source map"
+        "reason": "unset load-error branches are examined per-test via Pi SettingsManager error handling"
       },
       "tests": [
         {
           "name": "TestUnset_LoadErrors",
-          "disposition": "pending_scope",
-          "reason": "not yet classified by the OCR v1.9.3 core-port source map"
+          "disposition": "not_applicable",
+          "reason": "Pi replaces OCR unset* load-error branches (unsetActiveProvider/unsetCustomProvider/unsetMCPServer wrapping loadOrCreateConfig invalid JSON {not valid) with Pi SettingsManager DefaultResourceLoader error handling; Go config file error path not applicable"
         }
       ]
     },
@@ -2305,90 +2305,90 @@
       "path": "cmd/opencodereview/provider_cmd_test.go",
       "blob": "2c81750084e2bff30684145357cb9662eb233f29",
       "scope": {
-        "kind": "needs_decision",
+        "kind": "in_scope",
         "area": "cmd/opencodereview",
-        "reason": "not yet classified by the OCR v1.9.3 core-port source map"
+        "reason": "provider field application, API key redaction, and TUI wizard are examined per-test via Pi SettingsManager boundary"
       },
       "tests": [
         {
           "name": "TestApplyCustomProviderConfig_EmptyKeyClearsSavedAPIKey",
-          "disposition": "pending_scope",
-          "reason": "not yet classified by the OCR v1.9.3 core-port source map"
+          "disposition": "not_applicable",
+          "reason": "Pi replaces OCR applyCustomProviderConfig empty-key clears CustomProviders[aaa].APIKey via saveConfig with Pi SettingsManager; not applicable"
         },
         {
           "name": "TestApplyCustomProviderConfig_MissingModel",
-          "disposition": "pending_scope",
-          "reason": "not yet classified by the OCR v1.9.3 core-port source map"
+          "disposition": "not_applicable",
+          "reason": "deferred: applyCustomProviderConfig missing model validation is omitted; Pi validates via ModelRuntime, not applicable"
         },
         {
           "name": "TestApplyCustomProviderConfig_MissingProvider",
-          "disposition": "pending_scope",
-          "reason": "not yet classified by the OCR v1.9.3 core-port source map"
+          "disposition": "not_applicable",
+          "reason": "deferred: applyCustomProviderConfig missing provider name validation is omitted; Pi custom provider name lives in SettingsManager ~/.pi/agent, not applicable"
         },
         {
           "name": "TestApplyManualConfig_MissingModel",
-          "disposition": "pending_scope",
-          "reason": "not yet classified by the OCR v1.9.3 core-port source map"
+          "disposition": "not_applicable",
+          "reason": "deferred: applyManualConfig missing model validation is omitted; Pi validates model via SettingsManager and --model flag, not applicable"
         },
         {
           "name": "TestApplyManualConfig_MissingURL",
-          "disposition": "pending_scope",
-          "reason": "not yet classified by the OCR v1.9.3 core-port source map"
+          "disposition": "not_applicable",
+          "reason": "deferred: applyManualConfig missing URL validation before network test is omitted; Pi uses createAgentSession with agentDir models.json URL, not applicable via Go config"
         },
         {
           "name": "TestApplyOfficialProviderConfig_EmptyKeyClearsSavedAPIKey",
-          "disposition": "pending_scope",
-          "reason": "not yet classified by the OCR v1.9.3 core-port source map"
+          "disposition": "not_applicable",
+          "reason": "Pi replaces OCR applyOfficialProviderConfig empty-key clears persisted APIKey via saveConfig/loadOrCreateConfig with Pi SettingsManager secret clearing via ~/.pi/agent; not applicable via Go file"
         },
         {
           "name": "TestApplyOfficialProviderConfig_MissingFields",
-          "disposition": "pending_scope",
-          "reason": "not yet classified by the OCR v1.9.3 core-port source map"
+          "disposition": "not_applicable",
+          "reason": "deferred: applyOfficialProviderConfig missing provider/model required error is omitted; Pi validates provider/model via review/scan flags, not applicable"
         },
         {
           "name": "TestApplyOfficialProviderConfig_UsesSessionModelPick",
-          "disposition": "pending_scope",
-          "reason": "not yet classified by the OCR v1.9.3 core-port source map"
+          "disposition": "not_applicable",
+          "reason": "Pi replaces OCR applyOfficialProviderConfig sessionModelPick -> Model/Provider switch via saveConfig with Pi ModelRuntime routing via createAgentSession; not applicable"
         },
         {
           "name": "TestApplyProviderDeletions",
-          "disposition": "pending_scope",
-          "reason": "not yet classified by the OCR v1.9.3 core-port source map"
+          "disposition": "not_applicable",
+          "reason": "Pi replaces OCR applyProviderDeletions (saveConfig + delete from CustomProviders, keep active) with Pi SettingsManager custom provider removal; not applicable via Pi APIs"
         },
         {
           "name": "TestApplyProviderDeletions_ActiveCleared",
-          "disposition": "pending_scope",
-          "reason": "not yet classified by the OCR v1.9.3 core-port source map"
+          "disposition": "not_applicable",
+          "reason": "Pi replaces OCR applyProviderDeletions active-cleared path that clears Provider/Model when deleting active custom provider with Pi SettingsManager provider switch via ~/.pi/agent; not applicable"
         },
         {
           "name": "TestApplyProviderDeletions_SkipsNotFound",
-          "disposition": "pending_scope",
-          "reason": "not yet classified by the OCR v1.9.3 core-port source map"
+          "disposition": "not_applicable",
+          "reason": "Pi replaces OCR applyProviderDeletions skip-not-found no-error path with Pi SettingsManager tolerant delete; Go file branch not applicable"
         },
         {
           "name": "TestMaskKey",
-          "disposition": "pending_scope",
-          "reason": "not yet classified by the OCR v1.9.3 core-port source map"
+          "disposition": "not_applicable",
+          "reason": "Pi replaces OCR maskKey API-key redaction (\"\"->(not set), \"abcd\"/\"12345678\"->***, sk-ant-***1234) with Pi SettingsManager secret handling via ~/.pi/agent; redaction logic not applicable"
         },
         {
           "name": "TestPrintWizardCancelled",
-          "disposition": "pending_scope",
-          "reason": "not yet classified by the OCR v1.9.3 core-port source map"
+          "disposition": "not_applicable",
+          "reason": "deferred: printWizardCancelled wizard scope message (Configuration/Model list changes kept) via stdout pipe is omitted; Pi has no provider TUI wizard, not applicable"
         },
         {
           "name": "TestProviderTUIResult_ResolvedModel",
-          "disposition": "pending_scope",
-          "reason": "not yet classified by the OCR v1.9.3 core-port source map"
+          "disposition": "not_applicable",
+          "reason": "Pi replaces OCR providerTUIResult.resolvedModel via sessionModelPick map vs model field with Pi CLI --model selection and SettingsManager; TUI result struct not applicable"
         },
         {
           "name": "TestRemoveModels",
-          "disposition": "pending_scope",
-          "reason": "not yet classified by the OCR v1.9.3 core-port source map"
+          "disposition": "not_applicable",
+          "reason": "Pi replaces OCR removeModels helper (remove one/none/all, empty existing) with Pi SettingsManager model list filtering; not applicable via Pi APIs"
         },
         {
           "name": "TestSaveConfig",
-          "disposition": "pending_scope",
-          "reason": "not yet classified by the OCR v1.9.3 core-port source map"
+          "disposition": "not_applicable",
+          "reason": "Pi replaces OCR saveConfig that MkdirAll + 0600 JSON write via loadOrCreateConfig round-trip with Pi SettingsManager DefaultResourceLoader reading ~/.pi/agent/settings.json; Go perm check not applicable"
         }
       ]
     },
@@ -2396,20 +2396,20 @@
       "path": "cmd/opencodereview/provider_config_apply_test.go",
       "blob": "c528986e3d55c4be85ff933b602e8ec55348495b",
       "scope": {
-        "kind": "needs_decision",
+        "kind": "in_scope",
         "area": "cmd/opencodereview",
-        "reason": "not yet classified by the OCR v1.9.3 core-port source map"
+        "reason": "provider config apply validation is examined per-test; Pi uses SettingsManager"
       },
       "tests": [
         {
           "name": "TestApplyOfficialProviderConfig_Validation",
-          "disposition": "pending_scope",
-          "reason": "not yet classified by the OCR v1.9.3 core-port source map"
+          "disposition": "not_applicable",
+          "reason": "deferred: applyOfficialProviderConfig validation that rejects empty provider/model or missing API key before test-connection is omitted; Pi validates via SettingsManager and ModelRuntime createAgentSession, not applicable via Go file"
         },
         {
           "name": "TestSetCustomProviderValue",
-          "disposition": "pending_scope",
-          "reason": "not yet classified by the OCR v1.9.3 core-port source map"
+          "disposition": "not_applicable",
+          "reason": "Pi replaces OCR setCustomProviderValue for `custom_providers.<name>.<field>` malformed-key rejection and custom provider materialization with Pi SettingsManager ~/.pi/agent; not applicable via Pi APIs"
         }
       ]
     },
@@ -7718,30 +7718,30 @@
       "path": "internal/config/testconnection/testconnection_test.go",
       "blob": "0fcb593786085be22557434ac277945e882fffe0",
       "scope": {
-        "kind": "needs_decision",
-        "area": "internal/config",
-        "reason": "not yet classified by the OCR v1.9.3 core-port source map"
+        "kind": "in_scope",
+        "area": "internal/config/testconnection",
+        "reason": "test-connection fixture and language mapping are examined per-test; Pi replaces HTTP test-connection with ModelRuntime"
       },
       "tests": [
         {
           "name": "TestApplyLanguage",
-          "disposition": "pending_scope",
-          "reason": "not yet classified by the OCR v1.9.3 core-port source map"
+          "disposition": "not_applicable",
+          "reason": "Pi replaces OCR LlmConversation.ApplyLanguage that appends \"Always respond in Chinese.\" to system message with Pi template language injection; not applicable via Pi prompt pipeline"
         },
         {
           "name": "TestApplyLanguage_EmptyLang",
-          "disposition": "pending_scope",
-          "reason": "not yet classified by the OCR v1.9.3 core-port source map"
+          "disposition": "not_applicable",
+          "reason": "Pi replaces OCR ApplyLanguage empty -> English fallback appending to system content with Pi template default language; not applicable"
         },
         {
           "name": "TestLoadDefault",
-          "disposition": "pending_scope",
-          "reason": "not yet classified by the OCR v1.9.3 core-port source map"
+          "disposition": "not_applicable",
+          "reason": "Pi replaces OCR LoadDefault conversation fixture (Timeout>0, system+user messages) for HTTP test-connection with Pi ModelRuntime via createAgentSession and review/scan --provider/--model; fixture not applicable"
         },
         {
           "name": "TestResolveLang",
-          "disposition": "pending_scope",
-          "reason": "not yet classified by the OCR v1.9.3 core-port source map"
+          "disposition": "not_applicable",
+          "reason": "Pi replaces OCR resolveLang mapping (\"\"->English, Chinese/Japanese) with Pi template language via SettingsManager and template substitution; not applicable via Pi APIs"
         }
       ]
     },

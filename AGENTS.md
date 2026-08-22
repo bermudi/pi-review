@@ -13,9 +13,7 @@ does not justify changing review semantics.
 
 The legacy precision-oriented engine has been removed by explicit user
 approval; `src/ocr-v193` is now the sole engine. Open Code Review v1.9.3
-remains the pinned behavioral reference. 129 upstream inventory cases remain
-pending/classification — do not claim full parity or a freshly verified gate
-unless the exact verifier passes at the final commit.
+remains the pinned behavioral reference. Inventory classification complete — 0 pending (1895 cases classified); provider/config shell (`config`/`provider`/`login`/`MCP`/`telemetry`/`test-connection` via `~/.pi/agent`) is intentionally not ported (deferred scope boundary via Pi SettingsManager). Do not claim full parity or a freshly verified gate unless the exact verifier passes at the final commit.
 
 The parity engine lives under `src/ocr-v193` with its own tests. It must not
 import removed legacy review policy. Reuse low-level utilities only after
