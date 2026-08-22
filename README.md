@@ -1,18 +1,18 @@
 # pi-reviewer
 
 `pi-reviewer` is a TypeScript library and `pi-review` CLI for running Open Code
-Review's core behavior through the Pi SDK.
+Review v1.9.3's core behavior through the Pi SDK.
 
-> **Migration status:** the current v0.2 implementation is a precision-first
-> fork and does not yet match the newly clarified port target. Open Code Review
-> v1.9.3 is now the pinned behavioral reference. The compatibility plan and
-> cutover criteria are in `docs/ocr-v1.9.3-port-plan.md`. The implementation
-> details below describe the current legacy engine until that cutover.
+> **Status:** the legacy precision-oriented engine has been removed by explicit
+> user approval; `src/ocr-v193` is now the sole engine and implements Open Code
+> Review v1.9.3 as the pinned behavioral reference (`v1.9.3` /
+> `4d796ae54cabdcf4e22b69ef502ed8871456a909` / `c35ddd7223f2b5540ce03aa43c9a25ef643fca27`).
+> 157 upstream inventory cases remain pending/classification — parity is not
+> claimed beyond the verifier evidence. See `docs/ocr-v1.9.3-port-plan.md` and
+> `docs/ocr-v193-source-map.md`.
 
 The public library boundary is small; Pi sessions, prompts, and model-visible
 tools remain behind `Reviewer`.
-
-A quiet review is preferable to a clever-looking false positive. An incomplete review is reported as incomplete rather than presented as success.
 
 ## Requirements
 
@@ -21,8 +21,6 @@ A quiet review is preferable to a clever-looking false positive. An incomplete r
 - A Pi-configured provider/model and its authentication
 
 ## Install, check, test, and build
-
-From the repository root:
 
 ```bash
 bun install
@@ -33,194 +31,159 @@ bun run build
 
 `bun run check` runs the strict TypeScript check. `bun test` runs the Bun test suite. `bun run build` creates the bundled `dist/cli.js` and `dist/index.js` entry points plus declarations; the package exposes the CLI as `pi-review`.
 
-The direct source entry point is also runnable without a build:
+From a checkout without a build:
 
 ```bash
-bun run src/cli.ts --repo . --model provider/model
+bun run src/cli.ts review --help
+bun run src/cli.ts scan --help
 ```
 
-The equivalent package start script is:
-
-```bash
-bun run start -- --repo . --model provider/model
-```
-
-When the package is installed or linked, use its binary as `pi-review`. From a checkout, `bun run src/cli.ts` is the reliable unbundled form.
+When the package is installed, use its binary as `pi-review`.
 
 ## CLI
 
-`--model` (shorthand `-m`) uses Pi's `provider/model[:thinking]` reference form. Bare and partial model names resolve against `~/.pi/agent/models.json` exactly as `pi --model` does — exact id first, then fuzzy — so `-m gpt-5.6-luna:max` works when `pi --model gpt-5.6-luna:max` does. The option is required unless the `PI_REVIEW_MODEL` environment variable is set; an explicit flag always wins over the variable. The default scope is the current directory's workspace:
+`pi-review` exposes two OCR-compatible subcommands. Both use `pi-review review|scan [flags]`; there is no `--engine` switch.
 
 ```bash
-# Workspace in the current directory; --repo and the workspace scope are both defaults.
-pi-review -m provider/model:high
+# Review the current workspace (unstaged changes vs HEAD)
+pi-review review --repo . --model provider/model --format json
 
-# Workspace in an explicit repository.
-pi-review --repo /path/to/repository --model provider/model
+# Range: diff from merge-base of --from to --to
+pi-review review --repo /path/to/repo --from main --to feature --model provider/model
 
-# Range: both refs are required; the target is head at the merge-base range.
-pi-review --repo /path/to/repository \
-  --base main --head feature --model provider/model
+# Single commit
+pi-review review --repo /path/to/repo --commit HEAD --model provider/model
 
-# One commit against its first parent, or the root tree for a root commit.
-pi-review --repo /path/to/repository --commit HEAD --model provider/model
+# Full-file scan (not diff-scoped)
+pi-review scan --repo . --path src --model provider/model --format json
 
-# Emit the exact ReviewResult JSON object on stdout.
-pi-review --repo . --model provider/model --json
+# Preview which files would be reviewed without calling the model
+pi-review review --repo . --preview --format json
 ```
 
-The same commands can be run from source by replacing `pi-review` with `bun run src/cli.ts`. `--base` implies `--head HEAD` when `--head` is omitted; `--head` requires `--base`. `--commit` cannot be combined with either range option. There is no separate mode flag: the selected flags determine the mode.
+**Review flags** (see `pi-review review --help` for exact help):
 
-Available options are:
+- `--repo PATH` — repository root (default: current dir, resolved to Git top-level)
+- `--rule PATH` — JSON system rule file
+- `--from REF --to REF` — range diff (both required together)
+- `-c, --commit REF` — single commit vs its first parent
+- `--resume ID` — resume a previous review session by ID
+- `--exclude PATTERNS` — comma-separated gitignore-style excludes
+- `-f, --format FORMAT` — `text` (default), `json`, or `sarif`
+- `--audience AUDIENCE` — `human` (default) or `agent`
+- `--concurrency N` — max concurrent file reviews (default 8)
+- `--timeout N` — per-file timeout in minutes (default 10)
+- `--max-tools N` — max tool rounds per file (0 = template default, min 10)
+- `--max-git-procs N` — max concurrent Git subprocesses (default 16)
+- `--max-tokens N` — per-file prompt token ceiling (0 = default)
+- `--max-tokens-budget N` — cap total token usage (0 = unlimited)
+- `-b, --background TEXT` / `-B, --background-file PATH` — business context
+- `--provider NAME` / `--model NAME` — override LLM provider/model for this run
+- `--tools PATH` — JSON tools config (default: embedded)
+- `-p, --preview` — preview files without running the LLM
+- `--no-filter` — keep all raw comments without LLM post-filtering
 
-- `--repo PATH` — repository to review; defaults to the current directory.
-- `-m, --model PROVIDER/MODEL[:thinking]` — Pi model reference; required unless `PI_REVIEW_MODEL` is set. Accepts bare and partial names resolved through `~/.pi/agent/models.json`, like `pi --model`.
-- `--thinking LEVEL` — `off`, `minimal`, `low`, `medium`, `high`, `xhigh`, or `max`.
-- `--base REF [--head REF]` — review the range from the merge-base of the refs to `head`; `--head` defaults to `HEAD`.
-- `--commit REF` — review one commit.
-- `--include PATTERN` and `--exclude PATTERN` — repeatable path filters.
-- `--background TEXT`, `--background-file PATH`, and `--rules-file PATH` — review context; the two background forms are mutually exclusive.
-- `--concurrency N` — positive maximum number of concurrent file tasks; default `4`.
-- `--max-tool-rounds N` — compatibility name for the nominal per-file tool budget, including the final submission; default `32`. The hard runner cap is one start higher (`33` by default) because recovery capacity is reserved, so not all nominal calls are normal evidence calls. Lower values still preserve a submit-only path.
-- `--plan-threshold N` — non-negative changed-line threshold for risk planning; default `50`.
-- `--agent-dir PATH` — Pi agent directory override.
-- `--session-dir PATH` — persist each per-task Pi session transcript (`.jsonl`) under PATH for debugging; off by default.
-- `--resume PATH` — continue one interrupted planning or main-review transcript. Narrow selection to exactly one file (usually with `--include`) and keep the same target and review options. Verification transcripts cannot be resumed because their evidence ledger is host-only. Cannot be combined with `--session-dir`.
-- `--json` — output the exact `ReviewResult` object instead of the human-readable rendering.
-- `--help` — print usage.
+**Scan flags** are analogous with `--path`, `--no-plan`, `--no-dedup`, `--no-summary`, and `--batch`. See `pi-review scan --help`.
 
-Human-readable results and JSON go to stdout. Progress events and warnings go to stderr, so `--json` remains machine-readable. The text renderer includes status, message, separate selected/completed/failed/skipped/excluded coverage lists, warnings, and anchored findings.
+Output goes to stdout (`text`/`json`/`sarif`); diagnostics and progress go to stderr, so `--format json` remains machine-readable.
 
 ### Exit status
 
-The result status maps to these exact review exit codes:
+`text`/`json`/`sarif` share the OCR exit contract:
 
-| `ReviewResult.status` | Exit code |
+| terminal state | Exit code |
 | --- | ---: |
-| `complete` | `0` |
-| `skipped` | `0` |
+| `complete` / `skipped` | `0` |
 | `partial` | `2` |
-| `failed` | `1` |
+| `failed` / invalid usage | `1` |
 
-`--help` exits `0`. Invalid usage, unreadable background/rules files, reviewer initialization failures, and failures before a `ReviewResult` is produced exit `1`.
+`--help` and `version` exit `0`. An `--engine` flag is unknown and exits `1`.
 
 ## Pi authentication and configuration
 
-The runtime dependency is the released Pi SDK package **`@earendil-works/pi-coding-agent` `0.84.2`**, pinned exactly in `package.json` and the lockfile. The implementation reference was the local `../pi-mono` checkout; it is not a runtime path dependency.
+The runtime dependency is the released Pi SDK package **`@earendil-works/pi-coding-agent` `0.84.2`**, pinned exactly in `package.json`. `../pi-mono` was the implementation reference, not a runtime path dependency.
 
-There is no login flow in `pi-reviewer`. By default, Pi uses the agent directory `~/.pi/agent`, including:
+There is no login flow in `pi-reviewer`. By default, Pi uses `~/.pi/agent`:
 
 - `~/.pi/agent/auth.json` for provider authentication
 - `~/.pi/agent/models.json` for model definitions
 
-Set `PI_CODING_AGENT_DIR` or pass `--agent-dir PATH` for another directory; the explicit CLI/library option takes precedence. Authentication and model resolution happen before a Pi task session is created. A provider that cannot be resolved or authenticated produces a failed review task/result rather than an interactive credential prompt.
+Set `PI_CODING_AGENT_DIR` or pass `--agent-dir` via the library `ReviewOptions.agentDir` for another directory. Set `PI_REVIEW_MODEL` is not used; pass `--model` explicitly.
 
-Set `PI_REVIEW_MODEL` to make `--model` optional in the CLI, for example `export PI_REVIEW_MODEL="provider/model"` in a shell profile. The explicit `--model` flag takes precedence; a blank or invalid variable value is treated as unset or rejected the same way as an invalid flag. The library keeps `model` required in `ReviewOptions` — the environment fallback is a CLI convenience only.
-
-Model references follow the same rules as `pi --model`: `provider/model[:thinking]`, a bare name, or a partial name, all resolved through `~/.pi/agent/models.json` by the Pi model runtime. Names that do not resolve produce a failed task/review with the resolver's error rather than an interactive prompt.
-
-Pi sessions use an in-memory session/settings manager and a minimal resource loader by default. With `--session-dir PATH` (or `ReviewOptions.sessionDir`), each per-task session transcript is persisted as a `.jsonl` file under that directory — useful for debugging failed or aborted reviews; failed files carry the transcript path in the result. Pass that path back with `--resume PATH` (or `ReviewOptions.resumeSessionFile`) to append a fresh attempt to the matching plan or main-review conversation. Resume requires exactly one selected file and a transcript outside the reviewed repository; it requires a new atomic terminal submission and does not reuse historical usage or tool results. The persisted task fingerprint must match the current model, thinking level, prompts, tool configuration, and budget. Later phases remain fresh isolated sessions. Repository `AGENTS.md` files, skills, extensions, prompts, and settings are not loaded into review sessions. Repository material is evidence, not authority. Review evidence and context are sent to the configured model provider, so use the tool where that disclosure is acceptable.
+Model references follow `pi --model` resolution through `~/.pi/agent/models.json`. Repository `AGENTS.md`, skills, extensions, and settings are never loaded into review sessions; repository material is untrusted evidence.
 
 ## Library usage
-
-The public library keeps Pi behind `review(input, options)`:
 
 ```ts
 import { review } from "pi-reviewer";
 
 const result = await review(
-  {
-    repository: process.cwd(),
-    mode: { kind: "workspace" },
-  },
-  {
-    model: "provider/model",
-  },
+  { repository: process.cwd(), mode: { kind: "workspace" } },
+  { model: "provider/model" },
 );
 
 if (result.status === "partial" || result.status === "failed") {
   throw new Error(result.message);
 }
-
 console.log(JSON.stringify(result, null, 2));
 ```
 
-For a range or commit, use the same domain API:
+For a range or commit:
 
 ```ts
-const range = {
-  repository: ".",
-  mode: { kind: "range" as const, base: "main", head: "feature" },
-};
-const commit = {
-  repository: ".",
-  mode: { kind: "commit" as const, ref: "HEAD" },
-};
+const range = { repository: ".", mode: { kind: "range" as const, base: "main", head: "feature" } };
+const commit = { repository: ".", mode: { kind: "commit" as const, ref: "HEAD" } };
 ```
 
-`ReviewResult` contains `status`, `message`, findings, selected/completed/failed/skipped/excluded coverage, warnings, token usage, and elapsed time. The public facade exports `review`, `Reviewer`, `createReviewer`, the review domain types, and deterministic Git/diff/selection/finding-placement seams. Pi runner types, prompts, phase toolkits, and model-visible tool definitions are internal.
+`ReviewResult` contains `status`, `message`, findings, coverage, warnings, token usage, and elapsed time. The public facade is `review`, `createReviewer`, `Reviewer`, and the review domain types; internal runner/prompts/tools are not exported.
 
 ## Review modes and target data
 
-- **Workspace** compares the working tree with `HEAD` when one exists. It includes tracked changes and non-ignored untracked files; an unborn repository is handled as a workspace snapshot. Workspace evidence is read from the live working tree.
-- **Range** compares `head` with the merge-base of `base` and `head`. Diff files and evidence reads are pinned to the `head` Git snapshot.
-- **Commit** compares a commit with its first parent, or with the root tree for a root commit. Diff files and evidence reads are pinned to the commit snapshot.
+- **Workspace** — working tree vs `HEAD` (or unborn snapshot); live reads may change during a long review.
+- **Range** — `head` vs merge-base of `base`/`head`; pinned to Git objects.
+- **Commit** — commit vs first parent; pinned.
 
-Git refs, repository-relative paths, traversal, absolute paths, `.git` paths, and workspace/Git symlinks are checked at the acquisition/read boundaries. Binary, deleted, unsupported, user-excluded, over-limit, empty, oversized, and otherwise non-reviewable files appear as `coverage.excluded` rather than being sent to a model. `coverage.selected` contains only files eligible for dispatch; its partition is `completed + failed + skipped`. Selected files that never run or are cancelled appear in `coverage.skipped`.
+Path safety, binary/deletion, user-exclude, and resource ceilings are enforced at the acquisition boundary; filtered files appear in `excluded` rather than being sent to a model.
 
-## Precision pipeline
+## Pipeline (OCR parity)
 
-The useful behavior is the set of hard boundaries around the model:
+1. Resolve and validate the Git target.
+2. Apply OCR-compatible selection, rules, and limits.
+3. Optionally run a `PLAN_TASK` pre-pass per file.
+4. Run the per-file `MAIN_TASK` loop with `code_comment` / `task_done` and bounded evidence tools (`file_read`, `code_search`, `file_find`, `file_read_diff`).
+5. Relocate, validate, and filter comments as OCR does.
+6. Enforce OCR-compatible round/context/time/token/recovery and the single restricted grace request.
+7. Emit `text`/`json`/`sarif` with coverage, warnings, and exit code; support `scan`, checkpoints/resume (`--resume`), and `preview`.
 
-1. **Deterministic target acquisition.** `git.ts` validates the repository and refs, obtains the selected Git diff, parses it into changed files, and enriches text files with the target-side content. Range and commit targets are pinned; workspace targets use the working tree.
-2. **Deterministic selection.** Files are ordered before selection. Safety, binary/deletion, user-exclude, default extension/path, and the `2,000` changed-line cap are applied before model work. A selected file also must have a non-empty diff no larger than `100,000` bytes and at least one changed line.
-3. **Optional structured planning.** A file with at least `50` changed lines receives a separate risk-planning task. Its only terminating tool is `submit_plan`, which accepts a schema-checked `change_summary` plus at most four prioritized risks, with one evidence suggestion per risk. The planner describes evidence; the later worker performs the evidence reads. A planner failure emits a warning and the main review still runs.
-4. **One isolated task per selected file.** The main worker receives the current file's diff, other changed paths for orientation, optional background/rules, and an optional plan. Its explicit tool allowlist contains only bounded evidence tools and `submit_review`.
-5. **Atomic structured output.** The worker must finish with one successful `submit_review` action; a rejected submission may be corrected within reserved recovery starts. The successful call supplies `state: "DONE"` or `"FAILED"` and the complete comments array (up to 20). Candidates are not accepted as a successful file result until the terminating `DONE` submission is received; a task that ends without it fails that file.
-6. **Deterministic placement.** `existingCode` is matched against target-side content and a finding is accepted only when its range intersects an added target-side line. An unanchored candidate is discarded with a warning rather than placed at line `0`.
-7. **Evidence-backed verification.** Resolved findings go through an independent verification task with the same bounded read-only evidence tools. Every candidate is classified as verified, disproved, or unverified. Verified and disproved decisions must cite exact text from host-recorded evidence; only verified candidates are emitted. An unverified claim is dropped, while verification failure fails the file rather than publishing unchecked findings.
-8. **Coverage-aware assembly.** Per-file tasks may run concurrently, but findings, coverage, warnings, and token usage are assembled into a deterministic result. `complete` means every selected file completed; partial or failed work is never reported as complete. `skipped` is used only when no files were selected.
-
-The main worker's model-visible tools are `file_read`, `code_search`, `file_find`, `file_read_diff`, and `submit_review`. The verifier has the same evidence tools plus `submit_verification`, with eight normal evidence calls reserved by default. Reads/searches/diffs have output and result limits, and each task has a tool-call budget. There is no model-visible shell, edit, or write tool. Prompt data is fenced as untrusted evidence so repository text cannot change system policy or authorize tools.
-
-The evidence bounds are intentionally explicit: file reads return at most `500` numbered lines and `100,000` bytes; searches return at most `100` results and `50,000` bytes; finds return at most `100` paths and `50,000` bytes; changed-file diffs return at most `100,000` bytes. Search skips files over `1,000,000` bytes and binary files. The default nominal main-review budget is `32` starts, including `submit_review`. The reviewer deliberately reserves capacity for recovery and termination: 30 normal evidence calls + up to two rejected/recovery starts + the final submission means up to `33` actual starts. The verifier separately allows eight normal evidence calls plus recovery and submission. The hard runner cap is one start above each nominal budget. `--max-tool-rounds` remains the compatibility name for the main review; lower values still preserve a submit-only path.
+There is no model-visible shell, edit, or write tool.
 
 ## Security and read-only guarantees
 
-- Git child processes receive argument arrays, not shell commands. Refs and paths are validated before use.
-- Model-visible tools can inspect only repository-relative target data, search the target file list, inspect a known changed diff, record in-memory candidates, and terminate a phase.
-- The reviewer does not apply patches or mutate repository files. `submit_review`, `submit_plan`, and `submit_verification` only update in-memory task state.
-- Pi sessions load no repository instructions or extensions. Diffs, code, rules, background, and tool results are delimited untrusted data.
-- Read-only is not sandboxed: Git and file reads run with the invoking host's permissions, and the configured provider receives review evidence.
+- Git invocations use argv arrays, never shell interpolation.
+- Model-visible tools are allowlisted and bounded; the reviewer does not mutate repository files.
+- Pi sessions load no repository instructions or extensions; diffs, code, rules, and tool results are delimited untrusted data.
+- Host filesystem operations run with the caller's permissions; review evidence is sent to the configured provider.
 
-## Limitations
+## Limitations (current)
 
-- **Phase-level resume only.** One persisted planning or main-review session can be continued. This does not merge coverage from a previous multi-file run, restore in-memory tool state, or resume verification evidence; narrow the current run to the same single file and use unchanged review inputs.
-- **No full scan.** The reviewer audits the selected Git workspace/range/commit diff. It has no whole-repository or whole-directory review mode.
-- **No mechanical validation.** It does not run compilers, tests, formatters, linters, or arbitrary repository commands. A model review is not CI.
-- **Bounded output is not a sandbox.** Evidence results are capped, but target reads and Git operations are performed with host permissions. Safe relative-path and symlink checks reduce traversal risk; they do not provide an OS sandbox.
-- **Workspace evidence can change.** The workspace diff and initial target content are acquired before tasks start, but workspace `readFile`/`listFiles` evidence reads the live working tree. A long review can therefore observe changes made after acquisition. Range and commit evidence are pinned.
-- **Target acquisition is buffered but capped.** Git command output is collected in memory with a 64 MiB stdout / 2 MiB stderr ceiling, and workspace/Git-blob files are rejected above 16 MiB. Parsing and enrichment are still whole-buffer operations rather than streaming; the later 100,000-byte per-file diff gate is stricter than these host-side safety ceilings.
-- **Selection is conservative.** Binary, deleted, unsafe, unsupported, excluded, over-line-limit, oversized-diff, empty-diff, and otherwise gated files are reported in `coverage.excluded` and never sent to a model.
-- **Model/provider failures remain visible.** A provider or task failure can produce `partial` or `failed`; `complete` means selected tasks terminated successfully, not that the code is correct.
+- No `rules check` or `session` CLI subcommands beyond `review`/`scan` and `version`/`help`.
+- Resume is per-session (`--resume ID`); it requires the same target/options and resumes a single prior session, not cross-run coverage merging.
+- Workspace evidence is live and may change during a long review; range/commit evidence is pinned.
+- The CLI requires an explicit `review` or `scan` subcommand.
+- 157 upstream inventory cases remain pending/classification — parity beyond verified fixtures is not claimed.
 
 ## SDK reference and public boundary
 
-`../pi-mono` was the implementation reference for the Pi session/runtime seams. The runtime dependency is the pinned released package `@earendil-works/pi-coding-agent` `0.84.2`, not the neighboring checkout.
-
 The deliberate public boundary is `src/index.ts`:
 
-- `Reviewer`, `review`, and `createReviewer`;
-- `createReviewTarget`, `parseUnifiedDiff`, `selectFiles`, and `resolveFinding`;
-- review, diff, finding, target, and selection types.
+- `Reviewer`, `review`, `createReviewer`
+- review domain types
+- OCR-backed `PiTransport`/`OcrRunner`/`runOcrCli` utilities
 
-`src/pi-runner.ts`, `src/prompts.ts`, `src/tools.ts`, and `src/phase-tools.ts` stay internal so consumers depend on the review domain rather than Pi SDK details.
+`src/ocr-v193/**` is the full port; see `docs/ocr-v193-source-map.md` for the upstream mapping.
 
 ## License and upstream attribution
 
-`pi-reviewer` is licensed under
-[GPL-3.0-or-later](LICENSE). It ports Open Code Review v1.9.3, whose source and
-prompt material is licensed under Apache-2.0. Upstream identity, provenance,
-and attribution are recorded in
-[THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md); the Apache license text is in
-[LICENSES/Apache-2.0.txt](LICENSES/Apache-2.0.txt).
+`pi-reviewer` is licensed under [GPL-3.0-or-later](LICENSE). It ports Open Code
+Review v1.9.3 (Apache-2.0) — see [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)
+and [LICENSES/Apache-2.0.txt](LICENSES/Apache-2.0.txt).

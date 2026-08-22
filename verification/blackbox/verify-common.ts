@@ -677,14 +677,12 @@ async function runPiSubprocess(opts: {
     OCR_LLM_MODEL: "test-model",
     OCR_LLM_PROTOCOL: "openai",
   };
-  // Use packed pi-review bin with parity engine for review; scan subcommand does not need --engine.
+  // Use packed pi-review bin (sole engine, no --engine switch); scan subcommand likewise.
   const extra = opts.command ?? ["--no-filter", "--json"];
   const hasPreview = extra.includes("--preview");
   const subcommand = opts.subcommand ?? "review";
   const args: string[] = [subcommand, "--repo", opts.repoDir, "--concurrency", "1", ...extra];
-  if (subcommand === "review") {
-    args.splice(1, 0, "--engine", "ocr-v193");
-  }
+  // no --engine insertion: final product has a single engine
   if (!hasPreview) {
     // Append --model at the end to avoid splitting --concurrency 1
     args.push("--model", "test-openai/test-model");
@@ -775,7 +773,7 @@ function parsePiJson(stdout: string): { findings: unknown[]; coverage: Record<st
     parsed = null;
   }
   if (!isRecord(parsed)) return { findings: [], coverage: {}, status: "unknown", raw: parsed };
-  // Parity Pi engine (ocr-v193) emits OCR-shaped JSON: comments[] + summary. Legacy emits findings[] + coverage.
+  // Pi parity engine emits OCR-shaped JSON: comments[] + summary.
   // Detect which shape we got and normalize to common fields for comparison where possible.
   if (Array.isArray(parsed["comments"])) {
     // Parity shape
@@ -1007,11 +1005,11 @@ function compareCoreReview(opts: CompareCoreOptions): { equal: boolean; mismatch
   if (ocrCmdStr.includes("--preview")) {
     pushMismatch("process.command.ocr.preview", false, true, "OCR command must not contain --preview for Gate 2");
   }
-  if (!piCmdStr.includes("--engine ocr-v193")) {
-    pushMismatch("process.command.pi.engine", piCmdStr, piCmdStr, "Pi command must contain --engine ocr-v193 (packed installed Pi CLI)");
+  if (piCmdStr.includes("--engine")) {
+    pushMismatch("process.command.pi.engine", piCmdStr, piCmdStr, "Pi command must not contain --engine (legacy switch removed)");
   }
-  if (!piCmdStr.includes("--repo") || !piCmdStr.includes("--json")) {
-    pushMismatch("process.command.pi", piCmdStr, piCmdStr, "Pi command must be pi-review --engine ocr-v193 --repo <dir> --model ... --json");
+  if (!piCmdStr.includes("review") || !piCmdStr.includes("--repo") || !piCmdStr.includes("--json")) {
+    pushMismatch("process.command.pi", piCmdStr, piCmdStr, "Pi command must be pi-review review --repo <dir> --model ... --json");
   }
 
   // 2. Provider request counts — both must have contacted server
@@ -1339,8 +1337,11 @@ function comparePreview(opts: {
   if (!ocrCmdStr.includes("review") || !ocrCmdStr.includes("--repo") || !ocrCmdStr.includes("--preview")) {
     pushMismatch("process.command.ocr", ocrCmdStr, ocrCmdStr, "OCR preview command must contain review --repo --preview");
   }
-  if (!piCmdStr.includes("--engine ocr-v193") || !piCmdStr.includes("--preview")) {
-    pushMismatch("process.command.pi", piCmdStr, piCmdStr, "Pi preview command must contain --engine ocr-v193 --preview");
+  if (piCmdStr.includes("--engine")) {
+    pushMismatch("process.command.pi.engine", piCmdStr, piCmdStr, "Pi preview command must not contain --engine");
+  }
+  if (!piCmdStr.includes("--preview")) {
+    pushMismatch("process.command.pi.preview", piCmdStr, piCmdStr, "Pi preview command must contain --preview");
   }
 
   const parsePreview = (s: string): Record<string, unknown> | null => {

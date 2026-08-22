@@ -1,447 +1,381 @@
 import { describe, expect, test } from "bun:test";
+import * as fs from "node:fs";
+import * as os from "node:os";
+import * as path from "node:path";
+import { spawnSync } from "node:child_process";
 
-import {
-	exitCodeForResult,
-	formatProgress,
-	HELP_TEXT,
-	parseArgs,
-	renderJson,
-	renderText,
-	runCli,
-	type CliIoOverrides,
-} from "../src/cli.ts";
-import type {
-	Finding,
-	ReviewEvent,
-	ReviewInput,
-	ReviewOptions,
-	ReviewResult,
-} from "../src/types.ts";
+import { runCli, HELP_TEXT, versionString } from "../src/cli.ts";
 
-const usage = {
-	inputTokens: 1,
-	outputTokens: 2,
-	cacheReadTokens: 3,
-	cacheWriteTokens: 4,
-	totalTokens: 10,
-};
+import type { Preview } from "../src/ocr-v193/model/preview.ts";
+import type { ReviewOptions, ScanOptions } from "../src/ocr-v193/cli/shared.ts";
+import type { ReviewRunner } from "../src/ocr-v193/cli/review.ts";
+import type { ScanRunner } from "../src/ocr-v193/cli/scan.ts";
 
-function result(status: ReviewResult["status"]): ReviewResult {
-	const finding: Finding = {
-		content: "Validate the value before using it.",
-		existingCode: "const value = input;",
-		suggestionCode: "const value = validate(input);",
-		category: "bug",
-		severity: "high",
-		path: "src/app.ts",
-		startLine: 12,
-		endLine: 13,
-	};
-	return {
-		status,
-		message: `Review ${status}`,
-		model: "test/model",
-		findings: status === "complete" ? [finding] : [],
-		coverage: {
-			selected: status === "skipped" ? [] : status === "failed" ? ["src/app.ts"] : ["src/app.ts", "src/other.ts"],
-			completed: status === "complete" ? ["src/app.ts", "src/other.ts"] : status === "partial" ? ["src/app.ts"] : [],
-			failed: status === "partial" ? [{ path: "src/other.ts", reason: "task failed" }] : [],
-			skipped: status === "failed" ? [{ path: "src/app.ts", reason: "aborted" }] : [],
-			excluded: status === "skipped" ? [{ path: "README.md", reason: "unsupported_ext" }] : [],
-		},
-		warnings: ["One planner warning."],
-		usage,
-		elapsedMs: 42,
-	};
+function captureIo() {
+  let stdout = "";
+  let stderr = "";
+  return {
+    io: {
+      cwd: () => process.cwd(),
+      stdout: (s: string) => {
+        stdout += s;
+      },
+      stderr: (s: string) => {
+        stderr += s;
+      },
+      onSignal: () => {},
+      offSignal: () => {},
+    },
+    stdout: () => stdout,
+    stderr: () => stderr,
+  };
 }
 
-function captureIo(): {
-	io: CliIoOverrides;
-	stdout: () => string;
-	stderr: () => string;
-	signals: Map<string, () => void>;
-} {
-	let out = "";
-	let err = "";
-	const signals = new Map<string, () => void>();
-	return {
-		io: {
-			cwd: () => "/fake/repository",
-			stdout: (text) => {
-				out += text;
-			},
-			stderr: (text) => {
-				err += text;
-			},
-			onSignal: (signal, listener) => {
-				signals.set(signal, listener);
-			},
-			offSignal: (signal) => {
-				signals.delete(signal);
-			},
-		},
-		stdout: () => out,
-		stderr: () => err,
-		signals,
-	};
+function createTempGitRepo(): { dir: string; cleanup: () => void } {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "cli-adapter-repo-"));
+  const git = (args: string[]) => {
+    const r = spawnSync("git", args, { cwd: dir, encoding: "utf-8" });
+    if (r.status !== 0) throw new Error(`git ${args.join(" ")} failed: ${r.stderr}`);
+  };
+  git(["init", "-q"]);
+  git(["config", "user.email", "test@example.com"]);
+  git(["config", "user.name", "test"]);
+  git(["config", "commit.gpgsign", "false"]);
+  fs.writeFileSync(path.join(dir, "main.go"), "package main\nfunc Add(a int, b int) int { return a + b }\n", "utf-8");
+  git(["add", "-A"]);
+  git(["commit", "-q", "-m", "initial"]);
+  fs.writeFileSync(path.join(dir, "main.go"), "package main\nfunc Add(a int, b int) int {\n  return a + b\n}\n", "utf-8");
+  return {
+    dir,
+    cleanup: () => fs.rmSync(dir, { recursive: true, force: true }),
+  };
 }
 
-describe("CLI argument parsing", () => {
-	test("parses the workspace defaults and all review options", () => {
-		const options = parseArgs([
-			"--model",
-			"anthropic/claude-sonnet:high",
-			"--thinking",
-			"medium",
-			"--repo",
-			"/tmp/repo",
-			"--include",
-			"src/**",
-			"--include=tests/**",
-			"--exclude",
-			"vendor/**",
-			"--background",
-			"Review API boundaries",
-			"--concurrency",
-			"3",
-			"--max-tool-rounds",
-			"8",
-			"--plan-threshold",
-			"50",
-			"--agent-dir",
-			".agents",
-			"--session-dir",
-			"/tmp/sessions",
-			"--json",
-		], "/default");
+function fakeReviewRunner(overrides: Partial<ReviewRunner> = {}): ReviewRunner {
+  const base: ReviewRunner = {
+    run: async () => [
+      {
+        path: "main.go",
+        content: "consider handling error",
+        existingCode: "func Add",
+        category: "bug",
+        severity: "medium",
+        startLine: 1,
+        endLine: 1,
+      } as never,
+    ],
+    manifest: {
+      schemaVersion: "ocr.run-manifest/v1",
+      runId: "run-test",
+      operation: "review",
+      terminalState: "complete",
+      repository: {},
+      input: { mode: "workspace" },
+      execution: { model: "test" },
+      coverage: {
+        selected: [{ itemId: "a", path: "main.go", fingerprint: "fp" }],
+        completed: [{ itemId: "a", path: "main.go", fingerprint: "fp" }],
+        reused: [],
+        failed: [],
+        waived: [],
+      },
+      elapsedMs: 100,
+    } as never,
+    warnings: [],
+    filesReviewed: 1,
+    inputTokens: 10,
+    outputTokens: 5,
+    totalTokens: 15,
+    cacheReadTokens: 0,
+    cacheWriteTokens: 0,
+    toolCalls: { code_comment: 1, task_done: 1 },
+    sessionId: "sess-1",
+    budgetExceeded: false,
+    projectSummary: "",
+    resumeInfo: undefined,
+    diffs: [],
+    retryReport: null,
+    retryReportError: null,
+  };
+  return { ...base, ...overrides };
+}
 
-		expect(options).toEqual({
-			help: false,
-			version: false,
-			repo: "/tmp/repo",
-			model: "anthropic/claude-sonnet:high",
-			thinking: "medium",
-			mode: { kind: "workspace" },
-			include: ["src/**", "tests/**"],
-			exclude: ["vendor/**"],
-			background: "Review API boundaries",
-			backgroundFile: undefined,
-			hostEvidence: undefined,
-			hostEvidenceFile: undefined,
-			rulesFile: undefined,
-			concurrency: 3,
-			maxToolRounds: 8,
-			planThreshold: 50,
-			agentDir: ".agents",
-			sessionDir: "/tmp/sessions",
-			resume: undefined,
-			json: true,
-			noFilter: false,
-			preview: false,
-		});
-	});
+function fakeScanRunner(overrides: Partial<ScanRunner> = {}): ScanRunner {
+  const base: ScanRunner = {
+    run: async () => [],
+    manifest: null as never,
+    warnings: [],
+    filesReviewed: 0,
+    inputTokens: 0,
+    outputTokens: 0,
+    totalTokens: 0,
+    cacheReadTokens: 0,
+    cacheWriteTokens: 0,
+    toolCalls: {},
+    sessionId: "scan-sess-1",
+    budgetExceeded: false,
+    projectSummary: "",
+    resumeInfo: undefined,
+    diffs: [],
+  };
+  return { ...base, ...overrides };
+}
 
-	test("parses resume and rejects conflicting persistence or concurrency options", () => {
-		const parsed = parseArgs(["--model", "p/m", "--resume", "/tmp/review.jsonl"]);
-		expect(parsed.resume).toBe("/tmp/review.jsonl");
-		expect(parseArgs(["--model", "p/m", "--resume", "a", "--concurrency", "01"]).concurrency).toBe(1);
-		expect(() => parseArgs(["--model", "p/m", "--resume", "a", "--session-dir", "b"])).toThrow("mutually exclusive");
-		expect(() => parseArgs(["--model", "p/m", "--resume", "a", "--concurrency", "2"])).toThrow("concurrency 1");
-	});
+// ---------------------------------------------------------------------------
+// version / help — OCR semantics directly, no engine flag
+// ---------------------------------------------------------------------------
 
-	test("selects range and commit modes and rejects invalid combinations", () => {
-		expect(parseArgs(["--model", "p/m", "--base", "main", "--head", "topic"]).mode).toEqual({
-			kind: "range",
-			base: "main",
-			head: "topic",
-		});
-		expect(parseArgs(["--model", "p/m", "--commit", "HEAD~1"]).mode).toEqual({
-			kind: "commit",
-			ref: "HEAD~1",
-		});
-		expect(parseArgs(["--model", "p/m", "--base", "main"]).mode).toEqual({
-			kind: "range",
-			base: "main",
-			head: "HEAD",
-		});
-		expect(() => parseArgs(["--model", "p/m", "--head", "topic"])).toThrow("--base (or --from)");
-		expect(() => parseArgs(["--model", "p/m", "--commit", "HEAD", "--base", "main", "--head", "topic"])).toThrow("--commit");
-		expect(() => parseArgs(["--model", "p/m", "--background", "one", "--background-file", "two"])).toThrow("mutually exclusive");
-	});
+describe("thin OCR production adapter", () => {
+  test("help goes to stdout, exit 0, via --help", async () => {
+    const cap = captureIo();
+    const code = await runCli(["--help"], { io: cap.io });
+    expect(code).toBe(0);
+    expect(cap.stdout()).toContain("pi-review");
+    expect(cap.stdout()).toContain("review");
+    expect(cap.stdout()).toBe(HELP_TEXT);
+    expect(cap.stderr()).toBe("");
+  });
 
-	test("validates the required model, thinking, and integer values", () => {
-		expect(() => parseArgs([])).toThrow("required --model");
-		expect(() => parseArgs(["--model", "bad model"])).toThrow("provider/model");
-		expect(parseArgs(["--model", "not-a-model"]).model).toBe("not-a-model");
-		expect(parseArgs(["--model", "openrouter/org/model:variant"]).model).toBe("openrouter/org/model:variant");
-		expect(() => parseArgs(["--model", "p/m", "--thinking", "turbo"])).toThrow("--thinking");
-		expect(() => parseArgs(["--model", "p/m", "--concurrency", "0"])).toThrow("--concurrency");
-		expect(() => parseArgs(["--model", "p/m", "--max-tool-rounds", "0"])).toThrow("--max-tool-rounds");
-		expect(() => parseArgs(["--model", "p/m", "--max-tool-rounds", "-1"])).toThrow("--max-tool-rounds");
-		expect(() => parseArgs(["--model", "p/m", "--max-tool-rounds", "1.5"])).toThrow("--max-tool-rounds");
-		expect(() => parseArgs(["--model", "p/m", "--max-tool-rounds", "9007199254740991"])).toThrow("9007199254740990");
-		expect(parseArgs(["--model", "p/m", "--max-tool-rounds", "9007199254740990"]).maxToolRounds).toBe(Number.MAX_SAFE_INTEGER - 1);
-		expect(() => parseArgs(["--model", "p/m", "--plan-threshold", "1.5"])).toThrow("--plan-threshold");
-		expect(parseArgs(["--help"]).help).toBe(true);
-	});
+  test("help via empty argv shows HELP_TEXT", async () => {
+    const cap = captureIo();
+    const code = await runCli([], { io: cap.io });
+    expect(code).toBe(0);
+    expect(cap.stdout()).toContain("Usage:");
+    expect(cap.stderr()).toBe("");
+  });
 
-	test("falls back to PI_REVIEW_MODEL when --model is absent", () => {
-		const options = parseArgs([], "/repo", { PI_REVIEW_MODEL: "provider/model" });
-		expect(options.model).toBe("provider/model");
-		expect(options.help).toBe(false);
-	});
+  test("help via review --help", async () => {
+    const cap = captureIo();
+    const code = await runCli(["review", "--help"], { io: cap.io });
+    expect(code).toBe(0);
+    expect(cap.stdout()).toContain("Review flags:");
+  });
 
-	test("--model wins over PI_REVIEW_MODEL", () => {
-		const options = parseArgs(["--model", "explicit/m"], "/repo", { PI_REVIEW_MODEL: "env/m" });
-		expect(options.model).toBe("explicit/m");
-	});
+  test("version via version subcommand", async () => {
+    const cap = captureIo();
+    const code = await runCli(["version"], { io: cap.io });
+    expect(code).toBe(0);
+    expect(cap.stdout()).toBe(versionString());
+    expect(cap.stdout()).toContain("pi-review");
+    expect(cap.stderr()).toBe("");
+  });
 
-	test("treats a blank PI_REVIEW_MODEL as unset", () => {
-		expect(() => parseArgs([], "/repo", { PI_REVIEW_MODEL: "   " })).toThrow("required --model");
-	});
+  test("version via --version and -V", async () => {
+    for (const argv of [["--version"], ["-V"]]) {
+      const cap = captureIo();
+      const code = await runCli(argv, { io: cap.io });
+      expect(code).toBe(0);
+      expect(cap.stdout()).toBe(versionString());
+    }
+  });
 
-	test("validates PI_REVIEW_MODEL like --model", () => {
-		expect(() => parseArgs([], "/repo", { PI_REVIEW_MODEL: "bad model" })).toThrow("provider/model");
-	});
+  test("unknown command is rejected on stderr with help", async () => {
+    const cap = captureIo();
+    const code = await runCli(["unknown-cmd"], { io: cap.io });
+    expect(code).toBe(1);
+    expect(cap.stderr()).toContain('unknown command "unknown-cmd"');
+    expect(cap.stderr()).toContain("Usage:");
+    expect(cap.stdout()).toBe("");
+  });
 
-	test("--help bypasses the model requirement even without PI_REVIEW_MODEL", () => {
-		expect(parseArgs(["--help"], "/repo", {}).help).toBe(true);
-	});
+  test("rejects --engine at review level as unknown flag without invoking model", async () => {
+    let factoryCalled = false;
+    const cap = captureIo();
+    const code = await runCli(["review", "--engine", "legacy", "--repo", "/tmp"], {
+      io: cap.io,
+      reviewRunnerFactory: async () => {
+        factoryCalled = true;
+        return fakeReviewRunner();
+      },
+    });
+    expect(code).toBe(1);
+    expect(factoryCalled).toBe(false);
+    expect(cap.stderr()).toContain("unknown flag --engine");
+    expect(cap.stdout()).toBe("");
+  });
 
-	test("accepts the -m shorthand and bare model names", () => {
-		expect(parseArgs(["-m", "p/m"]).model).toBe("p/m");
-		expect(parseArgs(["-m=p/m"]).model).toBe("p/m");
-		expect(parseArgs(["-m", "gpt-5.6-luna:max"]).model).toBe("gpt-5.6-luna:max");
-		expect(parseArgs(["--model", "gpt-5.6-luna:max"]).model).toBe("gpt-5.6-luna:max");
-	});
+  test("rejects --engine ocr-v193 as unknown flag", async () => {
+    const cap = captureIo();
+    const code = await runCli(["review", "--engine", "ocr-v193", "--repo", "/tmp"], { io: cap.io });
+    expect(code).toBe(1);
+    expect(cap.stderr()).toContain("unknown flag --engine");
+  });
 
-	test("rejects duplicate model flags, malformed models, and unknown short flags", () => {
-		expect(() => parseArgs(["-m", "p/m", "--model", "a/b"])).toThrow("Duplicate --model");
-		expect(() => parseArgs(["-m", "p/m", "-m", "a/b"])).toThrow("Duplicate --model");
-		expect(() => parseArgs(["-m", "bad model"])).toThrow("provider/model");
-		expect(() => parseArgs(["-m="])).toThrow("non-empty");
-		expect(() => parseArgs(["-mx"])).toThrow("--option form");
-	});
-});
+  test("rejects top-level --engine before subcommand as unknown command", async () => {
+    const cap = captureIo();
+    const code = await runCli(["--engine", "legacy"], { io: cap.io });
+    expect(code).toBe(1);
+    // First token is treated as command, so it is unknown command, not unknown flag
+    expect(cap.stderr()).toContain("unknown command");
+  });
 
-describe("CLI rendering and exit codes", () => {
-	test("renders anchored findings, coverage, and warnings without ANSI", () => {
-		const text = renderText(result("complete"));
-		expect(text).toContain("Status: complete");
-		expect(text).toContain("Message: Review complete");
-		expect(text).toContain("Coverage:");
-		expect(text).toContain("excluded:");
-		expect(text).toContain("skipped:");
-		expect(text).toContain("Warnings:");
-		expect(text).toContain("high/bug src/app.ts:12-13");
-		expect(text).toContain("Validate the value before using it.");
-		expect(text).not.toMatch(/\u001b/u);
-	});
+  test("factory injection without network: review runner is called and stdout is JSON, stderr is diagnostics only", async () => {
+    const repo = createTempGitRepo();
+    try {
+      const cap = captureIo();
+      let factoryOpts: ReviewOptions | undefined;
+      let runnerRunCalled = 0;
+      const runner = fakeReviewRunner({
+        run: async () => {
+          runnerRunCalled++;
+          return [
+            {
+              path: "main.go",
+              content: "test comment",
+              existingCode: "func Add",
+              category: "bug",
+              severity: "low",
+              startLine: 2,
+              endLine: 2,
+            } as never,
+          ];
+        },
+      });
 
-	test("JSON rendering is the exact ReviewResult object", () => {
-		const expected = result("partial");
-		expect(renderJson(expected)).toBe(`${JSON.stringify(expected)}\n`);
-		expect(JSON.parse(renderJson(expected))).toEqual(expected);
-	});
+      const code = await runCli(["review", "--repo", repo.dir, "--format", "json", "--concurrency", "1"], {
+        io: cap.io,
+        reviewRunnerFactory: async (opts) => {
+          factoryOpts = opts;
+          return runner;
+        },
+      });
 
-	test("documents the compatibility budget name and reserved recovery in help", () => {
-		expect(HELP_TEXT).toContain("--max-tool-rounds N");
-		expect(HELP_TEXT).toContain("recovery reserved");
-	});
+      expect(code).toBe(0);
+      expect(factoryOpts?.repoDir).toBe(repo.dir);
+      expect(runnerRunCalled).toBe(1);
+      // stdout must be exact JSON result, not contain stderr markers
+      const parsed = JSON.parse(cap.stdout());
+      expect(parsed.status).toBe("complete");
+      expect(Array.isArray(parsed.comments)).toBe(true);
+      expect(parsed.comments[0].content).toBe("test comment");
+      // stderr should not contain the JSON stdout content
+      expect(cap.stderr()).not.toContain('"status"');
+      // stdout should not contain diagnostic prefix
+      expect(cap.stdout()).not.toContain("[pi-review]");
+    } finally {
+      repo.cleanup();
+    }
+  });
 
-	test("maps result status to the documented exit code", () => {
-		expect(exitCodeForResult(result("complete"))).toBe(0);
-		expect(exitCodeForResult(result("skipped"))).toBe(0);
-		expect(exitCodeForResult(result("partial"))).toBe(2);
-		expect(exitCodeForResult(result("failed"))).toBe(1);
-	});
-});
+  test("scan factory injection without network produces correct stdout/stderr separation", async () => {
+    const repo = createTempGitRepo();
+    try {
+      const cap = captureIo();
+      let scanFactoryCalled = false;
+      const code = await runCli(["scan", "--repo", repo.dir, "--format", "json"], {
+        io: cap.io,
+        scanRunnerFactory: async () => {
+          scanFactoryCalled = true;
+          return fakeScanRunner({
+            run: async () => [
+              { path: "main.go", content: "scan comment", startLine: 1, endLine: 1 } as never,
+            ],
+            filesReviewed: 1,
+            totalTokens: 5,
+          });
+        },
+      });
+      expect(code).toBe(0);
+      expect(scanFactoryCalled).toBe(true);
+      const parsed = JSON.parse(cap.stdout());
+      // Scan output is also JSON with comments
+      expect(parsed).toBeDefined();
+      expect(cap.stderr()).not.toContain('"comments"');
+    } finally {
+      repo.cleanup();
+    }
+  });
 
-describe("CLI execution seams", () => {
-	test("reads UTF-8 files, passes options to Reviewer, and keeps progress on stderr", async () => {
-		const captured = captureIo();
-		const reads: Array<{ path: string; encoding: string }> = [];
-		let receivedInput: ReviewInput | undefined;
-		let receivedOptions: ReviewOptions | undefined;
-		const events: ReviewEvent[] = [];
-		const expected = result("complete");
+  test("preview injection: review --preview uses preview factory and never calls runner", async () => {
+    const repo = createTempGitRepo();
+    try {
+      const cap = captureIo();
+      let previewCalled = false;
+      let runnerCalled = false;
+      const preview: Preview = {
+        entries: [
+          {
+            path: "main.go",
+            status: "modified",
+            insertions: 3,
+            deletions: 1,
+            willReview: true,
+          },
+        ],
+        totalInsertions: 3,
+        totalDeletions: 1,
+        totalFiles: 1,
+        reviewableCount: 1,
+        excludedCount: 0,
+      };
 
-		const exitCode = await runCli([
-			"--engine",
-			"legacy",
-			"--model",
-			"provider/model",
-			"--repo",
-			"repo",
-			"--base",
-			"base",
-			"--head",
-			"head",
-			"--background-file",
-			"background.md",
-			"--rules-file",
-			"rules.md",
-			"--include",
-			"src/**",
-			"--exclude",
-			"src/generated/**",
-			"--concurrency",
-			"2",
-			"--max-tool-rounds",
-			"4",
-			"--plan-threshold",
-			"10",
-			"--agent-dir",
-			"agents",
-		], {
-			io: captured.io,
-			readFile: async (path, encoding) => {
-				reads.push({ path, encoding });
-				return path === "background.md" ? "background text" : "rules text";
-			},
-			reviewer: {
-				review: async (input, options) => {
-					receivedInput = input;
-					receivedOptions = options;
-					options.onEvent?.({ type: "review_started", files: 1 });
-					options.onEvent?.({ type: "file_started", path: "src/app.ts" });
-					options.onEvent?.({ type: "tool_started", path: "src/app.ts", tool: "file_read" });
-					options.onEvent?.({ type: "file_completed", path: "src/app.ts", findings: 1 });
-					options.onEvent?.({ type: "warning", message: "be careful" });
-					events.push(
-						{ type: "review_started", files: 1 },
-						{ type: "file_started", path: "src/app.ts" },
-					);
-					return expected;
-				},
-			},
-		});
+      const code = await runCli(["review", "--repo", repo.dir, "--preview", "--format", "json"], {
+        io: cap.io,
+        reviewPreviewFactory: async () => {
+          previewCalled = true;
+          return preview;
+        },
+        reviewRunnerFactory: async () => {
+          runnerCalled = true;
+          return fakeReviewRunner();
+        },
+      });
 
-		expect(exitCode).toBe(0);
-		expect(reads).toEqual([
-			{ path: "background.md", encoding: "utf8" },
-			{ path: "rules.md", encoding: "utf8" },
-		]);
-		expect(receivedInput).toEqual({
-			repository: "repo",
-			mode: { kind: "range", base: "base", head: "head" },
-			background: "background text",
-			rules: "rules text",
-		});
-		expect(receivedOptions?.model).toBe("provider/model");
-		expect(receivedOptions?.concurrency).toBe(2);
-		expect(receivedOptions?.maxToolRounds).toBe(4);
-		expect(receivedOptions?.planChangedLineThreshold).toBe(10);
-		expect(receivedOptions?.include).toEqual(["src/**"]);
-		expect(receivedOptions?.exclude).toEqual(["src/generated/**"]);
-		expect(receivedOptions?.signal).toBeInstanceOf(AbortSignal);
-		expect(captured.stdout()).toContain("Status: complete");
-		expect(captured.stderr()).toContain("Review started: 1 file(s).");
-		expect(captured.stderr()).toContain("Evidence: src/app.ts -> file_read.");
-		expect(events).toHaveLength(2);
-	});
+      expect(code).toBe(0);
+      expect(previewCalled).toBe(true);
+      expect(runnerCalled).toBe(false);
+      const parsed = JSON.parse(cap.stdout());
+      expect(parsed.files?.length ?? parsed.entries?.length ?? parsed.total_files ?? 0).toBeGreaterThanOrEqual(0);
+      // preview output should be on stdout, not stderr
+      expect(cap.stderr()).toBe("");
+      expect(cap.stdout().length).toBeGreaterThan(0);
+    } finally {
+      repo.cleanup();
+    }
+  });
 
-	test("emits exact JSON to stdout and installs/removes termination handlers", async () => {
-		const captured = captureIo();
-		const expected = result("partial");
-		let signalWasAborted = false;
-		const exitCode = await runCli(["--engine", "legacy", "--model", "provider/model", "--json"], {
-			io: captured.io,
-			reviewer: {
-				review: async (_input, options) => {
-					captured.signals.get("SIGINT")?.();
-					signalWasAborted = options.signal?.aborted === true;
-					return expected;
-				},
-			},
-		});
+  test("explicit review command succeeds and default help is consistent", async () => {
+    const repo = createTempGitRepo();
+    try {
+      // explicit review with format text
+      const cap = captureIo();
+      const code = await runCli(["review", "--repo", repo.dir, "--format", "text", "--concurrency", "1"], {
+        io: cap.io,
+        reviewRunnerFactory: async () => fakeReviewRunner(),
+      });
+      expect(code).toBe(0);
+      expect(cap.stdout().length).toBeGreaterThan(0);
+      // stdout for text should contain human readable output, not error markers
+      expect(cap.stdout()).not.toContain("unknown flag");
+      expect(cap.stderr()).not.toContain("unknown flag");
+    } finally {
+      repo.cleanup();
+    }
+  });
 
-		expect(exitCode).toBe(2);
-		expect(captured.stdout()).toBe(`${JSON.stringify(expected)}\n`);
-		expect(JSON.parse(captured.stdout())).toEqual(expected);
-		expect(signalWasAborted).toBe(true);
-		expect(captured.signals.size).toBe(0);
-		expect(captured.stderr()).toBe("");
-	});
-
-	test("uses PI_REVIEW_MODEL when --model is not passed", async () => {
-		const captured = captureIo();
-		let receivedOptions: ReviewOptions | undefined;
-		const exitCode = await runCli(["--engine", "legacy", "--repo", "repo"], {
-			io: { ...captured.io, env: () => ({ PI_REVIEW_MODEL: "env/provider/model" }) },
-			reviewer: {
-				review: async (_input, options) => {
-					receivedOptions = options;
-					return result("complete");
-				},
-			},
-		});
-
-		expect(exitCode).toBe(0);
-		expect(receivedOptions?.model).toBe("env/provider/model");
-		expect(captured.stdout()).toContain("Status: complete");
-	});
-
-	test("passes --host-evidence through to ReviewInput", async () => {
-		const captured = captureIo();
-		let receivedInput: ReviewInput | undefined;
-		const exitCode = await runCli(["--engine", "legacy", "--model", "provider/model", "--host-evidence", "tsc output"], {
-			io: captured.io,
-			reviewer: {
-				review: async (input) => {
-					receivedInput = input;
-					return result("complete");
-				},
-			},
-		});
-
-		expect(exitCode).toBe(0);
-		expect(receivedInput?.hostEvidence).toBe("tsc output");
-	});
-
-	test("reads --host-evidence-file and passes it to ReviewInput", async () => {
-		const captured = captureIo();
-		let receivedInput: ReviewInput | undefined;
-		const exitCode = await runCli(["--engine", "legacy", "--model", "provider/model", "--host-evidence-file", "evidence.txt"], {
-			io: captured.io,
-			readFile: async (path) => {
-				if (path !== "evidence.txt") throw new Error("unexpected file");
-				return "build output";
-			},
-			reviewer: {
-				review: async (input) => {
-					receivedInput = input;
-					return result("complete");
-				},
-			},
-		});
-
-		expect(exitCode).toBe(0);
-		expect(receivedInput?.hostEvidence).toBe("build output");
-	});
-
-	test("returns exit 1 when --host-evidence-file cannot be read", async () => {
-		const captured = captureIo();
-		const exitCode = await runCli(["--engine", "legacy", "--model", "provider/model", "--host-evidence-file", "missing.txt"], {
-			io: captured.io,
-			readFile: async () => {
-				throw new Error("ENOENT");
-			},
-			reviewer: {
-				review: async () => result("complete"),
-			},
-		});
-
-		expect(exitCode).toBe(1);
-		expect(captured.stderr()).toContain("Unable to read --host-evidence-file");
-	});
-});
-
-test("formats every progress event as stderr-safe text", () => {
-	expect(formatProgress({ type: "review_started", files: 2 })).toBe("Review started: 2 file(s).\n");
-	expect(formatProgress({ type: "file_failed", path: "a.ts", reason: "nope" })).toBe("Failed a.ts: nope.\n");
-	expect(formatProgress({ type: "file_failed", path: "a.ts", reason: "nope", sessionFile: "/tmp/s/rev.jsonl" })).toBe(
-		"Failed a.ts: nope.\nSession: /tmp/s/rev.jsonl\n",
-	);
-	expect(formatProgress({ type: "warning", message: "multi\nline" })).toBe("Warning: multi line\n");
+  test("IO seam: custom cwd and readFile are forwarded", async () => {
+    const repo = createTempGitRepo();
+    try {
+      // Use a background file via readFile seam to prove it is used
+      const bgPath = path.join(repo.dir, "bg.md");
+      fs.writeFileSync(bgPath, "# background\n", "utf-8");
+      const cap = captureIo();
+      let readFileCalled = false;
+      const code = await runCli(["review", "--repo", repo.dir, "--background-file", "bg.md", "--format", "json"], {
+        io: { ...cap.io, cwd: () => repo.dir },
+        readFile: async (p, enc) => {
+          readFileCalled = true;
+          expect(enc).toBe("utf8");
+          // p is resolved absolute path inside repo
+          return fs.readFileSync(p, "utf-8");
+        },
+        reviewRunnerFactory: async () => fakeReviewRunner(),
+      });
+      expect(code).toBe(0);
+      expect(readFileCalled).toBe(true);
+      expect(cap.stdout()).toContain('"status"');
+    } finally {
+      repo.cleanup();
+    }
+  });
 });

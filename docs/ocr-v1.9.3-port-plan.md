@@ -18,8 +18,9 @@ parity. Do not delete or rewrite it merely because its old verifiers were
 unsound. Reuse it only when a new gate proves its behavior.
 
 All gates begin `unverified`. Gate 5 verifies that the shipped CLI defaults to
-the parity engine; legacy remains available behind `--engine legacy` and
-suffixed library exports.
+the parity engine. Before explicit removal on 2026-08-22, legacy remained
+available behind `--engine legacy` and suffixed library exports; after removal
+the sole engine is OCR v1.9.3 and the verifier proves absence of that switch.
 
 ## Why the previous evidence is invalid
 
@@ -330,13 +331,11 @@ Only after Gates 0–4 pass:
 
 1. change the shipped CLI default to the parity engine;
 2. change the library's default `review` API to the parity engine;
-3. retain legacy behavior only behind an explicit `--engine legacy` switch
-   and explicit legacy library export until removal is approved;
+3. (transitional, now retired) legacy behavior was retained behind an explicit `--engine legacy` switch and explicit legacy library export until removal was approved — explicit removal was approved and executed on 2026-08-22; the retention requirement is now closed and the cutover verifier proves absence of `--engine`, legacy exports, and legacy modules;
 4. pack and install into a new empty consumer directory;
-5. execute `pi-review` without an engine switch against the local server;
+5. execute `pi-review review` (and `pi-review scan`) without an engine switch against the local server;
 6. prove the server receives parity-engine tool schemas;
-7. instrument the legacy constructor with a boundary-visible failure and prove
-   the default command does not reach it;
+7. prove a `--engine legacy` request is rejected without invoking a model (no provider capture, unknown-flag error);
 8. run one partial/incomplete fixture and prove non-clean status and exit; and
 9. run the complete suite from the installed package.
 

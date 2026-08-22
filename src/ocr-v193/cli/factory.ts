@@ -53,7 +53,7 @@ import type { Diff } from "../model/diff.js";
 /**
  * Create a production ReviewRunner for one review invocation.
  * This is the factory injected into the parity CLI (src/ocr-v193/cli/index.ts)
- * when --engine ocr-v193 delegates from the legacy CLI.
+ * for the sole OCR v1.9.3 engine (no legacy delegation).
  *
  * Uses the v1.9.3 Agent orchestrator so per-file loops, planning, filtering,
  * relocation, concurrency, and budget behaviour are all exercised.

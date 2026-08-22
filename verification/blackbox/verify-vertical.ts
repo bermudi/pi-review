@@ -391,9 +391,9 @@ async function runPiSubprocess(opts: {
     OCR_LLM_MODEL: "test-model",
     OCR_LLM_PROTOCOL: "openai",
   };
-  // Use packed pi-review bin with --engine ocr-v193 to get parity behavior.
-  // Command: <consumerBinPath> --engine ocr-v193 --repo <repo> --model test-openai/test-model --concurrency 1 --json
-  const args = ["--engine", "ocr-v193", "--repo", opts.repoDir, "--model", "test-openai/test-model", "--concurrency", "1", "--no-filter", "--json"];
+  // Use packed pi-review bin (sole OCR v1.9.3 engine, no --engine switch).
+  // Command: <consumerBinPath> review --repo <repo> --model test-openai/test-model --concurrency 1 --json
+  const args = ["review", "--repo", opts.repoDir, "--model", "test-openai/test-model", "--concurrency", "1", "--no-filter", "--json"];
   // consumerBinPath is typically /tmp/consumer/node_modules/.bin/pi-review which is a shell wrapper; spawn via bun? Use that path directly.
   // If it's a JS file (dist/cli.js), run via bun. Detect.
   let bin = opts.consumerBinPath;
@@ -477,7 +477,7 @@ function parsePiJson(stdout: string): { findings: unknown[]; coverage: Record<st
     parsed = null;
   }
   if (!isRecord(parsed)) return { findings: [], coverage: {}, status: "unknown", raw: parsed };
-  // Parity Pi engine (ocr-v193) emits OCR-shaped JSON: comments[] + summary. Legacy emits findings[] + coverage.
+  // Pi parity engine emits OCR-shaped JSON: comments[] + summary.
   // Detect which shape we got and normalize to common fields for comparison where possible.
   if (Array.isArray(parsed["comments"])) {
     // Parity shape
@@ -703,11 +703,11 @@ function compareVertical(opts: {
   if (ocrCmdStr.includes("--preview")) {
     pushMismatch("process.command.ocr.preview", false, true, "OCR command must not contain --preview for Gate 2");
   }
-  if (!piCmdStr.includes("--engine ocr-v193")) {
-    pushMismatch("process.command.pi.engine", piCmdStr, piCmdStr, "Pi command must contain --engine ocr-v193 (packed installed Pi CLI)");
+  if (piCmdStr.includes("--engine")) {
+    pushMismatch("process.command.pi.engine", piCmdStr, piCmdStr, "Pi command must not contain --engine (legacy switch removed)");
   }
-  if (!piCmdStr.includes("--repo") || !piCmdStr.includes("--json")) {
-    pushMismatch("process.command.pi", piCmdStr, piCmdStr, "Pi command must be pi-review --engine ocr-v193 --repo <dir> --model ... --json");
+  if (!piCmdStr.includes("review") || !piCmdStr.includes("--repo") || !piCmdStr.includes("--json")) {
+    pushMismatch("process.command.pi", piCmdStr, piCmdStr, "Pi command must be pi-review review --repo <dir> --model ... --json");
   }
 
   // 2. Provider request counts — both must have contacted server

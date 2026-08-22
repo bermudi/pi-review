@@ -550,8 +550,8 @@ describe("packed CLI boundary", () => {
       const binExists = existsSync(consumerCli);
       const useBun = binExists;
       const args = format === "json"
-        ? ["--engine", "ocr-v193", "--repo", repoDir, "-m", "test-openai/test-model", "--concurrency", "1", "--json"]
-        : ["--engine", "ocr-v193", "--repo", repoDir, "-m", "test-openai/test-model", "--concurrency", "1"];
+        ? ["review", "--repo", repoDir, "-m", "test-openai/test-model", "--concurrency", "1", "--json"]
+        : ["review", "--repo", repoDir, "-m", "test-openai/test-model", "--concurrency", "1"];
       const env: Record<string, string> = {};
       for (const [k, v] of Object.entries(process.env)) if (v !== undefined) env[k] = v;
       for (const k of Object.keys(env)) {

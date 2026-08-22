@@ -11,20 +11,20 @@ The fixed reference is OCR tag `v1.9.3`, signed tag object
 `../open-code-review` checkout. Pi replaces OCR's provider/model runtime; it
 does not justify changing review semantics.
 
-The current implementation is a precision-oriented fork created before this
-goal was clarified. Do not deepen that architecture. Follow
-`docs/ocr-v1.9.3-port-plan.md` and build the parity engine alongside the legacy
-engine until cutover.
+The legacy precision-oriented engine has been removed by explicit user
+approval; `src/ocr-v193` is now the sole engine. Open Code Review v1.9.3
+remains the pinned behavioral reference. 157 upstream inventory cases remain
+pending/classification — do not claim full parity or a freshly verified gate
+unless the exact verifier passes at the final commit.
 
-The parity engine is a fresh core under `src/ocr-v193` with its own tests. It
-must not import legacy review policy. Reuse low-level utilities only after
-OCR-derived tests prove equivalent behavior.
-
-Treat the existing parity tree as `building`, not proven. Do not expand its
-scope or call a phase complete until the corresponding committed verifier in
-`docs/ocr-v1.9.3-port-plan.md` passes. If Pi `0.84.2` cannot provide OCR round
-accounting, dynamic terminal-only tools, one restricted grace request, and
-OCR-controlled compression through public APIs, stop and report the blocker.
+The parity engine lives under `src/ocr-v193` with its own tests. It must not
+import removed legacy review policy. Reuse low-level utilities only after
+OCR-derived tests prove equivalent behavior. Treat the existing parity tree as
+`building`, not proven. Do not expand its scope or call a phase complete until
+the corresponding committed verifier in `docs/ocr-v1.9.3-port-plan.md` passes.
+If Pi `0.84.2` cannot provide OCR round accounting, dynamic terminal-only
+tools, one restricted grace request, and OCR-controlled compression through
+public APIs, stop and report the blocker.
 
 ## Stack
 
@@ -56,8 +56,10 @@ findings, events, and abort—not Pi sessions or provider messages. Keep OCR
 policy independent of the Pi adapter so it can be tested with scripted model
 turns and compared against the reference CLI.
 
-`docs/architecture.md` describes the legacy implementation until cutover.
-`docs/ocr-v1.9.3-port-plan.md` is authoritative for migration.
+`docs/architecture.md` describes the shipped OCR v1.9.3 architecture and
+`docs/ocr-v193-source-map.md` maps upstream files. `docs/ocr-v1.9.3-port-plan.md`
+is authoritative for migration; Gate 5’s transitional legacy retention has been
+closed by explicit removal approval and the cutover verifier now proves absence.
 
 ## Domain Contracts
 

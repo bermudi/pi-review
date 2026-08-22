@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: Apache-2.0
 // Parity-engine library facade for the public review API.
 //
-// This exposes the same domain-level seam as src/reviewer.ts (legacy) while
-// routing work through the ocr-v193 parity engine. It is the default library
-// API after Gate 5 cutover; legacy remains available as reviewLegacy etc.
+// This exposes the domain-level review seam routed through the OCR v1.9.3
+// parity engine. The legacy engine has been removed; this is the sole
+// library API.
 
 import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
@@ -268,12 +268,11 @@ async function runParityReview(input: ReviewInput, options: ReviewOptions): Prom
 }
 
 /**
- * Domain-level review orchestration backed by the ocr-v193 parity engine.
- * Implements the same public seam as the legacy Reviewer class.
+ * Domain-level review orchestration backed by the OCR v1.9.3 parity engine.
  */
 export class Reviewer {
-	// Accepts an optional dependencies argument for API symmetry with the legacy
-	// facade; the parity engine does not use the legacy dependency seam.
+		// Accepts an optional dependencies argument for API symmetry;
+	// the parity engine does not use a legacy dependency seam.
 	constructor(_dependencies?: unknown) {}
 
 	async review(input: ReviewInput, options: ReviewOptions): Promise<ReviewResult> {

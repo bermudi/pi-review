@@ -1,8 +1,10 @@
 #!/usr/bin/env bun
 // SPDX-License-Identifier: Apache-2.0
-// Gate 5 — cutover: shipped CLI and library default to the ocr-v193 parity engine;
-// legacy remains behind --engine legacy and suffixed library exports.
-// See docs/ocr-v1.9.3-port-plan.md Gate 5.
+// Gate 5 — cutover: shipped CLI and library are single-engine OCR v1.9.3.
+// Legacy engine has been removed by explicit user approval; verifier proves
+// absence of --engine switch, absence of legacy exports/modules, default
+// CLI reaches OCR tools, and a legacy engine request is rejected without
+// invoking a model. See docs/ocr-v1.9.3-port-plan.md Gate 5.
 
 import { spawn, spawnSync } from "node:child_process";
 import { existsSync } from "node:fs";
@@ -232,26 +234,46 @@ async function main(): Promise<void> {
   const cliText = await readFile(resolve("src/cli.ts"), "utf-8").catch((e) => failNow(`cannot read src/cli.ts: ${e instanceof Error ? e.message : String(e)}`));
   const indexText = await readFile(resolve("src/index.ts"), "utf-8").catch((e) => failNow(`cannot read src/index.ts: ${e instanceof Error ? e.message : String(e)}`));
 
-  expectCondition(
-    /--engine ENGINE\s+Review engine: ocr-v193 \(default\) or legacy/.test(cliText),
-    "src/cli.ts help text does not identify ocr-v193 as the default engine",
-  );
-  expectCondition(
-    /export\s*\{\s*review,\s*createReviewer,\s*Reviewer\s*\}\s*from\s*["']\.\/ocr-v193\/reviewer\.js["']/.test(indexText),
-    "src/index.ts does not export parity Reviewer as default",
-  );
-  expectCondition(
-    /export\s*\{\s*review\s+as\s+reviewLegacy,\s*createReviewer\s+as\s+createReviewerLegacy,\s*Reviewer\s+as\s+ReviewerLegacy\s*\}\s*from\s*["']\.\/reviewer\.js["']/.test(indexText),
-    "src/index.ts does not retain explicit legacy suffixed exports",
-  );
+  // Absence of --engine switch in the thin adapter
+  expectCondition(!cliText.includes("--engine"), "src/cli.ts must not contain --engine (legacy switch removed)");
+  expectCondition(!cliText.includes("engine"), "src/cli.ts must not mention engine switching");
 
-  expectCondition(pack.binOutput.includes("ocr-v193 (default)"), "installed pi-review --help does not identify ocr-v193 as default");
+  // Help text must not advertise engine selection
+  expectCondition(!cliText.includes("legacy"), "src/cli.ts must not mention legacy engine");
 
+  // No legacy exports/modules in public surface
+  expectCondition(!indexText.includes("reviewLegacy"), "src/index.ts must not export reviewLegacy");
+  expectCondition(!indexText.includes("ReviewerLegacy"), "src/index.ts must not export ReviewerLegacy");
+  expectCondition(!indexText.includes("createReviewerLegacy"), "src/index.ts must not export createReviewerLegacy");
+  expectCondition(/export\s*\{\s*review,\s*createReviewer,\s*Reviewer\s*\}\s*from\s*["']\.\/ocr-v193\/reviewer\.js["']/.test(indexText), "src/index.ts does not export parity Reviewer as default");
+
+  // Deleted production modules must not exist
+  const deletedModules = [
+    "src/change-map.ts",
+    "src/diff.ts",
+    "src/git.ts",
+    "src/phase-tools.ts",
+    "src/pi-runner.ts",
+    "src/prompts.ts",
+    "src/resolver.ts",
+    "src/reviewer.ts",
+    "src/selection.ts",
+    "src/tools.ts",
+  ];
+  for (const mod of deletedModules) {
+    expectCondition(!existsSync(resolve(mod)), `deleted module still exists: ${mod}`);
+  }
+
+  // Installed help must not contain --engine
+  expectCondition(!pack.binOutput.includes("--engine"), "installed pi-review --help must not contain --engine");
+  expectCondition(pack.binOutput.includes("review"), "installed pi-review --help must contain review command");
+
+  // Docs must not claim legacy is default (negative requirement excluded)
   const docFiles = await readdirRecursive(resolve("docs"), ".md");
   const disallowed: string[] = [];
   const allowedPhrases = ["ocr-v193 (default)", "default review engine is the parity"];
   for (const file of docFiles) {
-    if (file.endsWith("ocr-v193-reference-manifest.md")) continue; // ledger is updated separately after verification
+    if (file.endsWith("ocr-v193-reference-manifest.md")) continue;
     const content = await readFile(file, "utf-8");
     const lines = content.split("\n");
     for (let i = 0; i < lines.length; i++) {
@@ -259,7 +281,6 @@ async function main(): Promise<void> {
       const lower = line.toLowerCase();
       if (lower.includes("legacy") && lower.includes("default")) {
         if (allowedPhrases.some((p) => line.includes(p))) continue;
-        // Negative requirements ("fails if ... still identify ... as the default") may be split across lines.
         const prev1 = (lines[i - 1] ?? "").toLowerCase();
         const prev2 = (lines[i - 2] ?? "").toLowerCase();
         const isNegativeRequirement =
@@ -271,16 +292,17 @@ async function main(): Promise<void> {
     }
   }
   expectCondition(disallowed.length === 0, `docs/comments identify legacy as default:\n${disallowed.join("\n")}`);
-  fixtures.push("source-defaults");
+  fixtures.push("source-absence");
 
+  // Library must expose only parity API, no legacy
   const libraryScript = join(pack.consumerDir, "library-default.ts");
   await writeFile(
     libraryScript,
-    `import { review, Reviewer, reviewLegacy, ReviewerLegacy } from "pi-reviewer";\n` +
-      `if (typeof review !== "function") throw new Error("review is not a function");\n` +
-      `if (typeof reviewLegacy !== "function") throw new Error("reviewLegacy is not a function");\n` +
-      `if (review === reviewLegacy) throw new Error("default review is the same object as reviewLegacy");\n` +
-      `if (Reviewer === ReviewerLegacy) throw new Error("default Reviewer is the same class as ReviewerLegacy");\n` +
+    `import * as mod from "pi-reviewer";\n` +
+      `if (typeof mod.review !== "function") throw new Error("review is not a function");\n` +
+      `if ("reviewLegacy" in mod) throw new Error("reviewLegacy should not be exported");\n` +
+      `if ("ReviewerLegacy" in mod) throw new Error("ReviewerLegacy should not be exported");\n` +
+      `if ("createReviewerLegacy" in mod) throw new Error("createReviewerLegacy should not be exported");\n` +
       `console.log(JSON.stringify({ status: "ok" }));\n`,
     "utf-8",
   );
@@ -291,9 +313,9 @@ async function main(): Promise<void> {
     env: getSanitizedEnv(),
   });
   if (libRun.status !== 0) {
-    failNow(`library default export identity check failed: ${libRun.stderr || libRun.stdout || ""}`);
+    failNow(`library legacy absence check failed: ${libRun.stderr || libRun.stdout || ""}`);
   }
-  fixtures.push("library-default-identity");
+  fixtures.push("library-no-legacy");
 
   notObservable.push("runtime provider traffic for the library default review() API");
 
@@ -315,6 +337,7 @@ async function main(): Promise<void> {
   const defaultTools = defaultRun.captures.length > 0 ? extractCapturedTools(defaultRun.captures[0]!) : [];
   expectCondition(defaultTools.includes("code_comment"), "default parity request schema missing code_comment");
   expectCondition(defaultTools.includes("task_done"), "default parity request schema missing task_done");
+  expectCondition(!defaultRun.stdout.includes("--engine"), "default parity stdout must not contain --engine");
   fixtures.push("default-parity-workspace");
   await defaultRepo.cleanup().catch(() => {});
 
@@ -334,9 +357,10 @@ async function main(): Promise<void> {
   fixtures.push("incomplete-partial");
   await incompleteRepo.cleanup().catch(() => {});
 
+  // Legacy engine request must be rejected without invoking model (no provider capture, unknown flag error)
   const legacyRepo = await createTempRepo();
   const legacyRun = await runInstalled({
-    fixtureId: "legacy-marker",
+    fixtureId: "legacy-rejected",
     binPath: actualBin,
     repoDir: legacyRepo.dir,
     args: ["review", "--engine", "legacy", "--repo", legacyRepo.dir, "--model", "test-openai/test-model", "--no-filter", "--json", "--max-tool-rounds", "5", "--concurrency", "1"],
@@ -344,8 +368,10 @@ async function main(): Promise<void> {
     timeoutMs: 60_000,
   });
 
-  expectCondition(legacyRun.stderr.includes("LEGACY_CONSTRUCTOR_INVOKED"), "legacy constructor marker missing with --engine legacy");
-  fixtures.push("legacy-marker");
+  expectCondition(legacyRun.exitCode !== 0, `legacy rejected fixture should exit non-zero, got ${legacyRun.exitCode}`);
+  expectCondition(legacyRun.stderr.includes("unknown flag --engine") || legacyRun.stderr.includes("unknown command"), "legacy request must be rejected as unknown flag/command");
+  expectCondition(legacyRun.captures.length === 0, "legacy rejected fixture must not have invoked model (no provider captures expected)");
+  fixtures.push("legacy-rejected");
   await legacyRepo.cleanup().catch(() => {});
 
   await writeFile(join(artifactDir, "pack.json"), JSON.stringify({ archivePath: pack.archivePath, archiveHash: pack.archiveHash, consumerDir: pack.consumerDir }, null, 2), "utf-8");
