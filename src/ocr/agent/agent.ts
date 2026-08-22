@@ -1,7 +1,9 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright 2026 alibaba/open-code-review Contributors
 //
-// Ported from internal/agent/agent.go at c35ddd7223f2b5540ce03aa43c9a25ef643fca27.
+// Ported from internal/agent/agent.go at c35ddd7223f2b5540ce03aa43c9a25ef643fca27;
+// named main-loop stop classification updated from OCR v1.9.9 commit
+// 4b6874bd23106b5c68bea6d230bb60303b9f0961.
 // Modifications are distributed as part of pi-reviewer under
 // GPL-3.0-or-later;
 // see LICENSES/Apache-2.0.txt and THIRD_PARTY_NOTICES.md.
@@ -42,6 +44,7 @@ import {
 } from "../session/manifest.js";
 import { SessionHistory } from "../session/history.js";
 import type { FailureClass } from "../session/manifest.js";
+import { MainLoopStop, mainLoopStopReason } from "../llmloop/types.js";
 
 // ---------------------------------------------------------------------------
 // RuntimeConfig — mirrors Go RuntimeConfig
@@ -312,6 +315,14 @@ export function classifyItemError(err: unknown): [FailureClass, string] {
 }
 
 export const ClassifyItemError = classifyItemError;
+
+/** OCR v1.9.9 maps only the configured round ceiling to budget. */
+export function classifyMainLoopStop(stop: MainLoopStop): [FailureClass, string] {
+  if (stop === MainLoopStop.StopMaxRounds) {
+    return [FailureBudget, mainLoopStopReason(stop)];
+  }
+  return [FailureUnknown, mainLoopStopReason(stop)];
+}
 
 // ---------------------------------------------------------------------------
 // Internal semaphore helper for concurrency
@@ -1398,10 +1409,8 @@ export class Agent {
       const res = await this.runner.RunPerFile(signal, runnerMessages, newPath);
       completed = res.completed;
       if (!completed) {
-        if (res.stop === 1) stop = { class: FailureBudget, reason: "reached the maximum tool-request rounds without finishing", checkpoint: "main_task did not complete before stopping", reportAsError: true };
-        else if (res.stop === 2) stop = { class: FailureUnknown, reason: "main task stopped before completing", checkpoint: "main_task did not complete before stopping", reportAsError: true };
-        else if (res.stop === 3) stop = { class: FailureUnknown, reason: "main task stopped before completing", checkpoint: "main_task did not complete before stopping", reportAsError: true };
-        else stop = { class: FailureBudget, reason: "reached the maximum tool-request rounds without finishing", checkpoint: "main_task did not complete before stopping", reportAsError: true };
+        const [classification, reason] = classifyMainLoopStop(res.stop as MainLoopStop);
+        stop = { class: classification, reason, checkpoint: "main_task did not complete before stopping", reportAsError: true };
       }
     } catch (err) {
       const e = err instanceof Error ? err : new Error(String(err));

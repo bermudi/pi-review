@@ -40,6 +40,7 @@ import type { SessionHistory, TaskRecord, TaskType } from "../session/history.js
 
 // Re-export for external consumers
 export { MainLoopStop } from "./types.js";
+export { mainLoopStopReason, mainLoopStopString } from "./types.js";
 export type { RunnerDeps, AgentWarning, ToolDef, ChatRequest, ChatResponse, UsageInfo } from "./types.js";
 
 // ---------------------------------------------------------------------------

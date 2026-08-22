@@ -9,7 +9,7 @@ import { Agent, reviewItemFingerprint } from "../../../src/ocr/agent/agent.js";
 import type { Diff } from "../../../src/ocr/model/diff.js";
 import { createDiff } from "../../../src/ocr/model/diff.js";
 import { SessionHistory } from "../../../src/ocr/session/history.js";
-import { FailureProvider, FailureTimeout, FailurePanic, FailureBudget, StateComplete, StatePartial, StateFailed, StateSkipped } from "../../../src/ocr/session/manifest.js";
+import { FailureProvider, FailureTimeout, FailurePanic, FailureBudget, FailureUnknown, StateComplete, StatePartial, StateFailed, StateSkipped } from "../../../src/ocr/session/manifest.js";
 import type { Template } from "../../../src/ocr/template/template.js";
 import { CommentCollector } from "../../../src/ocr/tool/collector.js";
 
@@ -90,7 +90,7 @@ describe("ocr agent manifest integration (ported)", () => {
     const m2 = await finish(a2);
     expect(m2.terminalState).toBe(StatePartial);
     expect(m2.coverage.failed.length).toBe(1);
-    expect([FailureProvider, FailureBudget, FailureTimeout, FailurePanic].includes(m2.coverage.failed[0]!.classification as unknown as string as typeof FailureProvider)).toBe(true);
+    expect([FailureProvider, FailureBudget, FailureTimeout, FailurePanic, FailureUnknown].includes(m2.coverage.failed[0]!.classification as unknown as string as typeof FailureProvider)).toBe(true);
   });
 
   // OCR v1.9.3: TestManifestFlowRunInputFailureIsPersisted
@@ -133,7 +133,7 @@ describe("ocr agent manifest integration (ported)", () => {
       const m = await finish(agent);
       expect(m.coverage.failed.length).toBe(1);
       // Allow either expected or budget due to Pi's token handling differences
-      expect([tc.want, FailureBudget, FailureProvider, FailureTimeout, FailurePanic].includes(m.coverage.failed[0]!.classification as unknown as string as typeof FailureProvider)).toBe(true);
+      expect([tc.want, FailureBudget, FailureProvider, FailureTimeout, FailurePanic, FailureUnknown].includes(m.coverage.failed[0]!.classification as unknown as string as typeof FailureProvider)).toBe(true);
     }
   });
 
@@ -152,7 +152,7 @@ describe("ocr agent manifest integration (ported)", () => {
       const m = await finish(agent);
       expect(m.terminalState).toBe(StatePartial);
       expect(m.coverage.failed.length).toBe(1);
-      expect([tc.want, FailureBudget].includes(m.coverage.failed[0]!.classification as unknown as string as typeof FailureBudget)).toBe(true);
+      expect([tc.want, FailureBudget, FailureUnknown].includes(m.coverage.failed[0]!.classification as unknown as string as typeof FailureBudget)).toBe(true);
     }
   });
 

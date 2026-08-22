@@ -31,6 +31,10 @@ The review-filter/fingerprint tranche translates five v1.9.9 cases using the
 v1.9.5 terminal filter-tool contract and pinned filter prompts. Remaining
 inventory work is still pending.
 
+The named-main-loop-stop tranche translates four v1.9.9 cases. Review and
+scan now retain the typed stop reason in incomplete-item diagnostics; remaining
+inventory work is still pending.
+
 Existing `src/ocr` code is **candidate implementation**, not proven
 parity. Do not delete or rewrite it merely because its old verifiers were
 unsound. Reuse it only when a new gate proves its behavior.

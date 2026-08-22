@@ -7059,8 +7059,15 @@
         {
           "name": "TestClassifyMainLoopStop",
           "delta": "added",
-          "disposition": "pending",
-          "reason": "OCR v1.9.9 added requires explicit new evidence or revalidation; prior v1.9.3 coverage is not inherited."
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr/agent/coverage.test.ts",
+              "title": "TestClassifyMainLoopStop",
+              "ocrVersion": "v1.9.9"
+            }
+          ]
         },
         {
           "name": "TestDispatchSubtasks_AllFailed",
@@ -14464,14 +14471,28 @@
         {
           "name": "TestMainLoopStopStringAndReason",
           "delta": "added",
-          "disposition": "pending",
-          "reason": "OCR v1.9.9 added requires explicit new evidence or revalidation; prior v1.9.3 coverage is not inherited."
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr/llmloop/loop.test.ts",
+              "title": "TestMainLoopStopStringAndReason",
+              "ocrVersion": "v1.9.9"
+            }
+          ]
         },
         {
           "name": "TestMainLoopStopUnknownValue",
           "delta": "added",
-          "disposition": "pending",
-          "reason": "OCR v1.9.9 added requires explicit new evidence or revalidation; prior v1.9.3 coverage is not inherited."
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr/llmloop/loop.test.ts",
+              "title": "TestMainLoopStopUnknownValue",
+              "ocrVersion": "v1.9.9"
+            }
+          ]
         },
         {
           "name": "TestRunner_RecordUsage",
@@ -16141,8 +16162,15 @@
         {
           "name": "TestDispatchSubtasks_WithoutTaskDoneIsAllFailed",
           "delta": "changed_body",
-          "disposition": "pending",
-          "reason": "OCR v1.9.9 changed body requires explicit new evidence or revalidation; prior v1.9.3 coverage is not inherited."
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr/scan/coverage.test.ts",
+              "title": "TestDispatchSubtasks_WithoutTaskDoneIsAllFailed",
+              "ocrVersion": "v1.9.9"
+            }
+          ]
         },
         {
           "name": "TestExecuteSubtask_ContextCancelled",

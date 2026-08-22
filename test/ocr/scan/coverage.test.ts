@@ -543,7 +543,7 @@ describe("ocr scan coverage (ported from internal/scan/coverage_test.go)", () =>
     expect(threw).toBe(true);
   });
 
-  // OCR v1.9.3: TestDispatchSubtasks_WithoutTaskDoneIsAllFailed
+  // OCR v1.9.9: TestDispatchSubtasks_WithoutTaskDoneIsAllFailed
   test("TestDispatchSubtasks_WithoutTaskDoneIsAllFailed", async () => {
     const client = new FakeScanClient([{ content: "", usage: { PromptTokens: 10, CompletionTokens: 1 } }]);
     const tpl = makeTemplateWithFullScan();
@@ -572,6 +572,7 @@ describe("ocr scan coverage (ported from internal/scan/coverage_test.go)", () =>
     expect(warnings.length).toBe(1);
     expect(warnings[0]?.type).toBe("scan_subtask_error");
     expect(String(warnings[0]?.message).includes("main_task did not complete")).toBe(true);
+    expect(String(warnings[0]?.message)).toContain("reached the maximum tool-request rounds without finishing");
   });
 
   // OCR v1.9.3: TestDispatchSubtasks_ResumeSkipsCompletedFiles

@@ -1,7 +1,9 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright 2026 alibaba/open-code-review Contributors
 //
-// Ported from internal/scan/agent.go at c35ddd7223f2b5540ce03aa43c9a25ef643fca27.
+// Ported from internal/scan/agent.go at c35ddd7223f2b5540ce03aa43c9a25ef643fca27;
+// named main-loop stop diagnostics updated from OCR v1.9.9 commit
+// 4b6874bd23106b5c68bea6d230bb60303b9f0961.
 // Modifications are distributed as part of pi-reviewer under
 // GPL-3.0-or-later;
 // see LICENSES/Apache-2.0.txt and THIRD_PARTY_NOTICES.md.
@@ -34,7 +36,7 @@ import { previewScan } from "./preview.js";
 import type { SessionHistory } from "../session/history.js";
 import type { ResumeState, ResumeItem } from "../session/resume.js";
 import { Runner } from "../llmloop/loop.js";
-import type { AnyLlmClient, ToolDef, ToolRegistryLike, AgentWarning } from "../llmloop/types.js";
+import { MainLoopStop, mainLoopStopReason, type AnyLlmClient, type ToolDef, type ToolRegistryLike, type AgentWarning } from "../llmloop/types.js";
 import { CommentCollector } from "../tool/collector.js";
 import { CommentWorkerPool } from "../llmloop/pool.js";
 import { CountMessagesTokens, PromptTokenLimit, StripMarkdownFences, countTokens } from "../llmloop/compression.js";
@@ -469,7 +471,7 @@ export class Agent {
     return [dispatched, budgetHit];
   }
 
-  private handleSubtaskResult(it: ScanItem, fingerprint: string, result: { completed: boolean; stop?: string; error: Error | null }, completed: ScanItem[]): void {
+  private handleSubtaskResult(it: ScanItem, fingerprint: string, result: { completed: boolean; stop?: MainLoopStop | "token_threshold_exceeded"; error: Error | null }, completed: ScanItem[]): void {
     if (result.completed) {
       completed.push(it);
     } else if (result.error !== null) {
@@ -477,9 +479,11 @@ export class Agent {
       this.args.session?.RecordReviewItemFailed(it.path, it.path, it.path, fingerprint, result.error.message);
       console.error(`[pi-review] Scan subtask error for ${it.path}: ${result.error.message}`);
       this.runner.RecordWarning("scan_subtask_error", it.path, result.error.message);
-    } else if (result.stop) {
+    } else if (result.stop !== undefined) {
       this.subtaskFailed++;
-      const checkpoint = result.stop === "token_threshold_exceeded" ? `prompt tokens exceed 80% of max_tokens(${this.args.template.MaxTokens})` : "main_task did not complete before stopping";
+      const checkpoint = result.stop === "token_threshold_exceeded"
+        ? `prompt tokens exceed 80% of max_tokens(${this.args.template.MaxTokens})`
+        : `main_task did not complete before stopping: ${mainLoopStopReason(result.stop)}`;
       this.args.session?.RecordReviewItemFailed(it.path, it.path, it.path, fingerprint, checkpoint);
       this.runner.RecordWarning("scan_subtask_error", it.path, checkpoint);
     }
@@ -493,7 +497,7 @@ export class Agent {
     this.runner.RecordWarning("scan_subtask_error", it.path, msg);
   }
 
-  private async executeSubtask(signal: AbortSignal, it: ScanItem): Promise<{ completed: boolean; stop?: string; error: Error | null }> {
+  private async executeSubtask(signal: AbortSignal, it: ScanItem): Promise<{ completed: boolean; stop?: MainLoopStop | "token_threshold_exceeded"; error: Error | null }> {
     if (signal.aborted) return { completed: false, error: new Error(String((signal as AbortSignal & { reason?: unknown }).reason ?? "aborted")) };
 
     const rule = this.args.systemRule ? this.args.systemRule(it.path.toLowerCase()) : "";
@@ -513,21 +517,12 @@ export class Agent {
     try {
       const res = await this.runner.RunPerFile(signal, messages as { role: string; content: string }[], it.path);
       if (!res.completed) {
-        return { completed: false, stop: this.classifyStop(res.stop), error: null };
+        return { completed: false, stop: res.stop as MainLoopStop, error: null };
       }
       return { completed: true, error: null };
     } catch (err) {
       const e = err instanceof Error ? err : new Error(String(err));
       return { completed: false, error: e };
-    }
-  }
-
-  private classifyStop(stop: number): string {
-    switch (stop) {
-      case 1: return "budget_exceeded";
-      case 2: return "empty_rounds";
-      case 3: return "compression";
-      default: return "max_rounds";
     }
   }
 

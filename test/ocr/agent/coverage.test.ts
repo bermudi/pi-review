@@ -7,7 +7,8 @@ import { describe, test, expect } from "bun:test";
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
-import { Agent, errMainTaskEmpty, classifyItemError, NewCommentWorkerPool } from "../../../src/ocr/agent/agent.js";
+import { Agent, errMainTaskEmpty, classifyItemError, classifyMainLoopStop, NewCommentWorkerPool } from "../../../src/ocr/agent/agent.js";
+import { MainLoopStop } from "../../../src/ocr/llmloop/types.js";
 import type { Diff } from "../../../src/ocr/model/diff.js";
 import { CommentCollector } from "../../../src/ocr/tool/collector.js";
 import { SessionHistory } from "../../../src/ocr/session/history.js";
@@ -64,6 +65,44 @@ function toolCallResponse(content: string, toolCalls: Array<{ ID: string; Type: 
 }
 
 describe("ocr agent coverage (ported)", () => {
+  // OCR v1.9.9: TestClassifyMainLoopStop
+  test("TestClassifyMainLoopStop", () => {
+    expect(classifyMainLoopStop(MainLoopStop.StopMaxRounds)).toEqual([
+      FailureBudget,
+      "reached the maximum tool-request rounds without finishing",
+    ]);
+    expect(classifyMainLoopStop(MainLoopStop.StopEmptyRounds)).toEqual([
+      "unknown",
+      "stopped after repeated rounds without a usable tool result",
+    ]);
+    expect(classifyMainLoopStop(MainLoopStop.StopCompression)).toEqual([
+      "unknown",
+      "stopped because context compression exceeded its threshold",
+    ]);
+    expect(classifyMainLoopStop(MainLoopStop.StopNone)).toEqual([
+      "unknown",
+      "main task stopped before completing",
+    ]);
+  });
+
+  test("review subtask carries the Runner's exhausted-round reason into its failure", async () => {
+    const agent = new Agent({
+      repoDir: makeTempDir(),
+      model: "test",
+      llmClient: new FakeAgentClient([chatResponse("")]) as unknown as never,
+      template: makeTemplate({ MaxToolRequestTimes: 1 }),
+      mainToolDefs: [{ type: "function", function: { name: "task_done" } }],
+    } as unknown as never);
+    (agent as unknown as { currentDate: string }).currentDate = "2026-06-26";
+    const result = await (agent as unknown as {
+      executeSubtask: (signal: AbortSignal, diff: Diff) => Promise<{ completed: boolean; stop?: { reason: string } }>;
+    }).executeSubtask(
+      new AbortController().signal,
+      { oldPath: "a.go", newPath: "a.go", diff: "+x", newFileContent: "", isBinary: false, isDeleted: false, isNew: false, isRenamed: false, insertions: 1, deletions: 0 },
+    );
+    expect(result.completed).toBe(false);
+    expect(result.stop?.reason).toBe("reached the maximum tool-request rounds without finishing");
+  });
   // OCR v1.9.3: TestAgent_Getters
   test("TestAgent_Getters", () => {
     const tmpDir = makeTempDir();

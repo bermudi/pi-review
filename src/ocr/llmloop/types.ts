@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright 2026 alibaba/open-code-review Contributors
-// Ported from internal/llmloop/loop.go at c35ddd7223f2b5540ce03aa43c9a25ef643fca27
+// Ported from internal/llmloop/loop.go at c35ddd7223f2b5540ce03aa43c9a25ef643fca27;
+// named stop diagnostics updated from OCR v1.9.9 commit
+// 4b6874bd23106b5c68bea6d230bb60303b9f0961.
 // Modifications are distributed as part of pi-reviewer under
 // GPL-3.0-or-later;
 // see LICENSES/Apache-2.0.txt and THIRD_PARTY_NOTICES.md.
@@ -26,6 +28,28 @@ export const StopNone = MainLoopStop.StopNone;
 export const StopMaxRounds = MainLoopStop.StopMaxRounds;
 export const StopEmptyRounds = MainLoopStop.StopEmptyRounds;
 export const StopCompression = MainLoopStop.StopCompression;
+
+/** Human-readable, stable name for logs and diagnostics. */
+export function mainLoopStopString(stop: MainLoopStop): string {
+  switch (stop) {
+    case MainLoopStop.StopNone: return "none";
+    case MainLoopStop.StopMaxRounds: return "max_rounds";
+    case MainLoopStop.StopEmptyRounds: return "empty_rounds";
+    case MainLoopStop.StopCompression: return "compression";
+    default: return `MainLoopStop(${String(stop)})`;
+  }
+}
+
+/** Manifest-safe reason shared by review and scan failure paths. */
+export function mainLoopStopReason(stop: MainLoopStop): string {
+  switch (stop) {
+    case MainLoopStop.StopNone: return "main task stopped before completing";
+    case MainLoopStop.StopMaxRounds: return "reached the maximum tool-request rounds without finishing";
+    case MainLoopStop.StopEmptyRounds: return "stopped after repeated rounds without a usable tool result";
+    case MainLoopStop.StopCompression: return "stopped because context compression exceeded its threshold";
+    default: return `main task stopped for an unrecognized reason (stop=${String(stop)})`;
+  }
+}
 
 // ---------------------------------------------------------------------------
 // Warnings

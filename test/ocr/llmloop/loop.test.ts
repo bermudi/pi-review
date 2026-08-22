@@ -5,7 +5,7 @@
 
 import { describe, test, expect } from "bun:test";
 
-import { Runner, MainLoopStop, graceRoundToolDefs } from "../../../src/ocr/llmloop/loop.ts";
+import { Runner, MainLoopStop, graceRoundToolDefs, mainLoopStopReason, mainLoopStopString } from "../../../src/ocr/llmloop/loop.ts";
 import { ScriptedTransport, type ScriptedResponse } from "../../../src/ocr/llmloop/transcript.ts";
 import type { ToolDef, Template } from "../../../src/ocr/llmloop/types.ts";
 import type { LlmComment } from "../../../src/ocr/model/types.ts";
@@ -830,5 +830,32 @@ describe("ocr llmloop Runner (ported)", () => {
     expect(
       graceRoundToolDefs([{ type: "function", function: { name: "file_find" } }]),
     ).toEqual([]);
+  });
+
+  // OCR v1.9.9: TestMainLoopStopStringAndReason
+  test("TestMainLoopStopStringAndReason", () => {
+    const stops = [
+      [MainLoopStop.StopNone, "none"],
+      [MainLoopStop.StopMaxRounds, "max_rounds"],
+      [MainLoopStop.StopEmptyRounds, "empty_rounds"],
+      [MainLoopStop.StopCompression, "compression"],
+    ] as const;
+    const names = new Set<string>();
+    const reasons = new Set<string>();
+    for (const [stop, name] of stops) {
+      expect(mainLoopStopString(stop)).toBe(name);
+      names.add(mainLoopStopString(stop));
+      reasons.add(mainLoopStopReason(stop));
+    }
+    expect(names.size).toBe(stops.length);
+    expect(reasons.size).toBe(stops.length);
+  });
+
+  // OCR v1.9.9: TestMainLoopStopUnknownValue
+  test("TestMainLoopStopUnknownValue", () => {
+    const unknown = 4 as MainLoopStop;
+    expect(mainLoopStopString(unknown)).toBe("MainLoopStop(4)");
+    expect(mainLoopStopReason(unknown)).toBe("main task stopped for an unrecognized reason (stop=4)");
+    expect(mainLoopStopReason(unknown)).not.toBe(mainLoopStopReason(MainLoopStop.StopNone));
   });
 });
