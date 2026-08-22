@@ -159,7 +159,7 @@ function emitScanResult(
     cacheReadTokens: provider.TotalCacheReadTokens(),
     cacheWriteTokens: provider.TotalCacheWriteTokens(),
     durationMs,
-    sessionId: "",
+    sessionId: provider.SessionID(),
   });
   io.stdout(`${summary}${stdout}`);
   if (stderr !== "") io.stderr(stderr);

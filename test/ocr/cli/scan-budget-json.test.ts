@@ -115,3 +115,43 @@ test("TestScanBudgetJSON", async () => {
     }
   }
 });
+
+test("successful text scan prints its session for human and agent audiences only when present", async () => {
+  for (const [audience, sessionId] of [["human", "scan-session"], ["agent", "scan-session"], ["human", ""]] as const) {
+    let stdout = "";
+    const io: CliIo = {
+      stdout: (text) => { stdout += text; },
+      stderr: () => {},
+      cwd: () => process.cwd(),
+      env: () => ({}),
+      onSignal: () => {},
+      offSignal: () => {},
+    };
+    const runner: ScanRunner = {
+      run: async () => [],
+      manifest: null,
+      warnings: [],
+      filesReviewed: 1,
+      inputTokens: 0,
+      outputTokens: 0,
+      totalTokens: 0,
+      cacheReadTokens: 0,
+      cacheWriteTokens: 0,
+      toolCalls: {},
+      sessionId,
+      budgetExceeded: false,
+      projectSummary: "",
+      resumeInfo: null,
+      diffs: [],
+    };
+    await runScanContext({
+      io,
+      opts: { ...defaultScanOptions(), outputFormat: "text", audience },
+      traceId: "scan-text-session",
+      llmIdentity: undefined,
+      startMs: Date.now(),
+      runnerFactory: async () => runner,
+    });
+    expect(stdout.includes("[pi-review] Session: scan-session")).toBe(sessionId !== "");
+  }
+});
