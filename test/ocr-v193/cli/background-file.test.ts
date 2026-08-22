@@ -15,9 +15,11 @@ import {
   getCommitMessage,
   loadBackgroundFile,
   mergeBackground,
+  processBackgroundContent,
   resolveBackgroundFilePath,
   sanitizeMarkdown,
 } from "../../../src/ocr-v193/cli/background.js";
+import { runCli } from "../../../src/ocr-v193/cli/index.js";
 
 function writeTempFile(content: string): string {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "ocr-bg-"));
@@ -304,6 +306,103 @@ test("loadBackgroundFile multi-byte rune count", () => {
     expect(got.includes(content)).toBe(true);
   } finally {
     cleanupTempFile(p);
+  }
+});
+
+// Regression: soft-limit warning must use [pi-review] branding, not [ocr]
+test("soft-limit warning uses pi-review branding", () => {
+  const content = "a".repeat(BACKGROUND_SOFT_LIMIT + 5);
+  let stderr = "";
+  const got = processBackgroundContent(content, "/tmp/fake.md", { stderr: (m) => { stderr += m; } });
+  expect(got.includes(content)).toBe(true);
+  expect(stderr).toContain("[pi-review] --background-file");
+  expect(stderr).not.toContain("[ocr] --background-file");
+  // exact prefix check
+  expect(stderr.startsWith("[pi-review] --background-file content is")).toBe(true);
+
+  // also verify filesystem path emits same branding
+  const p = writeTempFile(content);
+  try {
+    let fsStderr = "";
+    const got2 = loadBackgroundFile(p, { stderr: (m) => { fsStderr += m; } });
+    expect(got2.includes(content)).toBe(true);
+    expect(fsStderr).toContain("[pi-review] --background-file");
+    expect(fsStderr).not.toContain("[ocr] --background-file");
+  } finally {
+    cleanupTempFile(p);
+  }
+});
+
+// Regression: injected reader is authoritative over filesystem when supplied
+test("injected readFile boundary is authoritative", async () => {
+  const repo = fs.mkdtempSync(path.join(os.tmpdir(), "ocr-reader-auth-"));
+  try {
+    spawnSync("git", ["init", "-q"], { cwd: repo });
+    spawnSync("git", ["config", "user.email", "test@example.com"], { cwd: repo });
+    spawnSync("git", ["config", "user.name", "Test"], { cwd: repo });
+    const docs = path.join(repo, "docs");
+    fs.mkdirSync(docs, { recursive: true });
+    const hostPath = path.join(docs, "context.md");
+    fs.writeFileSync(hostPath, "host content should be ignored", "utf8");
+    // ensure git top-level is repo
+    let capturedBackground: string | undefined;
+    const io = {
+      stdout: () => {},
+      stderr: () => {},
+      cwd: () => repo,
+      env: () => ({}),
+      onSignal: () => {},
+      offSignal: () => {},
+    };
+    const fakeReader = async (p: string, _enc: "utf8") => {
+      // only serve the resolved background path
+      if (p.endsWith(path.join("docs", "context.md"))) return "injected content authoritative";
+      throw new Error(`unexpected read ${p}`);
+    };
+    const runnerFactory = async (opts: { background: string }) => {
+      capturedBackground = opts.background;
+      return {
+        run: async () => [],
+        manifest: { terminalState: "complete", coverage: { selected: [], completed: [], failed: [], reused: [], waived: [] } } as unknown as never,
+        warnings: [],
+        filesReviewed: 0,
+        inputTokens: 0,
+        outputTokens: 0,
+        totalTokens: 0,
+        cacheReadTokens: 0,
+        cacheWriteTokens: 0,
+        toolCalls: {},
+        sessionId: "test",
+        budgetExceeded: false,
+        projectSummary: "",
+        resumeInfo: undefined,
+        diffs: [],
+      } as unknown as never;
+    };
+    const code = await runCli(["review", "--repo", repo, "--background-file", "./docs/context.md", "--preview"], {
+      io,
+      readFile: fakeReader as unknown as never,
+      reviewPreviewFactory: async () => ({ entries: [], totalInsertions: 0, totalDeletions: 0, totalFiles: 0, reviewableCount: 0, excludedCount: 0 } as never),
+      reviewRunnerFactory: runnerFactory as unknown as never,
+    });
+    // preview path will be taken, but background should already be merged via injected reader
+    // For preview, runCli still merges background before calling previewFactory; we verify via captured? Instead check via direct run without preview using runner
+    // Do a second run without preview to capture background via runnerFactory
+    capturedBackground = undefined;
+    const code2 = await runCli(["review", "--repo", repo, "--background-file", "./docs/context.md"], {
+      io,
+      readFile: fakeReader as unknown as never,
+      reviewRunnerFactory: runnerFactory as unknown as never,
+    });
+    expect(capturedBackground).toBeDefined();
+    expect(capturedBackground!).toContain("injected content authoritative");
+    expect(capturedBackground!).not.toContain("host content should be ignored");
+    expect(capturedBackground!).toContain(BACKGROUND_OPEN_TAG);
+    // ensure we did not accidentally read host file via filesystem (would contain host content)
+    void code;
+    void code2;
+  } finally {
+    fs.rmSync(repo, { recursive: true, force: true });
   }
 });
 

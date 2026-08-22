@@ -28,16 +28,11 @@ import type { ScanRunner, ScanPreviewFactory } from "./scan.js";
 import type { Preview } from "../model/preview.js";
 import type { JsonLlmIdentity, RetryReport } from "./output.js";
 import {
-  BACKGROUND_CLOSE_TAG,
-  BACKGROUND_HARD_LIMIT,
-  BACKGROUND_OPEN_TAG,
-  BACKGROUND_SOFT_LIMIT,
-  MAX_BACKGROUND_FILE_BYTES,
   getCommitMessage,
   loadBackgroundFile,
   mergeBackground,
+  processBackgroundContent,
   resolveBackgroundFilePath,
-  sanitizeMarkdown,
 } from "./background.js";
 
 // ---------------------------------------------------------------------------
@@ -522,31 +517,12 @@ export async function runCli(
       const bgPath = resolveBackgroundFilePath(repoForBg, opts.backgroundFile);
       let fileBg: string;
       try {
-        if (deps.readFile === undefined) {
-          fileBg = loadBackgroundFile(bgPath, { stderr: (m) => io.stderr(m) });
+        if (deps.readFile !== undefined) {
+          const maybe = await deps.readFile(bgPath, "utf8");
+          if (typeof maybe !== "string") throw new CliUsageError(`background file ${bgPath} did not return text`);
+          fileBg = processBackgroundContent(maybe, bgPath, { stderr: (m) => io.stderr(m) });
         } else {
-          // When a custom reader is supplied, prefer the real filesystem first
-          // (so temp-file tests work) and fall back to the seam on ENOENT.
-          try {
-            fileBg = loadBackgroundFile(bgPath, { stderr: (m) => io.stderr(m) });
-          } catch (e) {
-            const msg = e instanceof Error ? e.message : String(e);
-            const isNotFound = msg.includes("read background file") && (msg.includes("no such file") || msg.includes("ENOENT"));
-            if (!isNotFound) throw e;
-            const maybe = await deps.readFile(bgPath, "utf8");
-            if (typeof maybe !== "string") throw new CliUsageError(`background file ${bgPath} did not return text`);
-            const byteLen = Buffer.byteLength(maybe, "utf8");
-            if (byteLen > MAX_BACKGROUND_FILE_BYTES) {
-              throw new Error(`background file "${bgPath}" is ${byteLen} bytes, exceeding the maximum of ${MAX_BACKGROUND_FILE_BYTES} bytes; please provide a smaller file`);
-            }
-            const cleaned = sanitizeMarkdown(maybe);
-            if (cleaned === "") throw new Error(`background file "${bgPath}" is empty after sanitisation`);
-            if (cleaned.includes(BACKGROUND_OPEN_TAG) || cleaned.includes(BACKGROUND_CLOSE_TAG)) throw new Error(`background file "${bgPath}" must not contain the reserved delimiters "${BACKGROUND_OPEN_TAG}" or "${BACKGROUND_CLOSE_TAG}"`);
-            const runeCount = [...cleaned].length;
-            if (runeCount > BACKGROUND_HARD_LIMIT) throw new Error(`background content is ${runeCount} characters, exceeding the hard limit of ${BACKGROUND_HARD_LIMIT} (aborting)`);
-            else if (runeCount > BACKGROUND_SOFT_LIMIT) io.stderr(`[ocr] --background-file content is ${runeCount} characters, exceeding the recommended ${BACKGROUND_SOFT_LIMIT} (continuing but review quality might be impacted)\n`);
-            fileBg = `${BACKGROUND_OPEN_TAG}\n${cleaned}\n${BACKGROUND_CLOSE_TAG}`;
-          }
+          fileBg = loadBackgroundFile(bgPath, { stderr: (m) => io.stderr(m) });
         }
       } catch (e) {
         const msg = e instanceof Error ? e.message : String(e);

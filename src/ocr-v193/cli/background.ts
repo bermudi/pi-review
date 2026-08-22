@@ -106,13 +106,16 @@ export interface LoadBackgroundFileOptions {
 }
 
 /**
- * loadBackgroundFile reads and validates a background file, mirroring Go's
- * loadBackgroundFile semantics: directory/oversize rejection before reading,
- * sanitisation, empty/reserved-delimiter/hard-limit rejection, soft-limit
- * warning to stderr, and wrapping with delimiters. Limits apply to cleaned
- * rune count, not the wrapped length.
+ * processBackgroundContent validates raw background markdown through the
+ * shared sanitisation/limits/wrapping pipeline. It is the single
+ * sanitation boundary reused by both filesystem and injected-reader paths
+ * so they cannot drift. Callers that need stat-before-read (filesystem)
+ * must still enforce directory and byte-ceiling via stat before invoking
+ * this function; this function also enforces the byte ceiling via
+ * Buffer.byteLength for injected content that has no stat.
  */
-export function loadBackgroundFile(
+export function processBackgroundContent(
+  raw: string,
   filePath: string,
   options?: LoadBackgroundFileOptions,
 ): string {
@@ -124,6 +127,50 @@ export function loadBackgroundFile(
     }
   });
 
+  const byteLen = Buffer.byteLength(raw, "utf8");
+  if (byteLen > MAX_BACKGROUND_FILE_BYTES) {
+    throw new Error(
+      `background file "${filePath}" is ${byteLen} bytes, exceeding the maximum of ${MAX_BACKGROUND_FILE_BYTES} bytes; please provide a smaller file`,
+    );
+  }
+
+  const cleaned = sanitizeMarkdown(raw);
+
+  if (cleaned === "") {
+    throw new Error(`background file "${filePath}" is empty after sanitisation`);
+  }
+
+  if (cleaned.includes(BACKGROUND_OPEN_TAG) || cleaned.includes(BACKGROUND_CLOSE_TAG)) {
+    throw new Error(
+      `background file "${filePath}" must not contain the reserved delimiters "${BACKGROUND_OPEN_TAG}" or "${BACKGROUND_CLOSE_TAG}"`,
+    );
+  }
+
+  const runeCount = [...cleaned].length;
+  if (runeCount > BACKGROUND_HARD_LIMIT) {
+    throw new Error(
+      `background content is ${runeCount} characters, exceeding the hard limit of ${BACKGROUND_HARD_LIMIT} (aborting)`,
+    );
+  } else if (runeCount > BACKGROUND_SOFT_LIMIT) {
+    stderr(
+      `[pi-review] --background-file content is ${runeCount} characters, exceeding the recommended ${BACKGROUND_SOFT_LIMIT} (continuing but review quality might be impacted)\n`,
+    );
+  }
+
+  return `${BACKGROUND_OPEN_TAG}\n${cleaned}\n${BACKGROUND_CLOSE_TAG}`;
+}
+
+/**
+ * loadBackgroundFile reads and validates a background file, mirroring Go's
+ * loadBackgroundFile semantics: directory/oversize rejection before reading
+ * (stat-before-read), sanitisation, empty/reserved-delimiter/hard-limit
+ * rejection, soft-limit warning to stderr, and wrapping with delimiters.
+ * Limits apply to cleaned rune count, not the wrapped length.
+ */
+export function loadBackgroundFile(
+  filePath: string,
+  options?: LoadBackgroundFileOptions,
+): string {
   let stat: fs.Stats;
   try {
     stat = fs.statSync(filePath);
@@ -150,30 +197,7 @@ export function loadBackgroundFile(
     throw new Error(`read background file "${filePath}": ${msg}`);
   }
 
-  const cleaned = sanitizeMarkdown(raw);
-
-  if (cleaned === "") {
-    throw new Error(`background file "${filePath}" is empty after sanitisation`);
-  }
-
-  if (cleaned.includes(BACKGROUND_OPEN_TAG) || cleaned.includes(BACKGROUND_CLOSE_TAG)) {
-    throw new Error(
-      `background file "${filePath}" must not contain the reserved delimiters "${BACKGROUND_OPEN_TAG}" or "${BACKGROUND_CLOSE_TAG}"`,
-    );
-  }
-
-  const runeCount = [...cleaned].length;
-  if (runeCount > BACKGROUND_HARD_LIMIT) {
-    throw new Error(
-      `background content is ${runeCount} characters, exceeding the hard limit of ${BACKGROUND_HARD_LIMIT} (aborting)`,
-    );
-  } else if (runeCount > BACKGROUND_SOFT_LIMIT) {
-    stderr(
-      `[ocr] --background-file content is ${runeCount} characters, exceeding the recommended ${BACKGROUND_SOFT_LIMIT} (continuing but review quality might be impacted)\n`,
-    );
-  }
-
-  return `${BACKGROUND_OPEN_TAG}\n${cleaned}\n${BACKGROUND_CLOSE_TAG}`;
+  return processBackgroundContent(raw, filePath, options);
 }
 
 /**
