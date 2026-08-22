@@ -184,10 +184,115 @@ test("buildToolRegistry returns non-nil registry", () => {
   const reg = buildToolRegistry(null, null);
   expect(reg).not.toBeNull();
   expect(reg).toBeDefined();
-  // Registry should be usable: has Register/Get semantics via tool lookup
-  // At minimum it should have providers (non-empty internal map). Check via tool lookup.
-  // Use the registry's ability to list or get a known tool.
-  // The Registry class stores providers; we can verify by checking that a known tool is not found before and after.
-  // Simpler: check that registry is instance of Registry and has expected method.
-  expect(typeof (reg as unknown as Record<string, unknown>)["Register"]).toBe("function");
+  for (const name of ["file_read", "file_find", "file_read_diff", "code_search", "code_comment"] as const) {
+    const provider = reg.Get(name);
+    expect(provider, `registry should contain ${name}`).toBeDefined();
+    expect(provider?.Tool().Name()).toBe(name);
+  }
+});
+
+test("runReviewContext rejects invalid commit before calling preview or runner", async () => {
+  const dir = initTestGitRepo();
+  const orig = process.cwd();
+  try {
+    const { runReviewContext } = await import("../../../src/ocr-v193/cli/review.js");
+    const io = {
+      cwd: () => dir,
+      env: () => ({}) as Record<string, string | undefined>,
+      stdout: () => {},
+      stderr: () => {},
+      onSignal: () => {},
+      offSignal: () => {},
+    } as unknown as import("../../../src/ocr-v193/cli/shared.js").CliIo;
+    const baseOpts = {
+      toolConfigPath: "",
+      rulePath: "",
+      repoDir: dir,
+      from: "",
+      to: "",
+      commit: "nonexistent-ref-xyz",
+      resume: "",
+      excludes: "",
+      outputFormat: "text" as const,
+      audience: "human" as const,
+      background: "",
+      backgroundFile: "",
+      provider: "",
+      model: "",
+      concurrency: 8,
+      perFileTimeout: 10,
+      maxTools: 0,
+      maxGitProcs: 16,
+      maxTokens: 0,
+      maxTokensBudget: 0,
+      noFilter: false,
+      preview: false,
+    } as unknown as import("../../../src/ocr-v193/cli/shared.js").ReviewOptions;
+
+    let previewCalled = false;
+    const previewFactory = async () => {
+      previewCalled = true;
+      return {
+        entries: [],
+        totalInsertions: 0,
+        totalDeletions: 0,
+        totalFiles: 0,
+        reviewableCount: 0,
+        excludedCount: 0,
+      } as unknown as import("../../../src/ocr-v193/model/preview.js").Preview;
+    };
+    await expect(
+      runReviewContext({
+        io,
+        opts: { ...baseOpts, preview: true } as unknown as import("../../../src/ocr-v193/cli/shared.js").ReviewOptions,
+        version: "test",
+        traceId: "",
+        llmIdentity: undefined,
+        retryReport: null,
+        startMs: Date.now(),
+        previewFactory,
+        runnerFactory: undefined,
+      }),
+    ).rejects.toThrow();
+    expect(previewCalled).toBe(false);
+
+    let runnerCalled = false;
+    const runnerFactory = async () => {
+      runnerCalled = true;
+      return {
+        run: async () => [],
+        manifest: null,
+        warnings: [],
+        filesReviewed: 0,
+        inputTokens: 0,
+        outputTokens: 0,
+        totalTokens: 0,
+        cacheReadTokens: 0,
+        cacheWriteTokens: 0,
+        toolCalls: {},
+        sessionId: "",
+        budgetExceeded: false,
+        projectSummary: "",
+        resumeInfo: undefined,
+        diffs: [],
+      } as unknown as import("../../../src/ocr-v193/cli/review.js").ReviewRunner;
+    };
+    await expect(
+      runReviewContext({
+        io,
+        opts: { ...baseOpts, preview: false } as unknown as import("../../../src/ocr-v193/cli/shared.js").ReviewOptions,
+        version: "test",
+        traceId: "",
+        llmIdentity: undefined,
+        retryReport: null,
+        startMs: Date.now(),
+        previewFactory: undefined,
+        runnerFactory,
+      }),
+    ).rejects.toThrow();
+    expect(runnerCalled).toBe(false);
+  } finally {
+    try { process.chdir(orig); } catch {}
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
 });

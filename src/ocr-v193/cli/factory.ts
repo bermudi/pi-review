@@ -35,8 +35,9 @@ import { Agent, newAgent, reviewItemFingerprint } from "../agent/agent.js";
 import { Agent as ScanAgent, NewAgent as NewScanAgent } from "../scan/scan.js";
 import { reviewModeString } from "../agent/util.js";
 import { createPiTransportForFile } from "../pi-adapter/pi-transport.js";
-import { FileReader, FileReadProvider, DiffMap, FileReadDiffProvider, CodeSearchProvider, FileFindProvider } from "../tool/filereader.js";
+import { FileReader, DiffMap, FileReadProvider, FileReadDiffProvider, CodeSearchProvider, FileFindProvider } from "../tool/filereader.js";
 import { Registry } from "../tool/definitions.js";
+import { getCommitMessage, buildToolRegistry } from "./git.js";
 import { Provider, ModeWorkspace, ModeRange, ModeCommit } from "../diff/git.js";
 import { Runner as GitRunner } from "../diff/runner.js";
 import { ManifestBuilder, ItemID, StatePartial, StateFailed, StateSkipped, FailureBudget, FailureTimeout, FailureUnknown } from "../session/manifest.js";
@@ -107,14 +108,8 @@ export function createReviewRunnerFactory(
     let background = opts.background;
     if (commit !== "" && background === "") {
       try {
-        const gitOut = spawnSync("git", ["-C", repoDir, "log", "-1", "--format=%B", "--end-of-options", commit], {
-          encoding: "utf-8",
-          timeout: 5000,
-        });
-        if (gitOut.status === 0) {
-          const msg = gitOut.stdout.trim();
-          if (msg !== "") background = msg;
-        }
+        const msg = getCommitMessage(repoDir, commit);
+        if (msg !== "") background = msg;
       } catch {
         // best-effort; leave background empty
       }
@@ -143,14 +138,8 @@ export function createReviewRunnerFactory(
     }
 
     const fileReader = new FileReader({ RepoDir: repoDir, Mode: mode as never, Ref: ref });
-    const diffMap = new DiffMap(new Map<string, string>());
-    const registry = new Registry();
-    registry.Register(new FileReadProvider(fileReader));
-    registry.Register(new FileReadDiffProvider(diffMap));
-    registry.Register(new CodeSearchProvider(fileReader));
-    registry.Register(new FileFindProvider(fileReader));
+    const registry = buildToolRegistry(collector, fileReader);
     registry.Freeze();
-
     const cwd = repoDir;
     const agentDirEnv = process.env["PI_CODING_AGENT_DIR"];
     const agentDir = agentDirEnv !== undefined && agentDirEnv !== "" ? agentDirEnv : `${process.env["HOME"] ?? "/tmp"}/.pi/agent`;

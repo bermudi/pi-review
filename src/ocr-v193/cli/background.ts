@@ -8,7 +8,6 @@
 
 import * as fs from "node:fs";
 import * as path from "node:path";
-import { spawnSync } from "node:child_process";
 
 export const BACKGROUND_SOFT_LIMIT = 2000;
 export const BACKGROUND_HARD_LIMIT = 8000;
@@ -200,22 +199,6 @@ export function loadBackgroundFile(
   return processBackgroundContent(raw, filePath, options);
 }
 
-/**
- * getCommitMessage resolves the full commit message for `commit` in
- * `repoDir`, mirroring Go's getCommitMessage (git log -1 --format=%B).
- * Leading/trailing whitespace is trimmed. Throws on git failure.
- */
-export function getCommitMessage(repoDir: string, commit: string): string {
-  const result = spawnSync("git", ["-C", repoDir, "log", "-1", "--format=%B", "--end-of-options", commit], {
-    encoding: "utf8",
-    timeout: 5000,
-  });
-  if (result.status !== 0) {
-    const out = (result.stdout as string | undefined ?? "") + (result.stderr as string | undefined ?? "");
-    const trimmed = out.trim();
-    const detail = trimmed !== "" ? `: ${trimmed}` : "";
-    throw new Error(`git log failed${detail}`);
-  }
-  const stdout = (result.stdout as string | undefined) ?? "";
-  return stdout.trim();
-}
+// getCommitMessage is the single Git source of truth; background re-exports it for
+// backward compatibility so existing `from "./background.js"` imports keep working.
+export { getCommitMessage } from "./git.js";

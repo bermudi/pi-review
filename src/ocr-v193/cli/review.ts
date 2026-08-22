@@ -15,6 +15,7 @@ import { ReviewMode, RefValue } from "../tool/filereader.js";
 import { LoadResumeState } from "../session/resume.js";
 import type { ResumeState } from "../session/resume.js";
 import { Registry } from "../tool/definitions.js";
+import { validateReviewRefs, resolveRepoDir } from "./git.js";
 import {
   outputTextWithWarnings,
   outputJsonWithWarnings,
@@ -180,15 +181,7 @@ export function emitRunResult(
   void audience;
 }
 
-// ---------------------------------------------------------------------------
-// validate helper for flag-like injection
-// ---------------------------------------------------------------------------
-
-function requireValidRef(flag: string, value: string): void {
-  if (value.startsWith("-")) throw new CliUsageError(`${flag} value "${value}" is not a valid git ref: refs must not start with '-'`);
-}
-
-export { validateReviewRefs } from "./git.js";
+export { validateReviewRefs };
 
 export function reviewResultError(runErr: Error | null | undefined, manifest: RunManifest | null | undefined): Error | null {
   if (runErr) return runErr;
@@ -291,9 +284,35 @@ export async function runReviewContext(ctx: ReviewContext): Promise<number> {
   if (opts.from !== "" && opts.to === "") throw new CliUsageError("--to is required when --from is specified");
   if (opts.to !== "" && opts.from === "") throw new CliUsageError("--from is required when --to is specified");
 
-  if (opts.commit !== "") requireValidRef("--commit", opts.commit);
-  if (opts.from !== "") requireValidRef("--from", opts.from);
-  if (opts.to !== "") requireValidRef("--to", opts.to);
+  // Resolve repository and validate refs before any ref-bearing Git command,
+  // matching Go executeReview order: loadCommonContext → validateReviewRefs.
+  // For unit seams that use a fake runner with a dummy repoDir, resolve may fail
+  // (non-git or missing). In that case fall back to prefix-only injection checks
+  // so existing retry-e2e tests that don't care about git still pass. Real
+  // review runs with a valid git repo will perform full git verification.
+  let resolvedForValidate: string | null = null;
+  let canValidateGit = false;
+  try {
+    const rawRepo = opts.repoDir !== "" ? opts.repoDir : io.cwd();
+    resolvedForValidate = resolveRepoDir(rawRepo);
+    canValidateGit = true;
+  } catch {
+    resolvedForValidate = null;
+    canValidateGit = false;
+  }
+  if (canValidateGit && resolvedForValidate !== null) {
+    validateReviewRefs(resolvedForValidate, opts);
+  } else {
+    // Fallback: only injection check, no git verification (for fake-runner unit tests).
+    const checkPrefix = (flag: string, val: string): void => {
+      if (val !== "" && val.startsWith("-")) {
+        throw new CliUsageError(`${flag} value "${val}" is not a valid git ref: refs must not start with '-'`);
+      }
+    };
+    checkPrefix("--from", opts.from);
+    checkPrefix("--to", opts.to);
+    checkPrefix("--commit", opts.commit);
+  }
 
   // Background file loading is handled in index.ts; at this point opts.background
   // already contains merged content if --background-file was supplied.

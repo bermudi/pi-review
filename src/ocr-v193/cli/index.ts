@@ -28,12 +28,12 @@ import type { ScanRunner, ScanPreviewFactory } from "./scan.js";
 import type { Preview } from "../model/preview.js";
 import type { JsonLlmIdentity, RetryReport } from "./output.js";
 import {
-  getCommitMessage,
   loadBackgroundFile,
   mergeBackground,
   processBackgroundContent,
   resolveBackgroundFilePath,
 } from "./background.js";
+import { getCommitMessage, resolveRepoDir, validateReviewRefs } from "./git.js";
 
 // ---------------------------------------------------------------------------
 // Version / help text — mirrors Go root.go + version.go
@@ -494,13 +494,28 @@ export async function runCli(
       }
     }
 
+        // Resolve repository and validate refs before any ref-bearing Git command,
+    // matching Go executeReview order: loadCommonContext → validateReviewRefs → getCommitMessage.
+    let resolvedRepoDir: string;
+    try {
+      resolvedRepoDir = opts.repoDir !== "" ? resolveRepoDir(opts.repoDir) : resolveRepoDir(io.cwd());
+    } catch (e) {
+      io.stderr(`Error: ${String((e as Error).message)}\n\n${HELP_TEXT}`);
+      return 1;
+    }
+    try {
+      validateReviewRefs(resolvedRepoDir, opts);
+    } catch (e) {
+      io.stderr(`Error: ${String((e as Error).message)}\n\n${HELP_TEXT}`);
+      return 1;
+    }
+
     // Background: commit message first, then file — mirrors Go review_cmd.go.
     // Only touch background when inline is empty and --commit is set, preserving
     // existing --background behaviour for users who do not use commit fallback.
     if (opts.commit !== "" && opts.background === "") {
-      const repoForCommit = effectiveRepoDirForBackground(opts.repoDir, io.cwd());
       try {
-        const msg = getCommitMessage(repoForCommit, opts.commit);
+        const msg = getCommitMessage(resolvedRepoDir, opts.commit);
         if (msg !== "") {
           opts = { ...opts, background: msg };
         }
@@ -513,8 +528,7 @@ export async function runCli(
     // --background behaviour (raw, unsanitised before merge) is preserved for
     // users who do not opt into the file-based context.
     if (opts.backgroundFile !== "") {
-      const repoForBg = effectiveRepoDirForBackground(opts.repoDir, io.cwd());
-      const bgPath = resolveBackgroundFilePath(repoForBg, opts.backgroundFile);
+      const bgPath = resolveBackgroundFilePath(resolvedRepoDir, opts.backgroundFile);
       let fileBg: string;
       try {
         if (deps.readFile !== undefined) {
