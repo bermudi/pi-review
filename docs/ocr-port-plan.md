@@ -37,7 +37,8 @@ inventory work is still pending.
 
 The cancellation checkpoint tranche translates two v1.9.9 cases. Review
 sessions preserve completed checkpoints but record interrupted and undispatched
-work as cancelled; remaining inventory work is still pending.
+work as cancelled. The production factory now uses that same single Agent-owned
+session/finalization boundary; remaining inventory work is still pending.
 
 Existing `src/ocr` code is **candidate implementation**, not proven
 parity. Do not delete or rewrite it merely because its old verifiers were

@@ -119,6 +119,8 @@ export interface Args {
   readonly skipFilter?: boolean;
   readonly runtimeConfig?: RuntimeConfig | null;
   readonly resume?: import("../session/resume.js").ResumeState | null;
+  /** Canonical persisted review session for this Agent run. */
+  readonly session?: SessionHistory | null;
   // Go-compat aliases — tests may use capitalized keys
   readonly LLMClient?: AnyLlmClient;
   readonly Model?: string;
@@ -127,7 +129,7 @@ export interface Args {
   readonly FileFilter?: FileFilter | null;
   readonly Tools?: ToolRegistryLike | null;
   readonly CommentCollector?: CommentCollectorLike | null;
-  readonly Session?: unknown;
+  readonly Session?: SessionHistory | null;
   readonly MaxConcurrency?: number;
   readonly ConcurrentTaskTimeout?: number;
   readonly SkipFilter?: boolean;
@@ -434,35 +436,28 @@ export class Agent {
       skipFilter: args.skipFilter ?? (rawArgs["SkipFilter"] as boolean | undefined) ?? false,
       runtimeConfig: args.runtimeConfig ?? (rawArgs["RuntimeConfig"] as RuntimeConfig | null | undefined) ?? null,
       resume: args.resume ?? null,
+      session: args.session ?? args.Session ?? null,
     };
     // Overlay resolved aliases back onto this.args for later reads
     (this as unknown as { args: Args }).args = resolvedArgs;
-    const sessCandidate = rawArgs["Session"] as unknown;
-    if (sessCandidate !== null && sessCandidate !== undefined && typeof sessCandidate === "object") {
-      this.sessionHistory = sessCandidate as import("../session/history.js").SessionHistory;
-    }
-    // Manifest builder — mirrors Go initManifest()
+    this.sessionHistory = resolvedArgs.session ?? null;
+    // A supplied session is the one manifest/session identity for the run.
     const runId =
+      this.sessionHistory?.sessionId ??
       (resolvedArgs.sessionId as string | undefined) ??
       (rawArgs["SessionId"] as string | undefined) ??
       (typeof crypto !== "undefined" && typeof (crypto as unknown as { randomUUID?: () => string }).randomUUID === "function"
         ? (crypto as unknown as { randomUUID: () => string }).randomUUID()
         : Math.random().toString(36).slice(2) + Date.now().toString(36));
-    this.manifestBuilder = NewManifestBuilder(runId, "review");
     const manifestMode = this.reviewModeForManifest();
+    if (this.sessionHistory === null) {
+      this.sessionHistory = new SessionHistory(resolvedArgs.repoDir ?? "/tmp", "", resolvedArgs.model ?? "", { reviewMode: manifestMode }, runId);
+    }
+    this.manifestBuilder = this.sessionHistory.Manifest() ?? NewManifestBuilder(runId, "review");
+    if (this.sessionHistory.Manifest() === null) this.sessionHistory.manifest = this.manifestBuilder;
     this.manifestBuilder.SetInput({ mode: manifestMode });
     this.manifestStartTime = Date.now();
     this.initManifest();
-    // Create a lightweight SessionHistory for compat with a.session.Finalize() / a.session.Manifest()
-    if (this.sessionHistory === null) {
-      this.sessionHistory = new SessionHistory(resolvedArgs.repoDir ?? "/tmp", "", resolvedArgs.model ?? "", { reviewMode: manifestMode }, runId);
-      (this.sessionHistory as unknown as { manifest: ManifestBuilder }).manifest = this.manifestBuilder;
-    } else {
-      // Attach our builder if session doesn't already have one
-      const existing = (this.sessionHistory as unknown as { manifest?: ManifestBuilder | null }).manifest;
-      if (!existing) (this.sessionHistory as unknown as { manifest: ManifestBuilder }).manifest = this.manifestBuilder;
-      else this.manifestBuilder = existing;
-    }
     this.session = this.sessionHistory;
     this.resumeState = (resolvedArgs.resume ?? null) as import("../session/resume.js").ResumeState | null;
     // Build runner with LlmTransport seam — mirrors Go llmloop.NewRunner.
@@ -866,8 +861,10 @@ export class Agent {
     const error = cause instanceof Error
       ? cause
       : new Error(cause === undefined ? "review was cancelled" : String(cause));
-    const manifestError = this.manifestBuilder.SetRunFailure(RunFailureCancelled, "review was cancelled");
-    if (manifestError !== null) this.recordWarning("manifest_error", "", manifestError.message);
+    if (this.manifestBuilder.runFailure?.classification !== RunFailureCancelled) {
+      const manifestError = this.manifestBuilder.SetRunFailure(RunFailureCancelled, "review was cancelled");
+      if (manifestError !== null) this.recordWarning("manifest_error", "", manifestError.message);
+    }
     return error;
   }
 
@@ -888,6 +885,26 @@ export class Agent {
 
   RunManifest(): RunManifest | null {
     return this.runManifest ? { ...this.runManifest, coverage: { selected: [...this.runManifest.coverage.selected], completed: [...this.runManifest.coverage.completed], reused: [...this.runManifest.coverage.reused], failed: [...this.runManifest.coverage.failed], waived: [...this.runManifest.coverage.waived] } } : null;
+  }
+
+  /** The sole terminal boundary for every review outcome. */
+  private finalizeRun(): Error | null {
+    const manifestError = this.finalizeManifest();
+    let sessionError: Error | null = null;
+    try {
+      sessionError = this.sessionHistory?.Finalize() ?? null;
+    } catch (err) {
+      sessionError = err instanceof Error ? err : new Error(String(err));
+    }
+    if (manifestError !== null) this.recordWarning("manifest_finalize_error", "", manifestError.message);
+    if (sessionError !== null) this.recordWarning("session_finalize_error", "", sessionError.message);
+    if (manifestError !== null && sessionError !== null) {
+      return new AggregateError(
+        [manifestError, sessionError],
+        `review finalization failed: ${manifestError.message}; ${sessionError.message}`,
+      );
+    }
+    return manifestError ?? sessionError;
   }
 
 
@@ -939,57 +956,63 @@ export class Agent {
 
   async run(signal?: AbortSignal): Promise<LlmComment[]> {
     const sig: AbortSignal = signal ?? new AbortController().signal;
-
-    // Step 1: load diffs (with sealed input handling)
+    let comments: LlmComment[] = [];
+    let primaryError: Error | null = null;
+    let inputFailed = false;
     try {
       await this.loadDiffs(sig);
     } catch (err) {
-      const e = err instanceof Error ? err : new Error(String(err));
+      inputFailed = true;
+      const error = err instanceof Error ? err : new Error(String(err));
+      primaryError = new Error(`load diffs: ${error.message}`, { cause: error });
+    }
+
+    if (primaryError === null) {
       try {
-        this.manifestBuilder.SetRunFailure("input" as never, e.message);
-        this.finalizeManifest();
-        this.sessionHistory?.Finalize();
-      } catch {}
-      throw new Error(`load diffs: ${e.message}`);
-    }
+        const totalChanged = this.diffs.length;
+        const reviewCount = this.countReviewable(this.diffs);
+        console.error(`[pi-review] ${totalChanged} file(s) changed, reviewing ${reviewCount} in ${this.args.repoDir}`);
+        this.injectDiffMap();
+        this.diffs = this.filterDiffs(this.diffs);
 
-    const totalChanged = this.diffs.length;
-    const reviewCount = this.countReviewable(this.diffs);
-    // Emit progress to stderr so stdout stays machine-readable.
-    console.error(`[pi-review] ${totalChanged} file(s) changed, reviewing ${reviewCount} in ${this.args.repoDir}`);
-
-    // Build diff map for file_read_diff tool if present (best-effort, no error if absent)
-    this.injectDiffMap();
-
-    this.diffs = this.filterDiffs(this.diffs);
-
-    if (this.diffs.length === 0) {
-      console.error("[pi-review] No supported files changed. Skipping review.");
-      return [];
-    }
-
-    this.currentDate = new Date().toISOString().replace("T", " ").slice(0, 16);
-
-    if ((this.args.maxTokensBudget ?? 0) > 0) {
-      const est = estimateDiffCost(this.diffs);
-      console.error(`[pi-review] estimated cost: ${est.totalTokens} tokens`);
-      console.error(`[pi-review] token budget: ${humanTokens(this.args.maxTokensBudget!)} (dispatch stops once exceeded)`);
-      if (est.totalTokens > (this.args.maxTokensBudget ?? 0)) {
-        console.error(`[pi-review] WARNING: estimate (${humanTokens(est.totalTokens)}) exceeds token budget (${humanTokens(this.args.maxTokensBudget!)})`);
+        if (this.diffs.length === 0) {
+          console.error("[pi-review] No supported files changed. Skipping review.");
+        } else {
+          this.currentDate = new Date().toISOString().replace("T", " ").slice(0, 16);
+          if ((this.args.maxTokensBudget ?? 0) > 0) {
+            const est = estimateDiffCost(this.diffs);
+            console.error(`[pi-review] estimated cost: ${est.totalTokens} tokens`);
+            console.error(`[pi-review] token budget: ${humanTokens(this.args.maxTokensBudget!)} (dispatch stops once exceeded)`);
+            if (est.totalTokens > (this.args.maxTokensBudget ?? 0)) {
+              console.error(`[pi-review] WARNING: estimate (${humanTokens(est.totalTokens)}) exceeds token budget (${humanTokens(this.args.maxTokensBudget!)})`);
+            }
+          }
+          comments = await this.dispatchSubtasks(sig);
+        }
+      } catch (err) {
+        primaryError = err instanceof Error ? err : new Error(String(err));
       }
     }
 
-    // Step 2: dispatch per-file subtasks concurrently.
-    try {
-      const comments = await this.dispatchSubtasks(sig);
-      await this.runner.WaitBackground().catch(() => undefined);
-      return comments;
-    } catch (err) {
-      if (sig.aborted) this.recordCancellation(sig);
-      this.finalizeManifest();
-      this.sessionHistory?.Finalize();
-      throw err;
+    await this.runner.WaitBackground().catch(() => undefined);
+    if (sig.aborted) {
+      const cancellationError = this.recordCancellation(sig);
+      if (primaryError === null) primaryError = cancellationError;
+    } else if (inputFailed && primaryError !== null) {
+      const manifestError = this.manifestBuilder.SetRunFailure("input" as never, primaryError.message);
+      if (manifestError !== null) this.recordWarning("manifest_error", "", manifestError.message);
     }
+    const finalizationError = this.finalizeRun();
+    if (primaryError !== null && finalizationError !== null) {
+      throw new AggregateError(
+        [primaryError, finalizationError],
+        `${primaryError.message}; additionally, review finalization failed: ${finalizationError.message}`,
+        { cause: primaryError },
+      );
+    }
+    if (primaryError !== null) throw primaryError;
+    if (finalizationError !== null) throw finalizationError;
+    return comments;
   }
 
   // -- internal helpers

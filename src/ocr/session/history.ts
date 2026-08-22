@@ -172,7 +172,7 @@ export class SessionHistory {
   }
 
   HasPersistence(): boolean {
-    return this.persist !== null;
+    return this.persist !== null && this.persistInitErr === null && this.finalizeErr === null;
   }
 
   GetOrCreateFileSession(filePath: string): FileSession {

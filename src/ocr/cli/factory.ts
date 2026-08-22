@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
-// Ported from cmd/opencodereview review wiring at c35ddd7223f2b5540ce03aa43c9a25ef643fca27.
+// Ported from cmd/opencodereview review wiring at c35ddd7223f2b5540ce03aa43c9a25ef643fca27;
+// review cancellation/session finalization follows OCR v1.9.4 commit 31db10f.
 // Factory for the parity review CLI — production wiring with real tools, no stubs, no any.
 
 import * as fs from "node:fs";
@@ -31,7 +32,7 @@ function filterToAllowlist(defs: readonly import("../llmloop/types.js").ToolDef[
 }
 import { CommentCollector } from "../tool/collector.js";
 import { CommentWorkerPool } from "../llmloop/pool.js";
-import { Agent, newAgent, reviewItemFingerprint } from "../agent/agent.js";
+import { Agent, newAgent } from "../agent/agent.js";
 import { Agent as ScanAgent, NewAgent as NewScanAgent } from "../scan/scan.js";
 import { reviewModeString } from "../agent/util.js";
 import { createPiTransportForFile } from "../pi-adapter/pi-transport.js";
@@ -40,17 +41,18 @@ import { Registry } from "../tool/definitions.js";
 import { buildToolRegistry } from "./git.js";
 import { resolveBackground } from "./background.js";
 import { REVIEW_FILTER_TOOLS } from "../agent/filter.js";
-import { Provider, ModeWorkspace, ModeRange, ModeCommit } from "../diff/git.js";
-import { Runner as GitRunner } from "../diff/runner.js";
-import { ManifestBuilder, ItemID, StatePartial, StateFailed, StateSkipped, FailureBudget, FailureTimeout, FailureUnknown } from "../session/manifest.js";
+import { ModeWorkspace, ModeRange, ModeCommit } from "../diff/git.js";
 import { RetryCollector } from "../retry/collector.js";
 import type { RetryReport } from "../retry/types.js";
 import { SessionHistory, ReviewModeFullScan } from "../session/history.js";
 import { newJSONLWriter, type JsonlWriter } from "../session/persist.js";
 import { ResumeState, LoadResumeState } from "../session/resume.js";
 import type { ResumeLineage } from "../session/resume.js";
-import type { RunManifest } from "../session/manifest.js";
-import type { Diff } from "../model/diff.js";
+
+export interface ReviewFactoryDeps {
+  /** Test seam for a deterministic local transport; production uses Pi. */
+  readonly createTransport?: typeof createPiTransportForFile;
+}
 
 /**
  * Create a production ReviewRunner for one review invocation.
@@ -63,6 +65,7 @@ import type { Diff } from "../model/diff.js";
 export function createReviewRunnerFactory(
   opts: ReviewOptions,
   ioCwd: string,
+  deps: ReviewFactoryDeps = {},
 ): (signal?: AbortSignal) => Promise<ReviewRunner> {
   return async (signal?: AbortSignal): Promise<ReviewRunner> => {
     const effectiveSignal = signal ?? new AbortController().signal;
@@ -139,52 +142,10 @@ export function createReviewRunnerFactory(
       }
     }
 
-    const gitRunner = new GitRunner(opts.maxGitProcs > 0 ? opts.maxGitProcs : 16);
-
-    // Load diffs and input resolution ourselves so we can build a manifest before
-    // running the agent, matching the original factory flow.
-    let diffs: Diff[] = [];
-    let inputMode = "workspace";
-    let resolvedBase = "";
-    let resolvedHead = "";
-    let remoteIdentity = "";
-    try {
-      let provider: Provider;
-      if (mode === ModeCommit) {
-        provider = new Provider({ repoDir, mode: ModeCommit as never, commit, runner: gitRunner } as never);
-        inputMode = "commit";
-      } else if (mode === ModeRange) {
-        provider = new Provider({ repoDir, mode: ModeRange as never, from, to: ref, runner: gitRunner } as never);
-        inputMode = "range";
-      } else {
-        provider = new Provider({ repoDir, mode: ModeWorkspace as never, runner: gitRunner } as never);
-        inputMode = "workspace";
-      }
-      diffs = (await provider.getDiff(effectiveSignal)) as unknown as Diff[];
-      const res = (await (provider as unknown as { resolveInput: (s?: AbortSignal) => Promise<{ resolvedBase: string; resolvedHead: string }> }).resolveInput(effectiveSignal)) as { resolvedBase: string; resolvedHead: string };
-      resolvedBase = res.resolvedBase ?? "";
-      resolvedHead = res.resolvedHead ?? "";
-      try {
-        remoteIdentity = await (provider as unknown as { remoteIdentity: (s?: AbortSignal) => Promise<string> }).remoteIdentity(effectiveSignal);
-      } catch {
-        remoteIdentity = "";
-      }
-      // Inject diffMap for file_read_diff tool
-      const mapInternal = new Map<string, string>();
-      for (const d of diffs) {
-        if (d.newPath !== "/dev/null") mapInternal.set(d.newPath, d.diff);
-      }
-      const newDiffMap = new DiffMap(mapInternal);
-      const prov = registry.Get("file_read_diff") as unknown as { setDiffMap?: (m: DiffMap) => void; SetDiffMap?: (m: DiffMap) => void };
-      if (prov !== undefined && typeof prov.setDiffMap === "function") prov.setDiffMap(newDiffMap);
-      else if (prov !== undefined && typeof prov.SetDiffMap === "function") prov.SetDiffMap(newDiffMap);
-    } catch (e) {
-      throw new Error(`load diffs: ${String((e as Error).message)}`);
-    }
-
     const retryCollector = new RetryCollector();
     // One Pi transport per review invocation; concurrency=1 serialises per-file use.
-    const transport = await createPiTransportForFile({
+    const createTransport = deps.createTransport ?? createPiTransportForFile;
+    const transport = await createTransport({
       cwd,
       agentDir,
       tools: mainToolDefs,
@@ -193,41 +154,24 @@ export function createReviewRunnerFactory(
     });
 
     const runId = randomUUID();
-    const builder = new ManifestBuilder(runId, "review");
-    builder.SetInput({
-      mode: inputMode,
-      requestedFrom: from || undefined,
-      requestedHead: to || undefined,
-      resolvedBase: resolvedBase || undefined,
-      resolvedHead: resolvedHead || undefined,
-    });
-    builder.SetExecution({
-      ocrVersion: "dev",
-      model: modelId,
-      configuredConcurrency: opts.concurrency,
-    });
-    if (remoteIdentity !== "") {
-      builder.SetRepository({ identitySha256: remoteIdentity });
-    }
-
-    const selectedPaths: string[] = [];
-    for (const d of diffs) {
-      if (d.isDeleted) continue;
-      const oldPath = d.oldPath === "/dev/null" ? "" : d.oldPath;
-      const newPath = d.newPath === "/dev/null" ? "" : d.newPath;
-      const itemId = ItemID("review", inputMode, oldPath, newPath);
-      const fingerprint = reviewItemFingerprint(inputMode, d);
-      const err = builder.RegisterSelected({ itemId, path: newPath, oldPath, fingerprint });
-      if (err) {
-        await transport.dispose().catch(() => {});
-        throw err;
-      }
-      selectedPaths.push(newPath);
-    }
-    const sealErr = builder.SealSelected();
-    if (sealErr) {
-      await transport.dispose().catch(() => {});
-      throw sealErr;
+    const gitBranch = detectGitBranch(repoDir);
+    const session = new SessionHistory(repoDir, gitBranch, modelId, {
+      reviewMode,
+      diffFrom: from,
+      diffTo: to,
+      diffCommit: commit,
+      operation: "review",
+    }, runId);
+    try {
+      const writer = newJSONLWriter(runId, repoDir, gitBranch, modelId, {
+        reviewMode,
+        diffFrom: from,
+        diffTo: to,
+        diffCommit: commit,
+      });
+      session._attachPersist(jsonlWriterToPersistHandle(writer));
+    } catch (err) {
+      session._setPersistInitErr(err instanceof Error ? err : new Error(String(err)));
     }
 
     const maxConcurrency = opts.concurrency > 0 ? opts.concurrency : 8;
@@ -255,6 +199,7 @@ export function createReviewRunnerFactory(
       maxTokensBudget: opts.maxTokensBudget > 0 ? opts.maxTokensBudget : undefined,
       skipFilter: opts.noFilter,
       runtimeConfig: { protocol: "openai", endpointHost: "", language: "English", timeoutMs: 30000 },
+      session,
     });
 
     const startMs = Date.now();
@@ -265,8 +210,6 @@ export function createReviewRunnerFactory(
     } catch (err) {
       runError = err instanceof Error ? err : new Error(String(err));
     }
-    const elapsedMs = Date.now() - startMs;
-
     // Freeze retry report at same boundary as manifest (after ag.Run joined background work).
     let retryReport: RetryReport | null = null;
     let freezeError: string | null = null;
@@ -277,79 +220,31 @@ export function createReviewRunnerFactory(
       retryReport = frozen.report;
     }
 
-    // Mark manifest items from agent outcomes.
-    const outcomes = agent.subtaskOutcomesMap();
-    for (const d of diffs) {
-      if (d.isDeleted) continue;
-      const itemId = ItemID("review", inputMode, d.oldPath === "/dev/null" ? "" : d.oldPath, d.newPath === "/dev/null" ? "" : d.newPath);
-      const outcome = outcomes.get(d.newPath);
-      if (outcome === undefined) {
-        // Never reached (e.g. filtered out or budget pre-check skipped). Mark failed.
-        if (!agent.budgetExceededFlag()) {
-          builder.MarkFailed(itemId, FailureUnknown, "no terminal outcome recorded");
-        } else {
-          builder.MarkFailed(itemId, FailureBudget, "stopped by token budget");
-        }
-      } else if (outcome.completed) {
-        builder.MarkCompleted(itemId);
-      } else if (outcome.stop === "budget_exceeded") {
-        builder.MarkFailed(itemId, FailureBudget, outcome.error ?? "budget exceeded");
-      } else if (outcome.stop === "empty_rounds") {
-        builder.MarkFailed(itemId, FailureUnknown, "empty rounds");
-      } else if (outcome.error) {
-        builder.MarkFailed(itemId, FailureUnknown, outcome.error);
-      } else {
-        builder.MarkFailed(itemId, FailureUnknown, outcome.stop ?? "unknown");
-      }
-    }
-
-    // If the agent threw before any dispatch, sweep selected -> failed.
-    if (runError !== null) {
-      builder.SetRunFailure("internal", runError.message);
-    }
-
-    const finalized = builder.Finalize(elapsedMs);
-    if (finalized.error) {
-      // Mark partial so the CLI treats it as a real failure path.
-      builder.SetRunFailure("internal", finalized.error.message);
-    }
-    // Re-finalize after possible run failure mutation.
-    const finalManifest = builder.Finalize(elapsedMs);
-    const manifest = finalManifest.manifest ?? null;
-
     const warnings = agent.warningsList();
-    if (finalized.error) {
-      warnings.push({ type: "manifest_finalize_error", file: "", message: finalized.error.message });
-    }
-
-    const filesReviewed = [...outcomes.values()].filter((o) => o.completed).length;
-    const toolCalls = agent.toolCalls();
-    const inputTokens = agent.totalInputTokens();
-    const outputTokens = agent.totalOutputTokens();
-    const totalTokens = agent.totalTokensUsed();
-    const cacheReadTokens = agent.totalCacheReadTokens();
-    const cacheWriteTokens = agent.totalCacheWriteTokens();
 
     await transport.dispose().catch((e) => {
       warnings.push({ type: "transport_dispose_error", file: "", message: String((e as Error).message) });
     });
 
     const reviewRunner: ReviewRunner = {
-      run: async (_sig?: AbortSignal): Promise<LlmComment[]> => comments,
-      manifest: manifest ?? undefined,
+      run: async (_sig?: AbortSignal): Promise<LlmComment[]> => {
+        if (runError !== null) throw runError;
+        return comments;
+      },
+      manifest: agent.RunManifest() ?? undefined,
       warnings,
-      filesReviewed,
-      inputTokens,
-      outputTokens,
-      totalTokens,
-      cacheReadTokens,
-      cacheWriteTokens,
-      toolCalls,
-      sessionId: runId,
+      filesReviewed: agent.FilesReviewed(),
+      inputTokens: agent.TotalInputTokens(),
+      outputTokens: agent.TotalOutputTokens(),
+      totalTokens: agent.TotalTokensUsed(),
+      cacheReadTokens: agent.TotalCacheReadTokens(),
+      cacheWriteTokens: agent.TotalCacheWriteTokens(),
+      toolCalls: agent.ToolCalls(),
+      sessionId: agent.sessionId(),
       budgetExceeded: agent.budgetExceededFlag(),
       projectSummary: "",
-      resumeInfo: undefined,
-      diffs,
+      resumeInfo: agent.ResumeInfo(),
+      diffs: agent.Diffs(),
       retryReport,
       retryReportError: freezeError,
     };
