@@ -9,6 +9,7 @@ import { randomUUID } from "node:crypto";
 import { spawnSync } from "node:child_process";
 
 import type { ReviewOptions, ScanOptions } from "./shared.js";
+import type { ProgressSink } from "../progress.js";
 import type { ReviewRunner } from "./review.js";
 import type { ScanRunner } from "./scan.js";
 import { type AgentWarning } from "./output.js";
@@ -66,6 +67,7 @@ export function createReviewRunnerFactory(
   opts: ReviewOptions,
   ioCwd: string,
   deps: ReviewFactoryDeps = {},
+  progress?: ProgressSink,
 ): (signal?: AbortSignal) => Promise<ReviewRunner> {
   return async (signal?: AbortSignal): Promise<ReviewRunner> => {
     const effectiveSignal = signal ?? new AbortController().signal;
@@ -201,6 +203,7 @@ export function createReviewRunnerFactory(
       skipFilter: opts.noFilter,
       runtimeConfig: { protocol: "openai", endpointHost: "", language: "English", timeoutMs: 30000 },
       session,
+      progress,
     });
 
     const startMs = Date.now();
@@ -263,6 +266,7 @@ export function createReviewRunnerFactory(
 export function createScanRunnerFactory(
   opts: ScanOptions,
   _ioCwd: string,
+  progress?: ProgressSink,
 ): (signal?: AbortSignal) => Promise<ScanRunner> {
   return async (signal?: AbortSignal): Promise<ScanRunner> => {
     const effectiveSignal = signal ?? new AbortController().signal;
@@ -374,6 +378,7 @@ export function createScanRunnerFactory(
       skipSummary: opts.noSummary,
       resume,
       session,
+      progress,
     });
 
     const startMs = Date.now();

@@ -562,7 +562,16 @@ const equivalentTests: ReadonlyMap<string, readonly LegacyEvidence[]> = new Map<
 
 // Revalidations for changed/new OCR behavior belong here and must name v1.9.9
 // evidence. This intentionally starts empty: Phase 2 records no new behavior.
-const upgradeEquivalentTests: ReadonlyMap<string, readonly Evidence[]> = new Map<string, readonly Evidence[]>([]);
+const upgradeEquivalentTests: ReadonlyMap<string, readonly Evidence[]> = new Map<string, readonly Evidence[]>([
+  [
+    "internal/stdout/stdout_test.go::TestSwap",
+    [{ kind: "bun-test-annotation", path: "test/ocr/cli/stdout-equivalence.test.ts", title: "TestSwap", ocrVersion: "v1.9.9" }],
+  ],
+  [
+    "internal/stdout/stdout_test.go::TestSwap_Composable",
+    [{ kind: "bun-test-annotation", path: "test/ocr/cli/stdout-equivalence.test.ts", title: "TestSwap_Composable", ocrVersion: "v1.9.9" }],
+  ],
+]);
 
 const notApplicableTests: ReadonlyMap<string, string> = new Map<string, string>([
   // ---- pi-adapter provider registry: Pi replaces OCR static registry with Pi ModelRuntime ----
@@ -2409,6 +2418,14 @@ const localCoverage: readonly LocalCoverage[] = [
   {
     localPath: "test/ocr/cli/shared.test.ts",
     upstreamPaths: ["cmd/opencodereview/shared_test.go"],
+  },
+  {
+    localPath: "test/ocr/cli/stdout-equivalence.test.ts",
+    upstreamPaths: ["internal/stdout/stdout_test.go"],
+  },
+  {
+    localPath: "test/ocr/cli/progress-stream.test.ts",
+    upstreamPaths: ["cmd/opencodereview/progress_stream_e2e_test.go"],
   },
   {
     localPath: "test/ocr/cli/shared-llmruntime.test.ts",

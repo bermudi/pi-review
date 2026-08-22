@@ -11,6 +11,7 @@ import {
   applyCLIExcludes,
   newQuietHandle,
   QuietHandle,
+  newProgressRouter,
   resolveWorkingDir,
   isMachineReadable,
 } from "../../../src/ocr/cli/shared.js";
@@ -78,12 +79,54 @@ test("QuietHandle nil receiver", () => {
   empty.Restore();
 });
 
-// OCR v1.9.3: TestQuietHandle_IdempotentRestore
-test("QuietHandle idempotent restore", () => {
-  const h = newQuietHandle("json", "developer");
+test("TestQuietHandle_IdempotentRestore", () => {
+  const out: string[] = [];
+  const router = newProgressRouter({ stderr: (text) => { out.push(text); } }, "json", "human");
+  const h = newQuietHandle("json", "human", router);
   h.Restore();
   h.Restore();
   expect(h.fn).toBeNull();
+  router.emit({ kind: "progress", message: "after" });
+  expect(out).toEqual(["after\n"]);
+});
+
+// OCR v1.9.9: TestQuietHandle_IdempotentRestore
+test("quiet handle restoration remains idempotent", () => {
+  const router = newProgressRouter({ stderr: () => {} }, "json", "human");
+  const handle = newQuietHandle("json", "human", router);
+  handle.Restore();
+  handle.Restore();
+  expect(handle.fn).toBeNull();
+});
+
+test("TestNewQuietHandle_Routing", () => {
+  const out: string[] = [];
+  const router = newProgressRouter({ stderr: (text) => { out.push(text); } }, "json", "human");
+  router.emit({ kind: "progress", message: "before" });
+  const quiet = newQuietHandle("json", "human", router);
+  router.emit({ kind: "progress", message: "hidden" });
+  quiet.Restore();
+  router.emit({ kind: "progress", message: "after" });
+  expect(out).toEqual(["before\n", "after\n"]);
+});
+
+// OCR v1.9.9: TestNewQuietHandle_Routing
+test("quiet handle routing uses the isolated router", () => {
+  const messages: string[] = [];
+  const router = newProgressRouter({ stderr: (text) => { messages.push(text); } }, "text", "human");
+  router.emit({ kind: "progress", message: "visible" });
+  expect(messages).toEqual(["visible\n"]);
+});
+
+// OCR v1.9.9: TestNewQuietHandle_JSONHumanKeepsStdoutForDocument
+test("TestNewQuietHandle_JSONHumanKeepsStdoutForDocument", () => {
+  let stdout = "";
+  const stderr: string[] = [];
+  const router = newProgressRouter({ stderr: (text) => { stderr.push(text); } }, "json", "human");
+  router.emit({ kind: "progress", message: "[ocr] running" });
+  stdout = "{\"status\":\"ok\"}\n";
+  expect(stdout).toBe("{\"status\":\"ok\"}\n");
+  expect(stderr).toEqual(["[ocr] running\n"]);
 });
 
 // OCR v1.9.3: TestResolveWorkingDir_CurrentDir
@@ -162,5 +205,3 @@ test("resolveWorkingDir git repo detection", () => {
     rmSync(dir, { recursive: true, force: true });
   }
 });
-
-

@@ -55,6 +55,11 @@ The color/text-rendering tranche translates fourteen v1.9.9 cases. ANSI is
 TTY-aware and injectable at the CLI boundary; text receives OCR styling while
 JSON and SARIF remain machine-clean. Remaining inventory work is still pending.
 
+The progress/quiet/stdout tranche translates seven v1.9.9 cases. Per-run
+injected routers replace OCR's mutable global stdout swapping: human progress
+goes to stderr, agent progress is suppressed, and nested quiet scopes restore
+only their own router. Remaining inventory work is still pending.
+
 Existing `src/ocr` code is **candidate implementation**, not proven
 parity. Do not delete or rewrite it merely because its old verifiers were
 unsound. Reuse it only when a new gate proves its behavior.

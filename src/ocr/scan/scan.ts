@@ -42,6 +42,7 @@ import { CommentCollector } from "../tool/collector.js";
 import { CommentWorkerPool } from "../llmloop/pool.js";
 import { CountMessagesTokens, PromptTokenLimit, StripMarkdownFences, countTokens } from "../llmloop/compression.js";
 import { isAllowedExt, isExcludedPath } from "../rules/allowed_ext.js";
+import type { ProgressSink } from "../progress.js";
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -87,6 +88,7 @@ export interface ScanArgs {
     isUserIncluded(path: string): boolean;
     hasInclude(): boolean;
   } | null;
+  readonly progress?: ProgressSink;
 }
 
 // ---------------------------------------------------------------------------
@@ -126,6 +128,10 @@ export class Agent {
   private budgetExceeded = false;
   private commentCollector: CommentCollector;
   private commentWorkerPool: CommentWorkerPool;
+
+  private progress(message: string): void {
+    this.args.progress?.emit({ kind: "progress", message });
+  }
 
   constructor(args: ScanArgs) {
     this.args = args;
@@ -233,13 +239,13 @@ export class Agent {
     for (const it of items) {
       const tokens = countTokens(it.content ?? "");
       if (tokens > limit) {
-        console.error(`[pi-review] Skipping ${it.path} (~${tokens} tokens exceeds 80% of max_tokens(${this.args.template.MaxTokens}))`);
+        this.progress(`[pi-review] Skipping ${it.path} (~${tokens} tokens exceeds 80% of max_tokens(${this.args.template.MaxTokens}))`);
         continue;
       }
       kept.push(it);
     }
     if (items.length !== kept.length) {
-      console.error(`[pi-review] Pre-filtered ${items.length - kept.length} file(s) exceeding 80% of max_tokens`);
+      this.progress(`[pi-review] Pre-filtered ${items.length - kept.length} file(s) exceeding 80% of max_tokens`);
     }
     return kept;
   }
@@ -274,10 +280,10 @@ export class Agent {
 
     const totalDiscovered = this.items.length;
     const reviewable = this.items.length;
-    console.error(`[pi-review] full-scan: ${totalDiscovered} file(s) discovered, reviewing ${reviewable} in ${this.args.repoDir}`);
+    this.progress(`[pi-review] full-scan: ${totalDiscovered} file(s) discovered, reviewing ${reviewable} in ${this.args.repoDir}`);
 
     if (reviewable === 0) {
-      console.error("[pi-review] No reviewable files. Skipping scan.");
+      this.progress("[pi-review] No reviewable files. Skipping scan.");
       if (this.args.session) {
         await this.args.session.Finalize();
       }
@@ -285,11 +291,11 @@ export class Agent {
     }
 
     const est = estimateCost(this.items, this.planEnabled(), this.dedupEnabled(), this.summaryEnabled());
-    console.error(`[pi-review] estimated cost: ${estimateToString(est)}`);
+    this.progress(`[pi-review] estimated cost: ${estimateToString(est)}`);
     if (this.args.maxTokensBudget && this.args.maxTokensBudget > 0) {
-      console.error(`[pi-review] token budget: ${humanTokens(this.args.maxTokensBudget)} (dispatch stops once exceeded)`);
+      this.progress(`[pi-review] token budget: ${humanTokens(this.args.maxTokensBudget)} (dispatch stops once exceeded)`);
       if (est.totalTokens > this.args.maxTokensBudget) {
-        console.error(`[pi-review] WARNING: estimate (${humanTokens(est.totalTokens)}) exceeds budget (${humanTokens(this.args.maxTokensBudget)}); scan will stop partway`);
+        this.progress(`[pi-review] WARNING: estimate (${humanTokens(est.totalTokens)}) exceeds budget (${humanTokens(this.args.maxTokensBudget)}); scan will stop partway`);
       }
     }
 
@@ -353,7 +359,7 @@ export class Agent {
     const strategy = this.resolveBatchStrategy();
     const batches = groupBatches(this.items, strategy, this.args.template.BatchSize ?? 0);
     const batchList = batches ?? [this.items];
-    console.error(`[pi-review] scan dispatch: ${batchList.length} batch(es) by ${strategy} strategy`);
+    this.progress(`[pi-review] scan dispatch: ${batchList.length} batch(es) by ${strategy} strategy`);
 
     for (let bi = 0; bi < batchList.length; bi++) {
       if (signal.aborted) return this.commentCollector.comments();
@@ -417,7 +423,7 @@ export class Agent {
         const used = this.runner.TotalTokensUsed();
         const projected = used + estimateFileTokens(it, this.planEnabled());
         if (projected > this.args.maxTokensBudget) {
-          console.error(`[pi-review] token budget reached (used ${humanTokens(used)} + next-file est ≈ ${humanTokens(projected)} > budget ${humanTokens(this.args.maxTokensBudget)}) — skipping ${it.path} and remaining files`);
+          this.progress(`[pi-review] token budget reached (used ${humanTokens(used)} + next-file est ≈ ${humanTokens(projected)} > budget ${humanTokens(this.args.maxTokensBudget)}) — skipping ${it.path} and remaining files`);
           this.runner.RecordWarning("token_budget_reached", it.path, `stopped in batch #${batchIdx}: used ${used} tokens + next-file estimate exceeds budget ${this.args.maxTokensBudget}`);
           budgetHit = true;
           this.budgetExceeded = true;
@@ -478,7 +484,7 @@ export class Agent {
     } else if (result.error !== null) {
       this.subtaskFailed++;
       this.args.session?.RecordReviewItemFailed(it.path, it.path, it.path, fingerprint, result.error.message);
-      console.error(`[pi-review] Scan subtask error for ${it.path}: ${result.error.message}`);
+      this.progress(`[pi-review] Scan subtask error for ${it.path}: ${result.error.message}`);
       this.runner.RecordWarning("scan_subtask_error", it.path, result.error.message);
     } else if (result.stop !== undefined) {
       this.subtaskFailed++;
@@ -494,7 +500,7 @@ export class Agent {
     this.subtaskFailed++;
     const msg = err instanceof Error ? err.message : String(err);
     this.args.session?.RecordReviewItemFailed(it.path, it.path, it.path, fingerprint, msg);
-    console.error(`[pi-review] Scan subtask error for ${it.path}: ${msg}`);
+    this.progress(`[pi-review] Scan subtask error for ${it.path}: ${msg}`);
     this.runner.RecordWarning("scan_subtask_error", it.path, msg);
   }
 
@@ -510,7 +516,7 @@ export class Agent {
     const tokenLimit = PromptTokenLimit(maxAllowed);
     if (tokenCount > tokenLimit) {
       const msg = `prompt tokens (${tokenCount}) exceed 80% of max_tokens(${maxAllowed})`;
-      console.error(`[pi-review] WARNING: ${msg} for ${it.path}`);
+      this.progress(`[pi-review] WARNING: ${msg} for ${it.path}`);
       this.runner.RecordWarning("token_threshold_exceeded", it.path, msg);
       return { completed: false, stop: "token_threshold_exceeded", error: null };
     }
@@ -564,7 +570,7 @@ export class Agent {
       const guidance = formatPlanGuidance(resp.content ?? "");
       return guidance === "" ? noPlan : guidance;
     } catch (err) {
-      console.error(`[pi-review] scan plan failed for ${it.path}: ${err instanceof Error ? err.message : String(err)} (falling back to plan-less)`);
+      this.progress(`[pi-review] scan plan failed for ${it.path}: ${err instanceof Error ? err.message : String(err)} (falling back to plan-less)`);
       return noPlan;
     }
   }
@@ -607,7 +613,7 @@ export class Agent {
       if (body === "") return;
       this.projectSummary = StripMarkdownFences(body);
     } catch (err) {
-      console.error(`[pi-review] scan project summary failed: ${err instanceof Error ? err.message : String(err)}`);
+      this.progress(`[pi-review] scan project summary failed: ${err instanceof Error ? err.message : String(err)}`);
     }
   }
 
@@ -646,10 +652,10 @@ export class Agent {
       const deduped = applyDedupGroups(resp.content ?? "", batchComments);
       if (deduped && deduped.length !== batchComments.length) {
         this.commentCollector.replaceSince(batchStart, deduped);
-        console.error(`[pi-review] scan dedup batch #${batchIdx}: ${batchComments.length} → ${deduped.length} comments`);
+        this.progress(`[pi-review] scan dedup batch #${batchIdx}: ${batchComments.length} → ${deduped.length} comments`);
       }
     } catch (err) {
-      console.error(`[pi-review] scan dedup failed for batch #${batchIdx}: ${err instanceof Error ? err.message : String(err)} (keeping originals)`);
+      this.progress(`[pi-review] scan dedup failed for batch #${batchIdx}: ${err instanceof Error ? err.message : String(err)} (keeping originals)`);
     }
   }
 

@@ -8,7 +8,7 @@ import { newResolver } from "./ocr/rules/system_rules.js";
 import { previewDiffs } from "./ocr/agent/preview.js";
 import type { Preview } from "./ocr/model/preview.js";
 import type { ReviewOptions, ScanOptions } from "./ocr/cli/shared.js";
-import { makeIo } from "./ocr/cli/shared.js";
+import { makeIo, newProgressRouter } from "./ocr/cli/shared.js";
 import type { CliIoOverrides } from "./ocr/cli/shared.js";
 import { runCli as runOcrCli, versionString, HELP_TEXT } from "./ocr/cli/index.js";
 import type { ReviewRunner } from "./ocr/cli/review.js";
@@ -59,14 +59,15 @@ export async function runCli(
   dependencies: CliDependencies = {},
 ): Promise<number> {
   const io = makeIo(dependencies.io);
+  const progressFor = (outputFormat: string, audience: string) => newProgressRouter(io, outputFormat, audience);
 
   const reviewRunnerFactory: (opts: ReviewOptions, signal?: AbortSignal) => Promise<ReviewRunner> =
     dependencies.reviewRunnerFactory ??
-    ((opts: ReviewOptions, signal?: AbortSignal) => createReviewRunnerFactory(opts, io.cwd())(signal));
+    ((opts: ReviewOptions, signal?: AbortSignal) => createReviewRunnerFactory(opts, io.cwd(), {}, progressFor(opts.outputFormat, opts.audience))(signal));
 
   const scanRunnerFactory: (opts: ScanOptions, signal?: AbortSignal) => Promise<ScanRunner> =
     dependencies.scanRunnerFactory ??
-    ((opts: ScanOptions, signal?: AbortSignal) => createScanRunnerFactory(opts, io.cwd())(signal));
+    ((opts: ScanOptions, signal?: AbortSignal) => createScanRunnerFactory(opts, io.cwd(), progressFor(opts.outputFormat, opts.audience))(signal));
 
   const reviewPreviewFactory: (opts: ReviewOptions, signal?: AbortSignal) => Promise<Preview> =
     dependencies.reviewPreviewFactory ?? createReviewPreviewFactory(io.cwd);

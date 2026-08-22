@@ -47,6 +47,7 @@ import {
 import { SessionHistory } from "../session/history.js";
 import type { FailureClass } from "../session/manifest.js";
 import { MainLoopStop, mainLoopStopReason } from "../llmloop/types.js";
+import type { ProgressSink } from "../progress.js";
 
 // ---------------------------------------------------------------------------
 // RuntimeConfig — mirrors Go RuntimeConfig
@@ -121,6 +122,7 @@ export interface Args {
   readonly resume?: import("../session/resume.js").ResumeState | null;
   /** Canonical persisted review session for this Agent run. */
   readonly session?: SessionHistory | null;
+  readonly progress?: ProgressSink;
   // Go-compat aliases — tests may use capitalized keys
   readonly LLMClient?: AnyLlmClient;
   readonly Model?: string;
@@ -401,6 +403,10 @@ export class Agent {
   private resumeInfo: import("../session/history.js").ResumeInfo | null = null;
   private resumeState: import("../session/resume.js").ResumeState | null = null;
 
+  private progress(message: string): void {
+    this.args.progress?.emit({ kind: "progress", message });
+  }
+
   // Public for test harness to observe pool draining behavior if needed
   public readonly commentWorkerPool: CommentWorkerPool;
 
@@ -437,6 +443,7 @@ export class Agent {
       runtimeConfig: args.runtimeConfig ?? (rawArgs["RuntimeConfig"] as RuntimeConfig | null | undefined) ?? null,
       resume: args.resume ?? null,
       session: args.session ?? args.Session ?? null,
+      progress: args.progress,
     };
     // Overlay resolved aliases back onto this.args for later reads
     (this as unknown as { args: Args }).args = resolvedArgs;
@@ -971,20 +978,20 @@ export class Agent {
       try {
         const totalChanged = this.diffs.length;
         const reviewCount = this.countReviewable(this.diffs);
-        console.error(`[pi-review] ${totalChanged} file(s) changed, reviewing ${reviewCount} in ${this.args.repoDir}`);
+        this.progress(`[pi-review] ${totalChanged} file(s) changed, reviewing ${reviewCount} in ${this.args.repoDir}`);
         this.injectDiffMap();
         this.diffs = this.filterDiffs(this.diffs);
 
         if (this.diffs.length === 0) {
-          console.error("[pi-review] No supported files changed. Skipping review.");
+          this.progress("[pi-review] No supported files changed. Skipping review.");
         } else {
           this.currentDate = new Date().toISOString().replace("T", " ").slice(0, 16);
           if ((this.args.maxTokensBudget ?? 0) > 0) {
             const est = estimateDiffCost(this.diffs);
-            console.error(`[pi-review] estimated cost: ${est.totalTokens} tokens`);
-            console.error(`[pi-review] token budget: ${humanTokens(this.args.maxTokensBudget!)} (dispatch stops once exceeded)`);
+            this.progress(`[pi-review] estimated cost: ${est.totalTokens} tokens`);
+            this.progress(`[pi-review] token budget: ${humanTokens(this.args.maxTokensBudget!)} (dispatch stops once exceeded)`);
             if (est.totalTokens > (this.args.maxTokensBudget ?? 0)) {
-              console.error(`[pi-review] WARNING: estimate (${humanTokens(est.totalTokens)}) exceeds token budget (${humanTokens(this.args.maxTokensBudget!)})`);
+              this.progress(`[pi-review] WARNING: estimate (${humanTokens(est.totalTokens)}) exceeds token budget (${humanTokens(this.args.maxTokensBudget!)})`);
             }
           }
           comments = await this.dispatchSubtasks(sig);
@@ -1123,14 +1130,14 @@ export class Agent {
       const d = normalizeDiff(dRaw);
       const path = effectivePath(d);
       if (whyExcluded(d, this.args.fileFilter ?? null) !== ExcludeNone) {
-        if (d.isBinary) console.error(`[pi-review] Skipping ${path} — binary file`);
-        else console.error(`[pi-review] Skipping ${path} — filtered by path/extension rules`);
+        if (d.isBinary) this.progress(`[pi-review] Skipping ${path} — binary file`);
+        else this.progress(`[pi-review] Skipping ${path} — filtered by path/extension rules`);
         skipped++;
         continue;
       }
       kept.push(d);
     }
-    if (skipped > 0) console.error(`[pi-review] Filtered ${skipped} file(s) by include/exclude rules`);
+    if (skipped > 0) this.progress(`[pi-review] Filtered ${skipped} file(s) by include/exclude rules`);
     return kept;
   }
 
@@ -1143,13 +1150,13 @@ export class Agent {
       const d = normalizeDiff(dRaw);
       const tokens = countTokens(d.diff);
       if (tokens > limit) {
-        console.error(`[pi-review] Skipping ${d.newPath} (~${tokens} tokens exceeds 80% of max_tokens(${this.args.template.MaxTokens}))`);
+        this.progress(`[pi-review] Skipping ${d.newPath} (~${tokens} tokens exceeds 80% of max_tokens(${this.args.template.MaxTokens}))`);
         skipped++;
         continue;
       }
       kept.push(d);
     }
-    if (skipped > 0) console.error(`[pi-review] Pre-filtered ${skipped} file(s) exceeding 80% of max_tokens`);
+    if (skipped > 0) this.progress(`[pi-review] Pre-filtered ${skipped} file(s) exceeding 80% of max_tokens`);
     return kept;
   }
 
@@ -1195,7 +1202,7 @@ export class Agent {
     // Pre-filter large diffs
     this.diffs = this.filterLargeDiffs(this.diffs);
     if (this.diffs.length === 0) {
-      console.error("[pi-review] All changed files exceeded the token size limit. Skipping review.");
+      this.progress("[pi-review] All changed files exceeded the token size limit. Skipping review.");
       return [];
     }
 
@@ -1238,7 +1245,7 @@ export class Agent {
         const nextEst = estimateDiffFileTokens(d);
         const projected = used + nextEst;
         if (projected > maxBudget) {
-          console.error(
+          this.progress(
             `[pi-review] token budget reached (used ${humanTokens(used)} + next-file est ${humanTokens(nextEst)} = projected ${humanTokens(projected)} > budget ${humanTokens(maxBudget)}) — skipping ${d.newPath} and remaining files`,
           );
           this.warnings.push({
@@ -1303,14 +1310,14 @@ export class Agent {
             if (!result.completed && result.error !== null && result.error !== undefined) {
               failed++;
               this.warnings.push({ type: "subtask_error", file: diff.newPath, message: result.error.message });
-              console.error(`[pi-review] Subtask error for ${diff.newPath}: ${result.error.message}`);
+              this.progress(`[pi-review] Subtask error for ${diff.newPath}: ${result.error.message}`);
             } else if (!result.completed && result.stop !== undefined) {
               const st = result.stop as unknown as { class: FailureClass; reason: string; checkpoint: string; reportAsError?: boolean };
               if (st.reportAsError) {
                 failed++;
                 const cp = st.checkpoint ?? st.reason;
                 this.warnings.push({ type: "subtask_error", file: diff.newPath, message: cp });
-                console.error(`[pi-review] Subtask error for ${diff.newPath}: ${cp}`);
+                this.progress(`[pi-review] Subtask error for ${diff.newPath}: ${cp}`);
               } else if (st.class === FailureBudget) {
                 // token threshold — already warned inside executeSubtask, treat as not failed but still marked
                 // keep as warning already recorded
@@ -1324,7 +1331,7 @@ export class Agent {
             this.warnings.push({ type: "subtask_error", file: diff.newPath, message: msg });
             const [cls, reason] = classifyItemError(err);
             this.markFailed(diff, cls, reason);
-            console.error(`[pi-review] Subtask panic for ${diff.newPath}: ${msg}`);
+            this.progress(`[pi-review] Subtask panic for ${diff.newPath}: ${msg}`);
           } finally {
             sem.release();
           }
@@ -1344,14 +1351,14 @@ export class Agent {
           if (!result.completed && result.error !== null && result.error !== undefined) {
             failed++;
             this.warnings.push({ type: "subtask_error", file: diff.newPath, message: result.error.message });
-            console.error(`[pi-review] Subtask error for ${diff.newPath}: ${result.error.message}`);
+            this.progress(`[pi-review] Subtask error for ${diff.newPath}: ${result.error.message}`);
           } else if (!result.completed && result.stop !== undefined) {
             const st = result.stop as unknown as { class: FailureClass; reason: string; checkpoint: string; reportAsError?: boolean };
             if (st.reportAsError) {
               failed++;
               const cp = st.checkpoint ?? st.reason;
               this.warnings.push({ type: "subtask_error", file: diff.newPath, message: cp });
-              console.error(`[pi-review] Subtask error for ${diff.newPath}: ${cp}`);
+              this.progress(`[pi-review] Subtask error for ${diff.newPath}: ${cp}`);
             }
           }
         } catch (err) {
@@ -1361,7 +1368,7 @@ export class Agent {
           this.warnings.push({ type: "subtask_error", file: diff.newPath, message: msg });
           const [cls, reason] = classifyItemError(err);
           this.markFailed(diff, cls, reason);
-          console.error(`[pi-review] Subtask panic for ${diff.newPath}: ${msg}`);
+          this.progress(`[pi-review] Subtask panic for ${diff.newPath}: ${msg}`);
         } finally {
           if (timeoutId !== null) clearTimeout(timeoutId);
           sem.release();
@@ -1416,13 +1423,13 @@ export class Agent {
     const hasPlan = planTask !== undefined && planTask.messages.length > 0;
     const shouldSkipPlan = hasPlan && threshold > 0 && changeLines < threshold;
     if (shouldSkipPlan) {
-      console.error(`[pi-review] Skipping plan phase for ${newPath} (${changeLines} lines < threshold ${threshold})`);
+      this.progress(`[pi-review] Skipping plan phase for ${newPath} (${changeLines} lines < threshold ${threshold})`);
     } else if (hasPlan) {
       try {
         planResult = await this.executePlanPhase(signal, newPath, d.diff, changeFilesExcludingCurrent, rule);
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);
-        console.error(`[pi-review] Plan phase failed for ${newPath}: ${msg} (continuing without plan)`);
+        this.progress(`[pi-review] Plan phase failed for ${newPath}: ${msg} (continuing without plan)`);
         planResult = "";
       }
     }
@@ -1456,7 +1463,7 @@ export class Agent {
     for (const msg of messages) tokenCount += countTokens(msg.content);
     if (tokenCount > tokenLimit) {
       const msg = `prompt tokens (${tokenCount}) exceed 80% of max_tokens(${maxAllowed})`;
-      console.error(`[pi-review] WARNING: ${msg} for ${newPath}`);
+      this.progress(`[pi-review] WARNING: ${msg} for ${newPath}`);
       this.warnings.push({ type: "token_threshold_exceeded", file: newPath, message: msg });
       try { this.runner.RecordWarning("token_threshold_exceeded", newPath, msg); } catch {}
       return { completed: false, stop: { class: FailureBudget, reason: "prompt exceeded the configured token budget", checkpoint: msg }, error: null };
@@ -1599,7 +1606,7 @@ export class Agent {
       // Plan has no tool calls, but record content
       rec.SetResponse({ content: content ?? "", toolCalls: toolCallsForRec, model: this.args.model, usage: usageForRec ? { promptTokens: (usageForRec["PromptTokens"] as number ?? 0), completionTokens: (usageForRec["CompletionTokens"] as number ?? 0), cacheReadTokens: (usageForRec["CacheReadTokens"] as number ?? 0), cacheWriteTokens: (usageForRec["CacheWriteTokens"] as number ?? 0) } : undefined }, Date.now() - start);
     }
-    console.error(`[pi-review] Plan completed for ${newPath}`);
+    this.progress(`[pi-review] Plan completed for ${newPath}`);
     return content ?? "";
   }
 
@@ -1613,7 +1620,7 @@ export class Agent {
     const ft = this.args.template.ReviewFilterTask;
     if (!ft || ft.messages.length === 0) return;
     if (this.args.skipFilter) {
-      console.error(`[pi-review] Review filter skipped for ${newPath} (--no-filter)`);
+      this.progress(`[pi-review] Review filter skipped for ${newPath} (--no-filter)`);
       return;
     }
     const collector = this.args.commentCollector;
@@ -1666,7 +1673,7 @@ export class Agent {
       }
     } catch (err) {
       if (recF) recF.SetError(err instanceof Error ? err : new Error(String(err)), Date.now() - startF);
-      console.error(`[pi-review] Review filter failed for ${newPath}: ${String((err as Error).message)}`);
+      this.progress(`[pi-review] Review filter failed for ${newPath}: ${String((err as Error).message)}`);
       return;
     }
     if (!resp) {
@@ -1710,9 +1717,9 @@ export class Agent {
         const anyC = collector as unknown as { RemoveByPathAndIndices?: (path: string, indices: Map<number, unknown>) => void };
         if (typeof anyC.RemoveByPathAndIndices === "function") anyC.RemoveByPathAndIndices(newPath, indices);
       }
-      console.error(`[pi-review] Review filter removed ${indices.size} comment(s) for ${newPath}`);
+      this.progress(`[pi-review] Review filter removed ${indices.size} comment(s) for ${newPath}`);
     } catch (err) {
-      console.error(`[pi-review] Review filter removal failed for ${newPath}: ${String((err as Error).message)}`);
+      this.progress(`[pi-review] Review filter removal failed for ${newPath}: ${String((err as Error).message)}`);
     }
   }
 

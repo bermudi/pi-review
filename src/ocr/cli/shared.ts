@@ -19,6 +19,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { spawnSync } from "node:child_process";
 import { resolve as pathResolve } from "node:path";
 import type { ColorMode } from "./color.js";
+import type { ProgressEvent, ProgressSink } from "../progress.js";
 
 // ---------------------------------------------------------------------------
 // CliIo seam — duplicated from legacy src/cli.ts for testability, not imported
@@ -415,15 +416,34 @@ export class QuietHandle {
   }
 }
 
-export function newQuietHandle(outputFormat: string, audience: string): QuietHandle {
-  if (isMachineReadable(outputFormat) || audience === "agent") {
-    let restored = false;
-    const fn = (): void => {
-      restored = true;
-      void restored;
-    };
-    return new QuietHandle(fn);
+export class ProgressRouter implements ProgressSink {
+  private muteDepth = 0;
+
+  constructor(
+    private readonly io: Pick<CliIo, "stderr">,
+    private readonly audience: string,
+  ) {}
+
+  emit(event: ProgressEvent): void {
+    if (this.muteDepth !== 0 || this.audience === "agent") return;
+    this.io.stderr(`${event.message}\n`);
   }
+
+  quiet(): QuietHandle {
+    this.muteDepth += 1;
+    return new QuietHandle(() => {
+      this.muteDepth = Math.max(0, this.muteDepth - 1);
+    });
+  }
+}
+
+/** Creates an isolated router: no process writer is swapped or shared. */
+export function newProgressRouter(io: Pick<CliIo, "stderr">, _outputFormat: string, audience: string): ProgressRouter {
+  return new ProgressRouter(io, audience);
+}
+
+export function newQuietHandle(outputFormat: string, audience: string, router?: ProgressRouter): QuietHandle {
+  if (isMachineReadable(outputFormat) || audience === "agent") return router?.quiet() ?? new QuietHandle(() => {});
   return new QuietHandle(null);
 }
 

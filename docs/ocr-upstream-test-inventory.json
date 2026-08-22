@@ -3000,14 +3000,28 @@
         {
           "name": "TestReviewE2E_JSONAgentStaysSilent",
           "delta": "added",
-          "disposition": "pending",
-          "reason": "OCR v1.9.9 added requires explicit new evidence or revalidation; prior v1.9.3 coverage is not inherited."
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr/cli/progress-stream.test.ts",
+              "title": "TestReviewE2E_JSONAgentStaysSilent",
+              "ocrVersion": "v1.9.9"
+            }
+          ]
         },
         {
           "name": "TestReviewE2E_JSONHumanStreamsProgressToStderr",
           "delta": "added",
-          "disposition": "pending",
-          "reason": "OCR v1.9.9 added requires explicit new evidence or revalidation; prior v1.9.3 coverage is not inherited."
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr/cli/progress-stream.test.ts",
+              "title": "TestReviewE2E_JSONHumanStreamsProgressToStderr",
+              "ocrVersion": "v1.9.9"
+            }
+          ]
         }
       ]
     },
@@ -6569,20 +6583,41 @@
         {
           "name": "TestNewQuietHandle_JSONHumanKeepsStdoutForDocument",
           "delta": "added",
-          "disposition": "pending",
-          "reason": "OCR v1.9.9 added requires explicit new evidence or revalidation; prior v1.9.3 coverage is not inherited."
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr/cli/shared.test.ts",
+              "title": "TestNewQuietHandle_JSONHumanKeepsStdoutForDocument",
+              "ocrVersion": "v1.9.9"
+            }
+          ]
         },
         {
           "name": "TestNewQuietHandle_Routing",
           "delta": "added",
-          "disposition": "pending",
-          "reason": "OCR v1.9.9 added requires explicit new evidence or revalidation; prior v1.9.3 coverage is not inherited."
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr/cli/shared.test.ts",
+              "title": "quiet handle routing uses the isolated router",
+              "ocrVersion": "v1.9.9"
+            }
+          ]
         },
         {
           "name": "TestQuietHandle_IdempotentRestore",
           "delta": "changed_body",
-          "disposition": "pending",
-          "reason": "OCR v1.9.9 changed body requires explicit new evidence or revalidation; prior v1.9.3 coverage is not inherited."
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr/cli/shared.test.ts",
+              "title": "quiet handle restoration remains idempotent",
+              "ocrVersion": "v1.9.9"
+            }
+          ]
         },
         {
           "name": "TestQuietHandle_NilReceiver",
@@ -18991,14 +19026,28 @@
         {
           "name": "TestSwap",
           "delta": "added",
-          "disposition": "pending",
-          "reason": "OCR v1.9.9 added requires explicit new evidence or revalidation; prior v1.9.3 coverage is not inherited."
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr/cli/stdout-equivalence.test.ts",
+              "title": "TestSwap",
+              "ocrVersion": "v1.9.9"
+            }
+          ]
         },
         {
           "name": "TestSwap_Composable",
           "delta": "added",
-          "disposition": "pending",
-          "reason": "OCR v1.9.9 added requires explicit new evidence or revalidation; prior v1.9.3 coverage is not inherited."
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr/cli/stdout-equivalence.test.ts",
+              "title": "TestSwap_Composable",
+              "ocrVersion": "v1.9.9"
+            }
+          ]
         },
         {
           "name": "TestWriter_Default",
