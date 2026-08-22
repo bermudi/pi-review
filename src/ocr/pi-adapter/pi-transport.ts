@@ -584,7 +584,7 @@ export class PiTransport implements TranscriptLlmTransport {
       //    session.state.messages if it diverges.
       // -----------------------------------------------------------------
       const sessAny = this.session as unknown as {
-        agent?: { messages?: unknown[] };
+        agent?: { state?: { messages?: unknown[] } };
         isIdle?: boolean;
         isStreaming?: boolean;
         subscribe?: (l: (e: unknown) => void) => () => void;
@@ -594,18 +594,18 @@ export class PiTransport implements TranscriptLlmTransport {
       };
 
       const getStateMessages = (): unknown[] => {
-        if (sessAny.agent !== undefined && Array.isArray(sessAny.agent.messages)) return sessAny.agent.messages;
+        if (sessAny.agent?.state !== undefined && Array.isArray(sessAny.agent.state.messages)) return sessAny.agent.state.messages;
         return [];
       };
 
       const setStateMessages = (msgs: unknown[]): void => {
-        if (sessAny.agent === undefined || !Array.isArray(sessAny.agent.messages)) {
-          throw new Error("Pi session does not expose public agent.messages history replacement");
+        if (sessAny.agent?.state === undefined || !Array.isArray(sessAny.agent.state.messages)) {
+          throw new Error("Pi session does not expose public agent state history replacement");
         }
-        sessAny.agent.messages = msgs;
-        if (sessAny.agent.messages.length !== msgs.length
-          || sessAny.agent.messages.some((message, index) => JSON.stringify(message) !== JSON.stringify(msgs[index]))) {
-          throw new Error("Pi agent.messages history replacement was not applied");
+        sessAny.agent.state.messages = msgs;
+        if (sessAny.agent.state.messages.length !== msgs.length
+          || sessAny.agent.state.messages.some((message, index) => JSON.stringify(message) !== JSON.stringify(msgs[index]))) {
+          throw new Error("Pi agent state history replacement was not applied");
         }
       };
 

@@ -16,7 +16,7 @@ test("ChatRequest role handling covers system/user/tool/assistant/unknown via Pi
   const session = {
     state: { messages: [] as unknown[] },
     messages: [] as unknown[],
-    agent: { messages: [] as unknown[] },
+    agent: { state: { messages: [] as unknown[] } },
     isIdle: true,
     isStreaming: false,
     sessionId: "s",
@@ -56,7 +56,7 @@ test("ChatRequest minimal tools stays unset", async () => {
   const session = {
     state: { messages: [] as unknown[] },
     messages: [] as unknown[],
-    agent: { messages: [] as unknown[] },
+    agent: { state: { messages: [] as unknown[] } },
     isIdle: true,
     isStreaming: false,
     sessionId: "s",
