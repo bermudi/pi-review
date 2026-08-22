@@ -7,7 +7,7 @@ Review v1.9.3's core behavior through the Pi SDK.
 > user approval; `src/ocr-v193` is now the sole engine and implements Open Code
 > Review v1.9.3 as the pinned behavioral reference (`v1.9.3` /
 > `4d796ae54cabdcf4e22b69ef502ed8871456a909` / `c35ddd7223f2b5540ce03aa43c9a25ef643fca27`).
-> 157 upstream inventory cases remain pending/classification — parity is not
+> 129 upstream inventory cases remain pending/classification — parity is not
 > claimed beyond the verifier evidence. See `docs/ocr-v1.9.3-port-plan.md` and
 > `docs/ocr-v193-source-map.md`.
 
@@ -170,7 +170,7 @@ There is no model-visible shell, edit, or write tool.
 - Resume is per-session (`--resume ID`); it requires the same target/options and resumes a single prior session, not cross-run coverage merging.
 - Workspace evidence is live and may change during a long review; range/commit evidence is pinned.
 - The CLI requires an explicit `review` or `scan` subcommand.
-- 157 upstream inventory cases remain pending/classification — parity beyond verified fixtures is not claimed.
+- 129 upstream inventory cases remain pending/classification — parity beyond verified fixtures is not claimed.
 
 ## SDK reference and public boundary
 

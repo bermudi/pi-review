@@ -1299,6 +1299,28 @@ const notApplicableTests: ReadonlyMap<string, string> = new Map<string, string>(
     "internal/llm/retry_report_test.go::TestNilCollectorIsInert",
     "Pi replaces Go nil-receiver method call (*RetryCollector)(nil).Freeze() with TypeScript's non-null this guarantee; calling a method on null is not applicable in TypeScript and has no runtime path.",
   ],
+  // ---- arg_errors: Pi replaces multi-command Cobra tree with reduced review/scan/version CLI ----
+  [
+    "cmd/opencodereview/arg_errors_test.go::TestArgCountErrors_AreActionable",
+    "Pi replaces OCR's multi-command Cobra tree (config set/unset, rules check, session show/comments, delegate rule, completion) with reduced pi-review review/scan/version surface; friendly count errors for those deferred commands are not applicable via public Pi CLI, Pi's flag-only parsing and version zero-arg handling are verified via flag-suggest and zero-args tests.",
+  ],
+  [
+    "cmd/opencodereview/arg_errors_test.go::TestArgCountErrors_MatchHelpOutput",
+    "Pi replaces OCR's UseLine-carrying argCountError for many positional commands with static HELP_TEXT for review/scan; the property that error carries UseLine is not applicable via public Pi CLI where review/scan take no positional args and version uses unknown-command error; covered validators verify placeholder extraction separately.",
+  ],
+  [
+    "cmd/opencodereview/arg_errors_test.go::TestEveryPositionalCommandUsesFriendlyErrors",
+    "Pi replaces OCR's exhaustive command-tree walk for friendly errors with a reduced command set (review/scan are flag-only, version is zero-arg); the invariant is preserved for pi's commands and verified via parent-cmd and zero-args boundary tests, exhaustive walk over deferred commands is not applicable.",
+  ],
+  // ---- smallfiles: Pi replaces provider/viewer TUI shells ----
+  [
+    "cmd/opencodereview/smallfiles_test.go::TestRunLLMProviders",
+    "Pi replaces OCR's list-providers CLI (provider TUI catalog) with Pi SettingsManager model discovery via agentDir; built-in provider listing is a deferred shell and not applicable via public Pi CLI.",
+  ],
+  [
+    "cmd/opencodereview/smallfiles_test.go::TestViewerCmd_DefaultAddr",
+    "Pi replaces OCR's viewer HTTP server shell with a deferred browser session viewer; default addr localhost:5483 is not applicable via pi-reviewer which has no viewer command.",
+  ],
 ]);
 
 // Explicit scope decisions for paths that would otherwise be needs_decision.
@@ -1359,6 +1381,78 @@ const scopeOverrides: ReadonlyMap<string, Scope> = new Map<string, Scope>([
       kind: "in_scope",
       area: "cli-output",
       reason: "miscellaneous review/session CLI helpers (reviewModeFromOptions, sanitizeEndpointHost, shortSessionID, completeSessionIDs) are core CLI behavior",
+    },
+  ],
+  [
+    "cmd/opencodereview/arg_errors_test.go",
+    {
+      kind: "in_scope",
+      area: "cli-output",
+      reason: "positional argument validators and friendly error formatting are core CLI input handling for review/scan/version",
+    },
+  ],
+  [
+    "cmd/opencodereview/flag_suggest_test.go",
+    {
+      kind: "in_scope",
+      area: "cli-output",
+      reason: "flag typo suggestion via Levenshtein is core CLI error handling for review/scan flags",
+    },
+  ],
+  [
+    "cmd/opencodereview/parent_cmd_test.go",
+    {
+      kind: "in_scope",
+      area: "cli-output",
+      reason: "parent command help and unknown subcommand handling is core CLI routing for pi-review review/scan/version",
+    },
+  ],
+  [
+    "cmd/opencodereview/smallfiles_test.go",
+    {
+      kind: "in_scope",
+      area: "cli-output",
+      reason: "version string formatting and root help text are core CLI output for pi-review",
+    },
+  ],
+  [
+    "cmd/opencodereview/zero_args_test.go",
+    {
+      kind: "in_scope",
+      area: "cli-output",
+      reason: "zero-argument version command rejection is core CLI validation for pi-review version",
+    },
+  ],
+  [
+    "internal/stdout/stdout_test.go",
+    {
+      kind: "in_scope",
+      area: "cli-output",
+      reason: "stdout writer and quiet silencing are core CLI output boundary for stdout/stderr separation",
+    },
+  ],
+  [
+    "cmd/opencodereview/manual_e2e_retry_test.go",
+    {
+      kind: "in_scope",
+      area: "cli-output",
+      reason: "manual e2e retry report wiring is core CLI retry reporting via injected collector semantics",
+    },
+  ],
+  [
+    "internal/release/asset_naming_test.go",
+    {
+      kind: "out_of_scope",
+      area: "internal/release",
+      reason: "Go binary release archive naming (urlPattern/checksum/Makefile/release.yml) is replaced by Bun npm package distribution; not applicable via pi-reviewer distribution",
+    },
+  ],
+  [
+    "cmd/opencodereview/rules_check_test.go",
+    {
+      kind: "out_of_scope",
+      area: "cmd/opencodereview",
+      reason: "auxiliary rules check diagnostic command is intentionally not ported per approved scope decision; review/scan are supported surface",
     },
   ],
 ]);
@@ -1757,6 +1851,34 @@ const localCoverage: readonly LocalCoverage[] = [
   {
     localPath: "test/ocr-v193/cli/misc-helpers.test.ts",
     upstreamPaths: ["cmd/opencodereview/misc_helpers_test.go"],
+  },
+  {
+    localPath: "test/ocr-v193/cli/flag-suggest.test.ts",
+    upstreamPaths: ["cmd/opencodereview/flag_suggest_test.go"],
+  },
+  {
+    localPath: "test/ocr-v193/cli/arg-helpers.test.ts",
+    upstreamPaths: ["cmd/opencodereview/arg_errors_test.go"],
+  },
+  {
+    localPath: "test/ocr-v193/cli/smallfiles.test.ts",
+    upstreamPaths: ["cmd/opencodereview/smallfiles_test.go"],
+  },
+  {
+    localPath: "test/ocr-v193/cli/parent-cmd.test.ts",
+    upstreamPaths: ["cmd/opencodereview/parent_cmd_test.go"],
+  },
+  {
+    localPath: "test/ocr-v193/cli/zero-args.test.ts",
+    upstreamPaths: ["cmd/opencodereview/zero_args_test.go"],
+  },
+  {
+    localPath: "test/ocr-v193/cli/stdout.test.ts",
+    upstreamPaths: ["internal/stdout/stdout_test.go"],
+  },
+  {
+    localPath: "test/ocr-v193/cli/manual-retry.test.ts",
+    upstreamPaths: ["cmd/opencodereview/manual_e2e_retry_test.go"],
   },
 ];
 

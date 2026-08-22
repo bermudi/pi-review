@@ -26,40 +26,58 @@
       "path": "cmd/opencodereview/arg_errors_test.go",
       "blob": "8c7ea24bec1b820582a091fe20cc9f75800b1c01",
       "scope": {
-        "kind": "needs_decision",
-        "area": "cmd/opencodereview",
-        "reason": "not yet classified by the OCR v1.9.3 core-port source map"
+        "kind": "in_scope",
+        "area": "cli-output",
+        "reason": "positional argument validators and friendly error formatting are core CLI input handling for review/scan/version"
       },
       "tests": [
         {
           "name": "TestArgCountErrors_AreActionable",
-          "disposition": "pending_scope",
-          "reason": "not yet classified by the OCR v1.9.3 core-port source map"
+          "disposition": "not_applicable",
+          "reason": "Pi replaces OCR's multi-command Cobra tree (config set/unset, rules check, session show/comments, delegate rule, completion) with reduced pi-review review/scan/version surface; friendly count errors for those deferred commands are not applicable via public Pi CLI, Pi's flag-only parsing and version zero-arg handling are verified via flag-suggest and zero-args tests."
         },
         {
           "name": "TestArgCountErrors_MatchHelpOutput",
-          "disposition": "pending_scope",
-          "reason": "not yet classified by the OCR v1.9.3 core-port source map"
+          "disposition": "not_applicable",
+          "reason": "Pi replaces OCR's UseLine-carrying argCountError for many positional commands with static HELP_TEXT for review/scan; the property that error carries UseLine is not applicable via public Pi CLI where review/scan take no positional args and version uses unknown-command error; covered validators verify placeholder extraction separately."
         },
         {
           "name": "TestEveryPositionalCommandUsesFriendlyErrors",
-          "disposition": "pending_scope",
-          "reason": "not yet classified by the OCR v1.9.3 core-port source map"
+          "disposition": "not_applicable",
+          "reason": "Pi replaces OCR's exhaustive command-tree walk for friendly errors with a reduced command set (review/scan are flag-only, version is zero-arg); the invariant is preserved for pi's commands and verified via parent-cmd and zero-args boundary tests, exhaustive walk over deferred commands is not applicable."
         },
         {
           "name": "TestPositionalSignature",
-          "disposition": "pending_scope",
-          "reason": "not yet classified by the OCR v1.9.3 core-port source map"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/cli/arg-helpers.test.ts",
+              "title": "positionalSignature extracts placeholders"
+            }
+          ]
         },
         {
           "name": "TestValidArgNames",
-          "disposition": "pending_scope",
-          "reason": "not yet classified by the OCR v1.9.3 core-port source map"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/cli/arg-helpers.test.ts",
+              "title": "validArgNames strips tab descriptions"
+            }
+          ]
         },
         {
           "name": "TestValidInvocationsStillResolve",
-          "disposition": "pending_scope",
-          "reason": "not yet classified by the OCR v1.9.3 core-port source map"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/cli/arg-helpers.test.ts",
+              "title": "valid invocations still resolve via exact/minimum validators"
+            }
+          ]
         }
       ]
     },
@@ -1395,25 +1413,43 @@
       "path": "cmd/opencodereview/flag_suggest_test.go",
       "blob": "d8bfd6881372496d1f72fa8daac024b24cd00ac4",
       "scope": {
-        "kind": "needs_decision",
-        "area": "cmd/opencodereview",
-        "reason": "not yet classified by the OCR v1.9.3 core-port source map"
+        "kind": "in_scope",
+        "area": "cli-output",
+        "reason": "flag typo suggestion via Levenshtein is core CLI error handling for review/scan flags"
       },
       "tests": [
         {
           "name": "TestFlagErrorWithSuggestion",
-          "disposition": "pending_scope",
-          "reason": "not yet classified by the OCR v1.9.3 core-port source map"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/cli/flag-suggest.test.ts",
+              "title": "flagErrorWithSuggestion appends Did you mean or leaves original"
+            }
+          ]
         },
         {
           "name": "TestLevenshtein",
-          "disposition": "pending_scope",
-          "reason": "not yet classified by the OCR v1.9.3 core-port source map"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/cli/flag-suggest.test.ts",
+              "title": "levenshtein distances match OCR table"
+            }
+          ]
         },
         {
           "name": "TestSuggestFlag",
-          "disposition": "pending_scope",
-          "reason": "not yet classified by the OCR v1.9.3 core-port source map"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/cli/flag-suggest.test.ts",
+              "title": "suggestFlag finds close matches on local and inherited"
+            }
+          ]
         }
       ]
     },
@@ -1784,15 +1820,21 @@
       "path": "cmd/opencodereview/manual_e2e_retry_test.go",
       "blob": "52bedcfbbba7a4f72c39467553aa111c1c0cb359",
       "scope": {
-        "kind": "needs_decision",
-        "area": "cmd/opencodereview",
-        "reason": "not yet classified by the OCR v1.9.3 core-port source map"
+        "kind": "in_scope",
+        "area": "cli-output",
+        "reason": "manual e2e retry report wiring is core CLI retry reporting via injected collector semantics"
       },
       "tests": [
         {
           "name": "TestManualE2ERetryReport",
-          "disposition": "pending_scope",
-          "reason": "not yet classified by the OCR v1.9.3 core-port source map"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/cli/manual-retry.test.ts",
+              "title": "manual retry harness semantics: clean, recovered, all fail"
+            }
+          ]
         }
       ]
     },
@@ -2237,25 +2279,43 @@
       "path": "cmd/opencodereview/parent_cmd_test.go",
       "blob": "13f42b794ea23df9e5155bfde7849b67e3132324",
       "scope": {
-        "kind": "needs_decision",
-        "area": "cmd/opencodereview",
-        "reason": "not yet classified by the OCR v1.9.3 core-port source map"
+        "kind": "in_scope",
+        "area": "cli-output",
+        "reason": "parent command help and unknown subcommand handling is core CLI routing for pi-review review/scan/version"
       },
       "tests": [
         {
           "name": "TestParentCommands_KnownSubcommandStillWorks",
-          "disposition": "pending_scope",
-          "reason": "not yet classified by the OCR v1.9.3 core-port source map"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/cli/parent-cmd.test.ts",
+              "title": "known subcommand --help still works"
+            }
+          ]
         },
         {
           "name": "TestParentCommands_NoArgsPrintsHelp",
-          "disposition": "pending_scope",
-          "reason": "not yet classified by the OCR v1.9.3 core-port source map"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/cli/parent-cmd.test.ts",
+              "title": "no args prints help and exits 0"
+            }
+          ]
         },
         {
           "name": "TestParentCommands_UnknownSubcommand",
-          "disposition": "pending_scope",
-          "reason": "not yet classified by the OCR v1.9.3 core-port source map"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/cli/parent-cmd.test.ts",
+              "title": "unknown subcommand returns non-zero with unknown command"
+            }
+          ]
         }
       ]
     },
@@ -4271,15 +4331,15 @@
       "path": "cmd/opencodereview/rules_check_test.go",
       "blob": "6896cfb28b9f61cb828fcdf7de158665a961838d",
       "scope": {
-        "kind": "needs_decision",
+        "kind": "out_of_scope",
         "area": "cmd/opencodereview",
-        "reason": "not yet classified by the OCR v1.9.3 core-port source map"
+        "reason": "auxiliary rules check diagnostic command is intentionally not ported per approved scope decision; review/scan are supported surface"
       },
       "tests": [
         {
           "name": "TestRunRulesCheck",
-          "disposition": "pending_scope",
-          "reason": "not yet classified by the OCR v1.9.3 core-port source map"
+          "disposition": "out_of_scope",
+          "reason": "auxiliary rules check diagnostic command is intentionally not ported per approved scope decision; review/scan are supported surface"
         }
       ]
     },
@@ -5378,35 +5438,53 @@
       "path": "cmd/opencodereview/smallfiles_test.go",
       "blob": "913768f52e4381973994ec32d1f9827c84a378c7",
       "scope": {
-        "kind": "needs_decision",
-        "area": "cmd/opencodereview",
-        "reason": "not yet classified by the OCR v1.9.3 core-port source map"
+        "kind": "in_scope",
+        "area": "cli-output",
+        "reason": "version string formatting and root help text are core CLI output for pi-review"
       },
       "tests": [
         {
           "name": "TestPrintVersion_Dev",
-          "disposition": "pending_scope",
-          "reason": "not yet classified by the OCR v1.9.3 core-port source map"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/cli/smallfiles.test.ts",
+              "title": "versionString dev contains base name and arch"
+            }
+          ]
         },
         {
           "name": "TestPrintVersion_WithCommitAndDate",
-          "disposition": "pending_scope",
-          "reason": "not yet classified by the OCR v1.9.3 core-port source map"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/cli/smallfiles.test.ts",
+              "title": "versionString with commit and date contains all parts"
+            }
+          ]
         },
         {
           "name": "TestRootCmd_Help",
-          "disposition": "pending_scope",
-          "reason": "not yet classified by the OCR v1.9.3 core-port source map"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/cli/smallfiles.test.ts",
+              "title": "help text contains usage banner"
+            }
+          ]
         },
         {
           "name": "TestRunLLMProviders",
-          "disposition": "pending_scope",
-          "reason": "not yet classified by the OCR v1.9.3 core-port source map"
+          "disposition": "not_applicable",
+          "reason": "Pi replaces OCR's list-providers CLI (provider TUI catalog) with Pi SettingsManager model discovery via agentDir; built-in provider listing is a deferred shell and not applicable via public Pi CLI."
         },
         {
           "name": "TestViewerCmd_DefaultAddr",
-          "disposition": "pending_scope",
-          "reason": "not yet classified by the OCR v1.9.3 core-port source map"
+          "disposition": "not_applicable",
+          "reason": "Pi replaces OCR's viewer HTTP server shell with a deferred browser session viewer; default addr localhost:5483 is not applicable via pi-reviewer which has no viewer command."
         }
       ]
     },
@@ -5414,15 +5492,21 @@
       "path": "cmd/opencodereview/zero_args_test.go",
       "blob": "de481028722fe5abc7f520b4bac166d34e7fe91e",
       "scope": {
-        "kind": "needs_decision",
-        "area": "cmd/opencodereview",
-        "reason": "not yet classified by the OCR v1.9.3 core-port source map"
+        "kind": "in_scope",
+        "area": "cli-output",
+        "reason": "zero-argument version command rejection is core CLI validation for pi-review version"
       },
       "tests": [
         {
           "name": "TestZeroArgumentCommands_RejectUnexpectedArgs",
-          "disposition": "pending_scope",
-          "reason": "not yet classified by the OCR v1.9.3 core-port source map"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/cli/zero-args.test.ts",
+              "title": "version rejects unexpected positional argument"
+            }
+          ]
         }
       ]
     },
@@ -12720,40 +12804,40 @@
       "path": "internal/release/asset_naming_test.go",
       "blob": "8ccfe1efd9dcf9151dd89c9f38450984a574351c",
       "scope": {
-        "kind": "needs_decision",
+        "kind": "out_of_scope",
         "area": "internal/release",
-        "reason": "not yet classified by the OCR v1.9.3 core-port source map"
+        "reason": "Go binary release archive naming (urlPattern/checksum/Makefile/release.yml) is replaced by Bun npm package distribution; not applicable via pi-reviewer distribution"
       },
       "tests": [
         {
           "name": "TestChecksumFilenameNoVersion",
-          "disposition": "pending_scope",
-          "reason": "not yet classified by the OCR v1.9.3 core-port source map"
+          "disposition": "out_of_scope",
+          "reason": "Go binary release archive naming (urlPattern/checksum/Makefile/release.yml) is replaced by Bun npm package distribution; not applicable via pi-reviewer distribution"
         },
         {
           "name": "TestMakefileBuildMatchesURLPattern",
-          "disposition": "pending_scope",
-          "reason": "not yet classified by the OCR v1.9.3 core-port source map"
+          "disposition": "out_of_scope",
+          "reason": "Go binary release archive naming (urlPattern/checksum/Makefile/release.yml) is replaced by Bun npm package distribution; not applicable via pi-reviewer distribution"
         },
         {
           "name": "TestReleaseYmlMatchesURLPattern",
-          "disposition": "pending_scope",
-          "reason": "not yet classified by the OCR v1.9.3 core-port source map"
+          "disposition": "out_of_scope",
+          "reason": "Go binary release archive naming (urlPattern/checksum/Makefile/release.yml) is replaced by Bun npm package distribution; not applicable via pi-reviewer distribution"
         },
         {
           "name": "TestURLPatternFormat",
-          "disposition": "pending_scope",
-          "reason": "not yet classified by the OCR v1.9.3 core-port source map"
+          "disposition": "out_of_scope",
+          "reason": "Go binary release archive naming (urlPattern/checksum/Makefile/release.yml) is replaced by Bun npm package distribution; not applicable via pi-reviewer distribution"
         },
         {
           "name": "TestURLPatternHTTPS",
-          "disposition": "pending_scope",
-          "reason": "not yet classified by the OCR v1.9.3 core-port source map"
+          "disposition": "out_of_scope",
+          "reason": "Go binary release archive naming (urlPattern/checksum/Makefile/release.yml) is replaced by Bun npm package distribution; not applicable via pi-reviewer distribution"
         },
         {
           "name": "TestURLPatternNoVersionInFilename",
-          "disposition": "pending_scope",
-          "reason": "not yet classified by the OCR v1.9.3 core-port source map"
+          "disposition": "out_of_scope",
+          "reason": "Go binary release archive naming (urlPattern/checksum/Makefile/release.yml) is replaced by Bun npm package distribution; not applicable via pi-reviewer distribution"
         }
       ]
     },
@@ -15418,20 +15502,32 @@
       "path": "internal/stdout/stdout_test.go",
       "blob": "98130db80461c16535fb7b04afd254812ac820c5",
       "scope": {
-        "kind": "needs_decision",
-        "area": "internal/stdout",
-        "reason": "not yet classified by the OCR v1.9.3 core-port source map"
+        "kind": "in_scope",
+        "area": "cli-output",
+        "reason": "stdout writer and quiet silencing are core CLI output boundary for stdout/stderr separation"
       },
       "tests": [
         {
           "name": "TestQuiet",
-          "disposition": "pending_scope",
-          "reason": "not yet classified by the OCR v1.9.3 core-port source map"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/cli/stdout.test.ts",
+              "title": "quiet via json format still separates stdout and stderr"
+            }
+          ]
         },
         {
           "name": "TestWriter_Default",
-          "disposition": "pending_scope",
-          "reason": "not yet classified by the OCR v1.9.3 core-port source map"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/cli/stdout.test.ts",
+              "title": "default writer is injected stdout via CliIo"
+            }
+          ]
         }
       ]
     },

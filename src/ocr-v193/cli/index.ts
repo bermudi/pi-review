@@ -32,21 +32,32 @@ import {
   resolveBackgroundFilePath,
 } from "./background.js";
 import { getCommitMessage, resolveRepoDir, validateReviewRefs } from "./git.js";
+import { suggestFlag } from "./flag-suggest.js";
 
 // ---------------------------------------------------------------------------
 // Version / help text — mirrors Go root.go + version.go
 // ---------------------------------------------------------------------------
 
-export const VERSION = "0.2.0";
-export const GIT_COMMIT = "";
-export const BUILD_DATE = "";
+export let VERSION = "0.2.0";
+export let GIT_COMMIT = "";
+export let BUILD_DATE = "";
+export function __setVersionForTest(v: string, c: string, d: string): void {
+  VERSION = v;
+  GIT_COMMIT = c;
+  BUILD_DATE = d;
+}
 
 export function versionString(): string {
   let s = `pi-review ${VERSION}`;
   if (GIT_COMMIT !== "") s += ` (${GIT_COMMIT})`;
-  s += "\nhttps://github.com/bermudi/pi-reviewer\n";
+  s += ` ${process.platform}/${process.arch}\n`;
   if (BUILD_DATE !== "") s += `built at: ${BUILD_DATE}\n`;
+  s += "https://github.com/bermudi/pi-reviewer\n";
   return s;
+}
+
+export function printVersion(write: (text: string) => void): void {
+  write(versionString());
 }
 
 export const HELP_TEXT = `pi-review - AI-Powered Code Review CLI
@@ -228,7 +239,12 @@ function parseFlags(
       const eq = tok.indexOf("=");
       const key = eq === -1 ? tok.slice(2) : tok.slice(2, eq);
       const spec = byLong.get(key);
-      if (!spec) throw new CliUsageError(`unknown flag --${key}`);
+      if (!spec) {
+        const available = specs.map((s) => s.name);
+        const sug = suggestFlag(available, key);
+        const base = `unknown flag --${key}`;
+        throw new CliUsageError(sug !== "" ? `${base}${sug}` : base);
+      }
       if (spec.takesValue) {
         let val: string;
         if (eq !== -1) val = tok.slice(eq + 1);
@@ -256,7 +272,12 @@ function parseFlags(
         const eq2 = tok.indexOf("=");
         const shortKey = tok.slice(1, eq2);
         const spec = byShort.get(shortKey);
-        if (!spec) throw new CliUsageError(`unknown flag -${shortKey}`);
+        if (!spec) {
+          const available = specs.map((s) => s.name);
+          const sug = suggestFlag(available, shortKey);
+          const base = `unknown flag -${shortKey}`;
+          throw new CliUsageError(sug !== "" ? `${base}${sug}` : base);
+        }
         if (!spec.takesValue) throw new CliUsageError(`-${shortKey} does not take a value`);
         const val = tok.slice(eq2 + 1);
         if (out.has(spec.name)) throw new CliUsageError(`duplicate --${spec.name}`);
@@ -267,7 +288,12 @@ function parseFlags(
       // Single short like -c, -p, -f, -b, -B
       if (chars.length === 1) {
         const spec = byShort.get(chars);
-        if (!spec) throw new CliUsageError(`unknown flag -${chars}`);
+        if (!spec) {
+          const available = specs.map((s) => s.name);
+          const sug = suggestFlag(available, chars);
+          const base = `unknown flag -${chars}`;
+          throw new CliUsageError(sug !== "" ? `${base}${sug}` : base);
+        }
         if (spec.takesValue) {
           const nxt = argv[i + 1];
           if (nxt === undefined || (nxt.startsWith("-") && !/^-?\d/u.test(nxt))) throw new CliUsageError(`-${chars} requires a value`);
@@ -286,7 +312,12 @@ function parseFlags(
       let consumed = false;
       for (const ch of chars) {
         const spec = byShort.get(ch);
-        if (!spec) throw new CliUsageError(`unknown flag -${ch}`);
+        if (!spec) {
+          const available = specs.map((s) => s.name);
+          const sug = suggestFlag(available, ch);
+          const base = `unknown flag -${ch}`;
+          throw new CliUsageError(sug !== "" ? `${base}${sug}` : base);
+        }
         if (spec.takesValue) throw new CliUsageError(`flag -${ch} requires a value and cannot be combined`);
         if (out.has(spec.name)) throw new CliUsageError(`duplicate --${spec.name}`);
         out.set(spec.name, true);
@@ -421,7 +452,8 @@ export async function runCli(
   if (first === "--version" || first === "-V" || first === "version") {
     // Allow `pi-review version` or `pi-review --version` or `pi-review -V`
     if (first === "version" && args.length > 1) {
-      io.stderr(`Error: version takes no arguments\n\n${HELP_TEXT}`);
+      const extra = args[1] ?? "";
+      io.stderr(`Error: unknown command "${extra}" for "pi-review version"\n\n${HELP_TEXT}`);
       return 1;
     }
     io.stdout(versionString());
