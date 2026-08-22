@@ -7,7 +7,7 @@ Review v1.9.3's core behavior through the Pi SDK.
 > user approval; `src/ocr-v193` is now the sole engine and implements Open Code
 > Review v1.9.3 as the pinned behavioral reference (`v1.9.3` /
 > `4d796ae54cabdcf4e22b69ef502ed8871456a909` / `c35ddd7223f2b5540ce03aa43c9a25ef643fca27`).
-> Inventory classification complete — 0 pending (1895 cases) while 324
+> Inventory classification complete — 0 pending (1895 cases) while 321
 > not-applicable and 475 out-of-scope decisions remain; the
 > `config`/`provider`/`login`/`MCP`/`telemetry`/`test-connection` command
 > surfaces are intentionally not ported (omitted boundary; runtime only

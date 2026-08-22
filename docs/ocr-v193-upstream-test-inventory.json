@@ -10,9 +10,9 @@
       "path": "cmd/opencodereview/apply_provider_field_test.go",
       "blob": "1b9a6e34dc35a2bafaf835a57f3b6cd3cf1dc484",
       "scope": {
-        "kind": "in_scope",
+        "kind": "out_of_scope",
         "area": "cmd/opencodereview",
-        "reason": "provider field switch is examined per-test via Pi SettingsManager"
+        "reason": "OCR provider-field mutation is intentionally omitted; pi-reviewer does not edit externally managed Pi provider configuration"
       },
       "tests": [
         {
@@ -395,9 +395,9 @@
       "path": "cmd/opencodereview/config_cmd_test.go",
       "blob": "1995c80a23944121dcee54183a32defb53d8ab0e",
       "scope": {
-        "kind": "in_scope",
+        "kind": "out_of_scope",
         "area": "cmd/opencodereview",
-        "reason": "config provider/model/MCP/telemetry dispatch and persistence are examined per-test; Pi replaces with SettingsManager but each cluster needs distinct disposition"
+        "reason": "OCR config provider/model/MCP/telemetry command dispatch and persistence are intentionally omitted; pi-reviewer only resolves externally managed Pi configuration at runtime, with per-test not-applicable reasons recorded below"
       },
       "tests": [
         {
@@ -906,9 +906,9 @@
       "path": "cmd/opencodereview/config_dispatch_test.go",
       "blob": "cbd1bdc6c365f222f9b29b274b27e7c6f48435c4",
       "scope": {
-        "kind": "in_scope",
+        "kind": "out_of_scope",
         "area": "cmd/opencodereview",
-        "reason": "config dispatch validation is examined per-test; Pi has no config subtree"
+        "reason": "OCR config command dispatch is intentionally omitted; pi-reviewer has no config command subtree"
       },
       "tests": [
         {
@@ -932,9 +932,9 @@
       "path": "cmd/opencodereview/config_runset_test.go",
       "blob": "37b2644bb7d4305e390e09a6a41caed6ecd79f4d",
       "scope": {
-        "kind": "in_scope",
+        "kind": "out_of_scope",
         "area": "cmd/opencodereview",
-        "reason": "run-set persistence and masking are examined per-test via Pi SettingsManager"
+        "reason": "OCR config set/unset persistence and display masking are intentionally omitted; pi-reviewer does not mutate or display externally managed Pi configuration"
       },
       "tests": [
         {
@@ -953,9 +953,9 @@
       "path": "cmd/opencodereview/config_unset_error_test.go",
       "blob": "793e9f416ead6969a789efd8cba279b9fee2c812",
       "scope": {
-        "kind": "in_scope",
+        "kind": "out_of_scope",
         "area": "cmd/opencodereview",
-        "reason": "unset load-error branches are examined per-test via Pi SettingsManager error handling"
+        "reason": "OCR config-unset mutation and its config-file error paths are intentionally omitted; pi-reviewer does not expose config unset"
       },
       "tests": [
         {
@@ -2315,9 +2315,9 @@
       "path": "cmd/opencodereview/provider_cmd_test.go",
       "blob": "2c81750084e2bff30684145357cb9662eb233f29",
       "scope": {
-        "kind": "in_scope",
+        "kind": "out_of_scope",
         "area": "cmd/opencodereview",
-        "reason": "provider field application, API key redaction, and TUI wizard are examined per-test via Pi SettingsManager boundary"
+        "reason": "OCR provider mutation, API-key display, and TUI wizard behavior are intentionally omitted; pi-reviewer does not mutate or display externally managed Pi configuration"
       },
       "tests": [
         {
@@ -2406,9 +2406,9 @@
       "path": "cmd/opencodereview/provider_config_apply_test.go",
       "blob": "c528986e3d55c4be85ff933b602e8ec55348495b",
       "scope": {
-        "kind": "in_scope",
+        "kind": "out_of_scope",
         "area": "cmd/opencodereview",
-        "reason": "provider config apply validation is examined per-test; Pi uses SettingsManager"
+        "reason": "OCR provider-config mutation and validation commands are intentionally omitted; pi-reviewer only resolves externally managed provider/model configuration at runtime"
       },
       "tests": [
         {

@@ -1969,17 +1969,17 @@ const scopeOverrides: ReadonlyMap<string, Scope> = new Map<string, Scope>([
   [
     "cmd/opencodereview/config_cmd_test.go",
     {
-      kind: "in_scope",
+      kind: "out_of_scope",
       area: "cmd/opencodereview",
-      reason: "config provider/model/MCP/telemetry dispatch and persistence are examined per-test; Pi replaces with SettingsManager but each cluster needs distinct disposition",
+      reason: "OCR config provider/model/MCP/telemetry command dispatch and persistence are intentionally omitted; pi-reviewer only resolves externally managed Pi configuration at runtime, with per-test not-applicable reasons recorded below",
     },
   ],
   [
     "cmd/opencodereview/provider_cmd_test.go",
     {
-      kind: "in_scope",
+      kind: "out_of_scope",
       area: "cmd/opencodereview",
-      reason: "provider field application, API key redaction, and TUI wizard are examined per-test via Pi SettingsManager boundary",
+      reason: "OCR provider mutation, API-key display, and TUI wizard behavior are intentionally omitted; pi-reviewer does not mutate or display externally managed Pi configuration",
     },
   ],
   [
@@ -1993,41 +1993,41 @@ const scopeOverrides: ReadonlyMap<string, Scope> = new Map<string, Scope>([
   [
     "cmd/opencodereview/config_dispatch_test.go",
     {
-      kind: "in_scope",
+      kind: "out_of_scope",
       area: "cmd/opencodereview",
-      reason: "config dispatch validation is examined per-test; Pi has no config subtree",
+      reason: "OCR config command dispatch is intentionally omitted; pi-reviewer has no config command subtree",
     },
   ],
   [
     "cmd/opencodereview/config_runset_test.go",
     {
-      kind: "in_scope",
+      kind: "out_of_scope",
       area: "cmd/opencodereview",
-      reason: "run-set persistence and masking are examined per-test via Pi SettingsManager",
+      reason: "OCR config set/unset persistence and display masking are intentionally omitted; pi-reviewer does not mutate or display externally managed Pi configuration",
     },
   ],
   [
     "cmd/opencodereview/provider_config_apply_test.go",
     {
-      kind: "in_scope",
+      kind: "out_of_scope",
       area: "cmd/opencodereview",
-      reason: "provider config apply validation is examined per-test; Pi uses SettingsManager",
+      reason: "OCR provider-config mutation and validation commands are intentionally omitted; pi-reviewer only resolves externally managed provider/model configuration at runtime",
     },
   ],
   [
     "cmd/opencodereview/apply_provider_field_test.go",
     {
-      kind: "in_scope",
+      kind: "out_of_scope",
       area: "cmd/opencodereview",
-      reason: "provider field switch is examined per-test via Pi SettingsManager",
+      reason: "OCR provider-field mutation is intentionally omitted; pi-reviewer does not edit externally managed Pi provider configuration",
     },
   ],
   [
     "cmd/opencodereview/config_unset_error_test.go",
     {
-      kind: "in_scope",
+      kind: "out_of_scope",
       area: "cmd/opencodereview",
-      reason: "unset load-error branches are examined per-test via Pi SettingsManager error handling",
+      reason: "OCR config-unset mutation and its config-file error paths are intentionally omitted; pi-reviewer does not expose config unset",
     },
   ],
 ]);
