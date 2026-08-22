@@ -68,7 +68,11 @@ export type RuntimeTransportFactory = (
   options: Parameters<typeof createPiTransportForFile>[0],
 ) => Promise<RuntimeTransport>;
 
-export async function withOwnedTransport<T>(transport: RuntimeTransport, work: () => Promise<T>): Promise<T> {
+async function withOwnedTransport<T>(
+  transport: RuntimeTransport,
+  work: () => Promise<T>,
+  onDeferredDisposeError?: (error: Error) => void,
+): Promise<T> {
   let primary: Error | null = null;
   try {
     return await work();
@@ -87,7 +91,11 @@ export async function withOwnedTransport<T>(transport: RuntimeTransport, work: (
           { cause: primary },
         );
       }
-      throw disposeError;
+      if (onDeferredDisposeError !== undefined) {
+        onDeferredDisposeError(disposeError);
+      } else {
+        throw disposeError;
+      }
     }
   }
 }
@@ -277,6 +285,7 @@ export function createReviewRunnerFactory(
       model: selection?.model,
       modelRuntime: selection?.modelRuntime,
     });
+    let deferredRunError: Error | null = null;
     return await withOwnedTransport(transport, async () => {
     const identity = transportModelIdentity(transport) ?? selection?.identity ?? {
       provider: opts.provider,
@@ -324,6 +333,7 @@ export function createReviewRunnerFactory(
       session.RecordResumeLineage(NewResumeLineage(resume, runId, identity.provider, modelId));
     } catch (err) {
       writer?.close();
+      session._attachPersist(null);
       const cause = err instanceof Error ? err : new Error(String(err));
       session._setPersistInitErr(new Error(`create session writer: ${cause.message}`, { cause }));
     }
@@ -367,6 +377,7 @@ export function createReviewRunnerFactory(
     } catch (err) {
       runError = err instanceof Error ? err : new Error(String(err));
     }
+    deferredRunError = runError;
     // Freeze retry report at same boundary as manifest (after ag.Run joined background work).
     let retryReport: RetryReport | null = null;
     let freezeError: string | null = null;
@@ -381,7 +392,7 @@ export function createReviewRunnerFactory(
 
     const reviewRunner: ReviewRunner = {
       run: async (_sig?: AbortSignal): Promise<LlmComment[]> => {
-        if (runError !== null) throw runError;
+        if (deferredRunError !== null) throw deferredRunError;
         return comments;
       },
       // A failed session_end cannot be resumed, but its already-built
@@ -405,6 +416,14 @@ export function createReviewRunnerFactory(
     };
 
     return reviewRunner;
+    }, (disposeError) => {
+      deferredRunError = deferredRunError === null
+        ? disposeError
+        : new AggregateError(
+          [deferredRunError, disposeError],
+          `${deferredRunError.message}; additionally, transport disposal failed: ${disposeError.message}`,
+          { cause: deferredRunError },
+        );
     });
   };
 }
