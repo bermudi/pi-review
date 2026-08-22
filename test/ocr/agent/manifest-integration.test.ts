@@ -9,7 +9,9 @@ import { Agent, reviewItemFingerprint } from "../../../src/ocr/agent/agent.js";
 import type { Diff } from "../../../src/ocr/model/diff.js";
 import { createDiff } from "../../../src/ocr/model/diff.js";
 import { SessionHistory } from "../../../src/ocr/session/history.js";
-import { FailureProvider, FailureTimeout, FailurePanic, FailureBudget, StateComplete, StatePartial, StateFailed, StateSkipped, type FailureClass } from "../../../src/ocr/session/manifest.js";
+import { FailureProvider, FailureTimeout, FailurePanic, FailureBudget, FailureCancelled, RunFailureCancelled, StateComplete, StatePartial, StateFailed, StateSkipped, type FailureClass } from "../../../src/ocr/session/manifest.js";
+import { newJSONLWriter } from "../../../src/ocr/session/persist.js";
+import { LoadReviewResumeState } from "../../../src/ocr/session/resume.js";
 import type { Template } from "../../../src/ocr/template/template.js";
 import { CommentCollector } from "../../../src/ocr/tool/collector.js";
 
@@ -34,6 +36,56 @@ class ManifestFlowClient {
   async complete(signal: unknown, req: unknown): Promise<unknown> {
     return this.CompletionsWithCtx(signal, req);
   }
+}
+
+class CancellationFlowClient extends ManifestFlowClient {
+  private resolveBlocked!: () => void;
+  readonly blocked = new Promise<void>((resolve) => {
+    this.resolveBlocked = resolve;
+  });
+  calls = 0;
+
+  override async CompletionsWithCtx(signal: unknown, req: unknown): Promise<unknown> {
+    const prompt = (req as { messages: Array<{ content: string }> }).messages
+      .map((message) => typeof message.content === "string" ? message.content : "")
+      .join("\n");
+    this.calls++;
+    if (!prompt.includes("blocked.go")) return super.CompletionsWithCtx(signal, req);
+    this.resolveBlocked();
+    const abortSignal = signal as AbortSignal;
+    return new Promise<never>((_resolve, reject) => {
+      const rejectAbort = (): void => {
+        reject(abortSignal.reason instanceof Error ? abortSignal.reason : new Error("context canceled"));
+      };
+      if (abortSignal.aborted) {
+        rejectAbort();
+        return;
+      }
+      abortSignal.addEventListener("abort", rejectAbort, { once: true });
+    });
+  }
+}
+
+function persistManifestSession(agent: Agent): void {
+  const session = (agent as unknown as { session: SessionHistory }).session;
+  const writer = newJSONLWriter(session.sessionId, session.repoDir, session.gitBranch, session.model, {
+    reviewMode: session.reviewMode,
+    diffFrom: session.diffFrom,
+    diffTo: session.diffTo,
+    diffCommit: session.diffCommit,
+    resumedFrom: session.resumedFrom,
+  });
+  session._attachPersist({
+    writeReviewItemDone: (...args) => { writer.WriteReviewItemDone(...args); },
+    writeReviewItemReused: (...args) => { writer.WriteReviewItemReused(...args); },
+    writeReviewItemFailed: (...args) => { writer.WriteReviewItemFailed(...args); },
+    writeResumeLineage: (lineage) => { writer.WriteResumeLineage(lineage); },
+    writeSessionEnd: (...args) => writer.WriteSessionEnd(...args),
+    writeLLMRequest: (...args) => { writer.WriteLLMRequest(...args); },
+    writeLLMResponse: (...args) => { writer.WriteLLMResponse(...args); },
+    writeLLMError: (...args) => { writer.WriteLLMError(...args); },
+    writeToolCall: (...args) => { writer.WriteToolCall(...args); },
+  });
 }
 
 function newManifestFlowAgent(diffs: Diff[], resume: unknown, client?: unknown): Agent {
@@ -76,6 +128,73 @@ async function finish(agent: Agent): Promise<import("../../../src/ocr/session/ma
 }
 
 describe("ocr agent manifest integration (ported)", () => {
+  // OCR v1.9.9: TestManifestFlowCancellationPersistsResumableSession
+  test("TestManifestFlowCancellationPersistsResumableSession", async () => {
+    const done = createDiff({ oldPath: "done.go", newPath: "done.go", diff: "+done", insertions: 1 });
+    const blocked = createDiff({ oldPath: "blocked.go", newPath: "blocked.go", diff: "+blocked", insertions: 1 });
+    const pending = createDiff({ oldPath: "pending.go", newPath: "pending.go", diff: "+pending", insertions: 1 });
+    const client = new CancellationFlowClient();
+    const agent = newManifestFlowAgent([done, blocked, pending], null, client);
+    persistManifestSession(agent);
+    (agent as unknown as { args: { maxConcurrency: number } }).args.maxConcurrency = 1;
+
+    const controller = new AbortController();
+    const dispatch = (agent as unknown as { dispatchSubtasks: (signal: AbortSignal) => Promise<unknown> })
+      .dispatchSubtasks(controller.signal);
+    await client.blocked;
+    controller.abort(new Error("context canceled"));
+    await expect(dispatch).rejects.toThrow("context canceled");
+
+    const manifest = await finish(agent);
+    expect(manifest.runFailure?.classification).toBe(RunFailureCancelled);
+    expect(manifest.coverage.completed).toHaveLength(1);
+    expect(manifest.coverage.failed).toHaveLength(2);
+    for (const item of manifest.coverage.failed) {
+      expect(item.classification).toBe(FailureCancelled);
+    }
+
+    const session = (agent as unknown as { session: SessionHistory }).session;
+    const resume = LoadReviewResumeState(session.repoDir, session.sessionId);
+    const resumeError = resume.ValidateResume({
+      identity: {
+        mode: manifest.input.mode,
+        sourceArtifactSha256: manifest.input.sourceArtifactSha256,
+        ruleConfigSha256: manifest.execution.ruleConfigSha256,
+        repositorySha256: manifest.repository.identitySha256,
+      },
+      provider: manifest.execution.provider ?? "",
+      model: manifest.execution.model ?? "",
+      providerExplicit: false,
+      modelExplicit: false,
+    });
+    expect(resumeError).toBeNull();
+    expect(resume.ReusableItem(reviewItemFingerprint("range", done))).not.toBeNull();
+    expect(resume.ReusableItem(reviewItemFingerprint("range", blocked))).toBeNull();
+  });
+
+  // OCR v1.9.9: TestManifestFlowCancellationBeforeDispatchStartsNoSubtask
+  test("TestManifestFlowCancellationBeforeDispatchStartsNoSubtask", async () => {
+    const pending = createDiff({ oldPath: "blocked.go", newPath: "blocked.go", diff: "+blocked", insertions: 1 });
+    const client = new CancellationFlowClient();
+    const agent = newManifestFlowAgent([pending], null, client);
+    persistManifestSession(agent);
+
+    const controller = new AbortController();
+    controller.abort(new Error("context canceled"));
+    await expect(
+      (agent as unknown as { dispatchSubtasks: (signal: AbortSignal) => Promise<unknown> })
+        .dispatchSubtasks(controller.signal),
+    ).rejects.toThrow("context canceled");
+    expect(client.calls).toBe(0);
+    expect((agent as unknown as { warnings: unknown[] }).warnings).toHaveLength(0);
+
+    const manifest = await finish(agent);
+    expect(manifest.runFailure?.classification).toBe(RunFailureCancelled);
+    expect(manifest.coverage.completed).toHaveLength(0);
+    expect(manifest.coverage.failed).toHaveLength(1);
+    expect(manifest.coverage.failed[0]?.classification).toBe(FailureCancelled);
+  });
+
   // OCR v1.9.3: TestManifestFlowCompleteAndPartial
   test("TestManifestFlowCompleteAndPartial", async () => {
     const a1 = newManifestFlowAgent([createDiff({ oldPath: "good.go", newPath: "good.go", diff: "+ok", insertions: 1 })], null);

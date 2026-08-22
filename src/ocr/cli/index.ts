@@ -541,7 +541,18 @@ export async function runCli(
       return 1;
     }
 
-    const signal = undefined;
+    // Use the same AbortSignal that reaches the review Agent.  The Agent owns
+    // cancellation classification, manifest finalization, and session
+    // persistence; the CLI only translates process signals at this boundary.
+    const abortController = new AbortController();
+    const onInterrupt = (): void => {
+      if (!abortController.signal.aborted) {
+        abortController.abort(new Error("review was cancelled"));
+      }
+    };
+    io.onSignal("SIGINT", onInterrupt);
+    io.onSignal("SIGTERM", onInterrupt);
+    const signal = abortController.signal;
     const startMs = Date.now();
 
     const reviewRunnerFactory = deps.reviewRunnerFactory;
@@ -580,6 +591,9 @@ export async function runCli(
       }
       io.stderr(`Error: ${String((err as Error).message)}\n`);
       return 1;
+    } finally {
+      io.offSignal("SIGINT", onInterrupt);
+      io.offSignal("SIGTERM", onInterrupt);
     }
   }
 

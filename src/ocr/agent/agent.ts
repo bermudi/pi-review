@@ -3,7 +3,8 @@
 //
 // Ported from internal/agent/agent.go at c35ddd7223f2b5540ce03aa43c9a25ef643fca27;
 // named main-loop stop classification updated from OCR v1.9.9 commit
-// 4b6874bd23106b5c68bea6d230bb60303b9f0961.
+// 4b6874bd23106b5c68bea6d230bb60303b9f0961; cancellation checkpoint
+// preservation follows OCR v1.9.4 commit 31db10f.
 // Modifications are distributed as part of pi-reviewer under
 // GPL-3.0-or-later;
 // see LICENSES/Apache-2.0.txt and THIRD_PARTY_NOTICES.md.
@@ -35,6 +36,7 @@ import {
   FailureProvider,
   FailurePanic,
   FailureUnknown,
+  RunFailureCancelled,
   type CoverageItem,
   type RunManifest,
   ManifestBuilder,
@@ -823,6 +825,16 @@ export class Agent {
     if (!b) return;
     const err = b.MarkCompleted(manifestItemID(this.reviewModeForManifest(), d));
     if (err) this.recordWarning("manifest_error", d.newPath, err.message);
+    if (err === null) {
+      const comments = this.args.commentCollector?.commentsForPath?.(effectivePath(d)) ?? [];
+      this.sessionHistory?.RecordReviewItemDone(
+        effectivePath(d),
+        d.oldPath,
+        d.newPath,
+        reviewItemFingerprint(this.reviewModeForManifest(), d),
+        comments,
+      );
+    }
   }
 
   private markReused(d: Diff): void {
@@ -837,6 +849,26 @@ export class Agent {
     if (!b) return;
     const err = b.MarkFailed(manifestItemID(this.reviewModeForManifest(), d), cls, reason);
     if (err) this.recordWarning("manifest_error", d.newPath, err.message);
+    if (err === null) {
+      this.sessionHistory?.RecordReviewItemFailed(
+        effectivePath(d),
+        d.oldPath,
+        d.newPath,
+        reviewItemFingerprint(this.reviewModeForManifest(), d),
+        reason,
+      );
+    }
+  }
+
+  /** Record the parent abort before finalization sweeps undispatched work. */
+  private recordCancellation(signal: AbortSignal): Error {
+    const cause = signal.reason;
+    const error = cause instanceof Error
+      ? cause
+      : new Error(cause === undefined ? "review was cancelled" : String(cause));
+    const manifestError = this.manifestBuilder.SetRunFailure(RunFailureCancelled, "review was cancelled");
+    if (manifestError !== null) this.recordWarning("manifest_error", "", manifestError.message);
+    return error;
   }
 
   finalizeManifest(): Error | null {
@@ -947,10 +979,17 @@ export class Agent {
       }
     }
 
-    // Step 2: dispatch per-file subtasks concurrently
-    const comments = await this.dispatchSubtasks(sig);
-    await this.runner.WaitBackground().catch(() => undefined);
-    return comments;
+    // Step 2: dispatch per-file subtasks concurrently.
+    try {
+      const comments = await this.dispatchSubtasks(sig);
+      await this.runner.WaitBackground().catch(() => undefined);
+      return comments;
+    } catch (err) {
+      if (sig.aborted) this.recordCancellation(sig);
+      this.finalizeManifest();
+      this.sessionHistory?.Finalize();
+      throw err;
+    }
   }
 
   // -- internal helpers
@@ -1144,6 +1183,10 @@ export class Agent {
       this.manifestBuilder.SetRunFailure("internal" as never, "coverage registration failed");
     }
 
+    if (signal.aborted) {
+      throw this.recordCancellation(signal);
+    }
+
     const toDispatch = this.applyResume(this.diffs);
 
     let concurrency = this.args.maxConcurrency ?? 8;
@@ -1307,11 +1350,7 @@ export class Agent {
 
     await Promise.all(tasks);
 
-    if (signal.aborted) {
-      const reason = (signal as AbortSignal & { reason?: unknown }).reason;
-      const msg = reason instanceof Error ? reason.message : String(reason ?? "aborted");
-      throw new Error(msg);
-    }
+    if (signal.aborted) throw this.recordCancellation(signal);
 
     if (dispatched === 0) {
       return collector !== null ? collector.comments() : [];

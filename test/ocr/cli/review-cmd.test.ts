@@ -214,6 +214,54 @@ test("runReview flag validation writes no artifacts", async () => {
   }
 });
 
+test("review CLI forwards SIGINT through the Agent abort seam and removes listeners", async () => {
+  const repo = fs.mkdtempSync(path.join(os.tmpdir(), "ocr-review-signal-"));
+  const init = spawnSync("git", ["init", "-q", repo], { encoding: "utf8" });
+  expect(init.status).toBe(0);
+  const listeners = new Map<string, () => void>();
+  const removed: string[] = [];
+  let receivedSignal: AbortSignal | undefined;
+  try {
+    const code = await runCli(["review", "--repo", repo], {
+      io: {
+        stdout: () => {},
+        stderr: () => {},
+        onSignal: (name: string, listener: () => void) => { listeners.set(name, listener); },
+        offSignal: (name: string) => { removed.push(name); listeners.delete(name); },
+      },
+      reviewRunnerFactory: async (
+        _opts: import("../../../src/ocr/cli/shared.js").ReviewOptions,
+        signal?: AbortSignal,
+      ) => {
+        receivedSignal = signal;
+        listeners.get("SIGINT")?.();
+        return {
+          run: async (runSignal?: AbortSignal) => {
+            expect(runSignal).toBe(receivedSignal);
+            expect(runSignal?.aborted).toBe(true);
+            return [];
+          },
+          diffs: [],
+          filesReviewed: 0,
+          inputTokens: 0,
+          outputTokens: 0,
+          totalTokens: 0,
+          cacheReadTokens: 0,
+          cacheWriteTokens: 0,
+          toolCalls: {},
+          warnings: [],
+          projectSummary: "",
+        } as never;
+      },
+    } as never);
+    expect(code).toBe(0);
+    expect(receivedSignal?.aborted).toBe(true);
+    expect(removed).toEqual(["SIGINT", "SIGTERM"]);
+  } finally {
+    fs.rmSync(repo, { recursive: true, force: true });
+  }
+});
+
 // OCR v1.9.3: TestParseReviewFlagsAllowsFromAndTo
 test("parseReviewFlags allows from and to", () => {
   const opts = parseReviewFlags(["--from", "main", "--to", "HEAD"]);

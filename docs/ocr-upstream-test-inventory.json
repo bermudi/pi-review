@@ -7592,14 +7592,28 @@
         {
           "name": "TestManifestFlowCancellationBeforeDispatchStartsNoSubtask",
           "delta": "added",
-          "disposition": "pending",
-          "reason": "OCR v1.9.9 added requires explicit new evidence or revalidation; prior v1.9.3 coverage is not inherited."
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr/agent/manifest-integration.test.ts",
+              "title": "TestManifestFlowCancellationBeforeDispatchStartsNoSubtask",
+              "ocrVersion": "v1.9.9"
+            }
+          ]
         },
         {
           "name": "TestManifestFlowCancellationPersistsResumableSession",
           "delta": "added",
-          "disposition": "pending",
-          "reason": "OCR v1.9.9 added requires explicit new evidence or revalidation; prior v1.9.3 coverage is not inherited."
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr/agent/manifest-integration.test.ts",
+              "title": "TestManifestFlowCancellationPersistsResumableSession",
+              "ocrVersion": "v1.9.9"
+            }
+          ]
         },
         {
           "name": "TestManifestFlowCompleteAndPartial",
