@@ -52,9 +52,11 @@ OCR-backed utilities (`PiTransport`, `OcrRunner`, `runOcrCli`).
 
 6. **Support diff review, full-file scan, checkpoints/resume, and output formats — `src/ocr-v193/scan`, `src/ocr-v193/session`, `src/ocr-v193/cli/output.ts`.**
    `review` handles workspace/range/commit diffs; `scan` handles full-file
-   scans with batching. Sessions persist under `~/.pi/agent` or an isolated
-   directory; `--resume` continues a single interrupted session. Output formats
-   are `text`, `json`, and `sarif`; audience is `human` or `agent`.
+   scans with batching. Review checkpoints persist under
+   `~/.opencodereview/sessions`; `~/.pi/agent` contains Pi model and
+   authentication configuration. `--resume` continues a single interrupted
+   session. Output formats are `text`, `json`, and `sarif`; audience is
+   `human` or `agent`.
 
 ## Module seams
 

@@ -3,7 +3,6 @@
 // Thin production adapter over the OCR v1.9.3 CLI. This file contains no
 // review policy; it injects the real parity runners
 // and preview factories and preserves the OCR command/flag semantics directly.
-// Probe: CLIPRODADAPTER
 
 import { newResolver } from "./ocr-v193/rules/system_rules.js";
 import { previewDiffs } from "./ocr-v193/agent/preview.js";
