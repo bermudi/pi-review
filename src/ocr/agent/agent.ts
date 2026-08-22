@@ -1408,6 +1408,9 @@ export class Agent {
     try {
       const res = await this.runner.RunPerFile(signal, runnerMessages, newPath);
       completed = res.completed;
+      if (res.error !== undefined) {
+        return { completed: false, error: res.error };
+      }
       if (!completed) {
         const [classification, reason] = classifyMainLoopStop(res.stop as MainLoopStop);
         stop = { class: classification, reason, checkpoint: "main_task did not complete before stopping", reportAsError: true };

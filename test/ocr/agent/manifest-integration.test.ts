@@ -9,7 +9,7 @@ import { Agent, reviewItemFingerprint } from "../../../src/ocr/agent/agent.js";
 import type { Diff } from "../../../src/ocr/model/diff.js";
 import { createDiff } from "../../../src/ocr/model/diff.js";
 import { SessionHistory } from "../../../src/ocr/session/history.js";
-import { FailureProvider, FailureTimeout, FailurePanic, FailureBudget, FailureUnknown, StateComplete, StatePartial, StateFailed, StateSkipped } from "../../../src/ocr/session/manifest.js";
+import { FailureProvider, FailureTimeout, FailurePanic, FailureBudget, StateComplete, StatePartial, StateFailed, StateSkipped, type FailureClass } from "../../../src/ocr/session/manifest.js";
 import type { Template } from "../../../src/ocr/template/template.js";
 import { CommentCollector } from "../../../src/ocr/tool/collector.js";
 
@@ -90,7 +90,7 @@ describe("ocr agent manifest integration (ported)", () => {
     const m2 = await finish(a2);
     expect(m2.terminalState).toBe(StatePartial);
     expect(m2.coverage.failed.length).toBe(1);
-    expect([FailureProvider, FailureBudget, FailureTimeout, FailurePanic, FailureUnknown].includes(m2.coverage.failed[0]!.classification as unknown as string as typeof FailureProvider)).toBe(true);
+    expect(m2.coverage.failed[0]!.classification).toBe(FailureProvider);
   });
 
   // OCR v1.9.3: TestManifestFlowRunInputFailureIsPersisted
@@ -120,7 +120,7 @@ describe("ocr agent manifest integration (ported)", () => {
 
   // OCR v1.9.3: TestManifestFlowAllFailedTimeoutAndPanic
   test("TestManifestFlowAllFailedTimeoutAndPanic", async () => {
-    const cases: Array<{ path: string; sig: () => AbortSignal; want: string }> = [
+    const cases: Array<{ path: string; sig: () => AbortSignal; want: FailureClass }> = [
       { path: "bad.go", sig: () => new AbortController().signal, want: FailureProvider },
       { path: "timeout.go", sig: () => new AbortController().signal, want: FailureTimeout },
       { path: "panic.go", sig: () => new AbortController().signal, want: FailurePanic },
@@ -132,15 +132,14 @@ describe("ocr agent manifest integration (ported)", () => {
       expect(threw).toBe(true);
       const m = await finish(agent);
       expect(m.coverage.failed.length).toBe(1);
-      // Allow either expected or budget due to Pi's token handling differences
-      expect([tc.want, FailureBudget, FailureProvider, FailureTimeout, FailurePanic, FailureUnknown].includes(m.coverage.failed[0]!.classification as unknown as string as typeof FailureProvider)).toBe(true);
+      expect(m.coverage.failed[0]!.classification).toBe(tc.want);
     }
   });
 
   // OCR v1.9.3: TestManifestFlowMixedFailureIsIsolatedToPartial
   test("TestManifestFlowMixedFailureIsIsolatedToPartial", async () => {
     const longPath = "nested/".repeat(20) + "budget.go";
-    const cases: Array<{ failDiff: Diff; want: string; setup?: (a: Agent) => void }> = [
+    const cases: Array<{ failDiff: Diff; want: FailureClass; setup?: (a: Agent) => void }> = [
       { failDiff: createDiff({ oldPath: "slow.go", newPath: "slow.go", diff: "+slow", insertions: 1 }), want: FailureTimeout },
       { failDiff: createDiff({ oldPath: "panic.go", newPath: "panic.go", diff: "+boom", insertions: 1 }), want: FailurePanic },
       { failDiff: createDiff({ oldPath: longPath as string, newPath: longPath as string, diff: "token ".repeat(50), insertions: 1 }), want: FailureBudget, setup: (a) => { (a as unknown as { args: { template: { MaxTokens: number } } }).args.template.MaxTokens = 100; } },
@@ -152,7 +151,7 @@ describe("ocr agent manifest integration (ported)", () => {
       const m = await finish(agent);
       expect(m.terminalState).toBe(StatePartial);
       expect(m.coverage.failed.length).toBe(1);
-      expect([tc.want, FailureBudget, FailureUnknown].includes(m.coverage.failed[0]!.classification as unknown as string as typeof FailureBudget)).toBe(true);
+      expect(m.coverage.failed[0]!.classification).toBe(tc.want);
     }
   });
 
