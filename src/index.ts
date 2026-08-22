@@ -1,5 +1,5 @@
 /**
- * Public package boundary — OCR v1.9.3 port only.
+ * Public package boundary — OCR v1.9.9 core port.
  * The legacy precision-oriented engine has been removed by explicit user
  * approval; the OCR tree under src/ocr is now the sole engine.
  * Pi sessions, runner adapters, prompts, and model-visible tool definitions

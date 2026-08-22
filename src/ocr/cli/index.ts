@@ -37,10 +37,10 @@ import { colorModeError, resolveColor, validateColorMode } from "./color.js";
 // Version / help text — mirrors Go root.go + version.go
 // ---------------------------------------------------------------------------
 
-export const VERSION = "0.3.0";
+export const VERSION = "0.4.0";
 export const GIT_COMMIT = "";
 export const BUILD_DATE = "";
-export const OCR_COMPATIBILITY_VERSION = "v1.9.3";
+export const OCR_COMPATIBILITY_VERSION = "v1.9.9";
 
 export interface BuildInfo {
   readonly version: string;

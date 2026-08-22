@@ -9,7 +9,7 @@
 /**
  * OCR binary runner for the differential harness.
  *
- * - Builds OCR v1.9.3 binary from a temporary `git archive` of the pinned tag so
+ * - Builds OCR v1.9.9 binary from a temporary `git archive` of the pinned tag so
  *   the neighboring checkout is not modified (per plan requirement).
  * - Spawns OCR binary with argv arrays, tmp config, and local fake server baseUrl.
  * - Captures stdout/stderr, exit code, selected/excluded/completed/failed, tool
@@ -26,8 +26,8 @@ import * as path from "node:path";
 import { verifyPinnedRef } from "./pinned.js";
 import type { HarnessRunResult, ScriptedTurn } from "./types.js";
 
-const PINNED_TAG = "v1.9.3";
-const PINNED_COMMIT = "c35ddd7223f2b5540ce03aa43c9a25ef643fca27";
+const PINNED_TAG = "v1.9.9";
+const PINNED_COMMIT = "4b6874bd23106b5c68bea6d230bb60303b9f0961";
 void PINNED_COMMIT;
 
 function gitSync(cwd: string, args: readonly string[]): string {
@@ -54,7 +54,7 @@ export async function getOcrBinary(): Promise<string> {
   await Bun.spawn(["mkdir", "-p", extractDir]).exited;
   const tarRes = spawnSync("tar", ["-xf", archivePath, "-C", extractDir], { encoding: "utf-8", timeout: 10000 });
   if (tarRes.status !== 0) throw new Error(`tar extract failed: ${tarRes.stderr ?? tarRes.stdout}`);
-  const binaryPath = join(buildDir, "ocr-v1.9.3");
+  const binaryPath = join(buildDir, "ocr-v1.9.9");
   const goBuild = spawnSync("go", ["build", "-o", binaryPath as string, "./cmd/opencodereview"], { cwd: extractDir, encoding: "utf-8", timeout: 60000 });
   if (goBuild.status !== 0) {
     // Fallback: try building from refCheckout directly (no archive) if go build from archive fails due to missing go.sum?

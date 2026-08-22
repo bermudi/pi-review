@@ -1,4 +1,4 @@
-# OCR v1.9.3 shipped parity recovery plan v2; v1.9.9 upgrade target — black-box evidence first
+# OCR v1.9.9 shipped parity plan — black-box evidence first
 
 ## Decision and current status
 
@@ -6,18 +6,15 @@ This plan supersedes every earlier OCR parity plan and every recorded phase
 completion. Git history preserves the old plans and reports; they are not
 evidence.
 
-The shipped reference remains:
+The shipped reference is:
 
-- OCR tag `v1.9.3`
-- signed tag object `4d796ae54cabdcf4e22b69ef502ed8871456a909`
-- commit `c35ddd7223f2b5540ce03aa43c9a25ef643fca27`
+- OCR tag `v1.9.9`
+- signed tag object `c95d3907d5448354d3f8a33f2ae5e4f23fdf1c94`
+- commit `4b6874bd23106b5c68bea6d230bb60303b9f0961`
 - development checkout `../open-code-review`
 
-The active, unshipped upgrade target is OCR `v1.9.9`, tag object
-`c95d3907d5448354d3f8a33f2ae5e4f23fdf1c94`, commit
-`4b6874bd23106b5c68bea6d230bb60303b9f0961`. Its committed test delta is
-`docs/ocr-upstream-test-delta.json`; pending delta cases must be ported and
-re-verified before the target can replace the shipped baseline.
+The previous package baseline was v0.3.0/OCR v1.9.3. Its committed delta to
+v1.9.9 remains `docs/ocr-upstream-test-delta.json` as historical evidence.
 
 The first v1.9.9 upgrade tranche translates 11 changed/additional cases:
 v1.9.5 cross-file relocation and v1.9.5/v1.9.6 rule-language assets. The
@@ -67,17 +64,17 @@ stage-only filter tooling remain tested; this is not a claim of required-tool
 wire equivalence. The inventory is classified, but release/packed-install
 verification remains separate.
 
-Existing `src/ocr` code is **candidate implementation**, not proven
-parity. Do not delete or rewrite it merely because its old verifiers were
-unsound. Reuse it only when a new gate proves its behavior.
+`src/ocr` is the sole v1.9.9 compatibility engine. Exact packed-install
+verification remains pending for the release commit; do not pre-record a pass
+SHA or claim full provider command-surface parity.
 
 All gates begin `unverified`. Gate 5 verifies that the shipped CLI defaults to
 the parity engine. Before explicit removal on 2026-08-22, legacy remained
 available behind `--engine legacy` and suffixed library exports; after removal
-the sole engine is OCR v1.9.3 and the verifier proves absence of that switch.
+the sole engine is OCR v1.9.9 and the verifier proves absence of that switch.
 
-Inventory classification is complete — 0 pending of 1895 upstream cases
-(321 not-applicable, 475 out-of-scope, remainder covered/equivalent). The
+Inventory classification is complete — 0 pending of 1,997 upstream cases:
+1,015 covered, 112 equivalent, 388 not applicable, and 482 out of scope. The
 `config`/`provider`/`login`/`MCP`/`telemetry`/`test-connection` command
 surfaces are intentionally not ported (omitted boundary; runtime only
 resolves/loads external Pi configuration via public Pi APIs from

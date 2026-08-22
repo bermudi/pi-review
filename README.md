@@ -1,16 +1,15 @@
 # pi-reviewer
 
 `pi-reviewer` is a TypeScript library and `pi-review` CLI for running Open Code
-Review v1.9.3's core behavior through the Pi SDK.
+Review v1.9.9's core behavior through the Pi SDK.
 
 > **Status:** the legacy precision-oriented engine has been removed by explicit
 > user approval; `src/ocr` is now the sole engine and implements Open Code
-> Review v1.9.3 as the shipped behavioral reference (`v1.9.3` /
-> `4d796ae54cabdcf4e22b69ef502ed8871456a909` / `c35ddd7223f2b5540ce03aa43c9a25ef643fca27`).
-> The active OCR v1.9.9 upgrade target is pinned and its delta inventory has
-> 56 pending core cases; it is not shipped behavior or a parity claim. The
-> shipped v1.9.3 inventory is complete: 0 pending (1895 cases) while 321
-> not-applicable and 475 out-of-scope decisions remain; the
+> Review v1.9.9 as the shipped behavioral reference (`v1.9.9` /
+> `c95d3907d5448354d3f8a33f2ae5e4f23fdf1c94` / `4b6874bd23106b5c68bea6d230bb60303b9f0961`).
+> The inventory is complete: 1,997 cases, with 1,015 covered, 112 equivalent,
+> 388 not applicable, and 482 out of scope. Final packed-install verification
+> is still pending for the release commit. The
 > `config`/`provider`/`login`/`MCP`/`telemetry`/`test-connection` command
 > surfaces are intentionally not ported (omitted boundary; runtime only
 > resolves/loads external Pi configuration via public Pi APIs from

@@ -1,7 +1,7 @@
-# OCR source translation map — shipped v1.9.3, upgrade target v1.9.9
+# OCR source translation map — shipped v1.9.9
 
-Shipped reference: tag `v1.9.3`, signed tag object `4d796ae54cabdcf4e22b69ef502ed8871456a909`, commit `c35ddd7223f2b5540ce03aa43c9a25ef643fca27` in `../open-code-review`.
-Verified: `git -C ../open-code-review rev-parse v1.9.3^{commit}` == `c35ddd7223f2b5540ce03aa43c9a25ef643fca27`, `git -C ../open-code-review tag --verify v1.9.3` is good signature.
+Shipped reference: tag `v1.9.9`, signed tag object `c95d3907d5448354d3f8a33f2ae5e4f23fdf1c94`, commit `4b6874bd23106b5c68bea6d230bb60303b9f0961` in `../open-code-review`.
+The v1.9.3→v1.9.9 delta and mixed-file provenance remain historical evidence.
 
 Active upgrade target (not shipped): tag `v1.9.9`, signed tag object
 `c95d3907d5448354d3f8a33f2ae5e4f23fdf1c94`, commit

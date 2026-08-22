@@ -3,8 +3,14 @@ import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
 import { spawnSync } from "node:child_process";
+import packageJson from "../package.json";
 
 import { runCli, HELP_TEXT, versionString } from "../src/cli.ts";
+import { VERSION } from "../src/ocr/cli/index.ts";
+
+test("package and CLI versions stay aligned", () => {
+  expect(VERSION).toBe(packageJson.version);
+});
 
 import type { Preview } from "../src/ocr/model/preview.ts";
 import type { ReviewOptions, ScanOptions } from "../src/ocr/cli/shared.ts";
@@ -162,7 +168,7 @@ describe("thin OCR production adapter", () => {
     expect(cap.stdout()).toBe(versionString());
     expect(typeof packageJson.version).toBe("string");
     expect(cap.stdout()).toContain(`pi-review ${String(packageJson.version)}`);
-    expect(cap.stdout()).toContain("OCR compatibility: v1.9.3");
+    expect(cap.stdout()).toContain("OCR compatibility: v1.9.9");
     expect(cap.stderr()).toBe("");
   });
 

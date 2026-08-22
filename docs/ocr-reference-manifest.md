@@ -1,25 +1,22 @@
-# OCR reference manifest — shipped v1.9.3, upgrade target v1.9.9
+# OCR reference manifest — shipped v1.9.9
 
 The shipped reference for every translated file remains under
 `docs/ocr-port-plan.md`.
 
 ## Shipped reference
 
-- Release: https://github.com/alibaba/open-code-review/releases/tag/v1.9.3
-- Tag: `v1.9.3`
-- Signed tag object: `4d796ae54cabdcf4e22b69ef502ed8871456a909` (`git cat-file -p v1.9.3`)
-- Commit: `c35ddd7223f2b5540ce03aa43c9a25ef643fca27` (`git rev-parse v1.9.3^{commit}`)
+- Release: https://github.com/alibaba/open-code-review/releases/tag/v1.9.9
+- Tag: `v1.9.9`
+- Signed tag object: `c95d3907d5448354d3f8a33f2ae5e4f23fdf1c94` (`git cat-file -p v1.9.9`)
+- Commit: `4b6874bd23106b5c68bea6d230bb60303b9f0961` (`git rev-parse v1.9.9^{commit}`)
 - Local checkout: `../open-code-review` (must contain tag+commit; harness fails otherwise)
 - Go: `go1.26.6` (per `manifest_hash_test.go` / Go image bump in tag notes)
 - Bun: `>=1.3.0` (package.json `engines`)
 - Pi SDK: `@earendil-works/pi-coding-agent` `0.84.2` (was `0.82.1`, see `docs/pi-sdk-feasibility-report.md` bump note)
 
-## Active upgrade target — not shipped
+## Previous baseline and upgrade evidence
 
-- Release: https://github.com/alibaba/open-code-review/releases/tag/v1.9.9
-- Tag: `v1.9.9`
-- Signed tag object: `c95d3907d5448354d3f8a33f2ae5e4f23fdf1c94`
-- Commit: `4b6874bd23106b5c68bea6d230bb60303b9f0961`
+- Previous shipped baseline: package `v0.3.0`, OCR `v1.9.3`.
 - Delta ledger: `docs/ocr-upstream-test-delta.json` (v1.9.3 → v1.9.9)
 - Signature observation: Git reports a good SSH signature from RSA fingerprint
   `SHA256:h1896zwqn7Qf5kfn0IaeVPOD6d8PVAfiyFqgcL3d9qU`, but local

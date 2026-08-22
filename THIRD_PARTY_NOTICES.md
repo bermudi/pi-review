@@ -2,11 +2,11 @@
 
 ## Open Code Review
 
-`pi-reviewer` is a TypeScript port of Open Code Review v1.9.3:
+`pi-reviewer` is a TypeScript port of Open Code Review v1.9.9:
 
 - project: <https://github.com/alibaba/open-code-review>
-- release: <https://github.com/alibaba/open-code-review/releases/tag/v1.9.3>
-- commit: `c35ddd7223f2b5540ce03aa43c9a25ef643fca27`
+- release: <https://github.com/alibaba/open-code-review/releases/tag/v1.9.9>
+- commit: `4b6874bd23106b5c68bea6d230bb60303b9f0961`
 
 Open Code Review is:
 

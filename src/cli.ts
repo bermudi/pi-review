@@ -1,6 +1,6 @@
 #!/usr/bin/env bun
 // SPDX-License-Identifier: GPL-3.0-or-later
-// Thin production adapter over the OCR v1.9.3 CLI. This file contains no
+// Thin production adapter over the OCR v1.9.9 CLI. This file contains no
 // review policy; it injects the real parity runners
 // and preview factories and preserves the OCR command/flag semantics directly.
 

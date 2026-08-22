@@ -15,9 +15,9 @@
 import { spawnSync } from "node:child_process";
 import * as path from "node:path";
 
-export const PINNED_TAG = "v1.9.3";
-export const PINNED_TAG_OBJECT = "4d796ae54cabdcf4e22b69ef502ed8871456a909";
-export const PINNED_COMMIT = "c35ddd7223f2b5540ce03aa43c9a25ef643fca27";
+export const PINNED_TAG = "v1.9.9";
+export const PINNED_TAG_OBJECT = "c95d3907d5448354d3f8a33f2ae5e4f23fdf1c94";
+export const PINNED_COMMIT = "4b6874bd23106b5c68bea6d230bb60303b9f0961";
 export const PINNED_GO = "go1.26.6";
 
 function runGit(args: readonly string[], cwd: string): { stdout: string; status: number | null } {
@@ -45,7 +45,7 @@ export function verifyPinnedRef(refCheckout: string = path.resolve(import.meta.d
   // tag object is signed tag object; verify via cat-file -p contains commit line
   // For annotated tag, rev-parse TAG = tag object id
   if (tagObj.stdout !== PINNED_TAG_OBJECT) {
-    // Allow commit as well if lightweight? but v1.9.3 is annotated, must match
+    // Allow commit as well if lightweight? but v1.9.9 is annotated, must match
     throw new Error(
       `[harness] pinned tag object mismatch: got ${JSON.stringify(tagObj.stdout)} want ${PINNED_TAG_OBJECT}. ` +
         `Verify: git -C ${refCheckout} cat-file -p ${PINNED_TAG}`,

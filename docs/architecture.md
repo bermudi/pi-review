@@ -1,9 +1,9 @@
-# Architecture — OCR v1.9.3 Port (sole engine)
+# Architecture — OCR v1.9.9 Port (sole engine)
 
-`pi-reviewer` is a behavioral port of Open Code Review v1.9.3 onto the Pi
+`pi-reviewer` is a behavioral port of Open Code Review v1.9.9 onto the Pi
 SDK. The legacy precision-oriented engine has been removed by explicit user
 approval; `src/ocr` is now the sole engine and `src/cli.ts` is a thin
-production adapter over it. The pinned reference is OCR tag `v1.9.3`
+production adapter over it. The pinned reference is OCR tag `v1.9.9`
 (`4d796ae54cabdcf4e22b69ef502ed8871456a909` / `c35ddd7223f2b5540ce03aa43c9a25ef643fca27`)
 in `../open-code-review`. The detailed upstream-to-TypeScript file map is in
 `docs/ocr-source-map.md`; `docs/ocr-port-plan.md` defines the
@@ -48,7 +48,7 @@ OCR-backed utilities (`PiTransport`, `OcrRunner`, `runOcrCli`).
 5. **Enforce OCR-compatible round, context, time, token, and recovery behavior — `src/ocr/llmloop`, `src/ocr/session`.**
    One model round is one provider request (including multiple tool calls).
    Context is OCR-controlled compression; time/token ceilings and the single
-   restricted grace round match v1.9.3.
+   restricted grace round match v1.9.9.
 
 6. **Support diff review, full-file scan, checkpoints/resume, and output formats — `src/ocr/scan`, `src/ocr/session`, `src/ocr/cli/output.ts`.**
    `review` handles workspace/range/commit diffs; `scan` handles full-file
