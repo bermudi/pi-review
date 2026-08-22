@@ -11,6 +11,7 @@ import { randomUUID } from "node:crypto";
 import { SessionManager } from "@earendil-works/pi-coding-agent";
 import { sessionTaskKey } from "../../../src/ocr/pi-adapter/session-key.js";
 import { createPiTransportForFile } from "../../../src/ocr/pi-adapter/pi-transport.js";
+import { ModelRuntime } from "@earendil-works/pi-coding-agent";
 import { newTextMessage } from "../../../src/ocr/llmloop/compression.js";
 
 // OCR v1.9.3: TestAnthropicClient_ContextSessionKeyOverridesFallback
@@ -84,11 +85,19 @@ test("session affinity via SessionManager id reaches provider request (loopback)
       }),
     );
 
+    const modelRuntime = await ModelRuntime.create({
+      authPath: join(agentDir, "auth.json"),
+      modelsPath: join(agentDir, "models.json"),
+      refreshOnCreate: false,
+    });
+    const model = modelRuntime.getModel("test-openai", "test-model");
+    if (model === undefined) throw new Error("test model unavailable");
     const transport = await createPiTransportForFile({
       cwd,
       agentDir,
       tools: [],
-      model: "test-model",
+      model,
+      modelRuntime,
       sessionId: taskKey,
     });
 

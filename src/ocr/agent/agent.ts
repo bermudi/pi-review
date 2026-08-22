@@ -613,16 +613,14 @@ export class Agent {
       const comments = (item as unknown as { comments?: unknown }).comments as unknown[] | undefined;
       if (collector !== null && Array.isArray(comments)) {
         for (const cm of comments) {
-          try { collector.add(cm as never); } catch {}
+          collector.add(cm as never);
         }
       }
-      try {
-        const sess = this.sessionHistory;
-        if (sess !== null && typeof (sess as unknown as { RecordReviewItemReused?: unknown }).RecordReviewItemReused === "function") {
-          const resumedFrom = resume.sessionId;
-          (sess as unknown as { RecordReviewItemReused: (p: string, o: string, n: string, f: string, s: string, c: unknown[]) => void }).RecordReviewItemReused(effectivePath(d), d.oldPath, d.newPath, fingerprint, resumedFrom, comments as never[]);
-        }
-      } catch {}
+      const sess = this.sessionHistory;
+      if (sess !== null && typeof (sess as unknown as { RecordReviewItemReused?: unknown }).RecordReviewItemReused === "function") {
+        const resumedFrom = resume.sessionId;
+        (sess as unknown as { RecordReviewItemReused: (p: string, o: string, n: string, f: string, s: string, c: unknown[]) => void }).RecordReviewItemReused(effectivePath(d), d.oldPath, d.newPath, fingerprint, resumedFrom, comments as never[]);
+      }
       this.markReused(d);
       reused++;
     }
@@ -1001,7 +999,12 @@ export class Agent {
       }
     }
 
-    await this.runner.WaitBackground().catch(() => undefined);
+    let backgroundError: Error | null = null;
+    try {
+      await this.runner.WaitBackground();
+    } catch (error) {
+      backgroundError = error instanceof Error ? error : new Error(String(error));
+    }
     if (sig.aborted) {
       const cancellationError = this.recordCancellation(sig);
       if (primaryError === null) primaryError = cancellationError;
@@ -1010,15 +1013,15 @@ export class Agent {
       if (manifestError !== null) this.recordWarning("manifest_error", "", manifestError.message);
     }
     const finalizationError = this.finalizeRun();
-    if (primaryError !== null && finalizationError !== null) {
+    const runErrors = [primaryError, backgroundError, finalizationError].filter((error): error is Error => error !== null);
+    if (runErrors.length > 1) {
       throw new AggregateError(
-        [primaryError, finalizationError],
-        `${primaryError.message}; additionally, review finalization failed: ${finalizationError.message}`,
-        { cause: primaryError },
+        runErrors,
+        `review failed: ${runErrors.map((error) => error.message).join("; additionally: ")}`,
+        { cause: runErrors[0] },
       );
     }
-    if (primaryError !== null) throw primaryError;
-    if (finalizationError !== null) throw finalizationError;
+    if (runErrors[0] !== undefined) throw runErrors[0];
     return comments;
   }
 

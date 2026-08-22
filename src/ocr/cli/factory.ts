@@ -7,6 +7,7 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 import { randomUUID } from "node:crypto";
 import { spawnSync } from "node:child_process";
+import { ModelRuntime } from "@earendil-works/pi-coding-agent";
 
 import type { ReviewOptions, ScanOptions } from "./shared.js";
 import type { ProgressSink } from "../progress.js";
@@ -36,7 +37,7 @@ import { CommentWorkerPool } from "../llmloop/pool.js";
 import { Agent, newAgent } from "../agent/agent.js";
 import { Agent as ScanAgent, NewAgent as NewScanAgent } from "../scan/scan.js";
 import { reviewModeString } from "../agent/util.js";
-import { createPiTransportForFile } from "../pi-adapter/pi-transport.js";
+import { PiTransport, createPiTransportForFile } from "../pi-adapter/pi-transport.js";
 import { FileReader, DiffMap, FileReadProvider, FileReadDiffProvider, CodeSearchProvider, FileFindProvider } from "../tool/filereader.js";
 import { Registry } from "../tool/definitions.js";
 import { buildToolRegistry } from "./git.js";
@@ -47,12 +48,72 @@ import { RetryCollector } from "../retry/collector.js";
 import type { RetryReport } from "../retry/types.js";
 import { SessionHistory, ReviewModeFullScan } from "../session/history.js";
 import { newJSONLWriter, type JsonlWriter } from "../session/persist.js";
-import { ResumeState, LoadResumeState } from "../session/resume.js";
+import { ResumeState, LoadResumeState, LoadReviewResumeState, NewResumeLineage } from "../session/resume.js";
 import type { ResumeLineage } from "../session/resume.js";
+import { resolveIdentity } from "../agent/identity.js";
 
 export interface ReviewFactoryDeps {
   /** Test seam for a deterministic local transport; production uses Pi. */
   readonly createTransport?: typeof createPiTransportForFile;
+}
+
+type PiModel = NonNullable<NonNullable<Parameters<typeof createPiTransportForFile>[0]>["model"]>;
+
+export interface PiModelSelection {
+  readonly model: PiModel;
+  readonly modelRuntime: ModelRuntime;
+  readonly identity: string;
+}
+
+/** Resolve the documented `provider/model` selector through Pi's public model runtime. */
+export async function resolvePiModelSelection(
+  agentDir: string,
+  provider: string,
+  selector: string,
+): Promise<PiModelSelection | null> {
+  if (provider === "" && selector === "") return null;
+  const runtime = await ModelRuntime.create({
+    authPath: path.join(agentDir, "auth.json"),
+    modelsPath: path.join(agentDir, "models.json"),
+    refreshOnCreate: false,
+  });
+  let selectedProvider = provider;
+  let selectedModel = selector;
+  const slash = selector.indexOf("/");
+  if (slash >= 0) {
+    const embeddedProvider = selector.slice(0, slash);
+    const embeddedModel = selector.slice(slash + 1);
+    if (embeddedProvider === "" || embeddedModel === "") {
+      throw new Error(`invalid --model "${selector}": use provider/model`);
+    }
+    if (provider !== "" && provider !== embeddedProvider) {
+      throw new Error(`--provider "${provider}" does not match --model "${selector}"`);
+    }
+    selectedProvider = embeddedProvider;
+    selectedModel = embeddedModel;
+  }
+  let model: PiModel | undefined;
+  if (selectedProvider !== "" && selectedModel !== "") {
+    model = runtime.getModel(selectedProvider, selectedModel);
+  } else if (selectedProvider !== "") {
+    const matches = runtime.getModels(selectedProvider);
+    if (matches.length !== 1) {
+      throw new Error(`--provider "${selectedProvider}" is ambiguous; specify --model ${selectedProvider}/model`);
+    }
+    model = matches[0];
+  } else {
+    const matches = runtime.getModels().filter((candidate) => candidate.id === selectedModel);
+    if (matches.length !== 1) {
+      throw new Error(matches.length === 0
+        ? `unknown --model "${selector}"; use provider/model`
+        : `--model "${selector}" is ambiguous; use provider/model`);
+    }
+    model = matches[0];
+  }
+  if (model === undefined) {
+    throw new Error(`unknown model "${selectedProvider}/${selectedModel}" in Pi configuration`);
+  }
+  return { model, modelRuntime: runtime, identity: `${model.provider}/${model.id}` };
 }
 
 /**
@@ -108,6 +169,25 @@ export function createReviewRunnerFactory(
     const to = opts.to;
     const commit = opts.commit;
     const reviewMode = reviewModeString(from, to, commit);
+    let resume: ResumeState | null = null;
+    let sealedInput: import("../diff/git.js").InputResolution | null = null;
+    let resumeIdentity: import("../agent/identity.js").RunIdentity | null = null;
+    if (opts.resume !== "") {
+      resume = LoadReviewResumeState(repoDir, opts.resume);
+      const optionsError = resume.ValidateOptions({ reviewMode });
+      if (optionsError !== null) throw optionsError;
+      const sealed = await resolveIdentity({
+        repoDir,
+        from: from || undefined,
+        to: to || undefined,
+        commit: commit || undefined,
+        fileFilter: fileFilter ?? null,
+        systemRule: ruleResolver,
+        template,
+      }, effectiveSignal);
+      sealedInput = sealed.resolution;
+      resumeIdentity = sealed.identity;
+    }
 
     let background = opts.background;
     if (opts.backgroundResolved !== true) {
@@ -133,18 +213,8 @@ export function createReviewRunnerFactory(
     const agentDirEnv = process.env["PI_CODING_AGENT_DIR"];
     const agentDir = agentDirEnv !== undefined && agentDirEnv !== "" ? agentDirEnv : `${process.env["HOME"] ?? "/tmp"}/.pi/agent`;
 
-    let modelId = "test-model";
-    if (opts.model !== "") {
-      const slash = opts.model.indexOf("/");
-      if (slash >= 0) {
-        const after = opts.model.slice(slash + 1);
-        modelId = after.split(":")[0] ?? modelId;
-      } else {
-        modelId = opts.model.split(":")[0] ?? modelId;
-      }
-    }
-
     const retryCollector = new RetryCollector();
+    const selection = await resolvePiModelSelection(agentDir, opts.provider, opts.model);
     // One Pi transport per review invocation; concurrency=1 serialises per-file use.
     const createTransport = deps.createTransport ?? createPiTransportForFile;
     const transport = await createTransport({
@@ -153,7 +223,25 @@ export function createReviewRunnerFactory(
       tools: mainToolDefs,
       supplementalTools: REVIEW_FILTER_TOOLS,
       retryCollector,
+      model: selection?.model,
+      modelRuntime: selection?.modelRuntime,
     });
+    const modelId = transport instanceof PiTransport
+      ? transport.modelIdentity() ?? selection?.identity ?? "test-model"
+      : selection?.identity ?? (opts.model !== "" ? opts.model : "test-model");
+    if (resume !== null && resumeIdentity !== null) {
+      const validation = resume.ValidateResume({
+        identity: resumeIdentity,
+        provider: opts.provider,
+        model: modelId,
+        providerExplicit: opts.provider !== "",
+        modelExplicit: opts.model !== "",
+      });
+      if (validation !== null) {
+        await transport.dispose();
+        throw validation;
+      }
+    }
 
     const runId = randomUUID();
     const gitBranch = detectGitBranch(repoDir);
@@ -163,6 +251,7 @@ export function createReviewRunnerFactory(
       diffTo: to,
       diffCommit: commit,
       operation: "review",
+      resumedFrom: resume?.SessionID ?? "",
     }, runId);
     try {
       const writer = newJSONLWriter(runId, repoDir, gitBranch, modelId, {
@@ -170,8 +259,10 @@ export function createReviewRunnerFactory(
         diffFrom: from,
         diffTo: to,
         diffCommit: commit,
+        resumedFrom: resume?.SessionID ?? "",
       });
       session._attachPersist(jsonlWriterToPersistHandle(writer));
+      session.RecordResumeLineage(NewResumeLineage(resume, runId, opts.provider, modelId));
     } catch (err) {
       const cause = err instanceof Error ? err : new Error(String(err));
       session._setPersistInitErr(new Error(`create session writer: ${cause.message}`, { cause }));
@@ -203,6 +294,8 @@ export function createReviewRunnerFactory(
       skipFilter: opts.noFilter,
       runtimeConfig: { protocol: "openai", endpointHost: "", language: "English", timeoutMs: 30000 },
       session,
+      resume,
+      sealedInput,
       progress,
     });
 
@@ -352,7 +445,14 @@ export function createScanRunnerFactory(
     }
     const mainToolDefs = allMainToolDefs.filter((t) => t.function.name !== "file_read_diff");
 
-    const transport = await createPiTransportForFile({ cwd, agentDir, tools: mainToolDefs });
+    const selection = await resolvePiModelSelection(agentDir, opts.provider, opts.model);
+    const transport = await createPiTransportForFile({
+      cwd,
+      agentDir,
+      tools: mainToolDefs,
+      model: selection?.model,
+      modelRuntime: selection?.modelRuntime,
+    });
 
     const maxTokensBudget = opts.maxTokensBudget > 0 ? opts.maxTokensBudget : (template.MaxTokensBudget ?? 0);
 
@@ -369,7 +469,7 @@ export function createScanRunnerFactory(
       commentWorkerPool: workerPool,
       maxConcurrency: opts.concurrency > 0 ? opts.concurrency : 8,
       concurrentTaskTimeoutMinutes: opts.perFileTimeout > 0 ? opts.perFileTimeout : 10,
-      model: modelIdFromModel(opts.model),
+      model: transport.modelIdentity() ?? selection?.identity ?? modelIdFromModel(opts.model),
       background: opts.background,
       maxFileSizeBytes: template.MaxFileSizeBytes,
       maxTokensBudget,

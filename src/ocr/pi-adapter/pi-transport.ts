@@ -21,7 +21,7 @@
  * `SettingsManager` from `@earendil-works/pi-coding-agent`.
  */
 
-import { createAgentSession, SessionManager, SettingsManager, DefaultResourceLoader } from "@earendil-works/pi-coding-agent";
+import { createAgentSession, SessionManager, SettingsManager, DefaultResourceLoader, type ModelRuntime } from "@earendil-works/pi-coding-agent";
 import { Type } from "typebox";
 
 import type { Message, ToolCall } from "../llmloop/compression.js";
@@ -380,7 +380,10 @@ export interface CreatePiTransportForFileOptions {
    * only when a request explicitly selects them (review filtering).
    */
   readonly supplementalTools?: readonly ToolDef[];
-  readonly model?: unknown;
+  /** Public Pi model selected by ModelRuntime, never a provider string. */
+  readonly model?: NonNullable<Parameters<typeof createAgentSession>[0]>["model"];
+  /** Matching public runtime that owns credentials and custom models. */
+  readonly modelRuntime?: ModelRuntime;
   /** Optional session affinity id for SessionManager (maps to prompt_cache_key / x-session-affinity via Pi providers). */
   readonly sessionId?: string;
   /** Optional retry collector for per-round observability; one Pi request = one attempt. */
@@ -413,6 +416,13 @@ export class PiTransport implements TranscriptLlmTransport {
     this.promptRef = promptRef;
     this.sessionManager = sessionManager;
     this.retryCollector = retryCollector;
+  }
+
+  /** Domain-safe identity for manifests and resume validation. */
+  modelIdentity(): string | undefined {
+    const model = (this.session as unknown as { model?: { provider?: unknown; id?: unknown } }).model;
+    if (typeof model?.provider !== "string" || typeof model.id !== "string") return undefined;
+    return `${model.provider}/${model.id}`;
   }
 
   /** Dispose the underlying Pi session — await to surface cleanup failure. */
@@ -857,7 +867,7 @@ export class PiTransport implements TranscriptLlmTransport {
 export async function createPiTransportForFile(
   options: CreatePiTransportForFileOptions,
 ): Promise<PiTransport> {
-  const { cwd, agentDir, tools, supplementalTools = [], model, sessionId, retryCollector } = options;
+  const { cwd, agentDir, tools, supplementalTools = [], model, modelRuntime, sessionId, retryCollector } = options;
   assertUniqueToolNames(tools, supplementalTools);
 
   const sessionManager = sessionId !== undefined && sessionId !== "" ? SessionManager.inMemory(cwd, { id: sessionId }) : SessionManager.inMemory(cwd);
@@ -936,6 +946,9 @@ export async function createPiTransportForFile(
   };
   if (model !== undefined) {
     createOpts["model"] = model;
+  }
+  if (modelRuntime !== undefined) {
+    createOpts["modelRuntime"] = modelRuntime;
   }
 
   const { session } = await createAgentSession(createOpts as unknown as Parameters<typeof createAgentSession>[0]);
