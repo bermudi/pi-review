@@ -68,6 +68,30 @@ export type RuntimeTransportFactory = (
   options: Parameters<typeof createPiTransportForFile>[0],
 ) => Promise<RuntimeTransport>;
 
+export async function withOwnedTransport<T>(transport: RuntimeTransport, work: () => Promise<T>): Promise<T> {
+  let primary: Error | null = null;
+  try {
+    return await work();
+  } catch (error) {
+    primary = error instanceof Error ? error : new Error(String(error));
+    throw primary;
+  } finally {
+    try {
+      await transport.dispose();
+    } catch (error) {
+      const disposeError = error instanceof Error ? error : new Error(String(error));
+      if (primary !== null) {
+        throw new AggregateError(
+          [primary, disposeError],
+          `${primary.message}; additionally, transport disposal failed: ${disposeError.message}`,
+          { cause: primary },
+        );
+      }
+      throw disposeError;
+    }
+  }
+}
+
 export interface ScanFactoryDeps {
   readonly createTransport?: RuntimeTransportFactory;
 }
@@ -135,7 +159,7 @@ function transportModelIdentity(transport: unknown): PiModelIdentity | undefined
   if (typeof transport !== "object" || transport === null) return undefined;
   const getter = (transport as { modelIdentity?: unknown }).modelIdentity;
   if (typeof getter !== "function") return undefined;
-  const identity = (getter as () => unknown)();
+  const identity = (getter as (this: unknown) => unknown).call(transport);
   if (typeof identity !== "object" || identity === null) return undefined;
   const value = identity as Record<string, unknown>;
   return typeof value["provider"] === "string" && typeof value["model"] === "string"
@@ -253,6 +277,7 @@ export function createReviewRunnerFactory(
       model: selection?.model,
       modelRuntime: selection?.modelRuntime,
     });
+    return await withOwnedTransport(transport, async () => {
     const identity = transportModelIdentity(transport) ?? selection?.identity ?? {
       provider: opts.provider,
       model: opts.model !== "" ? opts.model : "test-model",
@@ -272,7 +297,6 @@ export function createReviewRunnerFactory(
         modelExplicit: opts.model !== "",
       });
       if (validation !== null) {
-        await transport.dispose();
         throw validation;
       }
     }
@@ -355,17 +379,6 @@ export function createReviewRunnerFactory(
 
     const warnings = agent.warningsList();
 
-    try {
-      await transport.dispose();
-    } catch (error) {
-      const disposeError = error instanceof Error ? error : new Error(String(error));
-      if (runError !== null) {
-        runError = new AggregateError([runError, disposeError], `${runError.message}; additionally, transport disposal failed: ${disposeError.message}`, { cause: runError });
-      } else {
-        runError = disposeError;
-      }
-    }
-
     const reviewRunner: ReviewRunner = {
       run: async (_sig?: AbortSignal): Promise<LlmComment[]> => {
         if (runError !== null) throw runError;
@@ -392,6 +405,7 @@ export function createReviewRunnerFactory(
     };
 
     return reviewRunner;
+    });
   };
 }
 
@@ -484,6 +498,7 @@ export function createScanRunnerFactory(
       model: selection?.model,
       modelRuntime: selection?.modelRuntime,
     });
+    return await withOwnedTransport(transport, async () => {
     const modelIdentity = transportModelIdentity(transport) ?? selection?.identity ?? {
       provider: opts.provider,
       model: modelIdFromModel(opts.model),
@@ -539,15 +554,11 @@ export function createScanRunnerFactory(
     }
     const durationMs = Date.now() - startMs;
 
-    await session.Finalize();
-
-    try {
-      await transport.dispose();
-    } catch (error) {
-      const disposeError = error instanceof Error ? error : new Error(String(error));
+    const finalizationError = await session.Finalize();
+    if (finalizationError !== null) {
       runError = runError === null
-        ? disposeError
-        : new AggregateError([runError, disposeError], `${runError.message}; additionally, transport disposal failed: ${disposeError.message}`, { cause: runError });
+        ? finalizationError
+        : new AggregateError([runError, finalizationError], `${runError.message}; additionally, scan finalization failed: ${finalizationError.message}`, { cause: runError });
     }
 
     const inputTokens = agent.TotalInputTokens();
@@ -580,10 +591,11 @@ export function createScanRunnerFactory(
     };
 
     if (runError) {
-      throw new Error(runError.message);
+      throw runError;
     }
 
     return scanRunner;
+    });
   };
 }
 
