@@ -77,9 +77,10 @@ export function createReviewRunnerFactory(
     const reviewMode = reviewModeString(from, to, commit);
 
     // Mirror Go review_cmd.go: when --commit is used without --background,
-    // default background to the commit message.
+    // default background to the commit message. This runs before background-file
+    // merging so the file content is appended after the commit message.
     let background = opts.background;
-    if (commit !== "" && background === "" && opts.backgroundFile === "") {
+    if (commit !== "" && background === "") {
       try {
         const gitOut = spawnSync("git", ["-C", repoDir, "log", "-1", "--format=%B", "--end-of-options", commit], {
           encoding: "utf-8",
@@ -92,6 +93,16 @@ export function createReviewRunnerFactory(
       } catch {
         // best-effort; leave background empty
       }
+    }
+    // If the CLI already merged --background-file, opts.background already
+    // contains the merged result. For direct library use where backgroundFile
+    // is still separate (not yet merged by the CLI), apply the same merge here
+    // so the factory remains faithful when invoked without the CLI wrapper.
+    if (opts.backgroundFile !== "" && !background.includes("<ocr_user_background>")) {
+      const { resolveBackgroundFilePath: resolveBg, loadBackgroundFile: loadBg, mergeBackground: mergeBg } = await import("./background.js");
+      const bgPath = resolveBg(repoDir, opts.backgroundFile);
+      const fileBg = loadBg(bgPath, { stderr: () => {} });
+      background = mergeBg(background, fileBg);
     }
 
     let mode: number;

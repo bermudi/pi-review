@@ -1313,6 +1313,14 @@ const scopeOverrides: ReadonlyMap<string, Scope> = new Map<string, Scope>([
       reason: "path traversal and symlink containment is core repository boundary for diff workspace and tool file access",
     },
   ],
+  [
+    "cmd/opencodereview/background_file_test.go",
+    {
+      kind: "in_scope",
+      area: "cli-output",
+      reason: "background file loading, sanitation, delimiters, limits and merge ordering are core CLI review input handling",
+    },
+  ],
 ]);
 
 const localCoverage: readonly LocalCoverage[] = [
@@ -1685,6 +1693,10 @@ const localCoverage: readonly LocalCoverage[] = [
   {
     localPath: "test/ocr-v193/cli/scan-resume.test.ts",
     upstreamPaths: ["cmd/opencodereview/scan_resume_more_test.go"],
+  },
+  {
+    localPath: "test/ocr-v193/cli/background-file.test.ts",
+    upstreamPaths: ["cmd/opencodereview/background_file_test.go"],
   },
 ];
 

@@ -319,16 +319,21 @@ export function validateRefNotFlagLike(flag: string, value: string): void {
 }
 
 // ---------------------------------------------------------------------------
-// Background helpers
+// Background helpers — re-exported from background.ts (OCR v1.9.3)
 // ---------------------------------------------------------------------------
 
-export function mergeBackground(inline: string, fileContent: string): string {
-  const a = inline.trim();
-  const b = fileContent.trim();
-  if (a === "") return b;
-  if (b === "") return a;
-  return `${a}\n\n${b}`;
-}
+export {
+  BACKGROUND_SOFT_LIMIT,
+  BACKGROUND_HARD_LIMIT,
+  BACKGROUND_OPEN_TAG,
+  BACKGROUND_CLOSE_TAG,
+  MAX_BACKGROUND_FILE_BYTES,
+  resolveBackgroundFilePath,
+  sanitizeMarkdown,
+  mergeBackground,
+  loadBackgroundFile,
+  getCommitMessage,
+} from "./background.js";
 
 // ---------------------------------------------------------------------------
 // Config / resolveMaxTokens — mirrors Go resolveMaxTokens

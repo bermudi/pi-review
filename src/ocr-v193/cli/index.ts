@@ -15,6 +15,8 @@
  * fns so `bun test` never needs a paid model.
  */
 
+import * as path from "node:path";
+import { spawnSync } from "node:child_process";
 import type { CliIo, CliIoOverrides } from "./shared.js";
 import { CliUsageError, makeIo, defaultReviewOptions, defaultScanOptions } from "./shared.js";
 import type { ReviewOptions, ScanOptions } from "./shared.js";
@@ -25,6 +27,18 @@ import type { ReviewRunner, PreviewFactory } from "./review.js";
 import type { ScanRunner, ScanPreviewFactory } from "./scan.js";
 import type { Preview } from "../model/preview.js";
 import type { JsonLlmIdentity, RetryReport } from "./output.js";
+import {
+  BACKGROUND_CLOSE_TAG,
+  BACKGROUND_HARD_LIMIT,
+  BACKGROUND_OPEN_TAG,
+  BACKGROUND_SOFT_LIMIT,
+  MAX_BACKGROUND_FILE_BYTES,
+  getCommitMessage,
+  loadBackgroundFile,
+  mergeBackground,
+  resolveBackgroundFilePath,
+  sanitizeMarkdown,
+} from "./background.js";
 
 // ---------------------------------------------------------------------------
 // Version / help text — mirrors Go root.go + version.go
@@ -387,14 +401,25 @@ function buildScanOptions(map: Map<string, string | boolean>): ScanOptions {
 }
 
 // ---------------------------------------------------------------------------
-// Background file handling
+// Background file handling — mirrors Go review_cmd.go executeReview background
 // ---------------------------------------------------------------------------
 
-async function loadBackgroundFile(path: string, reader: Utf8FileReader | undefined): Promise<string> {
-  const r: Utf8FileReader = reader ?? ((p: string, _enc: "utf8") => Bun.file(p).text());
-  const text: unknown = await r(path, "utf8");
-  if (typeof text !== "string") throw new CliUsageError(`background file ${path} did not return text`);
-  return text;
+function effectiveRepoDirForBackground(repoOpt: string, cwd: string): string {
+  if (repoOpt !== "") {
+    try {
+      return path.resolve(repoOpt);
+    } catch {
+      return repoOpt;
+    }
+  }
+  try {
+    const top = spawnSync("git", ["-C", cwd, "rev-parse", "--show-toplevel"], { encoding: "utf8" });
+    const out = (top.stdout as string | undefined)?.trim() ?? "";
+    if (top.status === 0 && out !== "") return out;
+  } catch {
+    // ignore
+  }
+  return cwd;
 }
 
 // ---------------------------------------------------------------------------
@@ -474,16 +499,62 @@ export async function runCli(
       }
     }
 
-    // Background file merging
-    if (opts.backgroundFile !== "") {
+    // Background: commit message first, then file — mirrors Go review_cmd.go.
+    // Only touch background when inline is empty and --commit is set, preserving
+    // existing --background behaviour for users who do not use commit fallback.
+    if (opts.commit !== "" && opts.background === "") {
+      const repoForCommit = effectiveRepoDirForBackground(opts.repoDir, io.cwd());
       try {
-        const fileBg = await loadBackgroundFile(opts.backgroundFile, deps.readFile);
-        const merged = opts.background.trim() !== "" && fileBg.trim() !== "" ? `${opts.background}\n\n${fileBg}` : (opts.background !== "" ? opts.background : fileBg);
-        opts = { ...opts, background: merged };
+        const msg = getCommitMessage(repoForCommit, opts.commit);
+        if (msg !== "") {
+          opts = { ...opts, background: msg };
+        }
       } catch {
-        io.stderr(`Error: Unable to read --background-file "${opts.backgroundFile}" as UTF-8.\n`);
+        // best-effort: Go checks `err == nil && msg != ""` and leaves background empty otherwise.
+      }
+    }
+
+    // Only touch the background when --background-file is set, so the existing
+    // --background behaviour (raw, unsanitised before merge) is preserved for
+    // users who do not opt into the file-based context.
+    if (opts.backgroundFile !== "") {
+      const repoForBg = effectiveRepoDirForBackground(opts.repoDir, io.cwd());
+      const bgPath = resolveBackgroundFilePath(repoForBg, opts.backgroundFile);
+      let fileBg: string;
+      try {
+        if (deps.readFile === undefined) {
+          fileBg = loadBackgroundFile(bgPath, { stderr: (m) => io.stderr(m) });
+        } else {
+          // When a custom reader is supplied, prefer the real filesystem first
+          // (so temp-file tests work) and fall back to the seam on ENOENT.
+          try {
+            fileBg = loadBackgroundFile(bgPath, { stderr: (m) => io.stderr(m) });
+          } catch (e) {
+            const msg = e instanceof Error ? e.message : String(e);
+            const isNotFound = msg.includes("read background file") && (msg.includes("no such file") || msg.includes("ENOENT"));
+            if (!isNotFound) throw e;
+            const maybe = await deps.readFile(bgPath, "utf8");
+            if (typeof maybe !== "string") throw new CliUsageError(`background file ${bgPath} did not return text`);
+            const byteLen = Buffer.byteLength(maybe, "utf8");
+            if (byteLen > MAX_BACKGROUND_FILE_BYTES) {
+              throw new Error(`background file "${bgPath}" is ${byteLen} bytes, exceeding the maximum of ${MAX_BACKGROUND_FILE_BYTES} bytes; please provide a smaller file`);
+            }
+            const cleaned = sanitizeMarkdown(maybe);
+            if (cleaned === "") throw new Error(`background file "${bgPath}" is empty after sanitisation`);
+            if (cleaned.includes(BACKGROUND_OPEN_TAG) || cleaned.includes(BACKGROUND_CLOSE_TAG)) throw new Error(`background file "${bgPath}" must not contain the reserved delimiters "${BACKGROUND_OPEN_TAG}" or "${BACKGROUND_CLOSE_TAG}"`);
+            const runeCount = [...cleaned].length;
+            if (runeCount > BACKGROUND_HARD_LIMIT) throw new Error(`background content is ${runeCount} characters, exceeding the hard limit of ${BACKGROUND_HARD_LIMIT} (aborting)`);
+            else if (runeCount > BACKGROUND_SOFT_LIMIT) io.stderr(`[ocr] --background-file content is ${runeCount} characters, exceeding the recommended ${BACKGROUND_SOFT_LIMIT} (continuing but review quality might be impacted)\n`);
+            fileBg = `${BACKGROUND_OPEN_TAG}\n${cleaned}\n${BACKGROUND_CLOSE_TAG}`;
+          }
+        }
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : String(e);
+        io.stderr(`Error: ${msg}\n`);
         return 1;
       }
+      const merged = mergeBackground(opts.background, fileBg!);
+      opts = { ...opts, background: merged };
     }
 
     const signal = undefined;

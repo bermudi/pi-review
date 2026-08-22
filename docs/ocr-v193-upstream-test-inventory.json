@@ -67,110 +67,230 @@
       "path": "cmd/opencodereview/background_file_test.go",
       "blob": "87f216ef5ceeecbbe8c809d97b3d42f955a54431",
       "scope": {
-        "kind": "needs_decision",
-        "area": "cmd/opencodereview",
-        "reason": "not yet classified by the OCR v1.9.3 core-port source map"
+        "kind": "in_scope",
+        "area": "cli-output",
+        "reason": "background file loading, sanitation, delimiters, limits and merge ordering are core CLI review input handling"
       },
       "tests": [
         {
           "name": "TestBackgroundFromCommitThenFile",
-          "disposition": "pending_scope",
-          "reason": "not yet classified by the OCR v1.9.3 core-port source map"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/cli/background-file.test.ts",
+              "title": "background from commit then file"
+            }
+          ]
         },
         {
           "name": "TestLoadBackgroundFileControlCharRemoval",
-          "disposition": "pending_scope",
-          "reason": "not yet classified by the OCR v1.9.3 core-port source map"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/cli/background-file.test.ts",
+              "title": "loadBackgroundFile control char removal"
+            }
+          ]
         },
         {
           "name": "TestLoadBackgroundFileDelimiters",
-          "disposition": "pending_scope",
-          "reason": "not yet classified by the OCR v1.9.3 core-port source map"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/cli/background-file.test.ts",
+              "title": "loadBackgroundFile delimiters wrapping"
+            }
+          ]
         },
         {
           "name": "TestLoadBackgroundFileDirectory",
-          "disposition": "pending_scope",
-          "reason": "not yet classified by the OCR v1.9.3 core-port source map"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/cli/background-file.test.ts",
+              "title": "loadBackgroundFile directory"
+            }
+          ]
         },
         {
           "name": "TestLoadBackgroundFileEmpty",
-          "disposition": "pending_scope",
-          "reason": "not yet classified by the OCR v1.9.3 core-port source map"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/cli/background-file.test.ts",
+              "title": "loadBackgroundFile empty cases"
+            }
+          ]
         },
         {
           "name": "TestLoadBackgroundFileHardLimit",
-          "disposition": "pending_scope",
-          "reason": "not yet classified by the OCR v1.9.3 core-port source map"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/cli/background-file.test.ts",
+              "title": "loadBackgroundFile hard limit"
+            }
+          ]
         },
         {
           "name": "TestLoadBackgroundFileHardLimitExcludesWrapper",
-          "disposition": "pending_scope",
-          "reason": "not yet classified by the OCR v1.9.3 core-port source map"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/cli/background-file.test.ts",
+              "title": "loadBackgroundFile hard limit excludes wrapper"
+            }
+          ]
         },
         {
           "name": "TestLoadBackgroundFileMultiByteRuneCount",
-          "disposition": "pending_scope",
-          "reason": "not yet classified by the OCR v1.9.3 core-port source map"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/cli/background-file.test.ts",
+              "title": "loadBackgroundFile multi-byte rune count"
+            }
+          ]
         },
         {
           "name": "TestLoadBackgroundFileNotFound",
-          "disposition": "pending_scope",
-          "reason": "not yet classified by the OCR v1.9.3 core-port source map"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/cli/background-file.test.ts",
+              "title": "loadBackgroundFile not found"
+            }
+          ]
         },
         {
           "name": "TestLoadBackgroundFileOversized",
-          "disposition": "pending_scope",
-          "reason": "not yet classified by the OCR v1.9.3 core-port source map"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/cli/background-file.test.ts",
+              "title": "loadBackgroundFile oversized"
+            }
+          ]
         },
         {
           "name": "TestLoadBackgroundFileRejectsReservedDelimiters",
-          "disposition": "pending_scope",
-          "reason": "not yet classified by the OCR v1.9.3 core-port source map"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/cli/background-file.test.ts",
+              "title": "loadBackgroundFile rejects reserved delimiters"
+            }
+          ]
         },
         {
           "name": "TestLoadBackgroundFileRelativeToRepo",
-          "disposition": "pending_scope",
-          "reason": "not yet classified by the OCR v1.9.3 core-port source map"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/cli/background-file.test.ts",
+              "title": "loadBackgroundFile relative to repo"
+            }
+          ]
         },
         {
           "name": "TestLoadBackgroundFileSoftLimit",
-          "disposition": "pending_scope",
-          "reason": "not yet classified by the OCR v1.9.3 core-port source map"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/cli/background-file.test.ts",
+              "title": "loadBackgroundFile soft limit continues"
+            }
+          ]
         },
         {
           "name": "TestMergeBackground",
-          "disposition": "pending_scope",
-          "reason": "not yet classified by the OCR v1.9.3 core-port source map"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/cli/background-file.test.ts",
+              "title": "mergeBackground combines file and inline"
+            }
+          ]
         },
         {
           "name": "TestMergeBackgroundSanitizesInline",
-          "disposition": "pending_scope",
-          "reason": "not yet classified by the OCR v1.9.3 core-port source map"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/cli/background-file.test.ts",
+              "title": "mergeBackground sanitizes inline"
+            }
+          ]
         },
         {
           "name": "TestResolveBackgroundFilePath",
-          "disposition": "pending_scope",
-          "reason": "not yet classified by the OCR v1.9.3 core-port source map"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/cli/background-file.test.ts",
+              "title": "resolveBackgroundFilePath handles repo-relative, absolute, empty and fallback"
+            }
+          ]
         },
         {
           "name": "TestSanitizeMarkdownCollapsesNewlines",
-          "disposition": "pending_scope",
-          "reason": "not yet classified by the OCR v1.9.3 core-port source map"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/cli/background-file.test.ts",
+              "title": "sanitizeMarkdown collapses newlines"
+            }
+          ]
         },
         {
           "name": "TestSanitizeMarkdownNormalizesCRLF",
-          "disposition": "pending_scope",
-          "reason": "not yet classified by the OCR v1.9.3 core-port source map"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/cli/background-file.test.ts",
+              "title": "sanitizeMarkdown normalizes CRLF"
+            }
+          ]
         },
         {
           "name": "TestSanitizeMarkdownPreservesNewlinesAndTabs",
-          "disposition": "pending_scope",
-          "reason": "not yet classified by the OCR v1.9.3 core-port source map"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/cli/background-file.test.ts",
+              "title": "sanitizeMarkdown preserves newlines and tabs"
+            }
+          ]
         },
         {
           "name": "TestSanitizeMarkdownTrims",
-          "disposition": "pending_scope",
-          "reason": "not yet classified by the OCR v1.9.3 core-port source map"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/cli/background-file.test.ts",
+              "title": "sanitizeMarkdown trims"
+            }
+          ]
         }
       ]
     },
