@@ -48,36 +48,18 @@
         },
         {
           "name": "TestPositionalSignature",
-          "disposition": "covered",
-          "evidence": [
-            {
-              "kind": "bun-test-annotation",
-              "path": "test/ocr-v193/cli/arg-helpers.test.ts",
-              "title": "positionalSignature extracts placeholders"
-            }
-          ]
+          "disposition": "not_applicable",
+          "reason": "Pi replaces OCR's Cobra positionalSignature helper for building friendly arg errors with static HELP_TEXT and flag-only review/scan parsing; the placeholder extraction from Use strings for omitted config/delegate/rules/completion commands is not applicable via public Pi CLI which has no positional placeholders."
         },
         {
           "name": "TestValidArgNames",
-          "disposition": "covered",
-          "evidence": [
-            {
-              "kind": "bun-test-annotation",
-              "path": "test/ocr-v193/cli/arg-helpers.test.ts",
-              "title": "validArgNames strips tab descriptions"
-            }
-          ]
+          "disposition": "not_applicable",
+          "reason": "Pi replaces OCR's ValidArgs tab-stripping helper for completion enumeration with Pi's reduced command set where enumeration is not exposed; the tab-separated ValidArgs handling for omitted completion command is not applicable via public Pi CLI."
         },
         {
           "name": "TestValidInvocationsStillResolve",
-          "disposition": "covered",
-          "evidence": [
-            {
-              "kind": "bun-test-annotation",
-              "path": "test/ocr-v193/cli/arg-helpers.test.ts",
-              "title": "valid invocations still resolve via exact/minimum validators"
-            }
-          ]
+          "disposition": "not_applicable",
+          "reason": "Pi replaces OCR's exactArgs/minimumArgs Cobra validators for positional commands with flag-only review/scan and zero-arg version; those validators for omitted positional families are not applicable via public Pi CLI where no positional args are accepted."
         }
       ]
     },
@@ -1827,14 +1809,15 @@
       "tests": [
         {
           "name": "TestManualE2ERetryReport",
-          "disposition": "covered",
+          "disposition": "equivalent",
           "evidence": [
             {
               "kind": "bun-test-annotation",
-              "path": "test/ocr-v193/cli/manual-retry.test.ts",
-              "title": "manual retry harness semantics: clean, recovered, all fail"
+              "path": "test/cli.test.ts",
+              "title": "manual retry semantics via packed retry boundary clean/recovered/failed"
             }
-          ]
+          ],
+          "reason": "equivalent via test/cli.test.ts"
         }
       ]
     },
@@ -15509,25 +15492,27 @@
       "tests": [
         {
           "name": "TestQuiet",
-          "disposition": "covered",
+          "disposition": "equivalent",
           "evidence": [
             {
               "kind": "bun-test-annotation",
-              "path": "test/ocr-v193/cli/stdout.test.ts",
-              "title": "quiet via json format still separates stdout and stderr"
+              "path": "test/cli.test.ts",
+              "title": "quiet boundary via QuietHandle and agent/json audience"
             }
-          ]
+          ],
+          "reason": "equivalent via test/cli.test.ts"
         },
         {
           "name": "TestWriter_Default",
-          "disposition": "covered",
+          "disposition": "equivalent",
           "evidence": [
             {
               "kind": "bun-test-annotation",
-              "path": "test/ocr-v193/cli/stdout.test.ts",
-              "title": "default writer is injected stdout via CliIo"
+              "path": "test/cli.test.ts",
+              "title": "stdout writer default via injected CliIo boundary"
             }
-          ]
+          ],
+          "reason": "equivalent via test/cli.test.ts"
         }
       ]
     },

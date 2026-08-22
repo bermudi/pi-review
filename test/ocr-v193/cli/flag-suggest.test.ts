@@ -36,6 +36,25 @@ test("suggestFlag finds close matches on local and inherited", () => {
   expect(suggestFlag(available, "--")).toBe("");
 });
 
+test("runCli wiring typo suggests via review", async () => {
+  const { runCli } = await import("../../../src/ocr-v193/cli/index.js");
+  let stderr = "";
+  const code = await runCli(["review", "--forma", "json"], {
+    io: {
+      stderr: (s: string) => { stderr += s; },
+      stdout: () => {},
+      cwd: () => "/tmp",
+      env: () => ({} as Record<string, string | undefined>),
+      onSignal: () => {},
+      offSignal: () => {},
+    },
+  });
+  expect(code).toBe(1);
+  expect(stderr).toContain("unknown flag: --forma");
+  expect(stderr).toContain("Did you mean");
+  expect(stderr).toContain("--format");
+});
+
 // OCR v1.9.3: TestFlagErrorWithSuggestion
 test("flagErrorWithSuggestion appends Did you mean or leaves original", () => {
   const available = ["format"];

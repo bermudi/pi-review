@@ -38,26 +38,27 @@ import { suggestFlag } from "./flag-suggest.js";
 // Version / help text — mirrors Go root.go + version.go
 // ---------------------------------------------------------------------------
 
-export let VERSION = "0.2.0";
-export let GIT_COMMIT = "";
-export let BUILD_DATE = "";
-export function __setVersionForTest(v: string, c: string, d: string): void {
-  VERSION = v;
-  GIT_COMMIT = c;
-  BUILD_DATE = d;
+export const VERSION = "0.2.0";
+export const GIT_COMMIT = "";
+export const BUILD_DATE = "";
+
+export interface BuildInfo {
+  readonly version: string;
+  readonly commit: string;
+  readonly date: string;
 }
 
-export function versionString(): string {
-  let s = `pi-review ${VERSION}`;
-  if (GIT_COMMIT !== "") s += ` (${GIT_COMMIT})`;
+export function formatVersion(info: BuildInfo): string {
+  let s = `pi-review ${info.version}`;
+  if (info.commit !== "") s += ` (${info.commit})`;
   s += ` ${process.platform}/${process.arch}\n`;
-  if (BUILD_DATE !== "") s += `built at: ${BUILD_DATE}\n`;
+  if (info.date !== "") s += `built at: ${info.date}\n`;
   s += "https://github.com/bermudi/pi-reviewer\n";
   return s;
 }
 
-export function printVersion(write: (text: string) => void): void {
-  write(versionString());
+export function versionString(): string {
+  return formatVersion({ version: VERSION, commit: GIT_COMMIT, date: BUILD_DATE });
 }
 
 export const HELP_TEXT = `pi-review - AI-Powered Code Review CLI
@@ -242,7 +243,7 @@ function parseFlags(
       if (!spec) {
         const available = specs.map((s) => s.name);
         const sug = suggestFlag(available, key);
-        const base = `unknown flag --${key}`;
+        const base = `unknown flag: --${key}`;
         throw new CliUsageError(sug !== "" ? `${base}${sug}` : base);
       }
       if (spec.takesValue) {
@@ -275,7 +276,7 @@ function parseFlags(
         if (!spec) {
           const available = specs.map((s) => s.name);
           const sug = suggestFlag(available, shortKey);
-          const base = `unknown flag -${shortKey}`;
+          const base = `unknown flag: -${shortKey}`;
           throw new CliUsageError(sug !== "" ? `${base}${sug}` : base);
         }
         if (!spec.takesValue) throw new CliUsageError(`-${shortKey} does not take a value`);
@@ -291,7 +292,7 @@ function parseFlags(
         if (!spec) {
           const available = specs.map((s) => s.name);
           const sug = suggestFlag(available, chars);
-          const base = `unknown flag -${chars}`;
+          const base = `unknown flag: -${chars}`;
           throw new CliUsageError(sug !== "" ? `${base}${sug}` : base);
         }
         if (spec.takesValue) {
@@ -315,7 +316,7 @@ function parseFlags(
         if (!spec) {
           const available = specs.map((s) => s.name);
           const sug = suggestFlag(available, ch);
-          const base = `unknown flag -${ch}`;
+          const base = `unknown flag: -${ch}`;
           throw new CliUsageError(sug !== "" ? `${base}${sug}` : base);
         }
         if (spec.takesValue) throw new CliUsageError(`flag -${ch} requires a value and cannot be combined`);

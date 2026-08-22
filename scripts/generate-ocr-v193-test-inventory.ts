@@ -517,6 +517,18 @@ const equivalentTests: ReadonlyMap<string, readonly Evidence[]> = new Map<string
     "cmd/opencodereview/retry_report_render_test.go::TestRetryReportJSON_KeySetIsAllowlisted",
     [{ kind: "bun-test-annotation", path: "test/ocr-v193/cli/retry-report-render.test.ts", title: "retryReport JSON key set is allowlisted" }],
   ],
+  [
+    "internal/stdout/stdout_test.go::TestWriter_Default",
+    [{ kind: "bun-test-annotation", path: "test/cli.test.ts", title: "stdout writer default via injected CliIo boundary" }],
+  ],
+  [
+    "internal/stdout/stdout_test.go::TestQuiet",
+    [{ kind: "bun-test-annotation", path: "test/cli.test.ts", title: "quiet boundary via QuietHandle and agent/json audience" }],
+  ],
+  [
+    "cmd/opencodereview/manual_e2e_retry_test.go::TestManualE2ERetryReport",
+    [{ kind: "bun-test-annotation", path: "test/cli.test.ts", title: "manual retry semantics via packed retry boundary clean/recovered/failed" }],
+  ],
 
 ]);
 
@@ -1312,6 +1324,18 @@ const notApplicableTests: ReadonlyMap<string, string> = new Map<string, string>(
     "cmd/opencodereview/arg_errors_test.go::TestEveryPositionalCommandUsesFriendlyErrors",
     "Pi replaces OCR's exhaustive command-tree walk for friendly errors with a reduced command set (review/scan are flag-only, version is zero-arg); the invariant is preserved for pi's commands and verified via parent-cmd and zero-args boundary tests, exhaustive walk over deferred commands is not applicable.",
   ],
+  [
+    "cmd/opencodereview/arg_errors_test.go::TestPositionalSignature",
+    "Pi replaces OCR's Cobra positionalSignature helper for building friendly arg errors with static HELP_TEXT and flag-only review/scan parsing; the placeholder extraction from Use strings for omitted config/delegate/rules/completion commands is not applicable via public Pi CLI which has no positional placeholders.",
+  ],
+  [
+    "cmd/opencodereview/arg_errors_test.go::TestValidArgNames",
+    "Pi replaces OCR's ValidArgs tab-stripping helper for completion enumeration with Pi's reduced command set where enumeration is not exposed; the tab-separated ValidArgs handling for omitted completion command is not applicable via public Pi CLI.",
+  ],
+  [
+    "cmd/opencodereview/arg_errors_test.go::TestValidInvocationsStillResolve",
+    "Pi replaces OCR's exactArgs/minimumArgs Cobra validators for positional commands with flag-only review/scan and zero-arg version; those validators for omitted positional families are not applicable via public Pi CLI where no positional args are accepted.",
+  ],
   // ---- smallfiles: Pi replaces provider/viewer TUI shells ----
   [
     "cmd/opencodereview/smallfiles_test.go::TestRunLLMProviders",
@@ -1857,10 +1881,6 @@ const localCoverage: readonly LocalCoverage[] = [
     upstreamPaths: ["cmd/opencodereview/flag_suggest_test.go"],
   },
   {
-    localPath: "test/ocr-v193/cli/arg-helpers.test.ts",
-    upstreamPaths: ["cmd/opencodereview/arg_errors_test.go"],
-  },
-  {
     localPath: "test/ocr-v193/cli/smallfiles.test.ts",
     upstreamPaths: ["cmd/opencodereview/smallfiles_test.go"],
   },
@@ -1871,14 +1891,6 @@ const localCoverage: readonly LocalCoverage[] = [
   {
     localPath: "test/ocr-v193/cli/zero-args.test.ts",
     upstreamPaths: ["cmd/opencodereview/zero_args_test.go"],
-  },
-  {
-    localPath: "test/ocr-v193/cli/stdout.test.ts",
-    upstreamPaths: ["internal/stdout/stdout_test.go"],
-  },
-  {
-    localPath: "test/ocr-v193/cli/manual-retry.test.ts",
-    upstreamPaths: ["cmd/opencodereview/manual_e2e_retry_test.go"],
   },
 ];
 
