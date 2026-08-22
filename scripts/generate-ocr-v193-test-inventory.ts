@@ -1969,7 +1969,7 @@ const scopeOverrides: ReadonlyMap<string, Scope> = new Map<string, Scope>([
   [
     "cmd/opencodereview/config_cmd_test.go",
     {
-      kind: "out_of_scope",
+      kind: "in_scope",
       area: "cmd/opencodereview",
       reason: "OCR config provider/model/MCP/telemetry command dispatch and persistence are intentionally omitted; pi-reviewer only resolves externally managed Pi configuration at runtime, with per-test not-applicable reasons recorded below",
     },
@@ -1977,7 +1977,7 @@ const scopeOverrides: ReadonlyMap<string, Scope> = new Map<string, Scope>([
   [
     "cmd/opencodereview/provider_cmd_test.go",
     {
-      kind: "out_of_scope",
+      kind: "in_scope",
       area: "cmd/opencodereview",
       reason: "OCR provider mutation, API-key display, and TUI wizard behavior are intentionally omitted; pi-reviewer does not mutate or display externally managed Pi configuration",
     },
@@ -1993,7 +1993,7 @@ const scopeOverrides: ReadonlyMap<string, Scope> = new Map<string, Scope>([
   [
     "cmd/opencodereview/config_dispatch_test.go",
     {
-      kind: "out_of_scope",
+      kind: "in_scope",
       area: "cmd/opencodereview",
       reason: "OCR config command dispatch is intentionally omitted; pi-reviewer has no config command subtree",
     },
@@ -2001,7 +2001,7 @@ const scopeOverrides: ReadonlyMap<string, Scope> = new Map<string, Scope>([
   [
     "cmd/opencodereview/config_runset_test.go",
     {
-      kind: "out_of_scope",
+      kind: "in_scope",
       area: "cmd/opencodereview",
       reason: "OCR config set/unset persistence and display masking are intentionally omitted; pi-reviewer does not mutate or display externally managed Pi configuration",
     },
@@ -2009,7 +2009,7 @@ const scopeOverrides: ReadonlyMap<string, Scope> = new Map<string, Scope>([
   [
     "cmd/opencodereview/provider_config_apply_test.go",
     {
-      kind: "out_of_scope",
+      kind: "in_scope",
       area: "cmd/opencodereview",
       reason: "OCR provider-config mutation and validation commands are intentionally omitted; pi-reviewer only resolves externally managed provider/model configuration at runtime",
     },
@@ -2017,7 +2017,7 @@ const scopeOverrides: ReadonlyMap<string, Scope> = new Map<string, Scope>([
   [
     "cmd/opencodereview/apply_provider_field_test.go",
     {
-      kind: "out_of_scope",
+      kind: "in_scope",
       area: "cmd/opencodereview",
       reason: "OCR provider-field mutation is intentionally omitted; pi-reviewer does not edit externally managed Pi provider configuration",
     },
@@ -2025,7 +2025,7 @@ const scopeOverrides: ReadonlyMap<string, Scope> = new Map<string, Scope>([
   [
     "cmd/opencodereview/config_unset_error_test.go",
     {
-      kind: "out_of_scope",
+      kind: "in_scope",
       area: "cmd/opencodereview",
       reason: "OCR config-unset mutation and its config-file error paths are intentionally omitted; pi-reviewer does not expose config unset",
     },
