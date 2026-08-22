@@ -235,6 +235,7 @@ test("clean run emits no retry report", async () => {
 });
 
 // OCR v1.9.3: TestReviewE2E_RecoveredAndFailedReachesJSONExit
+// OCR v1.9.3: TestManualE2ERetryReport
 test("recovered and failed reaches JSON exit", async () => {
   const { report } = buildRecoveredCollector();
   const manifest = makeManifest("partial");
@@ -305,6 +306,7 @@ test("retry report reaches text exit", async () => {
 });
 
 // OCR v1.9.3: TestReviewE2E_AllFilesFailPublishesReportOnce
+// OCR v1.9.3: TestManualE2ERetryReport
 test("all files fail publishes report once (json)", async () => {
   const { report } = buildAllFailedCollector();
   const manifest = makeManifest("failed");

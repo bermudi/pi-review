@@ -7,8 +7,14 @@ Review v1.9.3's core behavior through the Pi SDK.
 > user approval; `src/ocr-v193` is now the sole engine and implements Open Code
 > Review v1.9.3 as the pinned behavioral reference (`v1.9.3` /
 > `4d796ae54cabdcf4e22b69ef502ed8871456a909` / `c35ddd7223f2b5540ce03aa43c9a25ef643fca27`).
-> Inventory classification complete — 0 pending (all 1895 upstream cases classified).
-> Provider/config command tree (`config`/`provider`/`login`/`MCP`/`telemetry`/`test-connection` via `~/.pi/agent`) is intentionally not ported (scope boundary via Pi SettingsManager); parity beyond verified fixtures is not claimed. See `docs/ocr-v1.9.3-port-plan.md` and `docs/ocr-v193-source-map.md`.
+> Inventory classification complete — 0 pending (1895 cases) while 324
+> not-applicable and 475 out-of-scope decisions remain; the
+> `config`/`provider`/`login`/`MCP`/`telemetry`/`test-connection` command
+> surfaces are intentionally not ported (omitted boundary; runtime only
+> resolves/loads external Pi configuration via public Pi APIs from
+> `~/.pi/agent`, Pi's external auth/model location). Full command-surface
+> parity is not claimed. See `docs/ocr-v1.9.3-port-plan.md` and
+> `docs/ocr-v193-source-map.md`.
 
 The public library boundary is small; Pi sessions, prompts, and model-visible
 tools remain behind `Reviewer`.
@@ -169,7 +175,12 @@ There is no model-visible shell, edit, or write tool.
 - Resume is per-session (`--resume ID`); it requires the same target/options and resumes a single prior session, not cross-run coverage merging.
 - Workspace evidence is live and may change during a long review; range/commit evidence is pinned.
 - The CLI requires an explicit `review` or `scan` subcommand.
-- Inventory classification complete (0 pending, 1895 cases): `config`/`provider`/`MCP`/`telemetry`/`test-connection` via `~/.pi/agent` intentionally not ported (deferred scope boundary via Pi SettingsManager); parity beyond verified fixtures is not claimed.
+- Inventory classification complete (0 pending, 1895 cases; 324
+  not-applicable, 475 out-of-scope): `config`/`provider`/`MCP`/`telemetry`/
+  `test-connection` command surfaces intentionally not ported (omitted
+  boundary; Pi's external auth/model configuration lives at `~/.pi/agent` and
+  is only resolved/loaded at runtime via public Pi APIs); full
+  command-surface parity is not claimed.
 
 ## SDK reference and public boundary
 

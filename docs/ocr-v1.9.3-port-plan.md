@@ -22,6 +22,15 @@ the parity engine. Before explicit removal on 2026-08-22, legacy remained
 available behind `--engine legacy` and suffixed library exports; after removal
 the sole engine is OCR v1.9.3 and the verifier proves absence of that switch.
 
+Inventory classification is complete — 0 pending of 1895 upstream cases
+(324 not-applicable, 475 out-of-scope, remainder covered/equivalent). The
+`config`/`provider`/`login`/`MCP`/`telemetry`/`test-connection` command
+surfaces are intentionally not ported (omitted boundary; runtime only
+resolves/loads external Pi configuration via public Pi APIs from
+`~/.pi/agent`, Pi's external auth/model location). Full command-surface
+parity is therefore not claimed; verified parity is limited to differential
+fixtures and the black-box gates below.
+
 ## Why the previous evidence is invalid
 
 The old verifiers could pass while:

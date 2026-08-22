@@ -18,7 +18,7 @@
         {
           "name": "TestApplyProviderField",
           "disposition": "not_applicable",
-          "reason": "Pi replaces OCR applyProviderField per-field switch (api_key/url/model/models/protocol/auth_header/extra_body/extra_headers) via ProviderEntry mutation with Pi SettingsManager ~/.pi/agent validation; not applicable via review/scan --provider/--model"
+          "reason": "OCR applyProviderField per-field switch (api_key/url/model/models/protocol/auth_header/extra_body/extra_headers) via ProviderEntry mutation is omitted; pi-reviewer does not expose provider field mutation and does not write Pi config; users configure via external Pi tooling/files, runtime only resolves via public Pi APIs; not applicable via review/scan --provider/--model"
         }
       ]
     },
@@ -403,502 +403,502 @@
         {
           "name": "TestActiveModelForProvider",
           "disposition": "not_applicable",
-          "reason": "Pi replaces OCR activeModelForProvider helper that prefers entry Model over cfg Model when provider matches with Pi SettingsManager ~/.pi/agent lookup via review/scan --provider/--model; not applicable"
+          "reason": "OCR activeModelForProvider helper that prefers entry Model over cfg Model when provider matches is omitted; pi-reviewer does not expose provider/model config lookup via cfg and does not mutate Pi config; users specify --provider/--model, runtime loads via public Pi APIs; not applicable"
         },
         {
           "name": "TestConfigRoundTripPreservesTimeoutSec",
           "disposition": "not_applicable",
-          "reason": "Pi replaces OCR saveConfig/loadOrCreateConfig round-trip preserving providers.*.timeout_sec/custom_providers.*.timeout_sec/llm.timeout_sec with Pi SettingsManager; Go file round-trip not applicable"
+          "reason": "OCR saveConfig/loadOrCreateConfig round-trip preserving providers.*.timeout_sec/custom_providers.*.timeout_sec/llm.timeout_sec is omitted; runtime per-file timeout exists via review --timeout flag, but config persistence of timeout_sec is not exposed and Pi config is not mutated by pi-reviewer; file round-trip not applicable"
         },
         {
           "name": "TestDeleteCustomProvider_NotFound",
           "disposition": "not_applicable",
-          "reason": "Pi replaces OCR deleteCustomProvider nil map vs missing entry error via CustomProviders with Pi SettingsManager custom provider delete; not applicable"
+          "reason": "OCR deleteCustomProvider nil map vs missing entry error via CustomProviders is omitted; pi-reviewer does not expose provider deletion and does not implement custom provider delete error path; Pi config deletion is managed externally; not applicable"
         },
         {
           "name": "TestEnsureModelInList",
           "disposition": "not_applicable",
-          "reason": "Pi replaces OCR ensureModelInList that appends new-model without reordering with Pi SettingsManager model list ensure; not applicable"
+          "reason": "OCR ensureModelInList that appends new-model without reordering is omitted; pi-reviewer does not implement model-list ensure for Pi config and does not write Pi config; model availability is managed externally; not applicable"
         },
         {
           "name": "TestEnsureTelemetry",
           "disposition": "not_applicable",
-          "reason": "deferred: ensureTelemetry nil->non-nil init for Telemetry is explicitly deferred; Pi telemetry export is deferred, not applicable"
+          "reason": "OCR ensureTelemetry nil->non-nil init for Telemetry is explicitly deferred; Pi telemetry export is not ported and pi-reviewer does not mutate Pi config; not applicable"
         },
         {
           "name": "TestLegacyLLMShadowWarning",
           "disposition": "not_applicable",
-          "reason": "deferred: legacyLLMShadowWarning for active provider shadowing llm.* (dashscope -> providers.dashscope.<field>) is omitted; Pi has no llm.* legacy config, not applicable"
+          "reason": "OCR legacyLLMShadowWarning for active provider shadowing llm.* is omitted; pi-reviewer has no llm.* legacy config and does not expose config warning flow; not applicable"
         },
         {
           "name": "TestLoadAppConfig_InvalidJSON",
           "disposition": "not_applicable",
-          "reason": "Pi replaces OCR LoadAppConfig invalid JSON error via os.WriteFile {invalid with Pi SettingsManager DefaultResourceLoader parse error; not applicable"
+          "reason": "OCR LoadAppConfig invalid JSON error via os.WriteFile {invalid} is omitted; pi-reviewer does not expose LoadAppConfig file parsing and does not write Pi config; runtime loads external Pi config via public APIs; file error path not applicable"
         },
         {
           "name": "TestLoadAppConfig_NotExist",
           "disposition": "not_applicable",
-          "reason": "Pi replaces OCR LoadAppConfig nil for nonexistent file with Pi SettingsManager inMemory defaults for ~/.pi/agent; not applicable"
+          "reason": "OCR LoadAppConfig nil for nonexistent file is omitted; pi-reviewer does not implement LoadAppConfig; Pi configuration defaults come from public Pi APIs reading ~/.pi/agent managed externally; not applicable"
         },
         {
           "name": "TestLoadOrCreateConfig_InvalidJSON",
           "disposition": "not_applicable",
-          "reason": "Pi replaces OCR loadOrCreateConfig invalid JSON error propagation with Pi SettingsManager; not applicable"
+          "reason": "OCR loadOrCreateConfig invalid JSON error propagation is omitted; pi-reviewer does not expose file config loading and does not write Pi config; omitted boundary, not applicable"
         },
         {
           "name": "TestLoadOrCreateConfig_NewFile",
           "disposition": "not_applicable",
-          "reason": "Pi replaces OCR loadOrCreateConfig new-file non-nil Config creation with Pi SettingsManager.inMemory ~/.pi/agent; not applicable"
+          "reason": "OCR loadOrCreateConfig new-file non-nil Config creation is omitted; pi-reviewer does not create Pi config files and does not mutate Pi config; external Pi tooling manages files; not applicable"
         },
         {
           "name": "TestMaxTokensConfigRoundTrip",
           "disposition": "not_applicable",
-          "reason": "Pi replaces OCR saveConfig/LoadAppConfig round-trip for MaxTokens 200000 with Pi SettingsManager and Budget handling; not applicable via Go file"
+          "reason": "OCR saveConfig/LoadAppConfig round-trip for MaxTokens 200000 is omitted; runtime max-tokens exists via review --max-tokens/Budget, but config persistence via Go file is not exposed and Pi config is not written by pi-reviewer; not applicable"
         },
         {
           "name": "TestMergeModelLists",
           "disposition": "not_applicable",
-          "reason": "Pi replaces OCR mergeModelLists dedup/empty-string filter merging of [][]string with Pi SettingsManager model list dedup; helper not applicable via Pi APIs"
+          "reason": "OCR mergeModelLists dedup/empty-string filter merging of [][]string is omitted; pi-reviewer does not implement model-list dedup for config persistence and does not mutate Pi config; model lists are managed externally via Pi files, runtime only consumes --model; helper not applicable"
         },
         {
           "name": "TestNormalizeModelList",
           "disposition": "not_applicable",
-          "reason": "Pi replaces OCR normalizeModelList trim+dedup+empty filter with Pi SettingsManager normalize via ~/.pi/agent; not applicable"
+          "reason": "OCR normalizeModelList trim+dedup+empty filter is omitted; pi-reviewer does not implement model-list normalization for config write and does not mutate Pi config; external Pi tooling manages lists; not applicable"
         },
         {
           "name": "TestParseModelListValue",
           "disposition": "not_applicable",
-          "reason": "Pi replaces OCR parseModelListValue (JSON array / comma / [a,b] unquoted) with Pi SettingsManager model list parsing; not applicable"
+          "reason": "OCR parseModelListValue (JSON array / comma / [a,b] unquoted) is omitted; pi-reviewer does not parse model lists for config persistence and does not mutate Pi config; users configure via external Pi files, runtime uses --model; not applicable"
         },
         {
           "name": "TestResolveConfigPath_Default",
           "disposition": "not_applicable",
-          "reason": "Pi replaces OCR resolveConfigPath default ~/.config/open-code-review/config.json via OCR_CONFIG_PATH with Pi SettingsManager DefaultResourceLoader ~/.pi/agent path; not applicable"
+          "reason": "OCR resolveConfigPath default ~/.config/open-code-review/config.json via OCR_CONFIG_PATH is omitted; pi-reviewer uses Pi's external auth/model location ~/.pi/agent via SettingsManager/DefaultResourceLoader and does not implement OCR's config path resolution; not applicable"
         },
         {
           "name": "TestResolveConfigPath_Env",
           "disposition": "not_applicable",
-          "reason": "Pi replaces OCR resolveConfigPath OCR_CONFIG_PATH=/tmp/test-config.json env override with Pi SettingsManager agentDir resolution; not applicable"
+          "reason": "OCR resolveConfigPath OCR_CONFIG_PATH=/tmp/test-config.json env override is omitted; pi-reviewer resolves Pi agent dir via PI_CODING_AGENT_DIR/--agent-dir and does not mutate Pi config; not applicable"
         },
         {
           "name": "TestRunConfig_EmptyArgs",
           "disposition": "not_applicable",
-          "reason": "deferred: runConfig nil args prints usage is omitted; Pi CLI has no config subcommand, review/scan are only surface, not applicable"
+          "reason": "OCR runConfig nil args prints usage is omitted; pi-reviewer has no config subcommand, review/scan are only surface; not applicable"
         },
         {
           "name": "TestRunConfig_ModelWithArgs",
           "disposition": "not_applicable",
-          "reason": "deferred: runConfig `model extra` arg error is omitted; Pi model is --model flag, not applicable"
+          "reason": "OCR runConfig `model extra` arg error is omitted; pi-reviewer does not expose config model subcommand, model is --model flag; not applicable"
         },
         {
           "name": "TestRunConfig_ProviderWithArgs",
           "disposition": "not_applicable",
-          "reason": "deferred: runConfig `provider extra` arg count error is omitted; Pi provider selection is --provider flag, not applicable"
+          "reason": "OCR runConfig `provider extra` arg count error is omitted; pi-reviewer does not expose config provider subcommand, provider selection is --provider flag; not applicable"
         },
         {
           "name": "TestRunConfigSetWarnsWhenActiveProviderShadowsLegacyLLMConfig",
           "disposition": "not_applicable",
-          "reason": "deferred: runConfigSet warning when active provider shadows legacy llm.url via captureConfigStderr is omitted; Pi has no llm.* precedence, not applicable"
+          "reason": "OCR runConfigSet warning when active provider shadows legacy llm.url via captureConfigStderr is omitted; pi-reviewer has no llm.* precedence and does not expose config set; not applicable"
         },
         {
           "name": "TestRunConfigUnset_InvalidKey",
           "disposition": "not_applicable",
-          "reason": "deferred: runConfigUnset custom_providers. empty name error is omitted; Pi has no config unset, not applicable"
+          "reason": "OCR runConfigUnset custom_providers. empty name error is omitted; pi-reviewer has no config unset; not applicable"
         },
         {
           "name": "TestRunConfigUnset_UnknownPrefix",
           "disposition": "not_applicable",
-          "reason": "deferred: runConfigUnset providers.anthropic unsupported prefix error is omitted; not applicable via Pi SettingsManager"
+          "reason": "OCR runConfigUnset providers.anthropic unsupported prefix error is omitted; pi-reviewer does not expose config unset and does not validate provider config keys for mutation; not applicable"
         },
         {
           "name": "TestRunConfigUnsetProviderClearsSelectionAndKeepsProviderEntries",
           "disposition": "not_applicable",
-          "reason": "Pi replaces OCR runConfigUnset `provider` that clears Provider/Model but keeps Providers[\"dashscope\"].APIKey via saveConfig/loadOrCreateConfig with Pi SettingsManager ~/.pi/agent; not applicable via Cobra"
+          "reason": "OCR runConfigUnset `provider` that clears Provider/Model but keeps Providers[\"dashscope\"].APIKey via saveConfig/loadOrCreateConfig is omitted; pi-reviewer does not expose config unset and does not clear secrets via saveConfig; users manage via external Pi files, runtime only loads; not applicable"
         },
         {
           "name": "TestSetConfigValueAuthHeaderNormalizesKnownValues",
           "disposition": "not_applicable",
-          "reason": "Pi replaces OCR setConfigValue `llm.auth_header` bearer -> authorization normalization via AuthHeader field with Pi SessionManager auth header handling; not applicable via SettingsManager"
+          "reason": "OCR setConfigValue `llm.auth_header` bearer -> authorization normalization via AuthHeader field is omitted; pi-reviewer does not expose llm.auth_header mutation and does not write Pi config; auth header is handled at runtime via Pi SessionManager from external files; not applicable"
         },
         {
           "name": "TestSetConfigValueAuthHeaderRejectsCustomHeader",
           "disposition": "not_applicable",
-          "reason": "Pi replaces OCR auth_header X-Custom-Auth rejection via setConfigValue with Pi SDK allowed Authorization/x-api-key; not applicable"
+          "reason": "OCR auth_header X-Custom-Auth rejection via setConfigValue is omitted; pi-reviewer does not expose config key validation for auth_header and does not mutate Pi config; allowed headers are enforced at runtime via Pi SDK; not applicable"
         },
         {
           "name": "TestSetConfigValueCustomProviderExtraHeaders",
           "disposition": "not_applicable",
-          "reason": "Pi replaces OCR custom_providers.my-gateway.extra_headers X-Gateway=secret via ProviderEntry with Pi SettingsManager; not applicable"
+          "reason": "OCR custom_providers.my-gateway.extra_headers via ProviderEntry is omitted; pi-reviewer does not persist extra_headers via config; not applicable"
         },
         {
           "name": "TestSetConfigValueLanguage",
           "disposition": "not_applicable",
-          "reason": "Pi replaces OCR setConfigValue `language` English via cfg.Language with Pi template language and SettingsManager; not applicable via Go config"
+          "reason": "OCR setConfigValue `language` English via cfg.Language is omitted; runtime language exists via template applyLanguage and review --language handling, but config persistence of language is not exposed and Pi config is not mutated by pi-reviewer; Go config path not applicable"
         },
         {
           "name": "TestSetConfigValueLlmAuthToken",
           "disposition": "not_applicable",
-          "reason": "Pi replaces OCR setConfigValue `llm.auth_token` tok-123 via Llm.AuthToken with Pi SettingsManager secret via ~/.pi/agent; legacy llm.* not applicable"
+          "reason": "OCR setConfigValue `llm.auth_token` via Llm.AuthToken is omitted; pi-reviewer does not expose llm.* legacy config and does not write Pi secrets; legacy llm.* not applicable"
         },
         {
           "name": "TestSetConfigValueLlmExtraBody",
           "disposition": "not_applicable",
-          "reason": "Pi replaces OCR setConfigValue `llm.extra_body` {\"key\":\"val\"} JSON via Llm.ExtraBody with Pi agentDir models.json extra body; not applicable via public Pi APIs"
+          "reason": "OCR setConfigValue `llm.extra_body` JSON via Llm.ExtraBody is omitted; pi-reviewer does not expose llm.extra_body config mutation; extra body is managed via external Pi models.json and consumed at runtime; not applicable via public Pi APIs"
         },
         {
           "name": "TestSetConfigValueLlmExtraBodyInvalid",
           "disposition": "not_applicable",
-          "reason": "Pi replaces OCR llm.extra_body not-json rejection via setConfigValue with Pi SettingsManager JSON validation; not applicable"
+          "reason": "OCR llm.extra_body not-json rejection via setConfigValue is omitted; pi-reviewer does not expose config validation for llm.extra_body and does not mutate Pi config; not applicable"
         },
         {
           "name": "TestSetConfigValueLlmExtraHeaders",
           "disposition": "not_applicable",
-          "reason": "Pi replaces OCR setConfigValue `llm.extra_headers` X-Custom=val1 parsing via Llm.ExtraHeaders map with Pi SettingsManager headers; not applicable"
+          "reason": "OCR setConfigValue `llm.extra_headers` parsing is omitted; pi-reviewer does not expose llm.extra_headers config mutation; headers are managed externally and consumed via Pi APIs; not applicable"
         },
         {
           "name": "TestSetConfigValueLlmExtraHeadersInvalid",
           "disposition": "not_applicable",
-          "reason": "Pi replaces OCR llm.extra_headers no-equals rejection with Pi SettingsManager header parse; not applicable"
+          "reason": "OCR llm.extra_headers no-equals rejection is omitted; pi-reviewer does not expose config key validation for headers and does not write Pi config; not applicable"
         },
         {
           "name": "TestSetConfigValueLlmExtraHeadersReservedRejected",
           "disposition": "not_applicable",
-          "reason": "Pi replaces OCR llm.extra_headers Authorization=bad reserved rejection with Pi SDK reserved header guard; not applicable"
+          "reason": "OCR llm.extra_headers Authorization=bad reserved rejection is omitted; pi-reviewer does not expose config validation and does not mutate Pi config; reserved header guard is at runtime via Pi SDK; not applicable"
         },
         {
           "name": "TestSetConfigValueLlmModel",
           "disposition": "not_applicable",
-          "reason": "Pi replaces OCR setConfigValue `llm.model` my-model via Llm.Model with Pi review/scan --model flag; legacy llm.* not applicable"
+          "reason": "OCR setConfigValue `llm.model` via Llm.Model is omitted; pi-reviewer does not expose llm.* legacy config; runtime model is via --model flag; not applicable"
         },
         {
           "name": "TestSetConfigValueLlmProtocol",
           "disposition": "not_applicable",
-          "reason": "Pi replaces OCR setConfigValue `llm.protocol` anthropic/openai/openai-responses mirroring UseAnthropic with Pi ModelRuntime protocol via createAgentSession; not applicable"
+          "reason": "OCR setConfigValue `llm.protocol` mirroring UseAnthropic is omitted; pi-reviewer does not expose llm.protocol mutation; protocol is resolved at runtime via ModelRuntime createAgentSession from external Pi config; not applicable"
         },
         {
           "name": "TestSetConfigValueLlmRetryCodesNoWarningForValidCodes",
           "disposition": "not_applicable",
-          "reason": "Pi replaces OCR llm.retry_codes 403,400 no-warning path via setConfigValue with Pi SettingsManager retry disabled (enabled:false); not applicable"
+          "reason": "OCR llm.retry_codes 403,400 no-warning path via setConfigValue is omitted; pi-reviewer disables retry via SettingsManager.inMemory({retry:{enabled:false}}) and does not expose retry_codes config persistence; not applicable"
         },
         {
           "name": "TestSetConfigValueLlmRetryCodesRedundantWarning",
           "disposition": "not_applicable",
-          "reason": "Pi replaces OCR llm.retry_codes 429,403 redundant 429 warning via captureConfigStderr with Pi SettingsManager filtering 429/408; not applicable"
+          "reason": "OCR llm.retry_codes 429,403 redundant 429 warning via captureConfigStderr is omitted; pi-reviewer does not expose retry_codes config and filters via retry disabled; not applicable"
         },
         {
           "name": "TestSetConfigValueLlmURL",
           "disposition": "not_applicable",
-          "reason": "Pi replaces OCR setConfigValue `llm.url` https://example.com/v1 via Llm.URL with Pi agentDir models.json baseUrl; not applicable"
+          "reason": "OCR setConfigValue `llm.url` via Llm.URL is omitted; pi-reviewer does not expose llm.url mutation; baseUrl comes from external Pi models.json via agentDir; not applicable"
         },
         {
           "name": "TestSetConfigValueLlmUseAnthropic",
           "disposition": "not_applicable",
-          "reason": "Pi replaces OCR setConfigValue `llm.use_anthropic` true/false mirroring Protocol anthropic/openai with Pi ModelRuntime; not applicable"
+          "reason": "OCR setConfigValue `llm.use_anthropic` mirroring Protocol is omitted; pi-reviewer does not expose llm.use_anthropic; not applicable via ModelRuntime"
         },
         {
           "name": "TestSetConfigValueLlmUseAnthropicInvalid",
           "disposition": "not_applicable",
-          "reason": "Pi replaces OCR llm.use_anthropic notbool rejection with Pi SettingsManager; not applicable"
+          "reason": "OCR llm.use_anthropic notbool rejection is omitted; pi-reviewer does not expose config validation for this key and does not write Pi config; not applicable"
         },
         {
           "name": "TestSetConfigValueMaxTokens",
           "disposition": "not_applicable",
-          "reason": "Pi replaces OCR setConfigValue `max_tokens` 200000 via cfg.MaxTokens with Pi Budget maxTokens handling; not applicable via Go config"
+          "reason": "OCR setConfigValue `max_tokens` 200000 via cfg.MaxTokens is omitted; runtime max-tokens exists via --max-tokens/Budget but config persistence is not exposed and Pi config is not mutated; not applicable via Go config"
         },
         {
           "name": "TestSetConfigValueMaxTokensRejectsInvalidValues",
           "disposition": "not_applicable",
-          "reason": "Pi replaces OCR max_tokens 0/-1/not-a-number rejection via setConfigValue with Pi Budget validation; not applicable"
+          "reason": "OCR max_tokens 0/-1/not-a-number rejection via setConfigValue is omitted; runtime validation via Budget exists but config-command validation/persistence is omitted and Pi config not written; not applicable"
         },
         {
           "name": "TestSetConfigValueMCPServer",
           "disposition": "not_applicable",
-          "reason": "deferred: setConfigValue `mcp_servers.my-server.command` npx via setMCPServerValue is deferred; MCP servers are not ported, not applicable"
+          "reason": "OCR setConfigValue `mcp_servers.my-server.command` via setMCPServerValue is deferred; MCP servers are not ported; not applicable"
         },
         {
           "name": "TestSetConfigValueModel",
           "disposition": "not_applicable",
-          "reason": "Pi replaces OCR setConfigValue `model` claude-opus-4-6 via cfg.Model with Pi review/scan --model and SettingsManager; not applicable"
+          "reason": "OCR setConfigValue `model` via cfg.Model is omitted; pi-reviewer does not persist model via config command and does not write Pi config; runtime model is via --model flag and external Pi files; not applicable"
         },
         {
           "name": "TestSetConfigValueModelWithCustomProvider",
           "disposition": "not_applicable",
-          "reason": "Pi replaces OCR setConfigValue `model` when Provider=my-gateway writes to CustomProviders[my-gateway].Model with Pi SettingsManager custom provider model; not applicable"
+          "reason": "OCR setConfigValue `model` when Provider=my-gateway writes to CustomProviders[my-gateway].Model is omitted; pi-reviewer does not mutate Pi config; model is resolved at runtime via --model/external files; not applicable"
         },
         {
           "name": "TestSetConfigValueModelWithProvider",
           "disposition": "not_applicable",
-          "reason": "Pi replaces OCR setConfigValue `model` when Provider=anthropic writes to Providers[anthropic].Model with Pi SettingsManager; not applicable"
+          "reason": "OCR setConfigValue `model` when Provider=anthropic writes to Providers[anthropic].Model is omitted; pi-reviewer does not write Pi config; runtime only loads; not applicable"
         },
         {
           "name": "TestSetConfigValueProvider",
           "disposition": "not_applicable",
-          "reason": "Pi replaces OCR setConfigValue `provider` anthropic via cfg.Provider with Pi review/scan --provider; not applicable via Go config"
+          "reason": "OCR setConfigValue `provider` via cfg.Provider is omitted; pi-reviewer does not persist provider via config command; provider is via --provider flag and external Pi files; not applicable"
         },
         {
           "name": "TestSetConfigValueProviderClearsModel",
           "disposition": "not_applicable",
-          "reason": "Pi replaces OCR setConfigValue `provider` clears Model on provider change (old-provider->new-provider) with Pi SettingsManager provider switch; not applicable"
+          "reason": "OCR setConfigValue `provider` clears Model on provider change is omitted; pi-reviewer does not implement provider switch clearing via saveConfig and does not mutate Pi config; not applicable"
         },
         {
           "name": "TestSetConfigValueProviderEntry",
           "disposition": "not_applicable",
-          "reason": "Pi replaces OCR setConfigValue `providers.anthropic.api_key/model` via ProviderEntry with Pi SettingsManager provider entry; not applicable"
+          "reason": "OCR setConfigValue `providers.anthropic.api_key/model` via ProviderEntry is omitted; pi-reviewer does not expose provider entry mutation and does not write Pi config; external files manage entries, runtime only loads; not applicable"
         },
         {
           "name": "TestSetConfigValueProviderEntryExtraBody",
           "disposition": "not_applicable",
-          "reason": "Pi replaces OCR providers.anthropic.extra_body {\"thinking\":...} JSON via ProviderEntry.ExtraBody with Pi agentDir extra body; not applicable"
+          "reason": "OCR providers.anthropic.extra_body JSON via ProviderEntry.ExtraBody is omitted; pi-reviewer does not persist extra_body via config and does not write Pi config; handled via external models.json at runtime; not applicable"
         },
         {
           "name": "TestSetConfigValueProviderEntryInvalidKey",
           "disposition": "not_applicable",
-          "reason": "Pi replaces OCR providers.anthropic.unknown_field rejection via applyProviderField with Pi SettingsManager field validation; not applicable"
+          "reason": "OCR providers.anthropic.unknown_field rejection via applyProviderField is omitted; pi-reviewer does not validate/expose config key persistence for provider entry and does not mutate Pi config; not applicable"
         },
         {
           "name": "TestSetConfigValueProviderEntryInvalidPath",
           "disposition": "not_applicable",
-          "reason": "Pi replaces OCR providers.anthropic incomplete path (no field) rejection with Pi SettingsManager path validation; not applicable"
+          "reason": "OCR providers.anthropic incomplete path (no field) rejection is omitted; pi-reviewer does not expose config path validation for mutation and does not write Pi config; not applicable"
         },
         {
           "name": "TestSetConfigValueProviderEntryModelsCommaSeparated",
           "disposition": "not_applicable",
-          "reason": "Pi replaces OCR custom_providers.my-gateway.models comma \" llama-3-70b, llama-3-8b\" parsing via parseModelListValue with Pi SettingsManager; not applicable"
+          "reason": "OCR custom_providers.my-gateway.models comma parsing via parseModelListValue is omitted; pi-reviewer does not parse/persist model lists via config command and does not mutate Pi config; external files manage lists; not applicable"
         },
         {
           "name": "TestSetConfigValueProviderEntryModelsJSON",
           "disposition": "not_applicable",
-          "reason": "Pi replaces OCR custom_providers.my-gateway.models [\"llama-3-70b\",\"llama-3-8b\"] JSON dedup via parseModelListValue with Pi SettingsManager; not applicable"
+          "reason": "OCR custom_providers.my-gateway.models JSON dedup via parseModelListValue is omitted; pi-reviewer does not implement dedup for config persistence and does not write Pi config; not applicable"
         },
         {
           "name": "TestSetConfigValueProviderEntryModelsUnquotedBracketList",
           "disposition": "not_applicable",
-          "reason": "Pi replaces OCR custom_providers models [llama-3-70b,llama-3-8b] unquoted bracket parsing with Pi SettingsManager; not applicable"
+          "reason": "OCR custom_providers models [llama-3-70b,llama-3-8b] unquoted bracket parsing is omitted; pi-reviewer does not parse model lists for config write; not applicable"
         },
         {
           "name": "TestSetConfigValueProviderEntryNonPresetWritesCustomProvider",
           "disposition": "not_applicable",
-          "reason": "Pi replaces OCR providers.my-gateway.url non-preset writes to CustomProviders[my-gateway].URL (not Providers) via setConfigValue with Pi SettingsManager; not applicable"
+          "reason": "OCR providers.my-gateway.url non-preset writes to CustomProviders[my-gateway].URL via setConfigValue is omitted; pi-reviewer does not route non-preset providers to CustomProviders and does not mutate Pi config; not applicable"
         },
         {
           "name": "TestSetConfigValueProviderEntryProtocol",
           "disposition": "not_applicable",
-          "reason": "Pi replaces OCR custom_providers.custom.protocol openai alias -> ProtocolOpenAIChatCompletions validation with Pi ModelRuntime protocol; not applicable"
+          "reason": "OCR custom_providers.custom.protocol openai alias validation is omitted; pi-reviewer does not validate protocol via config mutation; runtime resolves via ModelRuntime from external files; not applicable"
         },
         {
           "name": "TestSetConfigValueProviderExtraHeaders",
           "disposition": "not_applicable",
-          "reason": "Pi replaces OCR providers.anthropic.extra_headers X-Custom=val1 parsing via ProviderEntry.ExtraHeaders with Pi agentDir headers; not applicable"
+          "reason": "OCR providers.anthropic.extra_headers parsing via ProviderEntry.ExtraHeaders is omitted; pi-reviewer does not persist extra_headers via config and does not write Pi config; handled externally at runtime; not applicable"
         },
         {
           "name": "TestSetConfigValueProviderExtraHeadersInvalid",
           "disposition": "not_applicable",
-          "reason": "Pi replaces OCR providers.anthropic.extra_headers =missing-key rejection with Pi header validation; not applicable"
+          "reason": "OCR providers.anthropic.extra_headers =missing-key rejection is omitted; pi-reviewer does not validate extra_headers config persistence and does not mutate Pi config; not applicable"
         },
         {
           "name": "TestSetConfigValueProviderRetryCodesRedundantWarning",
           "disposition": "not_applicable",
-          "reason": "Pi replaces OCR custom_providers.test.retry_codes 408,400 redundant 408 warning via captureConfigStderr with Pi SettingsManager retry disabled; not applicable"
+          "reason": "OCR custom_providers.test.retry_codes redundant warning via captureConfigStderr is omitted; pi-reviewer disables retry and does not expose retry_codes config persistence; not applicable"
         },
         {
           "name": "TestSetConfigValueTelemetryContentLogging",
           "disposition": "not_applicable",
-          "reason": "deferred: telemetry.content_logging bool is deferred; Pi content logging is not ported, not applicable"
+          "reason": "OCR telemetry.content_logging bool is deferred; pi-reviewer does not port content logging config; not applicable"
         },
         {
           "name": "TestSetConfigValueTelemetryContentLoggingInvalid",
           "disposition": "not_applicable",
-          "reason": "deferred: telemetry.content_logging notbool rejection is deferred; not applicable"
+          "reason": "OCR telemetry.content_logging notbool rejection is deferred; not applicable"
         },
         {
           "name": "TestSetConfigValueTelemetryEnabled",
           "disposition": "not_applicable",
-          "reason": "deferred: setConfigValue `telemetry.enabled` true bool via ensureTelemetry is deferred; Pi telemetry is not configurable via config, not applicable"
+          "reason": "OCR setConfigValue `telemetry.enabled` true bool via ensureTelemetry is deferred; pi-reviewer does not expose telemetry config mutation and does not write Pi config; not applicable"
         },
         {
           "name": "TestSetConfigValueTelemetryEnabledInvalid",
           "disposition": "not_applicable",
-          "reason": "deferred: telemetry.enabled notbool rejection is deferred; not applicable via Pi SettingsManager"
+          "reason": "OCR telemetry.enabled notbool rejection is deferred; pi-reviewer does not expose telemetry config command and does not validate config keys; not applicable"
         },
         {
           "name": "TestSetConfigValueTelemetryExporter",
           "disposition": "not_applicable",
-          "reason": "deferred: telemetry.exporter otlp string is deferred; not applicable"
+          "reason": "OCR telemetry.exporter otlp string is deferred; pi-reviewer does not port telemetry config; not applicable"
         },
         {
           "name": "TestSetConfigValueTelemetryOTLPEndpoint",
           "disposition": "not_applicable",
-          "reason": "deferred: telemetry.otlp_endpoint localhost:4317 is deferred; not applicable"
+          "reason": "OCR telemetry.otlp_endpoint localhost:4317 is deferred; not applicable"
         },
         {
           "name": "TestSetConfigValueUnknownKey",
           "disposition": "not_applicable",
-          "reason": "Pi replaces OCR setConfigValue unknown.key rejection via supportedConfigKeys with Pi SettingsManager schema; not applicable"
+          "reason": "OCR setConfigValue unknown.key rejection via supportedConfigKeys is omitted; pi-reviewer does not expose config key validation for persistence and does not write Pi config; users configure via external Pi files, runtime only loads; not applicable"
         },
         {
           "name": "TestSetConfigValueUnknownKeyMessage",
           "disposition": "not_applicable",
-          "reason": "Pi replaces OCR unknown-key message byte-identical check from supportedConfigKeys/supportedProviderFields/protocol values generation with Pi SettingsManager; not applicable"
+          "reason": "OCR unknown-key message byte-identical check from supportedConfigKeys/supportedProviderFields is omitted; pi-reviewer does not generate unknown-key messages for config persistence and does not mutate Pi config; not applicable"
         },
         {
           "name": "TestSetMCPServerValue_Args",
           "disposition": "not_applicable",
-          "reason": "deferred: setMCPServerValue mcp_servers.my-server.args [\"--port\",\"8080\"] JSON is deferred; MCP servers are not ported, not applicable"
+          "reason": "OCR setMCPServerValue mcp_servers.my-server.args JSON is deferred; MCP servers not ported; not applicable"
         },
         {
           "name": "TestSetMCPServerValue_ArgsInvalidJSON",
           "disposition": "not_applicable",
-          "reason": "deferred: mcp_servers args not-json rejection is deferred; not applicable"
+          "reason": "OCR mcp_servers args not-json rejection is deferred; not applicable"
         },
         {
           "name": "TestSetMCPServerValue_Command",
           "disposition": "not_applicable",
-          "reason": "deferred: setMCPServerValue mcp_servers.my-server.command npx is deferred; Pi has no MCP command, not applicable"
+          "reason": "OCR setMCPServerValue mcp_servers.my-server.command is deferred; Pi has no MCP command; not applicable"
         },
         {
           "name": "TestSetMCPServerValue_CommandEmpty",
           "disposition": "not_applicable",
-          "reason": "deferred: mcp_servers command empty rejection is deferred; not applicable"
+          "reason": "OCR mcp_servers command empty rejection is deferred; not applicable"
         },
         {
           "name": "TestSetMCPServerValue_Env",
           "disposition": "not_applicable",
-          "reason": "deferred: mcp_servers.my-server.env [\"FOO=bar\"] is deferred; not applicable"
+          "reason": "OCR mcp_servers.my-server.env is deferred; not applicable"
         },
         {
           "name": "TestSetMCPServerValue_EnvInvalidFormat",
           "disposition": "not_applicable",
-          "reason": "deferred: mcp_servers env NOEQUALS format rejection is deferred; not applicable"
+          "reason": "OCR mcp_servers env NOEQUALS format rejection is deferred; not applicable"
         },
         {
           "name": "TestSetMCPServerValue_EnvInvalidJSON",
           "disposition": "not_applicable",
-          "reason": "deferred: mcp_servers env not-json rejection is deferred; not applicable"
+          "reason": "OCR mcp_servers env not-json rejection is deferred; not applicable"
         },
         {
           "name": "TestSetMCPServerValue_ExistingServer",
           "disposition": "not_applicable",
-          "reason": "deferred: setMCPServerValue existing srv old-cmd->new-cmd via MCPServers map is deferred; not applicable"
+          "reason": "OCR setMCPServerValue existing srv old-cmd->new-cmd via MCPServers map is deferred; not applicable"
         },
         {
           "name": "TestSetMCPServerValue_Headers",
           "disposition": "not_applicable",
-          "reason": "deferred: mcp_servers.gh.headers {\"Authorization\":\"Bearer $TOKEN\"} is deferred; Pi has no MCP headers, not applicable"
+          "reason": "OCR mcp_servers.gh.headers is deferred; Pi has no MCP headers; not applicable"
         },
         {
           "name": "TestSetMCPServerValue_HeadersEmptyName",
           "disposition": "not_applicable",
-          "reason": "deferred: mcp_servers headers empty name rejection is deferred; not applicable"
+          "reason": "OCR mcp_servers headers empty name rejection is deferred; not applicable"
         },
         {
           "name": "TestSetMCPServerValue_HeadersEmptyValue",
           "disposition": "not_applicable",
-          "reason": "deferred: mcp_servers headers empty value rejection is deferred; not applicable"
+          "reason": "OCR mcp_servers headers empty value rejection is deferred; not applicable"
         },
         {
           "name": "TestSetMCPServerValue_HeadersInvalidJSON",
           "disposition": "not_applicable",
-          "reason": "deferred: mcp_servers headers not-json rejection is deferred; not applicable"
+          "reason": "OCR mcp_servers headers not-json rejection is deferred; not applicable"
         },
         {
           "name": "TestSetMCPServerValue_InvalidKey",
           "disposition": "not_applicable",
-          "reason": "deferred: setMCPServerValue mcp_servers malformed key (no field) is deferred; not applicable"
+          "reason": "OCR setMCPServerValue mcp_servers malformed key is deferred; not applicable"
         },
         {
           "name": "TestSetMCPServerValue_Setup",
           "disposition": "not_applicable",
-          "reason": "deferred: mcp_servers.my-server.setup init-script.sh is deferred; not applicable"
+          "reason": "OCR mcp_servers.my-server.setup is deferred; not applicable"
         },
         {
           "name": "TestSetMCPServerValue_Tools",
           "disposition": "not_applicable",
-          "reason": "deferred: mcp_servers.my-server.tools [\"search\",\"read\"] dedup via setMCPServerValue is deferred; not applicable"
+          "reason": "OCR mcp_servers.my-server.tools dedup via setMCPServerValue is deferred; not applicable"
         },
         {
           "name": "TestSetMCPServerValue_ToolsEmptyName",
           "disposition": "not_applicable",
-          "reason": "deferred: mcp_servers tools empty name rejection is deferred; not applicable"
+          "reason": "OCR mcp_servers tools empty name rejection is deferred; not applicable"
         },
         {
           "name": "TestSetMCPServerValue_ToolsInvalidJSON",
           "disposition": "not_applicable",
-          "reason": "deferred: mcp_servers tools not-json rejection is deferred; not applicable"
+          "reason": "OCR mcp_servers tools not-json rejection is deferred; not applicable"
         },
         {
           "name": "TestSetMCPServerValue_Type",
           "disposition": "not_applicable",
-          "reason": "deferred: setMCPServerValue mcp_servers.gh.type remote is deferred; Pi has no MCP type, not applicable"
+          "reason": "OCR setMCPServerValue mcp_servers.gh.type is deferred; Pi has no MCP type; not applicable"
         },
         {
           "name": "TestSetMCPServerValue_TypeInvalid",
           "disposition": "not_applicable",
-          "reason": "deferred: mcp_servers type invalid rejection is deferred; not applicable"
+          "reason": "OCR mcp_servers type invalid rejection is deferred; not applicable"
         },
         {
           "name": "TestSetMCPServerValue_UnknownField",
           "disposition": "not_applicable",
-          "reason": "deferred: mcp_servers unknown field rejection is deferred; not applicable"
+          "reason": "OCR mcp_servers unknown field rejection is deferred; not applicable"
         },
         {
           "name": "TestSetMCPServerValue_URL",
           "disposition": "not_applicable",
-          "reason": "deferred: mcp_servers.gh.url https://api.example.com/mcp is deferred; not applicable"
+          "reason": "OCR mcp_servers.gh.url is deferred; not applicable"
         },
         {
           "name": "TestSetMCPServerValue_URLEmpty",
           "disposition": "not_applicable",
-          "reason": "deferred: mcp_servers url empty rejection is deferred; not applicable"
+          "reason": "OCR mcp_servers url empty rejection is deferred; not applicable"
         },
         {
           "name": "TestSetMCPServerValue_URLInvalidScheme",
           "disposition": "not_applicable",
-          "reason": "deferred: mcp_servers url ftp:// scheme rejection is deferred; not applicable"
+          "reason": "OCR mcp_servers url ftp:// scheme rejection is deferred; not applicable"
         },
         {
           "name": "TestSetMCPServerValue_URLNoHost",
           "disposition": "not_applicable",
-          "reason": "deferred: mcp_servers url http:// no-host rejection is deferred; not applicable"
+          "reason": "OCR mcp_servers url http:// no-host rejection is deferred; not applicable"
         },
         {
           "name": "TestSetMCPServerValue_URLParseError",
           "disposition": "not_applicable",
-          "reason": "deferred: mcp_servers url ://bad parse error is deferred; not applicable"
+          "reason": "OCR mcp_servers url ://bad parse error is deferred; not applicable"
         },
         {
           "name": "TestUnsetActiveCustomProvider",
           "disposition": "not_applicable",
-          "reason": "Pi replaces OCR unsetCustomProvider when Provider=my-gateway active clears Provider/Model and keeps other-gateway via saveConfig with Pi SettingsManager; not applicable via Go file"
+          "reason": "OCR unsetCustomProvider when Provider=my-gateway active clears Provider/Model and keeps other-gateway via saveConfig is omitted; pi-reviewer does not expose unset and does not mutate Pi config; Pi files managed externally; not applicable"
         },
         {
           "name": "TestUnsetCustomProvider",
           "disposition": "not_applicable",
-          "reason": "Pi replaces OCR unsetCustomProvider that deletes CustomProviders[my-gateway] via saveConfig with Pi SettingsManager custom provider removal; not applicable"
+          "reason": "OCR unsetCustomProvider that deletes CustomProviders[my-gateway] via saveConfig is omitted; pi-reviewer does not expose unset and does not delete via saveConfig; external Pi files manage deletions; not applicable"
         },
         {
           "name": "TestUnsetInvalidKey",
           "disposition": "not_applicable",
-          "reason": "Pi replaces OCR unsetCustomProvider my-gateway ok vs nonexistent error via CustomProviders map with Pi SettingsManager; not applicable"
+          "reason": "OCR unsetCustomProvider my-gateway ok vs nonexistent error via CustomProviders map is omitted; pi-reviewer does not expose unset error path and does not mutate Pi config; not applicable"
         },
         {
           "name": "TestUnsetMaxTokens",
           "disposition": "not_applicable",
-          "reason": "Pi replaces OCR unsetMaxTokens that removes max_tokens key and omits from JSON via saveConfig/loadOrCreateConfig with Pi SettingsManager; not applicable"
+          "reason": "OCR unsetMaxTokens that removes max_tokens key via saveConfig/loadOrCreateConfig is omitted; runtime maxTokens via Budget exists but config unset persistence is not exposed and Pi config is not written; not applicable"
         },
         {
           "name": "TestUnsetMCPServer",
           "disposition": "not_applicable",
-          "reason": "deferred: unsetMCPServer deleting srv1 keeps srv2 via saveConfig is deferred; MCP is not ported, not applicable"
+          "reason": "OCR unsetMCPServer deleting srv1 keeps srv2 via saveConfig is deferred; MCP not ported; not applicable"
         },
         {
           "name": "TestUnsetMCPServer_LastEntry",
           "disposition": "not_applicable",
-          "reason": "deferred: unsetMCPServer deleting last entry nils MCPServers map is deferred; not applicable"
+          "reason": "OCR unsetMCPServer deleting last entry nils MCPServers map is deferred; not applicable"
         },
         {
           "name": "TestUnsetMCPServer_NotFound",
           "disposition": "not_applicable",
-          "reason": "deferred: unsetMCPServer nonexistent error is deferred; not applicable"
+          "reason": "OCR unsetMCPServer nonexistent error is deferred; not applicable"
         }
       ]
     },
@@ -914,17 +914,17 @@
         {
           "name": "TestRunConfig_InvalidSetMissingValue",
           "disposition": "not_applicable",
-          "reason": "deferred: runConfig `config set` missing value arg validation via Cobra is omitted; Pi replaces config set with SettingsManager and review/scan --provider/--model, not applicable"
+          "reason": "OCR runConfig `config set` missing value arg validation via Cobra is omitted; pi-reviewer does not expose config set and does not mutate Pi config; users configure through external Pi tooling/files, runtime only resolves via public Pi APIs; config-command persistence is omitted, not applicable via review/scan --provider/--model"
         },
         {
           "name": "TestRunConfig_InvalidUnsetMissingKey",
           "disposition": "not_applicable",
-          "reason": "deferred: runConfig `config unset` missing key validation via Cobra is omitted; Pi has no config unset, uses SettingsManager ~/.pi/agent, not applicable"
+          "reason": "OCR runConfig `config unset` missing key validation via Cobra is omitted; pi-reviewer does not expose config unset and does not mutate Pi config; users configure via external Pi tooling/files, runtime only loads via public Pi APIs; config unset is omitted, not applicable"
         },
         {
           "name": "TestRunConfig_UnknownSubcommand",
           "disposition": "not_applicable",
-          "reason": "deferred: runConfig dispatch unknown subcommand via Cobra is omitted; Pi has no `config` subtree and routes only review/scan/version via SettingsManager ~/.pi/agent, not applicable"
+          "reason": "OCR runConfig dispatch unknown subcommand via Cobra is omitted; pi-reviewer does not expose a config command tree and routes only review/scan/version; users configure auth/models through external Pi tooling/files, runtime only resolves/loads via public Pi APIs; config subtree is an omitted boundary, not applicable"
         }
       ]
     },
@@ -940,12 +940,12 @@
         {
           "name": "TestRunConfigSetPersists",
           "disposition": "not_applicable",
-          "reason": "Pi replaces OCR runConfigSet that calls setConfigValue + saveConfig 0600 with captureStdout masking via maskKey with Pi SettingsManager ~/.pi/agent persistence; Go file write and api_key masking not applicable via Pi APIs"
+          "reason": "OCR runConfigSet persistence via setConfigValue + saveConfig 0600 with maskKey redaction is omitted; pi-reviewer does not expose config set, does not write Pi config files and does not implement maskKey; users configure via external Pi tooling/files, runtime only loads via public Pi APIs; config saving/masking is omitted boundary, not applicable"
         },
         {
           "name": "TestRunConfigUnsetPaths",
           "disposition": "not_applicable",
-          "reason": "deferred: runConfigUnset dispatch for `provider`/`custom_providers.<name>`/`mcp_servers.<name>` with captureStdout is omitted; Pi replaces unset* via SettingsManager, not applicable via Cobra"
+          "reason": "OCR runConfigUnset dispatch for `provider`/`custom_providers.<name>`/`mcp_servers.<name>` with captureStdout is omitted; pi-reviewer does not expose config unset and does not mutate Pi config; users configure via external Pi tooling/files; omitted boundary, not applicable via Cobra"
         }
       ]
     },
@@ -961,7 +961,7 @@
         {
           "name": "TestUnset_LoadErrors",
           "disposition": "not_applicable",
-          "reason": "Pi replaces OCR unset* load-error branches (unsetActiveProvider/unsetCustomProvider/unsetMCPServer wrapping loadOrCreateConfig invalid JSON {not valid) with Pi SettingsManager DefaultResourceLoader error handling; Go config file error path not applicable"
+          "reason": "OCR unset* load-error branches (unsetActiveProvider/unsetCustomProvider/unsetMCPServer wrapping loadOrCreateConfig invalid JSON) are omitted; pi-reviewer does not expose config unset and does not implement loadOrCreateConfig file parsing; runtime only loads external Pi config via public Pi APIs; omitted boundary, not applicable"
         }
       ]
     },
@@ -1815,6 +1815,16 @@
               "kind": "bun-test-annotation",
               "path": "test/ocr-v193/cli/retry-e2e.test.ts",
               "title": "clean run emits no retry report"
+            },
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/cli/retry-e2e.test.ts",
+              "title": "recovered and failed reaches JSON exit"
+            },
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/cli/retry-e2e.test.ts",
+              "title": "all files fail publishes report once (json)"
             }
           ]
         }
@@ -2313,82 +2323,82 @@
         {
           "name": "TestApplyCustomProviderConfig_EmptyKeyClearsSavedAPIKey",
           "disposition": "not_applicable",
-          "reason": "Pi replaces OCR applyCustomProviderConfig empty-key clears CustomProviders[aaa].APIKey via saveConfig with Pi SettingsManager; not applicable"
+          "reason": "OCR applyCustomProviderConfig empty-key clears CustomProviders[aaa].APIKey via saveConfig is omitted; pi-reviewer does not expose secret clearing and does not write Pi config; external Pi files manage secrets; not applicable"
         },
         {
           "name": "TestApplyCustomProviderConfig_MissingModel",
           "disposition": "not_applicable",
-          "reason": "deferred: applyCustomProviderConfig missing model validation is omitted; Pi validates via ModelRuntime, not applicable"
+          "reason": "OCR applyCustomProviderConfig missing model validation is omitted; pi-reviewer does not expose custom provider config mutation; validation is at runtime via ModelRuntime, not via config save; omitted, not applicable"
         },
         {
           "name": "TestApplyCustomProviderConfig_MissingProvider",
           "disposition": "not_applicable",
-          "reason": "deferred: applyCustomProviderConfig missing provider name validation is omitted; Pi custom provider name lives in SettingsManager ~/.pi/agent, not applicable"
+          "reason": "OCR applyCustomProviderConfig missing provider name validation is omitted; pi-reviewer does not expose custom provider creation via config command; provider name lives in external Pi files, runtime only loads; omitted, not applicable"
         },
         {
           "name": "TestApplyManualConfig_MissingModel",
           "disposition": "not_applicable",
-          "reason": "deferred: applyManualConfig missing model validation is omitted; Pi validates model via SettingsManager and --model flag, not applicable"
+          "reason": "OCR applyManualConfig missing model validation is omitted; pi-reviewer does not expose manual config mutation; model validation occurs at runtime via --model and ModelRuntime, not via saved config; omitted boundary, not applicable"
         },
         {
           "name": "TestApplyManualConfig_MissingURL",
           "disposition": "not_applicable",
-          "reason": "deferred: applyManualConfig missing URL validation before network test is omitted; Pi uses createAgentSession with agentDir models.json URL, not applicable via Go config"
+          "reason": "OCR applyManualConfig missing URL validation before network test is omitted; pi-reviewer does not expose manual config/provider wizard; manual provider URL is supplied via external Pi models.json baseUrl and resolved at review time via createAgentSession; config-command validation is omitted, not applicable"
         },
         {
           "name": "TestApplyOfficialProviderConfig_EmptyKeyClearsSavedAPIKey",
           "disposition": "not_applicable",
-          "reason": "Pi replaces OCR applyOfficialProviderConfig empty-key clears persisted APIKey via saveConfig/loadOrCreateConfig with Pi SettingsManager secret clearing via ~/.pi/agent; not applicable via Go file"
+          "reason": "OCR applyOfficialProviderConfig empty-key clears persisted APIKey via saveConfig/loadOrCreateConfig is omitted; pi-reviewer does not expose secret clearing and does not mutate Pi config; users manage secrets via external Pi tooling/files; omitted boundary, not applicable"
         },
         {
           "name": "TestApplyOfficialProviderConfig_MissingFields",
           "disposition": "not_applicable",
-          "reason": "deferred: applyOfficialProviderConfig missing provider/model required error is omitted; Pi validates provider/model via review/scan flags, not applicable"
+          "reason": "OCR applyOfficialProviderConfig missing provider/model required error is omitted; pi-reviewer does not expose official provider config mutation; provider/model validation is via review/scan --provider/--model flags, not via config file; omitted, not applicable"
         },
         {
           "name": "TestApplyOfficialProviderConfig_UsesSessionModelPick",
           "disposition": "not_applicable",
-          "reason": "Pi replaces OCR applyOfficialProviderConfig sessionModelPick -> Model/Provider switch via saveConfig with Pi ModelRuntime routing via createAgentSession; not applicable"
+          "reason": "OCR applyOfficialProviderConfig sessionModelPick -> Model/Provider switch via saveConfig is omitted; pi-reviewer does not expose provider config apply and does not mutate Pi config; runtime routes via --provider/--model and createAgentSession; omitted, not applicable"
         },
         {
           "name": "TestApplyProviderDeletions",
           "disposition": "not_applicable",
-          "reason": "Pi replaces OCR applyProviderDeletions (saveConfig + delete from CustomProviders, keep active) with Pi SettingsManager custom provider removal; not applicable via Pi APIs"
+          "reason": "OCR applyProviderDeletions (saveConfig + delete from CustomProviders, keep active) is omitted; pi-reviewer does not expose provider deletion and does not mutate Pi config; users manage deletions via external Pi tooling/files; omitted boundary, not applicable"
         },
         {
           "name": "TestApplyProviderDeletions_ActiveCleared",
           "disposition": "not_applicable",
-          "reason": "Pi replaces OCR applyProviderDeletions active-cleared path that clears Provider/Model when deleting active custom provider with Pi SettingsManager provider switch via ~/.pi/agent; not applicable"
+          "reason": "OCR applyProviderDeletions active-cleared path that clears Provider/Model when deleting active custom provider is omitted; pi-reviewer does not expose provider deletion and does not clear selection via saveConfig; users configure via external Pi files, runtime only loads; not applicable"
         },
         {
           "name": "TestApplyProviderDeletions_SkipsNotFound",
           "disposition": "not_applicable",
-          "reason": "Pi replaces OCR applyProviderDeletions skip-not-found no-error path with Pi SettingsManager tolerant delete; Go file branch not applicable"
+          "reason": "OCR applyProviderDeletions skip-not-found no-error path is omitted; pi-reviewer does not expose provider deletion and does not implement tolerant delete; Pi config is not mutated by pi-reviewer; omitted boundary, not applicable"
         },
         {
           "name": "TestMaskKey",
           "disposition": "not_applicable",
-          "reason": "Pi replaces OCR maskKey API-key redaction (\"\"->(not set), \"abcd\"/\"12345678\"->***, sk-ant-***1234) with Pi SettingsManager secret handling via ~/.pi/agent; redaction logic not applicable"
+          "reason": "OCR maskKey API-key redaction (\"\"->(not set), \"abcd\"/\"12345678\"->***, sk-ant-***1234) is omitted; pi-reviewer does not expose config display and does not implement Pi config secret clearing/masking; users manage secrets via external Pi tooling/files; not applicable"
         },
         {
           "name": "TestPrintWizardCancelled",
           "disposition": "not_applicable",
-          "reason": "deferred: printWizardCancelled wizard scope message (Configuration/Model list changes kept) via stdout pipe is omitted; Pi has no provider TUI wizard, not applicable"
+          "reason": "OCR printWizardCancelled wizard scope message (Configuration/Model list changes kept) via stdout pipe is omitted; pi-reviewer does not expose provider TUI wizard; not applicable"
         },
         {
           "name": "TestProviderTUIResult_ResolvedModel",
           "disposition": "not_applicable",
-          "reason": "Pi replaces OCR providerTUIResult.resolvedModel via sessionModelPick map vs model field with Pi CLI --model selection and SettingsManager; TUI result struct not applicable"
+          "reason": "OCR providerTUIResult.resolvedModel via sessionModelPick map vs model field is omitted; pi-reviewer does not expose provider TUI wizard; model selection is via CLI --model and external Pi config, runtime only resolves via public APIs; TUI result struct not applicable"
         },
         {
           "name": "TestRemoveModels",
           "disposition": "not_applicable",
-          "reason": "Pi replaces OCR removeModels helper (remove one/none/all, empty existing) with Pi SettingsManager model list filtering; not applicable via Pi APIs"
+          "reason": "OCR removeModels helper (remove one/none/all, empty existing) is omitted; pi-reviewer does not expose model-list mutation and does not implement Pi config model deduplication/filtering for persistence; users edit Pi models externally, runtime only resolves via --model; not applicable"
         },
         {
           "name": "TestSaveConfig",
           "disposition": "not_applicable",
-          "reason": "Pi replaces OCR saveConfig that MkdirAll + 0600 JSON write via loadOrCreateConfig round-trip with Pi SettingsManager DefaultResourceLoader reading ~/.pi/agent/settings.json; Go perm check not applicable"
+          "reason": "OCR saveConfig MkdirAll + 0600 JSON write and loadOrCreateConfig round-trip is omitted; pi-reviewer does not write Pi config files and does not mutate Pi config; users manage files externally, runtime only reads via public Pi APIs; Go permission/file write not applicable"
         }
       ]
     },
@@ -2404,12 +2414,12 @@
         {
           "name": "TestApplyOfficialProviderConfig_Validation",
           "disposition": "not_applicable",
-          "reason": "deferred: applyOfficialProviderConfig validation that rejects empty provider/model or missing API key before test-connection is omitted; Pi validates via SettingsManager and ModelRuntime createAgentSession, not applicable via Go file"
+          "reason": "OCR applyOfficialProviderConfig validation that rejects empty provider/model or missing API key before test-connection is omitted; pi-reviewer does not expose the provider TUI/config apply flow; provider/model are supplied via review/scan --provider/--model and validated at runtime via Pi ModelRuntime createAgentSession; config-command validation is omitted, not applicable via Go file"
         },
         {
           "name": "TestSetCustomProviderValue",
           "disposition": "not_applicable",
-          "reason": "Pi replaces OCR setCustomProviderValue for `custom_providers.<name>.<field>` malformed-key rejection and custom provider materialization with Pi SettingsManager ~/.pi/agent; not applicable via Pi APIs"
+          "reason": "OCR setCustomProviderValue for `custom_providers.<name>.<field>` malformed-key handling and custom provider materialization is omitted; pi-reviewer does not expose custom_providers config mutation and does not write Pi config; users define providers via external Pi files, runtime only loads via public Pi APIs; not applicable"
         }
       ]
     },
@@ -7725,23 +7735,44 @@
       "tests": [
         {
           "name": "TestApplyLanguage",
-          "disposition": "not_applicable",
-          "reason": "Pi replaces OCR LlmConversation.ApplyLanguage that appends \"Always respond in Chinese.\" to system message with Pi template language injection; not applicable via Pi prompt pipeline"
+          "disposition": "equivalent",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/template/template.test.ts",
+              "title": "appends language to review system messages"
+            }
+          ],
+          "reason": "equivalent via test/ocr-v193/template/template.test.ts"
         },
         {
           "name": "TestApplyLanguage_EmptyLang",
-          "disposition": "not_applicable",
-          "reason": "Pi replaces OCR ApplyLanguage empty -> English fallback appending to system content with Pi template default language; not applicable"
+          "disposition": "equivalent",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/template/template.test.ts",
+              "title": "defaults an empty language to English"
+            }
+          ],
+          "reason": "equivalent via test/ocr-v193/template/template.test.ts"
         },
         {
           "name": "TestLoadDefault",
           "disposition": "not_applicable",
-          "reason": "Pi replaces OCR LoadDefault conversation fixture (Timeout>0, system+user messages) for HTTP test-connection with Pi ModelRuntime via createAgentSession and review/scan --provider/--model; fixture not applicable"
+          "reason": "OCR LoadDefault conversation fixture (Timeout>0, system+user messages) for HTTP test-connection is omitted; pi-reviewer does not expose a test-connection command and does not use that fixture; users verify connectivity via external Pi tooling, runtime uses review/scan --provider/--model via ModelRuntime createAgentSession; fixture not applicable (language behavior covered separately via template applyLanguage)"
         },
         {
           "name": "TestResolveLang",
-          "disposition": "not_applicable",
-          "reason": "Pi replaces OCR resolveLang mapping (\"\"->English, Chinese/Japanese) with Pi template language via SettingsManager and template substitution; not applicable via Pi APIs"
+          "disposition": "equivalent",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/template/template.test.ts",
+              "title": "resolves empty and explicit languages"
+            }
+          ],
+          "reason": "equivalent via test/ocr-v193/template/template.test.ts"
         }
       ]
     },

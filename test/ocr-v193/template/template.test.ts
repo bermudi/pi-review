@@ -157,6 +157,7 @@ describe("ocr-v193 template", () => {
   });
 
   // OCR v1.9.3: TestApplyLanguage_DefaultEnglish
+  // OCR v1.9.3: TestApplyLanguage_EmptyLang
   it("defaults an empty language to English", () => {
     const tpl = loadDefaultTemplate();
     applyLanguageMut(tpl, "");
