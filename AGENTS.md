@@ -32,7 +32,8 @@ public APIs, stop and report the blocker.
 ## Upstream Releases and Upgrade Policy
 
 `pi-reviewer` supports exactly one shipped OCR behavioral baseline at a time.
-The current package line is `0.4.x`, shipped against OCR `v1.9.9`. The prior
+The prepared package line is `0.4.x`, targeting OCR `v1.9.9`; it becomes the
+shipped line when its verified release commit is tagged and pushed. The prior
 `0.3.x`/v1.9.3 release remains in Git history. Do not opportunistically sync
 OCR `main` or mix behavior from multiple OCR releases.
 
@@ -40,7 +41,7 @@ Package and OCR versions are related but independent:
 
 - package patches fix the current OCR baseline without changing it;
 - changing the pinned OCR baseline requires at least a package minor release
-  (`v0.4.0` is the intended line for an OCR `v1.9.9` upgrade);
+  (`v0.4.0` is the prepared OCR `v1.9.9` release);
 - normal SemVer rules still govern public CLI/library breaking changes; and
 - an annotated package release tag must point at the exact commit whose full
   inventory and packed-install gates passed. Creating or pushing a release tag
@@ -119,6 +120,91 @@ machine-checked `docs/ocr-upstream-test-delta.json` is authoritative for
 v1.9.9 changes. `docs/ocr-port-plan.md` is authoritative for migration; Gate
 5’s transitional legacy retention has been closed by explicit removal approval
 and the cutover verifier now proves absence.
+
+## Durable v1.9.9 Port Lessons
+
+These are implementation constraints discovered by differential and
+packed-install testing, not optional style preferences.
+
+### Pi runtime adaptation
+
+- Pi `0.84.2` must know every bounded tool that may be activated later when the
+  session is created. Register the normal and supplemental stage tools, then
+  immediately narrow the active set to the exact tools allowed for the first
+  request. After every stage transition, read the active names back and fail
+  closed unless they exactly equal the requested allowlist. Registration alone
+  is not authorization.
+- Filter-only tools are active only for the terminal review-filter request.
+  They must never leak into planning or normal review rounds. A tool that is
+  not backed by an allowlisted host implementation is inert and must not be
+  advertised as a capability.
+- Public `AgentSession.prompt()` in Pi `0.84.2` has no provider-wire
+  `tool_choice` option. Do not invent one with a cast, use private imports, or
+  claim OCR provider-wire equivalence. The approved adaptation is exact
+  per-request tool activation plus OCR's terminal filter protocol; the three
+  upstream provider-wire tests are explicitly not applicable.
+- OCR context replacement must update Pi through the public agent state and
+  then verify the resulting message list exactly. A warning followed by stale
+  history is not recovery; it changes the model request and must fail.
+- Resolve explicit `--provider`/`--model` selectors through Pi's public
+  `ModelRuntime` before creating transports, session files, or writers. Keep
+  provider and model as separate structured fields: model IDs may themselves
+  contain `/`, and guessed or concatenated identities corrupt resume hashes
+  and manifests.
+
+### Sessions, resume, and ownership
+
+- One review run owns one manifest, one `SessionHistory`, and at most one JSONL
+  writer. The production factory must pass those same objects through the
+  Agent and result path; rebuilding a second manifest after the run silently
+  loses cancellation and failure state.
+- Resume is a production-factory behavior, not merely an Agent helper. Validate
+  target mode, pinned input hashes, provider/model identity, and scan/review
+  options before creating a child session or making a model request. Completed
+  items may be reused; cancelled or pending items may not. Workspace review is
+  live evidence and is intentionally not resumable.
+- A rejected resume creates no child session and makes no model call. A
+  successful resume records parent/child lineage and can reuse completed
+  findings with zero model calls.
+- Transport, writer, and persistence ownership must use `try`/`finally`.
+  Dispose exactly once on success, failure, abort, and validation rejection.
+  If work and cleanup both fail, retain both errors rather than hiding either.
+- Cancellation produces one final session record, preserves completed
+  checkpoints, and remains an incomplete/non-clean result. A persistence
+  delivery failure may still publish the review manifest for diagnosis, but
+  must not advertise an unusable resume ID.
+
+### Output boundaries
+
+- Output routing is per invocation through injected I/O; do not port OCR's
+  mutable global stdout swap. JSON/SARIF stdout is exactly one machine
+  document. Human-audience progress moves to stderr; agent-audience progress is
+  quiet, while actual errors still reach stderr.
+- OCR v1.9.9 text summaries include the successful session ID for both review
+  and scan. Machine formats carry it in their structured result. ANSI color is
+  never allowed in JSON or SARIF.
+
+### Upgrade evidence
+
+- Compare exact top-level Go test-function bytes between pinned releases.
+  Added and changed-body tests require evidence from the new OCR version;
+  unchanged test names alone may not inherit old coverage. Keep annotation
+  versions explicit and use UTF-16-safe source offsets when slicing parsed
+  JavaScript strings.
+- Zero pending inventory means every upstream case is classified; it does not
+  prove behavior. During this upgrade, packed differential fixtures caught a
+  skipped filter request and a missing scan session line after the inventory
+  was already complete.
+- Active verifier selectors, prompts, fixtures, and OCR build inputs must all
+  use the same pinned tag object and peeled commit. Historical verifier files
+  may retain old references only when clearly excluded from active checks.
+- Run release gates from the clean detached worktree itself, not from the dirty
+  parent checkout. Build `dist` before invoking a verifier that packs the
+  current package. Documentation changes also change the release commit and
+  therefore require a new exact-commit cutover run.
+- A cryptographically good upstream tag signature is not the same as a trusted
+  signer identity. Record `No principal matched` honestly when the local
+  allowed-signers configuration cannot bind the key to a principal.
 
 ## Domain Contracts
 
