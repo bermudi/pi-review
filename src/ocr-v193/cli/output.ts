@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright 2026 alibaba/open-code-review Contributors
 //
-// Ported from cmd/opencodereview/output.go at c35ddd7223f2b5540ce03aa43c9a25ef643fca27.
+// Ported from cmd/opencodereview/output.go and internal/suggestdiff/diff.go at c35ddd7223f2b5540ce03aa43c9a25ef643fca27.
 // Modifications are distributed as part of pi-reviewer under
 // GPL-3.0-or-later;
 // see LICENSES/Apache-2.0.txt and THIRD_PARTY_NOTICES.md.
@@ -156,7 +156,7 @@ export interface DiffLine {
   readonly content: string;
 }
 
-function computeLineDiff(oldLines: string[], newLines: string[]): DiffLine[] {
+export function computeLineDiff(oldLines: string[], newLines: string[]): DiffLine[] {
   const m = oldLines.length;
   const n = newLines.length;
   if (m === 0 && n === 0) return [];
@@ -191,6 +191,8 @@ function computeLineDiff(oldLines: string[], newLines: string[]): DiffLine[] {
   back.reverse();
   return back;
 }
+
+export const ComputeLineDiff = computeLineDiff;
 
 export function buildDiffLines(comment: LlmComment): DiffLine[] {
   if (!comment.suggestionCode || !comment.existingCode) return [];

@@ -1345,6 +1345,14 @@ const scopeOverrides: ReadonlyMap<string, Scope> = new Map<string, Scope>([
       reason: "git repository resolution, commit validation, and tool registry setup are core CLI review input handling",
     },
   ],
+  [
+    "internal/suggestdiff/diff_test.go",
+    {
+      kind: "in_scope",
+      area: "cli-output",
+      reason: "suggestdiff line diff is core CLI rendering for suggestion display; used by cmd/opencodereview/output.go via buildDiffLines",
+    },
+  ],
 ]);
 
 const localCoverage: readonly LocalCoverage[] = [
@@ -1733,6 +1741,10 @@ const localCoverage: readonly LocalCoverage[] = [
   {
     localPath: "test/ocr-v193/cli/git.test.ts",
     upstreamPaths: ["cmd/opencodereview/git_test.go"],
+  },
+  {
+    localPath: "test/ocr-v193/cli/suggestdiff.test.ts",
+    upstreamPaths: ["internal/suggestdiff/diff_test.go"],
   },
 ];
 

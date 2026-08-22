@@ -15415,20 +15415,32 @@
       "path": "internal/suggestdiff/diff_test.go",
       "blob": "a0d2916639819605d00a761edddb6a3856d7ecdb",
       "scope": {
-        "kind": "needs_decision",
-        "area": "internal/suggestdiff",
-        "reason": "not yet classified by the OCR v1.9.3 core-port source map"
+        "kind": "in_scope",
+        "area": "cli-output",
+        "reason": "suggestdiff line diff is core CLI rendering for suggestion display; used by cmd/opencodereview/output.go via buildDiffLines"
       },
       "tests": [
         {
           "name": "TestComputeLineDiff",
-          "disposition": "pending_scope",
-          "reason": "not yet classified by the OCR v1.9.3 core-port source map"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/cli/suggestdiff.test.ts",
+              "title": "TestComputeLineDiff table-driven diff cases"
+            }
+          ]
         },
         {
           "name": "TestComputeLineDiff_ContextContent",
-          "disposition": "pending_scope",
-          "reason": "not yet classified by the OCR v1.9.3 core-port source map"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/cli/suggestdiff.test.ts",
+              "title": "TestComputeLineDiff_ContextContent preserves first and last context"
+            }
+          ]
         }
       ]
     },
