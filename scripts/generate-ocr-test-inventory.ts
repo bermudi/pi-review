@@ -44,7 +44,17 @@ interface Scope {
   readonly reason?: string;
 }
 
-interface Evidence {
+export type OcrEvidenceVersion = "v1.9.3" | "v1.9.9";
+
+export interface Evidence {
+  readonly kind: "bun-test-annotation";
+  readonly path: string;
+  readonly title: string;
+  /** OCR baseline whose semantics this directly attached test proves. */
+  readonly ocrVersion: OcrEvidenceVersion;
+}
+
+interface LegacyEvidence {
   readonly kind: "bun-test-annotation";
   readonly path: string;
   readonly title: string;
@@ -95,7 +105,7 @@ interface LocalCoverage {
 //
 // Keep this table explicit — hidden source-code rules are not allowed
 // to silently decide these categories.
-const equivalentTests: ReadonlyMap<string, readonly Evidence[]> = new Map<string, readonly Evidence[]>([
+const equivalentTests: ReadonlyMap<string, readonly LegacyEvidence[]> = new Map<string, readonly LegacyEvidence[]>([
   [
     "internal/llm/protocol_test.go::TestNormalizeProtocol",
     [{ kind: "bun-test-annotation", path: "test/ocr/pi-adapter/protocol.test.ts", title: "normalizeProtocol canonicalizes known protocols case-insensitively and trims" }],
@@ -549,6 +559,10 @@ const equivalentTests: ReadonlyMap<string, readonly Evidence[]> = new Map<string
   ],
 
 ]);
+
+// Revalidations for changed/new OCR behavior belong here and must name v1.9.9
+// evidence. This intentionally starts empty: Phase 2 records no new behavior.
+const upgradeEquivalentTests: ReadonlyMap<string, readonly Evidence[]> = new Map<string, readonly Evidence[]>([]);
 
 const notApplicableTests: ReadonlyMap<string, string> = new Map<string, string>([
   // ---- pi-adapter provider registry: Pi replaces OCR static registry with Pi ModelRuntime ----
@@ -2555,12 +2569,13 @@ function classifyScope(path: string): Scope {
   };
 }
 
-interface LocalAnnotation {
+export interface LocalAnnotation {
   readonly name: string;
   readonly title: string;
+  readonly ocrVersion: OcrEvidenceVersion;
 }
 
-function annotations(localPath: string): readonly LocalAnnotation[] {
+export function annotations(localPath: string): readonly LocalAnnotation[] {
   const absolutePath = resolve(repoRoot, localPath);
   if (!existsSync(absolutePath)) return [];
   const source = readFileSync(absolutePath, "utf8");
@@ -2591,25 +2606,45 @@ function annotations(localPath: string): readonly LocalAnnotation[] {
       if (titleNode !== undefined && ts.isStringLiteralLike(titleNode)) {
         const statement = ts.isExpressionStatement(node.parent) ? node.parent : node;
         const comments = ts.getLeadingCommentRanges(source, statement.getFullStart()) ?? [];
-        const names = comments
-          .map((range) => source.slice(range.pos, range.end).match(/OCR v1\.9\.3: (Test[A-Za-z0-9_]+)/)?.[1])
-          .filter((name): name is string => name !== undefined);
-        for (const name of names) result.push({ name, title: titleNode.text });
+        const annotations = comments
+          .map((range) => source.slice(range.pos, range.end).match(/OCR (v1\.9\.[39]): (Test[A-Za-z0-9_]+)/))
+          .filter((match): match is RegExpMatchArray => match !== null);
+        for (const annotation of annotations) {
+          const [, ocrVersion, name] = annotation;
+          if ((ocrVersion !== "v1.9.3" && ocrVersion !== "v1.9.9") || name === undefined) {
+            throw new Error(`invalid OCR annotation in ${localPath}`);
+          }
+          result.push({ name, title: titleNode.text, ocrVersion });
+        }
       }
     }
     ts.forEachChild(node, visit);
   };
   visit(sourceFile);
 
-  const rawNames = [...source.matchAll(/^\s*\/\/ OCR v1\.9\.3: (Test[A-Za-z0-9_]+)\s*$/gm)]
-    .map((match) => match[1])
-    .filter((name): name is string => name !== undefined);
-  if (rawNames.length !== result.length) {
+  const rawAnnotations = [...source.matchAll(/^\s*\/\/ OCR (v1\.9\.[39]): (Test[A-Za-z0-9_]+)\s*$/gm)]
+    .map((match) => ({ ocrVersion: match[1], name: match[2] }))
+    .filter((annotation): annotation is { readonly ocrVersion: OcrEvidenceVersion; readonly name: string } =>
+      (annotation.ocrVersion === "v1.9.3" || annotation.ocrVersion === "v1.9.9") && annotation.name !== undefined,
+    );
+  if (rawAnnotations.length !== result.length) {
     throw new Error(
-      `${localPath} has ${rawNames.length} OCR annotations but only ${result.length} are attached to test()/it() calls`,
+      `${localPath} has ${rawAnnotations.length} OCR annotations but only ${result.length} are attached to test()/it() calls`,
     );
   }
   return result;
+}
+
+export function evidenceApplicableToDelta(
+  delta: Exclude<DeltaKind, "removed">,
+  evidence: readonly Evidence[],
+): readonly Evidence[] {
+  if (delta === "byte_identical") return evidence;
+  return evidence.filter((item) => item.ocrVersion === "v1.9.9");
+}
+
+function legacyEvidence(evidence: readonly LegacyEvidence[]): readonly Evidence[] {
+  return evidence.map((item) => ({ ...item, ocrVersion: "v1.9.3" }));
 }
 
 function coverageByTestId(
@@ -2625,15 +2660,15 @@ function coverageByTestId(
 
   for (const mapping of localCoverage) {
     const localAnnotations = annotations(mapping.localPath);
-    const names = localAnnotations.map((annotation) => annotation.name);
     const seen = new Map<string, Set<string>>();
     for (const annotation of localAnnotations) {
-      const set = seen.get(annotation.name) ?? new Set<string>();
+      const annotationId = `${annotation.ocrVersion}:${annotation.name}`;
+      const set = seen.get(annotationId) ?? new Set<string>();
       if (set.has(annotation.title)) {
-        throw new Error(`${mapping.localPath} has duplicate OCR annotation ${annotation.name} with title "${annotation.title}"`);
+        throw new Error(`${mapping.localPath} has duplicate OCR annotation ${annotationId} with title "${annotation.title}"`);
       }
       set.add(annotation.title);
-      seen.set(annotation.name, set);
+      seen.set(annotationId, set);
     }
 
     for (const annotation of localAnnotations) {
@@ -2669,7 +2704,12 @@ function coverageByTestId(
       }
       const id = `${matchingPaths[0]}::${name}`;
       const evidence = result.get(id) ?? [];
-      evidence.push({ kind: "bun-test-annotation", path: mapping.localPath, title: annotation.title });
+      evidence.push({
+        kind: "bun-test-annotation",
+        path: mapping.localPath,
+        title: annotation.title,
+        ocrVersion: annotation.ocrVersion,
+      });
       result.set(id, evidence);
     }
   }
@@ -2698,6 +2738,25 @@ function validateOverrides(
     for (const e of evidence) {
       if (e.kind !== "bun-test-annotation") throw new Error(`equivalentTests ${key} evidence kind must be bun-test-annotation`);
       if (!existsSync(resolve(repoRoot, e.path))) throw new Error(`equivalentTests ${key} evidence path does not exist: ${e.path}`);
+    }
+  }
+  for (const [key, evidence] of upgradeEquivalentTests) {
+    const [path, name] = key.split("::");
+    if (!path || !name) throw new Error(`upgradeEquivalentTests key must be "path::TestName", got ${JSON.stringify(key)}`);
+    if (!testNamesByPath.get(path)?.has(name)) throw new Error(`upgradeEquivalentTests references unknown active test ${key}`);
+    const deltaEntry = delta.tests.find((test) => test.path === path && test.name === name);
+    if (deltaEntry?.kind !== "added" && deltaEntry?.kind !== "changed_body") {
+      throw new Error(`upgradeEquivalentTests ${key} requires an added or changed-body v1.9.9 test`);
+    }
+    if (evidence.length === 0) throw new Error(`upgradeEquivalentTests ${key} has no v1.9.9 evidence`);
+    for (const e of evidence) {
+      if (e.kind !== "bun-test-annotation" || e.ocrVersion !== "v1.9.9") {
+        throw new Error(`upgradeEquivalentTests ${key} evidence must be a v1.9.9 bun-test-annotation`);
+      }
+      const source = readFileSync(resolve(repoRoot, e.path), "utf8");
+      if (!source.includes(`// OCR v1.9.9: ${name}`) || !source.includes(`"${e.title}"`)) {
+        throw new Error(`upgradeEquivalentTests ${key} evidence is not directly attached in ${e.path}`);
+      }
     }
   }
   for (const [key, reason] of notApplicableTests) {
@@ -2791,6 +2850,20 @@ function generateInventory(): Inventory {
         if (change === undefined || change === "removed") throw new Error(`active test ${id} is absent from delta`);
         if (change === "added" || change === "changed_body") {
           const scope = effectiveScope(path);
+          const directEvidence = evidenceApplicableToDelta(change, evidence.get(id) ?? []);
+          if (directEvidence.length > 0) {
+            return { name, delta: change, disposition: "covered", evidence: directEvidence };
+          }
+          const revalidationEvidence = upgradeEquivalentTests.get(id);
+          if (revalidationEvidence !== undefined) {
+            return {
+              name,
+              delta: change,
+              disposition: "equivalent",
+              evidence: revalidationEvidence,
+              reason: `v1.9.9 revalidated equivalent via ${revalidationEvidence.map((item) => item.path).join(", ")}`,
+            };
+          }
           const omissionReason = upgradeNotApplicableByPath.get(path);
           if (omissionReason !== undefined) {
             return {
@@ -2818,7 +2891,7 @@ function generateInventory(): Inventory {
         const testEvidence = evidence.get(id);
         if (testEvidence !== undefined) return { name, delta: change, disposition: "covered", evidence: testEvidence };
         const equivEvidence = equivalentTests.get(id);
-        if (equivEvidence !== undefined) return { name, delta: change, disposition: "equivalent", evidence: equivEvidence, reason: `equivalent via ${equivEvidence.map((e) => e.path).join(", ")}` };
+        if (equivEvidence !== undefined) return { name, delta: change, disposition: "equivalent", evidence: legacyEvidence(equivEvidence), reason: `equivalent via ${equivEvidence.map((e) => e.path).join(", ")}` };
         const naReason = notApplicableTests.get(id);
         if (naReason !== undefined) return { name, delta: change, disposition: "not_applicable", reason: naReason };
         if (scope.kind === "out_of_scope") return { name, delta: change, disposition: "out_of_scope", reason: scope.reason };
@@ -2869,29 +2942,31 @@ function summary(inventory: Inventory): string {
     .join(" ");
 }
 
-const args = new Set(process.argv.slice(2));
-const generated = serializedInventory();
-if (args.has("--check")) {
-  if (!existsSync(inventoryPath) || readFileSync(inventoryPath, "utf8") !== generated) {
-    console.error("OCR v1.9.9 test inventory is stale; run bun run scripts/generate-ocr-test-inventory.ts");
-    process.exit(1);
+if (import.meta.main) {
+  const args = new Set(process.argv.slice(2));
+  const generated = serializedInventory();
+  if (args.has("--check")) {
+    if (!existsSync(inventoryPath) || readFileSync(inventoryPath, "utf8") !== generated) {
+      console.error("OCR v1.9.9 test inventory is stale; run bun run scripts/generate-ocr-test-inventory.ts");
+      process.exit(1);
+    }
+  } else {
+    writeFileSync(inventoryPath, generated);
   }
-} else {
-  writeFileSync(inventoryPath, generated);
-}
 
-const inventory = JSON.parse(generated) as Inventory;
-console.error(`[ocr-test-inventory] files=${inventory.files.length} ${summary(inventory)}`);
-if (args.has("--require-complete")) {
-  const incomplete = inventory.files.flatMap((file) =>
-    file.tests
-      .filter((test) => test.disposition === "pending" || test.disposition === "pending_scope")
-      .map((test) => `${file.path}::${test.name} (${test.disposition})`),
-  );
-  if (incomplete.length > 0) {
-    console.error(`[ocr-test-inventory] incomplete=${incomplete.length}`);
-    for (const id of incomplete.slice(0, 20)) console.error(`  ${id}`);
-    if (incomplete.length > 20) console.error(`  ... and ${incomplete.length - 20} more`);
-    process.exit(1);
+  const inventory = JSON.parse(generated) as Inventory;
+  console.error(`[ocr-test-inventory] files=${inventory.files.length} ${summary(inventory)}`);
+  if (args.has("--require-complete")) {
+    const incomplete = inventory.files.flatMap((file) =>
+      file.tests
+        .filter((test) => test.disposition === "pending" || test.disposition === "pending_scope")
+        .map((test) => `${file.path}::${test.name} (${test.disposition})`),
+    );
+    if (incomplete.length > 0) {
+      console.error(`[ocr-test-inventory] incomplete=${incomplete.length}`);
+      for (const id of incomplete.slice(0, 20)) console.error(`  ${id}`);
+      if (incomplete.length > 20) console.error(`  ... and ${incomplete.length - 20} more`);
+      process.exit(1);
+    }
   }
 }

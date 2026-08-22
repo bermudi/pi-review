@@ -111,7 +111,9 @@ function matchingBrace(source: string, openingBrace: number): number {
 }
 
 function maskCommentsAndLiterals(source: string): string {
-  const output = [...source];
+  // split("") preserves UTF-16 code-unit indexes used by scanner offsets and
+  // String#slice; spread would collapse a non-BMP character into one element.
+  const output = source.split("");
   let state: "code" | "line-comment" | "block-comment" | "string" | "raw-string" | "rune" = "code";
 
   const mask = (index: number): void => {

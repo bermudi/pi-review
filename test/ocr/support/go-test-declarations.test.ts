@@ -63,4 +63,26 @@ describe("Go test declaration extraction", () => {
       },
     ]);
   });
+
+  test("keeps UTF-16 offsets correct after a non-BMP character", () => {
+    const source = [
+      "package sample",
+      "// 😀 must not shift the following source offsets",
+      "func TestAfterEmoji(t *testing.T) {",
+      '  t.Log("exact body")',
+      "}",
+    ].join("\n");
+
+    expect(extractGoTestFunctions(source)).toEqual([
+      {
+        name: "TestAfterEmoji",
+        line: 3,
+        source: [
+          "func TestAfterEmoji(t *testing.T) {",
+          '  t.Log("exact body")',
+          "}",
+        ].join("\n"),
+      },
+    ]);
+  });
 });

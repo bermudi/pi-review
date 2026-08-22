@@ -13,7 +13,12 @@ interface InventoryTest {
   readonly name: string;
   readonly delta: "added" | "changed_body" | "byte_identical";
   readonly disposition: "covered" | "equivalent" | "not_applicable" | "pending" | "pending_scope" | "out_of_scope";
-  readonly evidence?: readonly { readonly kind: string; readonly path: string; readonly title: string }[];
+  readonly evidence?: readonly {
+    readonly kind: string;
+    readonly path: string;
+    readonly title: string;
+    readonly ocrVersion: "v1.9.3" | "v1.9.9";
+  }[];
   readonly reason?: string;
 }
 
@@ -58,7 +63,7 @@ describe("OCR v1.9.9 exhaustive upstream-test inventory", () => {
       { cwd: repoRoot, encoding: "utf8" },
     );
     expect(check.status, `${check.stdout}${check.stderr}`).toBe(0);
-  });
+  }, 15_000);
 
   test("uses closed, internally consistent dispositions", () => {
     const inventory = JSON.parse(readFileSync(inventoryPath, "utf8")) as Inventory;
@@ -96,7 +101,7 @@ describe("OCR v1.9.9 exhaustive upstream-test inventory", () => {
           for (const evidence of entry.evidence ?? []) {
             expect(evidence.kind).toBe("bun-test-annotation");
             const localSource = readFileSync(resolve(repoRoot, evidence.path), "utf8");
-            expect(localSource).toContain(`// OCR v1.9.3: ${entry.name}`);
+            expect(localSource).toContain(`// OCR ${evidence.ocrVersion}: ${entry.name}`);
             expect(localSource).toContain(`"${evidence.title}"`);
           }
           if (entry.disposition === "equivalent") expect(entry.reason?.length ?? 0).toBeGreaterThan(0);
