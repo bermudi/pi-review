@@ -122,6 +122,11 @@ export interface ReviewOptions {
   readonly audience: Audience;
   readonly background: string;
   readonly backgroundFile: string;
+  /**
+   * Internal factory contract: the CLI has already applied
+   * resolveBackground. Direct factory callers leave this false/absent.
+   */
+  readonly backgroundResolved?: boolean;
   readonly provider: string;
   readonly model: string;
   readonly concurrency: number;
@@ -319,7 +324,7 @@ export function validateRefNotFlagLike(flag: string, value: string): void {
 }
 
 // ---------------------------------------------------------------------------
-// Background helpers — re-exported from background.ts (OCR v1.9.3)
+// Background helpers — re-exported from background.ts
 // ---------------------------------------------------------------------------
 
 export {
@@ -330,9 +335,7 @@ export {
   MAX_BACKGROUND_FILE_BYTES,
   resolveBackgroundFilePath,
   sanitizeMarkdown,
-  mergeBackground,
   loadBackgroundFile,
-  getCommitMessage,
 } from "./background.js";
 
 // ---------------------------------------------------------------------------

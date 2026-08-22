@@ -1,5 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
-// Ported from cmd/opencodereview/background_file_test.go at c35ddd7223f2b5540ce03aa43c9a25ef643fca27
+// Ported from cmd/opencodereview/background_file_test.go at
+// c35ddd7223f2b5540ce03aa43c9a25ef643fca27; selected cases updated at
+// OCR v1.9.9 commit 4b6874bd23106b5c68bea6d230bb60303b9f0961.
 
 import { test, expect } from "bun:test";
 import * as fs from "node:fs";
@@ -12,12 +14,12 @@ import {
   BACKGROUND_OPEN_TAG,
   BACKGROUND_SOFT_LIMIT,
   MAX_BACKGROUND_FILE_BYTES,
-  getCommitMessage,
   loadBackgroundFile,
-  mergeBackground,
   processBackgroundContent,
+  resolveBackground,
   resolveBackgroundFilePath,
   sanitizeMarkdown,
+  selectBackground,
 } from "../../../src/ocr/cli/background.js";
 import { runCli } from "../../../src/ocr/cli/index.js";
 
@@ -59,7 +61,7 @@ test("loadBackgroundFile not found", () => {
   expect(() => loadBackgroundFile(missing)).toThrow();
 });
 
-// OCR v1.9.3: TestResolveBackgroundFilePath
+// OCR v1.9.9: TestResolveBackgroundFilePath
 test("resolveBackgroundFilePath handles repo-relative, absolute, empty and fallback", () => {
   const repo = path.join("/path", "to", "repo");
 
@@ -195,37 +197,18 @@ test("loadBackgroundFile rejects reserved delimiters", () => {
   }
 });
 
-// OCR v1.9.3: TestMergeBackgroundSanitizesInline
-test("mergeBackground sanitizes inline", () => {
-  // inline only
-  const gotInline = mergeBackground("  \x00Inline\u200B context  ", "");
-  expect(gotInline).toBe("Inline context");
-
-  // inline combined with file
+// OCR v1.9.9: TestSelectBackground
+test("selectBackground makes a supplied file authoritative", () => {
   const wrapped = BACKGROUND_OPEN_TAG + "\nfrom file\n" + BACKGROUND_CLOSE_TAG;
-  const gotCombined = mergeBackground("\x07dirty\uFEFF inline\n\n\n\nend", wrapped);
-  expect(gotCombined.includes("\x07")).toBe(false);
-  expect(gotCombined.includes("\uFEFF")).toBe(false);
-  expect(gotCombined.includes("\n\n\n")).toBe(false);
-  expect(gotCombined.includes(wrapped)).toBe(true);
-});
-
-// OCR v1.9.3: TestMergeBackground
-test("mergeBackground combines file and inline", () => {
-  const wrapped = BACKGROUND_OPEN_TAG + "\nfrom file\n" + BACKGROUND_CLOSE_TAG;
-
-  // both present are combined
-  const gotBoth = mergeBackground("inline context", wrapped);
-  const wantBoth = "inline context\n\n" + wrapped;
-  expect(gotBoth).toBe(wantBoth);
-  expect(gotBoth.includes("inline context")).toBe(true);
-  expect(gotBoth.includes("from file")).toBe(true);
-
-  // inline only
-  expect(mergeBackground("inline only", "")).toBe("inline only");
-
-  // file only
-  expect(mergeBackground("", wrapped)).toBe(wrapped);
+  let stderr = "";
+  expect(selectBackground("inline context", wrapped, { stderr: (message) => { stderr += message; } })).toBe(wrapped);
+  expect(stderr).toBe(
+    "[pi-review] both --background and --background-file were provided; " +
+    "--background-file takes precedence and --background is ignored\n",
+  );
+  expect(selectBackground("inline only", "")).toBe("inline only");
+  expect(selectBackground("", wrapped)).toBe(wrapped);
+  expect(selectBackground("", "")).toBe("");
 });
 
 // OCR v1.9.3: TestLoadBackgroundFileSoftLimit
@@ -385,9 +368,8 @@ test("injected readFile boundary is authoritative", async () => {
       reviewPreviewFactory: async () => ({ entries: [], totalInsertions: 0, totalDeletions: 0, totalFiles: 0, reviewableCount: 0, excludedCount: 0 } as never),
       reviewRunnerFactory: runnerFactory as unknown as never,
     });
-    // preview path will be taken, but background should already be merged via injected reader
-    // For preview, runCli still merges background before calling previewFactory; we verify via captured? Instead check via direct run without preview using runner
-    // Do a second run without preview to capture background via runnerFactory
+    // Resolve once before either preview or runner creation; run a normal review
+    // to observe the value passed through the production runner boundary.
     capturedBackground = undefined;
     const code2 = await runCli(["review", "--repo", repo, "--background-file", "./docs/context.md"], {
       io,
@@ -406,29 +388,106 @@ test("injected readFile boundary is authoritative", async () => {
   }
 });
 
-// OCR v1.9.3: TestBackgroundFromCommitThenFile
-test("background from commit then file", () => {
-  const commitMsg = "Implement rate limiting on login";
-  const { repo, hash } = initRepoWithCommit(commitMsg);
+// OCR v1.9.9: TestResolveBackground_FilePrecedenceOverCommit
+test("resolveBackground does not query commit text when a file is supplied", async () => {
+  const p = writeTempFile("Extra context from a file.");
   try {
-    let background = "";
-    const msg = getCommitMessage(repo, hash);
-    expect(msg).toBe(commitMsg);
-    if (background === "") background = msg;
+    let commitLookups = 0;
+    const background = await resolveBackground("/unused", "", p, "HEAD", {
+      getCommitMessage: () => {
+        commitLookups++;
+        return "commit message must not be read";
+      },
+    });
+    expect(commitLookups).toBe(0);
+    expect(background).toContain("Extra context from a file.");
+    expect(background).not.toContain("commit message must not be read");
+  } finally {
+    cleanupTempFile(p);
+  }
+});
 
-    const p = writeTempFile("Extra context from a file.");
-    let fileBg: string;
-    try {
-      fileBg = loadBackgroundFile(p);
-    } finally {
-      cleanupTempFile(p);
-    }
-    background = mergeBackground(background, fileBg);
+// OCR v1.9.9: TestResolveBackground_AllCases
+test("resolveBackground applies file, inline, and commit fallback precedence", async () => {
+  const p = writeTempFile("File-based context.");
+  try {
+    let commitLookups = 0;
+    const getCommit = (): string => {
+      commitLookups++;
+      return "Add rate limiting";
+    };
 
-    expect(background.startsWith(commitMsg + "\n\n")).toBe(true);
-    expect(background.includes("Extra context from a file.")).toBe(true);
-    expect(background.includes(BACKGROUND_OPEN_TAG)).toBe(true);
-    expect(background.includes(BACKGROUND_CLOSE_TAG)).toBe(true);
+    let stderr = "";
+    const fileWins = await resolveBackground("/unused", "inline", p, "HEAD", {
+      getCommitMessage: getCommit,
+      stderr: (message) => { stderr += message; },
+    });
+    expect(fileWins).toContain("File-based context.");
+    expect(fileWins).not.toContain("inline");
+    expect(commitLookups).toBe(0);
+    expect(stderr).toContain("[pi-review] both --background");
+
+    expect(await resolveBackground("/unused", "", "", "HEAD", { getCommitMessage: getCommit })).toBe("Add rate limiting");
+    expect(commitLookups).toBe(1);
+    expect(await resolveBackground("/unused", "just inline", "", "HEAD", { getCommitMessage: getCommit })).toBe("just inline");
+    expect(commitLookups).toBe(1);
+    expect(await resolveBackground("/unused", "", p, "", { getCommitMessage: getCommit })).toContain("File-based context.");
+    expect(await resolveBackground("/unused", "", "", "", { getCommitMessage: getCommit })).toBe("");
+    expect(await resolveBackground("/unused", "", "", "HEAD", {
+      getCommitMessage: () => { throw new Error("git unavailable"); },
+    })).toBe("");
+  } finally {
+    cleanupTempFile(p);
+  }
+});
+
+test("CLI resolves file background once, skips commit lookup, and passes only file content", async () => {
+  const { repo, hash } = initRepoWithCommit("Commit text that must not appear");
+  try {
+    fs.writeFileSync(path.join(repo, "context.md"), "File context wins", "utf8");
+    let capturedBackground = "";
+    let commitLookups = 0;
+    let stderr = "";
+    const code = await runCli(
+      ["review", "--repo", repo, "--commit", hash, "--background", "inline loses", "--background-file", "context.md"],
+      {
+        io: {
+          stdout: () => {},
+          stderr: (message) => { stderr += message; },
+          cwd: () => repo,
+        },
+        getCommitMessage: () => {
+          commitLookups++;
+          return "Commit text that must not appear";
+        },
+        reviewRunnerFactory: async (opts) => {
+          capturedBackground = opts.background;
+          return {
+            run: async () => [],
+            manifest: { terminalState: "complete", coverage: { selected: [], completed: [], failed: [], reused: [], waived: [] } } as unknown as never,
+            warnings: [],
+            filesReviewed: 0,
+            inputTokens: 0,
+            outputTokens: 0,
+            totalTokens: 0,
+            cacheReadTokens: 0,
+            cacheWriteTokens: 0,
+            toolCalls: {},
+            sessionId: "test",
+            budgetExceeded: false,
+            projectSummary: "",
+            resumeInfo: undefined,
+            diffs: [],
+          } as unknown as never;
+        },
+      },
+    );
+    expect(code).toBe(0);
+    expect(commitLookups).toBe(0);
+    expect(capturedBackground).toContain("File context wins");
+    expect(capturedBackground).not.toContain("inline loses");
+    expect(capturedBackground).not.toContain("Commit text that must not appear");
+    expect(stderr).toContain("[pi-review] both --background");
   } finally {
     fs.rmSync(repo, { recursive: true, force: true });
   }

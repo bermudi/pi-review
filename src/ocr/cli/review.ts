@@ -283,9 +283,9 @@ export async function runReviewContext(ctx: ReviewContext): Promise<number> {
   if (opts.from !== "" && opts.to === "") throw new CliUsageError("--to is required when --from is specified");
   if (opts.to !== "" && opts.from === "") throw new CliUsageError("--from is required when --to is specified");
 
-  // Inputs are prepared by runCli preprocessing (repo resolution, validateReviewRefs,
-  // commit background and background-file merge) before reaching this post-processing
-  // seam; do not re-resolve or revalidate Git input here.
+  // Inputs are prepared by runCli preprocessing (repo resolution,
+  // validateReviewRefs, and background resolution) before reaching this
+  // post-processing seam; do not re-resolve or revalidate Git input here.
 
   // Preview short-circuit
   if (opts.preview) {

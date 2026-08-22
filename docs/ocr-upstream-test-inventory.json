@@ -252,20 +252,41 @@
         {
           "name": "TestResolveBackground_AllCases",
           "delta": "added",
-          "disposition": "pending",
-          "reason": "OCR v1.9.9 added requires explicit new evidence or revalidation; prior v1.9.3 coverage is not inherited."
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr/cli/background-file.test.ts",
+              "title": "resolveBackground applies file, inline, and commit fallback precedence",
+              "ocrVersion": "v1.9.9"
+            }
+          ]
         },
         {
           "name": "TestResolveBackground_FilePrecedenceOverCommit",
           "delta": "added",
-          "disposition": "pending",
-          "reason": "OCR v1.9.9 added requires explicit new evidence or revalidation; prior v1.9.3 coverage is not inherited."
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr/cli/background-file.test.ts",
+              "title": "resolveBackground does not query commit text when a file is supplied",
+              "ocrVersion": "v1.9.9"
+            }
+          ]
         },
         {
           "name": "TestResolveBackgroundFilePath",
           "delta": "changed_body",
-          "disposition": "pending",
-          "reason": "OCR v1.9.9 changed body requires explicit new evidence or revalidation; prior v1.9.3 coverage is not inherited."
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr/cli/background-file.test.ts",
+              "title": "resolveBackgroundFilePath handles repo-relative, absolute, empty and fallback",
+              "ocrVersion": "v1.9.9"
+            }
+          ]
         },
         {
           "name": "TestSanitizeMarkdownCollapsesNewlines",
@@ -322,8 +343,15 @@
         {
           "name": "TestSelectBackground",
           "delta": "added",
-          "disposition": "pending",
-          "reason": "OCR v1.9.9 added requires explicit new evidence or revalidation; prior v1.9.3 coverage is not inherited."
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr/cli/background-file.test.ts",
+              "title": "selectBackground makes a supplied file authoritative",
+              "ocrVersion": "v1.9.9"
+            }
+          ]
         }
       ]
     },

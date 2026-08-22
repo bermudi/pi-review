@@ -37,7 +37,8 @@ import { reviewModeString } from "../agent/util.js";
 import { createPiTransportForFile } from "../pi-adapter/pi-transport.js";
 import { FileReader, DiffMap, FileReadProvider, FileReadDiffProvider, CodeSearchProvider, FileFindProvider } from "../tool/filereader.js";
 import { Registry } from "../tool/definitions.js";
-import { getCommitMessage, buildToolRegistry } from "./git.js";
+import { buildToolRegistry } from "./git.js";
+import { resolveBackground } from "./background.js";
 import { Provider, ModeWorkspace, ModeRange, ModeCommit } from "../diff/git.js";
 import { Runner as GitRunner } from "../diff/runner.js";
 import { ManifestBuilder, ItemID, StatePartial, StateFailed, StateSkipped, FailureBudget, FailureTimeout, FailureUnknown } from "../session/manifest.js";
@@ -102,27 +103,9 @@ export function createReviewRunnerFactory(
     const commit = opts.commit;
     const reviewMode = reviewModeString(from, to, commit);
 
-    // Mirror Go review_cmd.go: when --commit is used without --background,
-    // default background to the commit message. This runs before background-file
-    // merging so the file content is appended after the commit message.
     let background = opts.background;
-    if (commit !== "" && background === "") {
-      try {
-        const msg = getCommitMessage(repoDir, commit);
-        if (msg !== "") background = msg;
-      } catch {
-        // best-effort; leave background empty
-      }
-    }
-    // If the CLI already merged --background-file, opts.background already
-    // contains the merged result. For direct library use where backgroundFile
-    // is still separate (not yet merged by the CLI), apply the same merge here
-    // so the factory remains faithful when invoked without the CLI wrapper.
-    if (opts.backgroundFile !== "" && !background.includes("<ocr_user_background>")) {
-      const { resolveBackgroundFilePath: resolveBg, loadBackgroundFile: loadBg, mergeBackground: mergeBg } = await import("./background.js");
-      const bgPath = resolveBg(repoDir, opts.backgroundFile);
-      const fileBg = loadBg(bgPath, { stderr: () => {} });
-      background = mergeBg(background, fileBg);
+    if (opts.backgroundResolved !== true) {
+      background = await resolveBackground(repoDir, background, opts.backgroundFile, commit);
     }
 
     let mode: number;

@@ -26,12 +26,10 @@ import type { ScanRunner, ScanPreviewFactory } from "./scan.js";
 import type { Preview } from "../model/preview.js";
 import type { JsonLlmIdentity, RetryReport } from "./output.js";
 import {
-  loadBackgroundFile,
-  mergeBackground,
-  processBackgroundContent,
-  resolveBackgroundFilePath,
+  resolveBackground,
+  type CommitMessageReader,
 } from "./background.js";
-import { getCommitMessage, resolveRepoDir, validateReviewRefs } from "./git.js";
+import { resolveRepoDir, validateReviewRefs } from "./git.js";
 import { flagErrorWithSuggestion } from "./flag-suggest.js";
 
 // ---------------------------------------------------------------------------
@@ -143,6 +141,7 @@ export type Utf8FileReader = (path: string, encoding: "utf8") => Promise<string>
 export interface OcrCliDependencies {
   readonly io?: CliIoOverrides;
   readonly readFile?: Utf8FileReader;
+  readonly getCommitMessage?: CommitMessageReader;
   readonly version?: string;
   readonly reviewRunnerFactory?: (opts: ReviewOptions, signal?: AbortSignal) => Promise<ReviewRunner>;
   readonly reviewPreviewFactory?: PreviewFactory;
@@ -523,41 +522,23 @@ export async function runCli(
       return 1;
     }
 
-    // Background: commit message first, then file — mirrors Go review_cmd.go.
-    // Only touch background when inline is empty and --commit is set, preserving
-    // existing --background behaviour for users who do not use commit fallback.
-    if (opts.commit !== "" && opts.background === "") {
-      try {
-        const msg = getCommitMessage(resolvedRepoDir, opts.commit);
-        if (msg !== "") {
-          opts = { ...opts, background: msg };
-        }
-      } catch {
-        // best-effort: Go checks `err == nil && msg != ""` and leaves background empty otherwise.
-      }
-    }
-
-    // Only touch the background when --background-file is set, so the existing
-    // --background behaviour (raw, unsanitised before merge) is preserved for
-    // users who do not opt into the file-based context.
-    if (opts.backgroundFile !== "") {
-      const bgPath = resolveBackgroundFilePath(resolvedRepoDir, opts.backgroundFile);
-      let fileBg: string;
-      try {
-        if (deps.readFile !== undefined) {
-          const maybe = await deps.readFile(bgPath, "utf8");
-          if (typeof maybe !== "string") throw new CliUsageError(`background file ${bgPath} did not return text`);
-          fileBg = processBackgroundContent(maybe, bgPath, { stderr: (m) => io.stderr(m) });
-        } else {
-          fileBg = loadBackgroundFile(bgPath, { stderr: (m) => io.stderr(m) });
-        }
-      } catch (e) {
-        const msg = e instanceof Error ? e.message : String(e);
-        io.stderr(`Error: ${msg}\n`);
-        return 1;
-      }
-      const merged = mergeBackground(opts.background, fileBg!);
-      opts = { ...opts, background: merged };
+    try {
+      const background = await resolveBackground(
+        resolvedRepoDir,
+        opts.background,
+        opts.backgroundFile,
+        opts.commit,
+        {
+          readFile: deps.readFile,
+          getCommitMessage: deps.getCommitMessage,
+          stderr: (message) => io.stderr(message),
+        },
+      );
+      opts = { ...opts, background, backgroundFile: "", backgroundResolved: true };
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      io.stderr(`Error: ${msg}\n`);
+      return 1;
     }
 
     const signal = undefined;

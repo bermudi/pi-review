@@ -23,6 +23,10 @@ The first v1.9.9 upgrade tranche translates 11 changed/additional cases:
 v1.9.5 cross-file relocation and v1.9.5/v1.9.6 rule-language assets. The
 remaining v1.9.9 inventory is still pending; this is not a completion claim.
 
+The next v1.9.9 tranche translates the four background-selection cases. File
+content now wins over inline and commit-message fallback through one shared
+resolver; remaining inventory work is still pending.
+
 Existing `src/ocr` code is **candidate implementation**, not proven
 parity. Do not delete or rewrite it merely because its old verifiers were
 unsound. Reuse it only when a new gate proves its behavior.

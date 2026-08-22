@@ -1,13 +1,14 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright 2026 alibaba/open-code-review Contributors
 //
-// Ported from cmd/opencodereview/background_file.go, review_cmd.go (background handling)
-// and cmd/opencodereview/git.go (getCommitMessage) at c35ddd7223f2b5540ce03aa43c9a25ef643fca27.
+// Ported from cmd/opencodereview/background_file.go and review_cmd.go at
+// OCR v1.9.9 commit 4b6874bd23106b5c68bea6d230bb60303b9f0961.
 // Modifications are distributed as part of pi-reviewer under
 // GPL-3.0-or-later; see LICENSES/Apache-2.0.txt and THIRD_PARTY_NOTICES.md.
 
 import * as fs from "node:fs";
 import * as path from "node:path";
+import { getCommitMessage } from "./git.js";
 
 export const BACKGROUND_SOFT_LIMIT = 2000;
 export const BACKGROUND_HARD_LIMIT = 8000;
@@ -87,20 +88,16 @@ export function sanitizeMarkdown(input: string): string {
   return out.trim();
 }
 
-/**
- * mergeBackground combines the inline --background value (or an auto-populated
- * commit message) with the wrapped file content produced by loadBackgroundFile.
- * The inline portion is sanitised; the file portion is already wrapped and
- * sanitised, so it is preserved verbatim.
- */
-export function mergeBackground(inline: string, fromFile: string): string {
-  const cleanedInline = sanitizeMarkdown(inline);
-  if (cleanedInline === "") return fromFile;
-  if (fromFile === "") return cleanedInline;
-  return `${cleanedInline}\n\n${fromFile}`;
+export interface LoadBackgroundFileOptions {
+  readonly stderr?: (message: string) => void;
 }
 
-export interface LoadBackgroundFileOptions {
+export type BackgroundFileReader = (path: string, encoding: "utf8") => Promise<string> | string;
+export type CommitMessageReader = (repoDir: string, commit: string) => string;
+
+export interface ResolveBackgroundOptions {
+  readonly readFile?: BackgroundFileReader;
+  readonly getCommitMessage?: CommitMessageReader;
   readonly stderr?: (message: string) => void;
 }
 
@@ -199,6 +196,62 @@ export function loadBackgroundFile(
   return processBackgroundContent(raw, filePath, options);
 }
 
-// getCommitMessage is the single Git source of truth; background re-exports it for
-// backward compatibility so existing `from "./background.js"` imports keep working.
-export { getCommitMessage } from "./git.js";
+/**
+ * Select one flag input for the single background capability. OCR v1.9.9
+ * deliberately does not concatenate user input and file content: a supplied
+ * file is authoritative and makes an inline value inapplicable.
+ */
+export function selectBackground(
+  inline: string,
+  fromFile: string,
+  options?: Pick<ResolveBackgroundOptions, "stderr">,
+): string {
+  if (fromFile === "") return inline;
+  if (inline !== "") {
+    const stderr = options?.stderr ?? ((message: string): void => { process.stderr.write(message); });
+    stderr(
+      "[pi-review] both --background and --background-file were provided; " +
+      "--background-file takes precedence and --background is ignored\n",
+    );
+  }
+  return fromFile;
+}
+
+/**
+ * Resolve file, inline, and commit-message inputs once at the CLI/factory
+ * boundary. File and inline are one capability; commit text is only a fallback
+ * when neither was supplied. File loading retains the native stat-before-read
+ * path, while the injected reader uses the same sanitation and limits.
+ */
+export async function resolveBackground(
+  repoDir: string,
+  inline: string,
+  backgroundFile: string,
+  commit: string,
+  options?: ResolveBackgroundOptions,
+): Promise<string> {
+  if (backgroundFile !== "") {
+    const filePath = resolveBackgroundFilePath(repoDir, backgroundFile);
+    let fromFile: string;
+    if (options?.readFile === undefined) {
+      fromFile = loadBackgroundFile(filePath, { stderr: options?.stderr });
+    } else {
+      const raw: unknown = await options.readFile(filePath, "utf8");
+      if (typeof raw !== "string") {
+        throw new Error(`background file ${filePath} did not return text`);
+      }
+      fromFile = processBackgroundContent(raw, filePath, { stderr: options.stderr });
+    }
+    return selectBackground(inline, fromFile, options);
+  }
+
+  if (inline === "" && commit !== "") {
+    try {
+      const message = (options?.getCommitMessage ?? getCommitMessage)(repoDir, commit);
+      if (message !== "") return message;
+    } catch {
+      // OCR treats commit-message background as best effort.
+    }
+  }
+  return inline;
+}
