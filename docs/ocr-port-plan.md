@@ -1,4 +1,4 @@
-# OCR v1.9.3 parity recovery plan v2 — black-box evidence first
+# OCR v1.9.3 shipped parity recovery plan v2; v1.9.9 upgrade target — black-box evidence first
 
 ## Decision and current status
 
@@ -6,12 +6,18 @@ This plan supersedes every earlier OCR parity plan and every recorded phase
 completion. Git history preserves the old plans and reports; they are not
 evidence.
 
-The fixed reference remains:
+The shipped reference remains:
 
 - OCR tag `v1.9.3`
 - signed tag object `4d796ae54cabdcf4e22b69ef502ed8871456a909`
 - commit `c35ddd7223f2b5540ce03aa43c9a25ef643fca27`
 - development checkout `../open-code-review`
+
+The active, unshipped upgrade target is OCR `v1.9.9`, tag object
+`c95d3907d5448354d3f8a33f2ae5e4f23fdf1c94`, commit
+`4b6874bd23106b5c68bea6d230bb60303b9f0961`. Its committed test delta is
+`docs/ocr-upstream-test-delta.json`; pending delta cases must be ported and
+re-verified before the target can replace the shipped baseline.
 
 Existing `src/ocr` code is **candidate implementation**, not proven
 parity. Do not delete or rewrite it merely because its old verifiers were

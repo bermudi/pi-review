@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 //
-// Generates the exhaustive OCR v1.9.3 upstream-test inventory. The upstream
+// Generates the exhaustive OCR v1.9.9 upstream-test inventory. The upstream
 // tree is read only through the pinned Git object; its working tree is ignored.
 
 import { execFileSync, spawnSync } from "node:child_process";
@@ -9,16 +9,20 @@ import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import ts from "typescript";
 import { extractGoTestDeclarations } from "../test/ocr/support/go-test-declarations.js";
+import {
+  activeReference,
+  deltaByActiveTestId,
+  generateOcrTestDelta,
+  previousReference,
+  type DeltaKind,
+  type OcrTestDelta,
+} from "./generate-ocr-test-delta.js";
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const upstreamRepo = resolve(repoRoot, "../open-code-review");
 const inventoryPath = resolve(repoRoot, "docs/ocr-upstream-test-inventory.json");
 
-const reference = {
-  tag: "v1.9.3",
-  tagObject: "4d796ae54cabdcf4e22b69ef502ed8871456a909",
-  commit: "c35ddd7223f2b5540ce03aa43c9a25ef643fca27",
-} as const;
+const reference = activeReference;
 
 type Area =
   | "agent"
@@ -50,6 +54,7 @@ type Disposition = "covered" | "equivalent" | "not_applicable" | "pending" | "pe
 
 interface InventoryTest {
   readonly name: string;
+  readonly delta: Exclude<DeltaKind, "removed">;
   readonly disposition: Disposition;
   readonly evidence?: readonly Evidence[];
   readonly reason?: string;
@@ -63,8 +68,13 @@ interface InventoryFile {
 }
 
 interface Inventory {
-  readonly schemaVersion: 2;
+  readonly schemaVersion: 3;
   readonly reference: typeof reference;
+  readonly previousReference: typeof previousReference;
+  readonly delta: {
+    readonly path: "docs/ocr-upstream-test-delta.json";
+    readonly totals: OcrTestDelta["totals"];
+  };
   readonly files: readonly InventoryFile[];
 }
 
@@ -1834,6 +1844,25 @@ const notApplicableTests: ReadonlyMap<string, string> = new Map<string, string>(
   ],
 ]);
 
+// v1.9.9 additions and changed bodies in these files were reviewed as a group:
+// each is solely an approved omitted provider catalog/TUI, credential command,
+// or config-persistence mechanism. This table is intentionally path-explicit;
+// no broad internal/llm exclusion is permitted because protocol, tool-choice,
+// and usage behavior remains in scope.
+const upgradeNotApplicableByPath: ReadonlyMap<string, string> = new Map<string, string>([
+  ["cmd/opencodereview/apply_provider_field_test.go", "OCR v1.9.9 applyProviderField configuration persistence is not applicable: Pi owns provider and credential configuration through public APIs, and pi-reviewer deliberately omits this OCR command mutation."],
+  ["cmd/opencodereview/bedrock_config_test.go", "OCR v1.9.9 Bedrock configuration persistence and provider-TUI flow are not applicable: Pi owns provider/model/auth runtime through public APIs, and pi-reviewer deliberately omits those OCR shells."],
+  ["cmd/opencodereview/config_cmd_test.go", "OCR v1.9.9 config-command mutation and credential masking persistence are not applicable: Pi owns external configuration through public APIs, and pi-reviewer does not mutate OCR config."],
+  ["cmd/opencodereview/provider_cmd_test.go", "OCR v1.9.9 provider-command persistence and credential mutation are not applicable: Pi owns provider/model/auth runtime through public APIs, and pi-reviewer deliberately omits this command."],
+  ["internal/llm/bedrock_test.go", "OCR v1.9.9 Bedrock provider catalog and credential-resolution behavior are not applicable: Pi owns provider/model/auth runtime through public APIs, and pi-reviewer deliberately omits OCR provider catalogs."],
+  ["internal/llm/keycmd_test.go", "OCR v1.9.9 API-key command execution is not applicable: Pi owns external credential resolution through public APIs, and pi-reviewer deliberately omits OCR credential commands."],
+  ["internal/llm/keycmd_windows_test.go", "OCR v1.9.9 Windows API-key command execution is not applicable: Pi owns external credential resolution through public APIs, and pi-reviewer deliberately omits OCR credential commands."],
+  ["internal/llm/providers_test.go", "OCR v1.9.9 provider catalog lookup and ordering are not applicable: Pi owns provider catalogs through public APIs, and pi-reviewer deliberately omits OCR provider catalogs."],
+  ["internal/llm/resolver_keycmd_test.go", "OCR v1.9.9 endpoint API-key command resolution is not applicable: Pi owns external credential resolution through public APIs, and pi-reviewer deliberately omits OCR credential commands."],
+  ["internal/llm/resolver_shellrc_test.go", "OCR v1.9.9 shell-profile credential resolution is not applicable: Pi owns external credential configuration through public APIs, and pi-reviewer deliberately omits OCR shell-profile loading."],
+  ["internal/llm/resolver_test.go", "OCR v1.9.9 provider endpoint catalog and credential-resolution policy are not applicable: Pi owns provider/model/auth runtime through public APIs, and pi-reviewer deliberately omits those OCR provider mechanisms."],
+]);
+
 // Explicit scope decisions for paths that would otherwise be needs_decision.
 // Each entry must state kind/area/reason; generator validates completeness.
 // Empty initially — every needs_decision file will be flagged until triaged.
@@ -2583,8 +2612,16 @@ function annotations(localPath: string): readonly LocalAnnotation[] {
   return result;
 }
 
-function coverageByTestId(testNamesByPath: ReadonlyMap<string, ReadonlySet<string>>): ReadonlyMap<string, readonly Evidence[]> {
+function coverageByTestId(
+  testNamesByPath: ReadonlyMap<string, ReadonlySet<string>>,
+  delta: OcrTestDelta,
+): ReadonlyMap<string, readonly Evidence[]> {
   const result = new Map<string, Evidence[]>();
+  const removedTestIds = new Set(
+    delta.tests
+      .filter((test) => test.kind === "removed")
+      .map((test) => `${test.path}::${test.name}`),
+  );
 
   for (const mapping of localCoverage) {
     const localAnnotations = annotations(mapping.localPath);
@@ -2619,6 +2656,8 @@ function coverageByTestId(testNamesByPath: ReadonlyMap<string, ReadonlySet<strin
           if (isEquivalent) break;
         }
         if (isEquivalent) continue;
+        const retiredIds = mapping.upstreamPaths.map((path) => `${path}::${name}`);
+        if (retiredIds.length > 0 && retiredIds.every((id) => removedTestIds.has(id))) continue;
         throw new Error(
           `${mapping.localPath} annotation ${name} matched ${matchingPaths.length} configured upstream files`,
         );
@@ -2640,13 +2679,21 @@ function coverageByTestId(testNamesByPath: ReadonlyMap<string, ReadonlySet<strin
 
 function validateOverrides(
   testNamesByPath: ReadonlyMap<string, ReadonlySet<string>>,
+  delta: OcrTestDelta,
 ): void {
+  const removedTestIds = new Set(
+    delta.tests
+      .filter((test) => test.kind === "removed")
+      .map((test) => `${test.path}::${test.name}`),
+  );
   for (const [key, evidence] of equivalentTests) {
     const [path, name] = key.split("::");
     if (!path || !name) throw new Error(`equivalentTests key must be "path::TestName", got ${JSON.stringify(key)}`);
     const names = testNamesByPath.get(path);
-    if (!names) throw new Error(`equivalentTests references unknown file ${path}`);
-    if (!names.has(name)) throw new Error(`equivalentTests references unknown test ${key}`);
+    if (!names || !names.has(name)) {
+      if (removedTestIds.has(key)) continue;
+      throw new Error(`equivalentTests references unknown active test ${key}`);
+    }
     if (evidence.length === 0) throw new Error(`equivalentTests ${key} has no evidence`);
     for (const e of evidence) {
       if (e.kind !== "bun-test-annotation") throw new Error(`equivalentTests ${key} evidence kind must be bun-test-annotation`);
@@ -2657,8 +2704,10 @@ function validateOverrides(
     const [path, name] = key.split("::");
     if (!path || !name) throw new Error(`notApplicableTests key must be "path::TestName", got ${JSON.stringify(key)}`);
     const names = testNamesByPath.get(path);
-    if (!names) throw new Error(`notApplicableTests references unknown file ${path}`);
-    if (!names.has(name)) throw new Error(`notApplicableTests references unknown test ${key}`);
+    if (!names || !names.has(name)) {
+      if (removedTestIds.has(key)) continue;
+      throw new Error(`notApplicableTests references unknown active test ${key}`);
+    }
     if (reason.length < 20) throw new Error(`notApplicableTests ${key} reason too short`);
     const lower = reason.toLowerCase();
     if (!lower.includes("pi replaces") && !lower.includes("not applicable") && !lower.includes("deferred")) {
@@ -2666,8 +2715,24 @@ function validateOverrides(
     }
   }
   for (const [path, scope] of scopeOverrides) {
-    if (!testNamesByPath.has(path)) throw new Error(`scopeOverrides references unknown file ${path}`);
+    if (!testNamesByPath.has(path)) {
+      const fileWasRemoved = delta.tests.some((test) => test.path === path && test.kind === "removed");
+      if (fileWasRemoved) continue;
+      throw new Error(`scopeOverrides references unknown active file ${path}`);
+    }
     if (!scope.area || !scope.kind) throw new Error(`scopeOverrides ${path} missing area/kind`);
+  }
+  for (const [path, reason] of upgradeNotApplicableByPath) {
+    const names = testNamesByPath.get(path);
+    if (names === undefined) throw new Error(`upgradeNotApplicableByPath references unknown active file ${path}`);
+    const hasUpgradeDelta = [...names].some((name) => {
+      const deltaEntry = delta.tests.find((test) => test.path === path && test.name === name);
+      return deltaEntry?.kind === "added" || deltaEntry?.kind === "changed_body";
+    });
+    if (!hasUpgradeDelta) throw new Error(`upgradeNotApplicableByPath ${path} has no v1.9.9 added or changed test`);
+    if (reason.length < 20 || !reason.toLowerCase().includes("not applicable")) {
+      throw new Error(`upgradeNotApplicableByPath ${path} must state its concrete not-applicable boundary`);
+    }
   }
 }
 
@@ -2678,6 +2743,8 @@ function effectiveScope(path: string): Scope {
 }
 
 function generateInventory(): Inventory {
+  const delta = generateOcrTestDelta();
+  const deltaByTestId = deltaByActiveTestId(delta);
   const actualTagObject = git("rev-parse", `${reference.tag}^{tag}`).trim();
   const actualCommit = git("rev-parse", `${reference.tag}^{commit}`).trim();
   if (actualTagObject !== reference.tagObject || actualCommit !== reference.commit) {
@@ -2710,9 +2777,9 @@ function generateInventory(): Inventory {
     testNamesByPath.set(path, new Set(names));
   }
 
-  validateOverrides(testNamesByPath);
+  validateOverrides(testNamesByPath, delta);
 
-  const evidence = coverageByTestId(testNamesByPath);
+  const evidence = coverageByTestId(testNamesByPath, delta);
   const files = [...blobs.entries()]
     .sort(([left], [right]) => left.localeCompare(right))
     .map(([path, blob]): InventoryFile => {
@@ -2720,15 +2787,43 @@ function generateInventory(): Inventory {
       const names = [...(testNamesByPath.get(path) ?? [])].sort((left, right) => left.localeCompare(right));
       const tests = names.map((name): InventoryTest => {
         const id = `${path}::${name}`;
+        const change = deltaByTestId.get(id);
+        if (change === undefined || change === "removed") throw new Error(`active test ${id} is absent from delta`);
+        if (change === "added" || change === "changed_body") {
+          const scope = effectiveScope(path);
+          const omissionReason = upgradeNotApplicableByPath.get(path);
+          if (omissionReason !== undefined) {
+            return {
+              name,
+              delta: change,
+              disposition: "not_applicable",
+              reason: omissionReason,
+            };
+          }
+          if (scope.kind === "out_of_scope") {
+            return {
+              name,
+              delta: change,
+              disposition: "out_of_scope",
+              reason: scope.reason,
+            };
+          }
+          return {
+            name,
+            delta: change,
+            disposition: "pending",
+            reason: `OCR v1.9.9 ${change.replace("_", " ")} requires explicit new evidence or revalidation; prior v1.9.3 coverage is not inherited.`,
+          };
+        }
         const testEvidence = evidence.get(id);
-        if (testEvidence !== undefined) return { name, disposition: "covered", evidence: testEvidence };
+        if (testEvidence !== undefined) return { name, delta: change, disposition: "covered", evidence: testEvidence };
         const equivEvidence = equivalentTests.get(id);
-        if (equivEvidence !== undefined) return { name, disposition: "equivalent", evidence: equivEvidence, reason: `equivalent via ${equivEvidence.map((e) => e.path).join(", ")}` };
+        if (equivEvidence !== undefined) return { name, delta: change, disposition: "equivalent", evidence: equivEvidence, reason: `equivalent via ${equivEvidence.map((e) => e.path).join(", ")}` };
         const naReason = notApplicableTests.get(id);
-        if (naReason !== undefined) return { name, disposition: "not_applicable", reason: naReason };
-        if (scope.kind === "out_of_scope") return { name, disposition: "out_of_scope", reason: scope.reason };
-        if (scope.kind === "needs_decision") return { name, disposition: "pending_scope", reason: scope.reason };
-        return { name, disposition: "pending", reason: "OCR-derived test translation has not been recorded" };
+        if (naReason !== undefined) return { name, delta: change, disposition: "not_applicable", reason: naReason };
+        if (scope.kind === "out_of_scope") return { name, delta: change, disposition: "out_of_scope", reason: scope.reason };
+        if (scope.kind === "needs_decision") return { name, delta: change, disposition: "pending_scope", reason: scope.reason };
+        return { name, delta: change, disposition: "pending", reason: "OCR-derived test translation has not been recorded" };
       });
       return { path, blob, scope, tests };
     });
@@ -2750,7 +2845,13 @@ function generateInventory(): Inventory {
     }
   }
 
-  return { schemaVersion: 2, reference, files };
+  return {
+    schemaVersion: 3,
+    reference,
+    previousReference,
+    delta: { path: "docs/ocr-upstream-test-delta.json", totals: delta.totals },
+    files,
+  };
 }
 
 function serializedInventory(): string {
@@ -2772,7 +2873,7 @@ const args = new Set(process.argv.slice(2));
 const generated = serializedInventory();
 if (args.has("--check")) {
   if (!existsSync(inventoryPath) || readFileSync(inventoryPath, "utf8") !== generated) {
-    console.error("OCR v1.9.3 test inventory is stale; run bun run scripts/generate-ocr-test-inventory.ts");
+    console.error("OCR v1.9.9 test inventory is stale; run bun run scripts/generate-ocr-test-inventory.ts");
     process.exit(1);
   }
 } else {

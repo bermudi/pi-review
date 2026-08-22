@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 import { describe, expect, test } from "bun:test";
-import { extractGoTestDeclarations } from "./go-test-declarations.js";
+import { extractGoTestDeclarations, extractGoTestFunctions } from "./go-test-declarations.js";
 
 describe("Go test declaration extraction", () => {
   test("finds top-level testing.T declarations with ordinary formatting", () => {
@@ -34,5 +34,33 @@ describe("Go test declaration extraction", () => {
     ].join("\n");
 
     expect(extractGoTestDeclarations(source)).toEqual([{ name: "TestReal", line: 9 }]);
+  });
+
+  test("preserves exact bodies for table-driven delta hashing", () => {
+    const source = [
+      "package sample",
+      'import "testing"',
+      "func TestTable(t *testing.T) {",
+      "  cases := []string{\"one\", \"two\"}",
+      "  for _, tc := range cases {",
+      "    t.Run(tc, func(t *testing.T) {})",
+      "  }",
+      "}",
+    ].join("\n");
+
+    expect(extractGoTestFunctions(source)).toEqual([
+      {
+        name: "TestTable",
+        line: 3,
+        source: [
+          "func TestTable(t *testing.T) {",
+          "  cases := []string{\"one\", \"two\"}",
+          "  for _, tc := range cases {",
+          "    t.Run(tc, func(t *testing.T) {})",
+          "  }",
+          "}",
+        ].join("\n"),
+      },
+    ]);
   });
 });

@@ -5,13 +5,27 @@ export interface GoTestDeclaration {
   readonly line: number;
 }
 
+export interface GoTestFunction extends GoTestDeclaration {
+  /** Exact source bytes for the top-level test function declaration and body. */
+  readonly source: string;
+}
+
 /**
  * Extract top-level Go test functions without being fooled by declarations
  * embedded in comments or string literals.
  */
 export function extractGoTestDeclarations(source: string): readonly GoTestDeclaration[] {
+  return extractGoTestFunctions(source).map(({ name, line }) => ({ name, line }));
+}
+
+/**
+ * Extract top-level Go test functions with their exact declaration/body bytes.
+ * The source is deliberately not normalized: a delta must catch edits inside
+ * table-driven tests even when their declaration names do not change.
+ */
+export function extractGoTestFunctions(source: string): readonly GoTestFunction[] {
   const code = maskCommentsAndLiterals(source);
-  const declarations: GoTestDeclaration[] = [];
+  const declarations: GoTestFunction[] = [];
   let braceDepth = 0;
   let line = 1;
 
@@ -38,10 +52,62 @@ export function extractGoTestDeclarations(source: string): readonly GoTestDeclar
       /^func\s+(Test[A-Za-z0-9_]+)\s*\(\s*[A-Za-z_][A-Za-z0-9_]*\s+\*\s*testing\s*\.\s*T\s*\)/,
     );
     const name = match?.[1];
-    if (name !== undefined) declarations.push({ name, line });
+    if (name === undefined || match === null) continue;
+
+    const bodyStart = index + match[0].length;
+    const openingBrace = code.indexOf("{", bodyStart);
+    if (openingBrace === -1) throw new Error(`test ${name} has no body`);
+    const end = matchingBrace(source, openingBrace);
+    if (end === -1) throw new Error(`test ${name} has an unclosed body`);
+    declarations.push({ name, line, source: source.slice(index, end + 1) });
   }
 
   return declarations;
+}
+
+function matchingBrace(source: string, openingBrace: number): number {
+  let depth = 0;
+  let state: "code" | "line-comment" | "block-comment" | "string" | "raw-string" | "rune" = "code";
+  for (let index = openingBrace; index < source.length; index++) {
+    const char = source[index];
+    const next = source[index + 1];
+    if (state === "code") {
+      if (char === "/" && next === "/") {
+        index++;
+        state = "line-comment";
+      } else if (char === "/" && next === "*") {
+        index++;
+        state = "block-comment";
+      } else if (char === '"') {
+        state = "string";
+      } else if (char === "`") {
+        state = "raw-string";
+      } else if (char === "'") {
+        state = "rune";
+      } else if (char === "{") {
+        depth++;
+      } else if (char === "}") {
+        depth--;
+        if (depth === 0) return index;
+      }
+      continue;
+    }
+    if (state === "line-comment" && char === "\n") {
+      state = "code";
+    } else if (state === "block-comment" && char === "*" && next === "/") {
+      index++;
+      state = "code";
+    } else if (state === "raw-string" && char === "`") {
+      state = "code";
+    } else if ((state === "string" || state === "rune") && char === "\\") {
+      index++;
+    } else if (state === "string" && char === '"') {
+      state = "code";
+    } else if (state === "rune" && char === "'") {
+      state = "code";
+    }
+  }
+  return -1;
 }
 
 function maskCommentsAndLiterals(source: string): string {

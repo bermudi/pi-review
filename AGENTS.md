@@ -2,24 +2,26 @@
 
 ## Project
 
-`pi-reviewer` is a behavioral port of Open Code Review v1.9.3's core review
-engine onto the Pi SDK, exposed as a TypeScript library and CLI.
+`pi-reviewer` ships a behavioral port of Open Code Review v1.9.3's core review
+engine onto the Pi SDK, exposed as a TypeScript library and CLI. The active
+upgrade target is OCR v1.9.9; it is inventorying work, not shipped behavior.
 
-The fixed reference is OCR tag `v1.9.3`, signed tag object
+The shipped reference is OCR tag `v1.9.3`, signed tag object
 `4d796ae54cabdcf4e22b69ef502ed8871456a909`, commit
 `c35ddd7223f2b5540ce03aa43c9a25ef643fca27`, in the neighboring
 `../open-code-review` checkout. Pi replaces OCR's provider/model runtime; it
 does not justify changing review semantics.
 
 The legacy precision-oriented engine has been removed by explicit user
-approval; `src/ocr` is now the sole engine. Open Code Review v1.9.3
-remains the pinned behavioral reference. Inventory classification complete —
-0 pending (1895 cases; 321 not-applicable, 475 out-of-scope decisions
-remain); the `config`/`provider`/`login`/`MCP`/`telemetry`/`test-connection`
-command surfaces are intentionally not ported (omitted boundary; Pi's external
+approval; `src/ocr` is now the sole engine. Open Code Review v1.9.3 remains
+the shipped behavioral reference. The active v1.9.9 target is pinned to tag
+object `c95d3907d5448354d3f8a33f2ae5e4f23fdf1c94`, commit
+`4b6874bd23106b5c68bea6d230bb60303b9f0961`; its delta inventory has pending
+cases, so do not claim v1.9.9 parity or a freshly verified gate. The
+`config`/`provider`/`login`/`MCP`/`telemetry`/`test-connection` command
+surfaces are intentionally not ported (omitted boundary; Pi's external
 auth/model configuration is at `~/.pi/agent` and is only resolved/loaded via
-public Pi APIs). Do not claim full command-surface parity or a freshly
-verified gate unless the exact verifier passes at the final commit.
+public Pi APIs).
 
 The parity engine lives under `src/ocr` with its own tests. It must not
 import removed legacy review policy. Reuse low-level utilities only after
@@ -32,11 +34,10 @@ public APIs, stop and report the blocker.
 
 ## Upstream Releases and Upgrade Policy
 
-`pi-reviewer` supports exactly one pinned OCR behavioral baseline at a time.
-The current package line is `0.3.x`, based on OCR `v1.9.3`. A newer OCR release
-does not retroactively make that baseline incomplete; it starts a separate,
-explicit upgrade. Do not opportunistically sync OCR `main` or mix behavior
-from multiple OCR releases.
+`pi-reviewer` supports exactly one shipped OCR behavioral baseline at a time.
+The current package line is `0.3.x`, shipped against OCR `v1.9.3`; v1.9.9 is
+the explicit active upgrade target and is not shipped. Do not opportunistically
+sync OCR `main` or mix behavior from multiple OCR releases.
 
 Package and OCR versions are related but independent:
 
@@ -116,9 +117,11 @@ policy independent of the Pi adapter so it can be tested with scripted model
 turns and compared against the reference CLI.
 
 `docs/architecture.md` describes the shipped OCR v1.9.3 architecture and
-`docs/ocr-source-map.md` maps upstream files. `docs/ocr-port-plan.md`
-is authoritative for migration; Gate 5’s transitional legacy retention has been
-closed by explicit removal approval and the cutover verifier now proves absence.
+`docs/ocr-source-map.md` maps its source and v1.9.9 upgrade delta. The
+machine-checked `docs/ocr-upstream-test-delta.json` is authoritative for
+v1.9.9 changes. `docs/ocr-port-plan.md` is authoritative for migration; Gate
+5’s transitional legacy retention has been closed by explicit removal approval
+and the cutover verifier now proves absence.
 
 ## Domain Contracts
 

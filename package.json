@@ -31,8 +31,8 @@
     "verify:sessions": "bun run verification/blackbox/verify-sessions.ts",
     "verify:outputs": "bun run verification/blackbox/verify-outputs.ts",
     "verify:cutover": "bun run verification/blackbox/verify-cutover.ts",
-    "check:ocr-test-inventory": "bun run scripts/generate-ocr-test-inventory.ts --check",
-    "verify:ocr-test-port": "bun run scripts/generate-ocr-test-inventory.ts --check --require-complete"
+    "check:ocr-test-inventory": "bun run scripts/generate-ocr-test-delta.ts --check && bun run scripts/generate-ocr-test-inventory.ts --check",
+    "verify:ocr-test-port": "bun run check:ocr-test-inventory && bun run scripts/generate-ocr-test-inventory.ts --check --require-complete"
   },
   "main": "dist/index.js",
   "engines": {

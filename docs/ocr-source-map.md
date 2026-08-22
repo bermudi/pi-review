@@ -1,7 +1,13 @@
-# OCR v1.9.3 source translation map
+# OCR source translation map — shipped v1.9.3, upgrade target v1.9.9
 
-Pinned reference: tag `v1.9.3`, signed tag object `4d796ae54cabdcf4e22b69ef502ed8871456a909`, commit `c35ddd7223f2b5540ce03aa43c9a25ef643fca27` in `../open-code-review`.
+Shipped reference: tag `v1.9.3`, signed tag object `4d796ae54cabdcf4e22b69ef502ed8871456a909`, commit `c35ddd7223f2b5540ce03aa43c9a25ef643fca27` in `../open-code-review`.
 Verified: `git -C ../open-code-review rev-parse v1.9.3^{commit}` == `c35ddd7223f2b5540ce03aa43c9a25ef643fca27`, `git -C ../open-code-review tag --verify v1.9.3` is good signature.
+
+Active upgrade target (not shipped): tag `v1.9.9`, signed tag object
+`c95d3907d5448354d3f8a33f2ae5e4f23fdf1c94`, commit
+`4b6874bd23106b5c68bea6d230bb60303b9f0961`. The machine-checked
+`docs/ocr-upstream-test-delta.json` records added, removed, changed-body, and
+byte-identical top-level tests; its pending cases are v1.9.9 upgrade work.
 
 This map is the Phase 2 contract from `docs/ocr-port-plan.md`. Each row identifies OCR production and test scope, whether Pi code is reused/wrapped/replaced, and where the TypeScript home lives. It is not a completion ledger. The exhaustive, path-qualified disposition of every pinned upstream test is `docs/ocr-upstream-test-inventory.json`, checked by `test/ocr/manifest-coverage.test.ts`. No parity engine may import `src/{reviewer,pi-runner,prompts,tools,phase-tools,resolver,change-map}` policy — reuse only after OCR-derived tests prove parity.
 

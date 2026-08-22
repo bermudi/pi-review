@@ -1,9 +1,9 @@
-# OCR v1.9.3 reference manifest
+# OCR reference manifest — shipped v1.9.3, upgrade target v1.9.9
 
-Fixed reference for every translated file under
+The shipped reference for every translated file remains under
 `docs/ocr-port-plan.md`.
 
-## Pinned reference
+## Shipped reference
 
 - Release: https://github.com/alibaba/open-code-review/releases/tag/v1.9.3
 - Tag: `v1.9.3`
@@ -13,6 +13,24 @@ Fixed reference for every translated file under
 - Go: `go1.26.6` (per `manifest_hash_test.go` / Go image bump in tag notes)
 - Bun: `>=1.3.0` (package.json `engines`)
 - Pi SDK: `@earendil-works/pi-coding-agent` `0.84.2` (was `0.82.1`, see `docs/pi-sdk-feasibility-report.md` bump note)
+
+## Active upgrade target — not shipped
+
+- Release: https://github.com/alibaba/open-code-review/releases/tag/v1.9.9
+- Tag: `v1.9.9`
+- Signed tag object: `c95d3907d5448354d3f8a33f2ae5e4f23fdf1c94`
+- Commit: `4b6874bd23106b5c68bea6d230bb60303b9f0961`
+- Delta ledger: `docs/ocr-upstream-test-delta.json` (v1.9.3 → v1.9.9)
+- Signature observation: Git reports a good SSH signature from RSA fingerprint
+  `SHA256:h1896zwqn7Qf5kfn0IaeVPOD6d8PVAfiyFqgcL3d9qU`, but local
+  allowed-signers matches no principal. Cryptographic validity is observed;
+  signer identity trust is **not verified**.
+- Lineage observation: each locally fetched tag `v1.9.4` through `v1.9.9`
+  reports that same good SSH signature and `No principal matched.` The absence
+  of a matching local allowed-signers principal applies to every one of those
+  observations; it is not an identity-trust verification.
+- Status: inventory only. The target has explicit pending core cases and must
+  not be described as shipped or parity-complete.
 
 ## Verification status (recovery plan v2)
 
