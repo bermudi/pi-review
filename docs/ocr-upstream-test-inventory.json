@@ -5503,7 +5503,7 @@
             {
               "kind": "bun-test-annotation",
               "path": "test/ocr/cli/sarif.test.ts",
-              "title": "newQuietHandle sarif silences",
+              "title": "newQuietHandle sarif human keeps stderr routing active",
               "ocrVersion": "v1.9.3"
             }
           ]
@@ -6601,7 +6601,7 @@
             {
               "kind": "bun-test-annotation",
               "path": "test/ocr/cli/shared.test.ts",
-              "title": "quiet handle routing uses the isolated router",
+              "title": "TestNewQuietHandle_Routing",
               "ocrVersion": "v1.9.9"
             }
           ]

@@ -11,8 +11,8 @@
  * Shared CLI types and validation — mirrors Go shared_flags.go + shared.go
  * helpers that both review and scan depend on.
  *
- * This file stays policy-free: it does not import the legacy `src/cli.ts`
- * reviewer policy, only the narrow `CliIo` shape (duplicated, not imported).
+ * This file stays policy-free: it owns the narrow injected `CliIo` boundary
+ * and does not import a broader command implementation.
  */
 
 import { existsSync, readFileSync } from "node:fs";
@@ -443,7 +443,11 @@ export function newProgressRouter(io: Pick<CliIo, "stderr">, _outputFormat: stri
 }
 
 export function newQuietHandle(outputFormat: string, audience: string, router?: ProgressRouter): QuietHandle {
-  if (isMachineReadable(outputFormat) || audience === "agent") return router?.quiet() ?? new QuietHandle(() => {});
+  // Pi routes every ordinary progress event directly to stderr. Unlike OCR's
+  // global stdout swap, JSON/SARIF for a human therefore needs no muting.
+  // Only agent audience intentionally suppresses ordinary progress.
+  void outputFormat;
+  if (audience === "agent") return router?.quiet() ?? new QuietHandle(() => {});
   return new QuietHandle(null);
 }
 

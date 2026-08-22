@@ -12,6 +12,7 @@ import { Agent } from "../../../src/ocr/agent/agent.js";
 import { loadDefaultTemplate } from "../../../src/ocr/template/template.js";
 import { defaultReviewOptions } from "../../../src/ocr/cli/shared.js";
 import { createReviewRunnerFactory } from "../../../src/ocr/cli/factory.js";
+import { runCli } from "../../../src/ocr/cli/index.js";
 
 function runAgentWithAudience(audience: string): { stdout: string; stderr: string } {
   let stdout = "";
@@ -88,4 +89,25 @@ test("real factory routes progress per invocation without network leakage", asyn
     fs.rmSync(repo, { recursive: true, force: true });
     fs.rmSync(home, { recursive: true, force: true });
   }
+});
+
+test("agent audience still delivers command errors to stderr", async () => {
+  let stdout = "";
+  let stderr = "";
+  const code = await runCli(["review", "--repo", process.cwd(), "--audience", "agent"], {
+    io: {
+      stdout: (text) => { stdout += text; },
+      stderr: (text) => { stderr += text; },
+      cwd: () => process.cwd(),
+      env: () => ({}),
+      onSignal: () => {},
+      offSignal: () => {},
+    },
+    reviewRunnerFactory: async () => {
+      throw new Error("transport exploded");
+    },
+  });
+  expect(code).toBe(1);
+  expect(stderr).toContain("transport exploded");
+  expect(stdout).toBe("");
 });

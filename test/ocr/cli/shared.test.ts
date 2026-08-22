@@ -56,11 +56,10 @@ test("newQuietHandle no-op for text/developer", () => {
 });
 
 // OCR v1.9.3: TestNewQuietHandle_JSON
-test("newQuietHandle json silences", () => {
+test("newQuietHandle json human keeps stderr routing active", () => {
   const h = newQuietHandle("json", "developer");
-  expect(h.fn).not.toBeNull();
-  h.Restore();
   expect(h.fn).toBeNull();
+  h.Restore();
 });
 
 // OCR v1.9.3: TestNewQuietHandle_Agent
@@ -99,23 +98,21 @@ test("quiet handle restoration remains idempotent", () => {
   expect(handle.fn).toBeNull();
 });
 
-test("TestNewQuietHandle_Routing", () => {
-  const out: string[] = [];
-  const router = newProgressRouter({ stderr: (text) => { out.push(text); } }, "json", "human");
-  router.emit({ kind: "progress", message: "before" });
-  const quiet = newQuietHandle("json", "human", router);
-  router.emit({ kind: "progress", message: "hidden" });
-  quiet.Restore();
-  router.emit({ kind: "progress", message: "after" });
-  expect(out).toEqual(["before\n", "after\n"]);
-});
-
 // OCR v1.9.9: TestNewQuietHandle_Routing
-test("quiet handle routing uses the isolated router", () => {
-  const messages: string[] = [];
-  const router = newProgressRouter({ stderr: (text) => { messages.push(text); } }, "text", "human");
-  router.emit({ kind: "progress", message: "visible" });
-  expect(messages).toEqual(["visible\n"]);
+test("TestNewQuietHandle_Routing", () => {
+  for (const [format, audience, visible] of [
+    ["text", "human", true],
+    ["json", "human", true],
+    ["text", "agent", false],
+    ["json", "agent", false],
+  ] as const) {
+    const out: string[] = [];
+    const router = newProgressRouter({ stderr: (text) => { out.push(text); } }, format, audience);
+    const quiet = newQuietHandle(format, audience, router);
+    router.emit({ kind: "progress", message: `${format}/${audience}` });
+    quiet.Restore();
+    expect(out.length === 1).toBe(visible);
+  }
 });
 
 // OCR v1.9.9: TestNewQuietHandle_JSONHumanKeepsStdoutForDocument

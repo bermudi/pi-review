@@ -210,9 +210,9 @@ test("sarif multiple comments", () => {
 });
 
 // OCR v1.9.3: TestNewQuietHandle_Sarif
-test("newQuietHandle sarif silences", () => {
+test("newQuietHandle sarif human keeps stderr routing active", () => {
   const h = newQuietHandle("sarif", "human");
-  expect(h.fn).not.toBeNull();
+  expect(h.fn).toBeNull();
   h.Restore();
 });
 
@@ -308,5 +308,3 @@ test("outputPreview sarif rejects", () => {
   const { error } = outputPreview(p as unknown as Parameters<typeof outputPreview>[0], "sarif");
   expect(error).toBeDefined();
 });
-
-
