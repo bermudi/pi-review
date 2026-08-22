@@ -80,6 +80,8 @@ export interface ChatRequest {
   readonly model: string;
   readonly messages: readonly Message[];
   readonly tools?: readonly ToolDef[];
+  /** OCR review-filter requires an explicit terminal tool decision. */
+  readonly toolChoice?: "required";
   readonly maxTokens?: number;
   readonly sessionId?: string;
   readonly requestMeta?: RequestMeta;

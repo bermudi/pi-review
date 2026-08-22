@@ -1,5 +1,5 @@
 {
-  "provenance": "Verbatim copies of OCR v1.9.3 prompts — do not edit without updating hash table",
+  "provenance": "Verbatim OCR prompt copies with v1.9.5 review-filter assets; per-file origins are recorded below",
   "upstream": "alibaba/open-code-review",
   "tag": "v1.9.3",
   "tag_object": "4d796ae54cabdcf4e22b69ef502ed8871456a909",
@@ -8,7 +8,7 @@
   "license": "Apache-2.0",
   "license_file": "LICENSES/Apache-2.0.txt",
   "notices": "THIRD_PARTY_NOTICES.md",
-  "note": "Prompt bytes are byte-identical to upstream. Provenance is kept in this adjacent metadata file and in src/ocr/template/template.ts EXPECTED_PROMPT_HASHES so model input is unchanged. Modifications are distributed under GPL-3.0-or-later.",
+  "note": "Prompt bytes are byte-identical to their recorded upstream origins. Provenance is kept in this adjacent metadata file and in src/ocr/template/template.ts EXPECTED_PROMPT_HASHES so model input is unchanged. Modifications are distributed under GPL-3.0-or-later.",
   "files": [
     {
       "file": "main_task_system.md",
@@ -53,12 +53,16 @@
     {
       "file": "review_filter_task_system.md",
       "upstream": "internal/config/template/prompts/review_filter_task_system.md",
-      "sha256": "5082e90fd7a6a78fae4d12c5e7ab26da95d937f7771670d78821576eb5facded"
+      "sha256": "de447f9a0e58ee5bebd3a533c154e6dbb319906eb561e23034148079b7d3d693",
+      "tag": "v1.9.5",
+      "commit": "c8b6a390b8ad447faf46d4764347167edff0ada2"
     },
     {
       "file": "review_filter_task_user.md",
       "upstream": "internal/config/template/prompts/review_filter_task_user.md",
-      "sha256": "2421fe5859e7a5f0b81b1c1497b0ed0108e401e4d879fb3b37548489908b33d5"
+      "sha256": "95f7cbe77dfc03d8b48152699b93d18776c4ff3592cf0a3c7c7c554b5123e7ad",
+      "tag": "v1.9.5",
+      "commit": "c8b6a390b8ad447faf46d4764347167edff0ada2"
     }
   ]
 }

@@ -6909,8 +6909,15 @@
         {
           "name": "TestParseFilterToolCalls",
           "delta": "added",
-          "disposition": "pending",
-          "reason": "OCR v1.9.9 added requires explicit new evidence or revalidation; prior v1.9.3 coverage is not inherited."
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr/agent/helpers.test.ts",
+              "title": "TestParseFilterToolCalls",
+              "ocrVersion": "v1.9.9"
+            }
+          ]
         },
         {
           "name": "TestReviewItemFingerprintIgnoresTrailingLineEndings",
@@ -6928,8 +6935,15 @@
         {
           "name": "TestReviewItemFingerprintStableAcrossPatchPosition",
           "delta": "added",
-          "disposition": "pending",
-          "reason": "OCR v1.9.9 added requires explicit new evidence or revalidation; prior v1.9.3 coverage is not inherited."
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr/agent/helpers.test.ts",
+              "title": "TestReviewItemFingerprintStableAcrossPatchPosition",
+              "ocrVersion": "v1.9.9"
+            }
+          ]
         }
       ]
     },
@@ -7142,20 +7156,41 @@
         {
           "name": "TestExecuteReviewFilter_RemovesComments",
           "delta": "changed_body",
-          "disposition": "pending",
-          "reason": "OCR v1.9.9 changed body requires explicit new evidence or revalidation; prior v1.9.3 coverage is not inherited."
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr/agent/coverage.test.ts",
+              "title": "TestExecuteReviewFilter_RemovesComments",
+              "ocrVersion": "v1.9.9"
+            }
+          ]
         },
         {
           "name": "TestExecuteReviewFilter_SkipFilter",
           "delta": "changed_body",
-          "disposition": "pending",
-          "reason": "OCR v1.9.9 changed body requires explicit new evidence or revalidation; prior v1.9.3 coverage is not inherited."
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr/agent/coverage.test.ts",
+              "title": "TestExecuteReviewFilter_SkipFilter",
+              "ocrVersion": "v1.9.9"
+            }
+          ]
         },
         {
           "name": "TestExecuteReviewFilter_WithTimeout",
           "delta": "changed_body",
-          "disposition": "pending",
-          "reason": "OCR v1.9.9 changed body requires explicit new evidence or revalidation; prior v1.9.3 coverage is not inherited."
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr/agent/coverage.test.ts",
+              "title": "TestExecuteReviewFilter_WithTimeout",
+              "ocrVersion": "v1.9.9"
+            }
+          ]
         },
         {
           "name": "TestExecuteSubtask_ContextCancelled",

@@ -39,6 +39,7 @@ import { FileReader, DiffMap, FileReadProvider, FileReadDiffProvider, CodeSearch
 import { Registry } from "../tool/definitions.js";
 import { buildToolRegistry } from "./git.js";
 import { resolveBackground } from "./background.js";
+import { REVIEW_FILTER_TOOLS } from "../agent/filter.js";
 import { Provider, ModeWorkspace, ModeRange, ModeCommit } from "../diff/git.js";
 import { Runner as GitRunner } from "../diff/runner.js";
 import { ManifestBuilder, ItemID, StatePartial, StateFailed, StateSkipped, FailureBudget, FailureTimeout, FailureUnknown } from "../session/manifest.js";
@@ -183,7 +184,13 @@ export function createReviewRunnerFactory(
 
     const retryCollector = new RetryCollector();
     // One Pi transport per review invocation; concurrency=1 serialises per-file use.
-    const transport = await createPiTransportForFile({ cwd, agentDir, tools: mainToolDefs, retryCollector });
+    const transport = await createPiTransportForFile({
+      cwd,
+      agentDir,
+      tools: mainToolDefs,
+      supplementalTools: REVIEW_FILTER_TOOLS,
+      retryCollector,
+    });
 
     const runId = randomUUID();
     const builder = new ManifestBuilder(runId, "review");

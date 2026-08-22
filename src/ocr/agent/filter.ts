@@ -7,7 +7,70 @@
 // see LICENSES/Apache-2.0.txt and THIRD_PARTY_NOTICES.md.
 
 import type { LlmComment } from "../model/review.js";
-import { StripMarkdownFences } from "../llmloop/compression.js";
+import { StripMarkdownFences, type ToolCall } from "../llmloop/compression.js";
+import type { ToolDef } from "../llmloop/types.js";
+
+// OCR v1.9.5 c8b6a390b8ad447faf46d4764347167edff0ada2. These are
+// terminal review-filter decisions, not normal-review capabilities.
+export const REVIEW_FILTER_TOOLS: readonly ToolDef[] = [
+  {
+    type: "function",
+    function: {
+      name: "report_incorrect_comments",
+      description: "Report only comments the diff proves factually wrong.",
+      parameters: {
+        type: "object",
+        properties: {
+          analysis: { type: "array", items: { type: "string" } },
+          comment_ids: { type: "array", items: { type: "string" } },
+        },
+        required: ["analysis", "comment_ids"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "approve_all_comments",
+      description: "Keep every review comment.",
+      parameters: { type: "object", properties: {} },
+    },
+  },
+];
+
+/**
+ * Extract removal indexes from the terminal filter tool calls. A missing or
+ * malformed matching call returns null, allowing OCR's text fallback.
+ */
+export function parseFilterToolCalls(calls: readonly ToolCall[], total: number): Map<number, unknown> | null {
+  let indices: Map<number, unknown> | null = null;
+  for (const call of calls) {
+    if (call.function.name === "approve_all_comments") {
+      indices ??= new Map<number, unknown>();
+      continue;
+    }
+    if (call.function.name !== "report_incorrect_comments") continue;
+    let raw: unknown;
+    try {
+      raw = JSON.parse(call.function.arguments);
+    } catch (error) {
+      console.error(`[pi-review] Review filter: failed to parse tool call arguments: ${String(error)}`);
+      continue;
+    }
+    if (raw === null || typeof raw !== "object") continue;
+    const ids = (raw as Record<string, unknown>)["comment_ids"];
+    if (!Array.isArray(ids)) continue;
+    indices ??= new Map<number, unknown>();
+    for (const id of ids) {
+      if (typeof id !== "string") continue;
+      const match = /^c-(\d+)$/.exec(id);
+      if (match === null) continue;
+      const index = Number(match[1]);
+      if (Number.isInteger(index) && index >= 0 && index < total) indices.set(index, {});
+    }
+  }
+  return indices;
+}
 
 /**
  * buildFilterCommentsJSON mirrors Go buildFilterCommentsJSON.

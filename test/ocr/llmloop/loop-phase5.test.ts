@@ -86,7 +86,7 @@ describe("ocr loop Phase 5 — comment processing", () => {
       }
       return null;
     };
-    const { runner } = makeRunner({
+    const { runner, transport } = makeRunner({
       collector,
       diffLookup,
       responses: [
@@ -104,6 +104,9 @@ describe("ocr loop Phase 5 — comment processing", () => {
     expect(comments[0]!.startLine).toBe(2);
     expect(comments[0]!.endLine).toBe(2);
     expect(comments[0]!.content).toBe("issue");
+    const visibleTools = transport.requests[0]?.tools?.map((tool) => tool.function.name) ?? [];
+    expect(visibleTools).not.toContain("report_incorrect_comments");
+    expect(visibleTools).not.toContain("approve_all_comments");
   });
 
   test("code_comment re-files a uniquely resolved cross-file excerpt before LLM relocation", async () => {

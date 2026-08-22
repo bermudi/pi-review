@@ -23,8 +23,10 @@ type FakeResponse = {
 
 class FakeAgentClient {
   public calls = 0;
+  public readonly requests: unknown[] = [];
   constructor(private readonly responses: FakeResponse[] | null) {}
-  async CompletionsWithCtx(_ctx: unknown, _req: unknown): Promise<FakeResponse> {
+  async CompletionsWithCtx(_ctx: unknown, req: unknown): Promise<FakeResponse> {
+    this.requests.push(req);
     if (this.responses === null || this.calls >= this.responses.length) {
       const content = "";
       return { Choices: [{ Message: { Content: content } }], Usage: { PromptTokens: 0, CompletionTokens: 0 } };
@@ -279,13 +281,17 @@ describe("ocr agent coverage (ported)", () => {
     expect(client.calls).toBe(0);
   });
 
-  // OCR v1.9.3: TestExecuteReviewFilter_RemovesComments
+  // OCR v1.9.9: TestExecuteReviewFilter_RemovesComments
   test("TestExecuteReviewFilter_RemovesComments", async () => {
     const collector = new CommentCollector();
     collector.Add({ path: "a.go", content: "keep this" });
     collector.Add({ path: "a.go", content: "remove this" });
     collector.Add({ path: "a.go", content: "also keep" });
-    const client = new FakeAgentClient([chatResponse(JSON.stringify(["c-1"]), { PromptTokens: 10, CompletionTokens: 5 })]);
+    const client = new FakeAgentClient([toolCallResponse("", [{
+      ID: "call_1",
+      Type: "function",
+      Function: { Name: "report_incorrect_comments", Arguments: `{"analysis":["c-1 is contradicted"],"comment_ids":["c-1"]}` },
+    }], { PromptTokens: 10, CompletionTokens: 5 })]);
     const agent = new Agent({
       repoDir: makeTempDir(),
       model: "test",
@@ -320,7 +326,7 @@ describe("ocr agent coverage (ported)", () => {
     expect(collector.CommentsForPath("a.go").length).toBe(1);
   });
 
-  // OCR v1.9.3: TestExecuteReviewFilter_SkipFilter
+  // OCR v1.9.9: TestExecuteReviewFilter_SkipFilter
   test("TestExecuteReviewFilter_SkipFilter", async () => {
     {
       const collector = new CommentCollector();
@@ -370,9 +376,13 @@ describe("ocr agent coverage (ported)", () => {
         template: { MaxTokens: 10000, MaxToolRequestTimes: 5, MainTask: { messages: [{ role: "user", content: "t" }] }, MemoryCompressionTask: { messages: [{ role: "system", content: "c" }] }, ReviewFilterTask: { messages: [{ role: "user", content: "Filter: {{comments}} path={{path}} diff={{diff}}" }] } } as unknown as Template,
         mainToolDefs: [],
       } as unknown as never);
-      await (agent as unknown as { executeReviewFilter: (s: AbortSignal, d: Diff, p: string) => Promise<void> }).executeReviewFilter(new AbortController().signal, { newPath: "a.go", oldPath: "a.go", diff: "+code", newFileContent: "", isBinary: false, isDeleted: false, isNew: false, isRenamed: false, insertions: 0, deletions: 0 } as unknown as Diff, "a.go");
-      expect(client.calls).toBe(1);
-      expect(collector.CommentsForPath("a.go").length).toBe(1);
+    await (agent as unknown as { executeReviewFilter: (s: AbortSignal, d: Diff, p: string) => Promise<void> }).executeReviewFilter(new AbortController().signal, { newPath: "a.go", oldPath: "a.go", diff: "+code", newFileContent: "", isBinary: false, isDeleted: false, isNew: false, isRenamed: false, insertions: 0, deletions: 0 } as unknown as Diff, "a.go");
+    expect(client.calls).toBe(1);
+    const request = client.requests[0] as { toolChoice?: string; tools?: readonly { function: { name: string; parameters?: unknown } }[] };
+    expect(request.toolChoice).toBe("required");
+    expect(request.tools?.map((tool) => tool.function.name)).toEqual(["report_incorrect_comments", "approve_all_comments"]);
+    expect((request.tools?.[0]?.function.parameters as { type?: string }).type).toBe("object");
+    expect(collector.CommentsForPath("a.go").length).toBe(1);
     }
     {
       const collector = new CommentCollector();
@@ -540,7 +550,7 @@ describe("ocr agent coverage (ported)", () => {
     expect(res.stop).toBeUndefined();
   });
 
-  // OCR v1.9.3: TestExecuteReviewFilter_WithTimeout
+  // OCR v1.9.9: TestExecuteReviewFilter_WithTimeout
   test("TestExecuteReviewFilter_WithTimeout", async () => {
     const collector = new CommentCollector();
     collector.Add({ path: "a.go", content: "comment" });

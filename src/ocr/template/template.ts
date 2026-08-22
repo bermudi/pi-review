@@ -30,8 +30,8 @@ import * as path from "node:path";
 import * as crypto from "node:crypto";
 
 // ---------------------------------------------------------------------------
-// Frozen hashes — must match the pinned v1.9.3 checkout (4d796ae..., c35ddd...)
-// computed via `sha256sum` on the original files. The loader verifies them
+// Frozen hashes — mixed v1.9.3/v1.9.5 prompt assets; per-file provenance is
+// recorded in prompts/PROVENANCE.json. The loader verifies them
 // on every LoadDefault call; `bun test` must fail if any prompt/template byte
 // diverges.
 // ---------------------------------------------------------------------------
@@ -67,9 +67,9 @@ export const EXPECTED_PROMPT_HASHES: Readonly<Record<string, string>> = {
   "re_location_task_user.md":
     "a931857542a500c733dedd1090528e986c9bf1d4924d762645f79512411d2685",
   "review_filter_task_system.md":
-    "5082e90fd7a6a78fae4d12c5e7ab26da95d937f7771670d78821576eb5facded",
+    "de447f9a0e58ee5bebd3a533c154e6dbb319906eb561e23034148079b7d3d693",
   "review_filter_task_user.md":
-    "2421fe5859e7a5f0b81b1c1497b0ed0108e401e4d879fb3b37548489908b33d5",
+    "95f7cbe77dfc03d8b48152699b93d18776c4ff3592cf0a3c7c7c554b5123e7ad",
 } as const;
 
 // ---------------------------------------------------------------------------

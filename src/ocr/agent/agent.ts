@@ -19,7 +19,7 @@ import { ExcludeNone, ExcludeDeleted } from "../model/preview.js";
 import { reviewModeString, stripEmptyPlanBlock } from "./util.js";
 import { countTokens, PromptTokenLimit } from "../llmloop/compression.js";
 import { Runner, sessionTaskKey } from "../llmloop/loop.js";
-import { buildFilterCommentsJSON, parseFilterResponse } from "./filter.js";
+import { buildFilterCommentsJSON, parseFilterResponse, parseFilterToolCalls, REVIEW_FILTER_TOOLS } from "./filter.js";
 import { formatToolDefs } from "./format.js";
 import type { AgentWarning, AnyLlmClient, ToolDef } from "../llmloop/types.js";
 import type { Template, ChatMessage, LlmConversation } from "../template/template.js";
@@ -1572,6 +1572,8 @@ export class Agent {
     const req: Record<string, unknown> = {
       model: this.args.model,
       messages: messages as unknown as import("../llmloop/compression.js").Message[],
+      tools: REVIEW_FILTER_TOOLS,
+      toolChoice: "required",
       maxTokens: this.args.template.MaxCompletionTokens ?? this.args.template.MaxTokens,
       sessionId: sessionIdF,
       ...(metaF ? { requestMeta: metaF } : {}),
@@ -1606,7 +1608,7 @@ export class Agent {
       const usageForRec = usage2 as unknown as { PromptTokens?: number; CompletionTokens?: number; promptTokens?: number; completionTokens?: number } | undefined;
       const promptT = (usageForRec as unknown as { PromptTokens?: number; promptTokens?: number })?.PromptTokens ?? (usageForRec as unknown as { promptTokens?: number })?.promptTokens ?? 0;
       const completionT = (usageForRec as unknown as { CompletionTokens?: number; completionTokens?: number })?.CompletionTokens ?? (usageForRec as unknown as { completionTokens?: number })?.completionTokens ?? 0;
-      recF.SetResponse({ content: typeof rawForRec === "string" ? rawForRec : "", toolCalls: [], model: this.args.model, usage: { promptTokens: promptT, completionTokens: completionT } }, Date.now() - startF);
+      recF.SetResponse({ content: typeof rawForRec === "string" ? rawForRec : "", toolCalls: extractFilterToolCalls(resp), model: this.args.model, usage: { promptTokens: promptT, completionTokens: completionT } }, Date.now() - startF);
     }
     const extract2 = (r: unknown): string => {
       const obj = r as Record<string, unknown>;
@@ -1624,7 +1626,8 @@ export class Agent {
       return "";
     };
     const rawContent = extract2(resp);
-    const indices = parseFilterResponse(rawContent, comments.length);
+    const toolIndices = parseFilterToolCalls(extractFilterToolCalls(resp), comments.length);
+    const indices = toolIndices ?? parseFilterResponse(rawContent, comments.length);
     if (!indices || indices.size === 0) return;
     try {
       if (typeof collector.removeByPathAndIndices === "function") {
@@ -1639,6 +1642,27 @@ export class Agent {
     }
   }
 
+}
+
+function extractFilterToolCalls(response: unknown): import("../llmloop/compression.js").ToolCall[] {
+  if (response === null || typeof response !== "object") return [];
+  const root = response as Record<string, unknown>;
+  const candidate = root["toolCalls"] ?? root["ToolCalls"]
+    ?? (Array.isArray(root["Choices"]) ? ((root["Choices"][0] as Record<string, unknown> | undefined)?.["Message"] as Record<string, unknown> | undefined)?.["ToolCalls"] : undefined);
+  if (!Array.isArray(candidate)) return [];
+  const calls: import("../llmloop/compression.js").ToolCall[] = [];
+  for (const value of candidate) {
+    if (value === null || typeof value !== "object") continue;
+    const call = value as Record<string, unknown>;
+    const functionValue = call["function"] ?? call["Function"];
+    if (functionValue === null || typeof functionValue !== "object") continue;
+    const fn = functionValue as Record<string, unknown>;
+    const name = fn["name"] ?? fn["Name"];
+    const argumentsText = fn["arguments"] ?? fn["Arguments"];
+    if (typeof name !== "string" || typeof argumentsText !== "string") continue;
+    calls.push({ id: typeof call["id"] === "string" ? call["id"] : typeof call["ID"] === "string" ? call["ID"] : "", type: typeof call["type"] === "string" ? call["type"] : "function", function: { name, arguments: argumentsText } });
+  }
+  return calls;
 }
 
 // ---------------------------------------------------------------------------

@@ -4,12 +4,16 @@
 // Covers helper pure tests: BuildFilterCommentsJSON, ParseFilterResponse, ExtFromPath, FormatToolDefs, BuildToolDefs, FilterLargeDiffs, ReviewItemFingerprint etc.
 
 import { describe, test, expect } from "bun:test";
+import * as fs from "node:fs";
+import * as os from "node:os";
+import * as path from "node:path";
 import { Agent, hashFields, reviewItemFingerprint } from "../../../src/ocr/agent/agent.js";
-import { buildFilterCommentsJSON, parseFilterResponse } from "../../../src/ocr/agent/filter.js";
+import { buildFilterCommentsJSON, parseFilterResponse, parseFilterToolCalls } from "../../../src/ocr/agent/filter.js";
 import { formatToolDefs, BuildToolDefs } from "../../../src/ocr/agent/format.js";
 import { extFromPath } from "../../../src/ocr/agent/preview.js";
 import type { Diff } from "../../../src/ocr/model/diff.js";
 import { createDiff } from "../../../src/ocr/model/diff.js";
+import { parseDiffText } from "../../../src/ocr/diff/parser.js";
 import { countTokens } from "../../../src/ocr/llmloop/compression.js";
 import type { Template } from "../../../src/ocr/template/template.js";
 
@@ -58,6 +62,19 @@ describe("ocr agent helpers (ported from internal/agent/agent_test.go)", () => {
       }
     }
     expect(buildFilterCommentsJSON([])).toBe("[]");
+  });
+
+  // OCR v1.9.9: TestParseFilterToolCalls
+  test("TestParseFilterToolCalls", () => {
+    const call = (name: string, argumentsText: string) => ({
+      id: "call", type: "function", function: { name, arguments: argumentsText },
+    });
+    expect(parseFilterToolCalls([], 5)).toBeNull();
+    expect([...parseFilterToolCalls([call("report_incorrect_comments", `{"comment_ids":["c-0","c-2"]}`)], 5)!.keys()]).toEqual([0, 2]);
+    expect(parseFilterToolCalls([call("approve_all_comments", "{}")], 5)?.size).toBe(0);
+    expect(parseFilterToolCalls([call("other_tool", `{"comment_ids":["c-0"]}`)], 5)).toBeNull();
+    expect([...parseFilterToolCalls([call("report_incorrect_comments", `{"comment_ids":["c-0","c-10"]}`)], 5)!.keys()]).toEqual([0]);
+    expect(parseFilterToolCalls([call("report_incorrect_comments", "not json")], 5)).toBeNull();
   });
 
   // OCR v1.9.3: TestParseFilterResponse
@@ -319,6 +336,29 @@ describe("ocr agent helpers (ported from internal/agent/agent_test.go)", () => {
     }
     const withContextLine = { ...base, diff: base.diff + "\n " };
     expect(reviewItemFingerprint("range", withContextLine)).not.toBe(want);
+  });
+
+  // OCR v1.9.9: TestReviewItemFingerprintStableAcrossPatchPosition
+  test("TestReviewItemFingerprintStableAcrossPatchPosition", async () => {
+    const target = "diff --git a/a.go b/a.go\n--- a/a.go\n+++ b/a.go\n@@ -1 +1 @@\n-old\n+new\n";
+    const other = "diff --git a/z.go b/z.go\n--- a/z.go\n+++ b/z.go\n@@ -1 +1 @@\n-x\n+y\n";
+    const repo = fs.mkdtempSync(path.join(os.tmpdir(), "ocr-fingerprint-"));
+    try {
+      fs.writeFileSync(path.join(repo, "a.go"), "new\n");
+      fs.writeFileSync(path.join(repo, "z.go"), "y\n");
+      const fingerprintOfA = async (patch: string): Promise<string> => {
+        const diffs = await parseDiffText(patch, repo, "", null);
+        const targetDiff = diffs.find((diff) => diff.newPath === "a.go");
+        if (targetDiff === undefined) throw new Error("a.go missing from parsed diffs");
+        return reviewItemFingerprint("range", targetDiff);
+      };
+      expect(await fingerprintOfA(other + target)).toBe(await fingerprintOfA(target + other));
+      expect(await fingerprintOfA(other + "\n\n" + target + "\n\n")).toBe(
+        await fingerprintOfA(target + "\n\n" + other + "\n\n"),
+      );
+    } finally {
+      fs.rmSync(repo, { recursive: true, force: true });
+    }
   });
 
   // OCR v1.9.3: TestCountReviewable

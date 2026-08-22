@@ -27,6 +27,10 @@ The next v1.9.9 tranche translates the four background-selection cases. File
 content now wins over inline and commit-message fallback through one shared
 resolver; remaining inventory work is still pending.
 
+The review-filter/fingerprint tranche translates five v1.9.9 cases using the
+v1.9.5 terminal filter-tool contract and pinned filter prompts. Remaining
+inventory work is still pending.
+
 Existing `src/ocr` code is **candidate implementation**, not proven
 parity. Do not delete or rewrite it merely because its old verifiers were
 unsound. Reuse it only when a new gate proves its behavior.

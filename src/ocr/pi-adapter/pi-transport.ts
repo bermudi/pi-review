@@ -330,6 +330,11 @@ export interface CreatePiTransportForFileOptions {
   readonly cwd: string;
   readonly agentDir: string;
   readonly tools: readonly ToolDef[];
+  /**
+   * Host-registered but initially inactive terminal tools. They become visible
+   * only when a request explicitly selects them (review filtering).
+   */
+  readonly supplementalTools?: readonly ToolDef[];
   readonly model?: unknown;
   /** Optional session affinity id for SessionManager (maps to prompt_cache_key / x-session-affinity via Pi providers). */
   readonly sessionId?: string;
@@ -825,7 +830,7 @@ export class PiTransport implements TranscriptLlmTransport {
 export async function createPiTransportForFile(
   options: CreatePiTransportForFileOptions,
 ): Promise<PiTransport> {
-  const { cwd, agentDir, tools, model, sessionId, retryCollector } = options;
+  const { cwd, agentDir, tools, supplementalTools = [], model, sessionId, retryCollector } = options;
 
   const sessionManager = sessionId !== undefined && sessionId !== "" ? SessionManager.inMemory(cwd, { id: sessionId }) : SessionManager.inMemory(cwd);
   const settingsManager = SettingsManager.inMemory({
@@ -862,7 +867,7 @@ export async function createPiTransportForFile(
     return originalGetSystemPrompt();
   };
 
-  const customTools = tools.map((def) => {
+  const customTools = [...tools, ...supplementalTools].map((def) => {
     const name = def.function.name;
     const description = def.function.description ?? `Tool ${name}`;
     const parameters = toPiToolParameters(def.function.parameters);
