@@ -47,8 +47,9 @@ disturbing remaining ordered files. Remaining inventory work is still pending.
 
 The session filesystem/finalization tranche translates two v1.9.9 cases.
 Malformed sessions directories fail rather than looking empty, and failed
-writer creation cannot advertise a resumable session or produce stdout output.
-Remaining inventory work is still pending.
+writer creation cannot advertise a resumable session. Its completed manifest is
+still emitted once on stdout while the delivery error makes the command fail on
+stderr. Remaining inventory work is still pending.
 
 Existing `src/ocr` code is **candidate implementation**, not proven
 parity. Do not delete or rewrite it merely because its old verifiers were

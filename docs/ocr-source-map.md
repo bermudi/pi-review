@@ -43,8 +43,8 @@ byte-identical top-level tests; its pending cases are v1.9.9 upgrade work.
   binary-sniff skips in the scan provider.
 - OCR v1.9.9 commit `4b6874bd23106b5c68bea6d230bb60303b9f0961`:
   session listing treats a non-directory sessions path as an actionable error,
-  and writer-creation failure remains terminal, non-resumable, and stderr-only
-  at the review command boundary.
+  and writer-creation failure remains non-resumable while its final manifest is
+  still published; the delivery error itself is emitted on stderr.
 
 This map is the Phase 2 contract from `docs/ocr-port-plan.md`. Each row identifies OCR production and test scope, whether Pi code is reused/wrapped/replaced, and where the TypeScript home lives. It is not a completion ledger. The exhaustive, path-qualified disposition of every pinned upstream test is `docs/ocr-upstream-test-inventory.json`, checked by `test/ocr/manifest-coverage.test.ts`. No parity engine may import `src/{reviewer,pi-runner,prompts,tools,phase-tools,resolver,change-map}` policy — reuse only after OCR-derived tests prove parity.
 

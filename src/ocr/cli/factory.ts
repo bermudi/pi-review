@@ -232,9 +232,9 @@ export function createReviewRunnerFactory(
         if (runError !== null) throw runError;
         return comments;
       },
-      // A failed session_end cannot be resumed; do not publish a partial
-      // result on stdout as though it were a durable review session.
-      manifest: session.HasPersistence() ? agent.RunManifest() ?? undefined : undefined,
+      // A failed session_end cannot be resumed, but its already-built
+      // manifest remains useful coverage evidence for the final result.
+      manifest: agent.RunManifest() ?? undefined,
       warnings,
       filesReviewed: agent.FilesReviewed(),
       inputTokens: agent.TotalInputTokens(),

@@ -108,7 +108,7 @@ test("production review factory persists one cancelled Agent session", async () 
   }
 });
 
-test("writer creation failure stays off stdout and suppresses the session ID", async () => {
+test("writer creation failure publishes the manifest but suppresses the session ID", async () => {
   const repo = fs.mkdtempSync(path.join(os.tmpdir(), "ocr-factory-session-error-"));
   const home = fs.mkdtempSync(path.join(os.tmpdir(), "ocr-factory-home-"));
   const originalHome = process.env.HOME;
@@ -146,8 +146,15 @@ test("writer creation failure stays off stdout and suppresses the session ID", a
     });
     expect(code).toBe(1);
     expect(created?.sessionId).toBe("");
-    expect(created?.manifest).toBeUndefined();
-    expect(stdout).toBe("");
+    expect(created?.manifest).toBeDefined();
+    const result = JSON.parse(stdout) as {
+      manifest?: { terminalState?: string; coverage?: unknown };
+      session_id?: string;
+    };
+    expect(result.manifest?.terminalState).toBe(created?.manifest?.terminalState);
+    expect(result.manifest?.coverage).toBeDefined();
+    expect(result.session_id).toBeUndefined();
+    expect(stdout).not.toContain("--resume");
     expect(stderr).toContain("create session writer");
   } finally {
     process.env.HOME = originalHome;
