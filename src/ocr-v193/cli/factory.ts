@@ -17,6 +17,18 @@ import { loadDefaultTemplate, loadDefaultScanTemplate, applyLanguage, applyLangu
 import { newResolver, type FileFilter } from "../rules/system_rules.js";
 import { minimatch } from "minimatch";
 import { mainTaskToolDefs, planTaskToolDefs, loadToolConfig, buildToolDefs } from "../tool/tools-config.js";
+
+/**
+ * Exact allowlist of host-implemented safe capabilities.
+ * Custom tools files may override/reorder/subset these schemas but must not
+ * advertise unknown or mutation capabilities to the model. This mirrors the
+ * six tools in the embedded tools.json and matches the host registry.
+ */
+const SAFE_TOOL_ALLOWLIST = new Set<string>(["task_done", "code_comment", "file_read", "code_search", "file_read_diff", "file_find"]);
+
+function filterToAllowlist(defs: readonly import("../llmloop/types.js").ToolDef[]): readonly import("../llmloop/types.js").ToolDef[] {
+  return defs.filter((d) => SAFE_TOOL_ALLOWLIST.has(d.function.name as string));
+}
 import { CommentCollector } from "../tool/collector.js";
 import { CommentWorkerPool } from "../llmloop/pool.js";
 import { Agent, newAgent, reviewItemFingerprint } from "../agent/agent.js";
@@ -67,12 +79,11 @@ export function createReviewRunnerFactory(
     if (opts.toolConfigPath !== "" && opts.toolConfigPath !== undefined) {
       try {
         const entries = loadToolConfig(opts.toolConfigPath);
-        mainToolDefs = buildToolDefs(entries, false);
-        planToolDefs = buildToolDefs(entries, true);
+        mainToolDefs = filterToAllowlist(buildToolDefs(entries, false));
+        planToolDefs = filterToAllowlist(buildToolDefs(entries, true));
       } catch (e) {
         const msg = e instanceof Error ? e.message : String(e);
-        // Mirror Go's "load tools: %w" wrapping from shared.go loadLLMRuntime
-        throw new Error(msg.startsWith("read tools file") || msg.startsWith("unmarshal tools file") ? `load tools: ${msg}` : `load tools: ${msg}`);
+        throw new Error(`load tools: ${msg}`);
       }
     } else {
       mainToolDefs = mainTaskToolDefs();
@@ -450,10 +461,10 @@ export function createScanRunnerFactory(
     if (opts.toolConfigPath !== "" && opts.toolConfigPath !== undefined) {
       try {
         const entries = loadToolConfig(opts.toolConfigPath);
-        allMainToolDefs = buildToolDefs(entries, false);
+        allMainToolDefs = filterToAllowlist(buildToolDefs(entries, false));
       } catch (e) {
         const msg = e instanceof Error ? e.message : String(e);
-        throw new Error(msg.startsWith("read tools file") || msg.startsWith("unmarshal tools file") ? `load tools: ${msg}` : `load tools: ${msg}`);
+        throw new Error(`load tools: ${msg}`);
       }
     } else {
       allMainToolDefs = mainTaskToolDefs();

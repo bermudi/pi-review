@@ -28,24 +28,26 @@ function initRepoWithFile(): string {
   return repo;
 }
 
-test("custom tools file changes advertised tool definitions on factory transport seam", async () => {
+test("custom tools file customizes safe built-in schema and reaches transport", async () => {
   const repo = initRepoWithFile();
   const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "ocr-tools-"));
   const toolsPath = path.join(tmp, "tools.json");
+  const customDesc = "CUSTOM_CODE_COMMENT_FOR_TEST_" + Math.random().toString(36).slice(2);
   const customDef = {
-    name: "custom_test_tool",
-    description: "custom tool for factory boundary test",
+    name: "code_comment",
+    description: customDesc,
     parameters: {
       type: "object",
       properties: {
-        foo: { type: "string", description: "foo param" },
+        comments: { type: "array", description: "custom" },
       },
-      required: ["foo"],
+      required: ["comments"],
     },
   };
+  // Override code_comment and keep task_done to prove reorder/subset works; order is custom first
   const customEntries = [
-    { name: "custom_test_tool", plan_task: false, main_task: true, definition: customDef },
-    { name: "code_comment", plan_task: false, main_task: true, definition: { name: "code_comment", description: "x", parameters: { type: "object", properties: {} } } },
+    { name: "code_comment", plan_task: false, main_task: true, definition: customDef },
+    { name: "task_done", plan_task: false, main_task: true, definition: { name: "task_done", description: "done", parameters: { type: "object", properties: { state: { type: "string" } }, required: ["state"] } } },
   ];
   fs.writeFileSync(toolsPath, JSON.stringify(customEntries), "utf8");
 
@@ -87,25 +89,88 @@ test("custom tools file changes advertised tool definitions on factory transport
       } as never,
       repo,
     );
-    // Factory is async and will attempt to load diffs and create transport.
-    // We only care that transport was called with custom tool defs.
     try {
       await factory();
     } catch (e) {
-      // Factory may fail after transport due to missing LLM config, but spy should have captured.
-      // If it threw before transport (e.g., load tools), rethrow.
+      if (capturedTools === null) throw e;
+    }
+    expect(capturedTools).not.toBeNull();
+    const toolsArr = capturedTools as Array<{ function: { name: string; description?: string } }>;
+    const names = toolsArr.map((t) => t.function.name);
+    // Custom file reorders/subsets: only the two safe tools should be advertised, in file order
+    expect(names).toEqual(["code_comment", "task_done"]);
+    const cc = toolsArr.find((t) => t.function.name === "code_comment");
+    expect(cc).toBeDefined();
+    expect(cc!.function.description).toBe(customDesc);
+  } finally {
+    spy.mockRestore();
+    fs.rmSync(repo, { recursive: true, force: true });
+    fs.rmSync(tmp, { recursive: true, force: true });
+  }
+});
+
+test("arbitrary and shell-like definitions never reach transport", async () => {
+  const repo = initRepoWithFile();
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "ocr-tools-"));
+  const toolsPath = path.join(tmp, "tools.json");
+  const customEntries = [
+    { name: "shell", plan_task: false, main_task: true, definition: { name: "shell", description: "run shell", parameters: { type: "object", properties: { cmd: { type: "string" } } } } },
+    { name: "custom_test_tool", plan_task: false, main_task: true, definition: { name: "custom_test_tool", description: "x", parameters: { type: "object", properties: {} } } },
+    { name: "code_comment", plan_task: false, main_task: true, definition: { name: "code_comment", description: "keep", parameters: { type: "object", properties: {} } } },
+  ];
+  fs.writeFileSync(toolsPath, JSON.stringify(customEntries), "utf8");
+
+  let capturedTools: unknown = null;
+  const spy = spyOn(PiTransport as unknown as Record<string, unknown> & { createPiTransportForFile: (...a: unknown[]) => Promise<unknown> }, "createPiTransportForFile").mockImplementation(async (opts: unknown) => {
+    const o = opts as { tools?: unknown };
+    capturedTools = o.tools;
+    return {
+      dispose: async () => {},
+      complete: async () => ({ content: "", toolCalls: [], usage: undefined }),
+    } as unknown as never;
+  });
+
+  try {
+    const factory = createReviewRunnerFactory(
+      {
+        toolConfigPath: toolsPath,
+        rulePath: "",
+        repoDir: repo,
+        from: "",
+        to: "",
+        commit: "",
+        resume: "",
+        excludes: "",
+        outputFormat: "text",
+        audience: "human",
+        background: "",
+        backgroundFile: "",
+        provider: "",
+        model: "",
+        concurrency: 1,
+        perFileTimeout: 10,
+        maxTools: 0,
+        maxGitProcs: 2,
+        maxTokens: 0,
+        maxTokensBudget: 0,
+        noFilter: false,
+        preview: false,
+      } as never,
+      repo,
+    );
+    try {
+      await factory();
+    } catch (e) {
       if (capturedTools === null) throw e;
     }
     expect(capturedTools).not.toBeNull();
     const toolsArr = capturedTools as Array<{ function: { name: string } }>;
     const names = toolsArr.map((t) => t.function.name);
-    expect(names).toContain("custom_test_tool");
-    // Verify that the custom tool's parameters are object-root and preserved
-    const custom = toolsArr.find((t) => t.function.name === "custom_test_tool");
-    expect(custom).toBeDefined();
-    // Ensure bounded capabilities: no shell tool should be present
     expect(names).not.toContain("shell");
-    expect(names).not.toContain("exec");
+    expect(names).not.toContain("custom_test_tool");
+    expect(names).toContain("code_comment");
+    // Only allowlisted safe tools should be advertised; arbitrary ones are dropped
+    expect(names.every((n) => ["task_done", "code_comment", "file_read", "code_search", "file_read_diff", "file_find"].includes(n))).toBe(true);
   } finally {
     spy.mockRestore();
     fs.rmSync(repo, { recursive: true, force: true });

@@ -398,18 +398,9 @@ export function buildToolDefs(entries: readonly ToolConfigEntry[], planOnly: boo
         continue;
       }
     }
-    // Bounded capabilities: deny explicit mutation tool names via custom config.
-    // This does not affect the 6 built-in allowlisted tools.
-    const lower = fnName.toLowerCase();
-    const isBuiltIn = ["task_done", "code_comment", "file_read", "code_search", "file_read_diff", "file_find"].includes(lower);
-    if (!isBuiltIn) {
-      const denyList = ["shell", "exec", "edit", "write", "apply_patch", "run_shell", "bash", "sh", "mutation"];
-      const isDenied = denyList.some((d) => lower.includes(d));
-      if (isDenied) {
-        try { console.error(`[pi-review] WARNING: tool ${JSON.stringify(fnName)} denied: mutation capabilities not allowed via custom tools config`);} catch {}
-        continue;
-      }
-    }
+    // No allowlist filtering here: the pure translation layer preserves
+    // OCR-generic behavior and returns whatever the config advertises.
+    // Production allowlisting is enforced at the factory boundary.
     const raw = JSON.stringify(defRaw);
     const fn: Record<string, unknown> = {
       name: fnName,
