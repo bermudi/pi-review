@@ -5,6 +5,26 @@
 import { expect, test } from "bun:test";
 import { colorize, resolveColor, validateColorMode } from "../../../src/ocr/cli/color.js";
 import { parseReviewFlags, runCli } from "../../../src/ocr/cli/index.js";
+import type { Preview } from "../../../src/ocr/model/preview.js";
+
+const preview: Preview = {
+  entries: [{ path: "main.go", status: "modified", insertions: 1, deletions: 0, willReview: true }],
+  totalInsertions: 1,
+  totalDeletions: 0,
+  totalFiles: 1,
+  reviewableCount: 1,
+  excludedCount: 0,
+};
+
+function capture(): { stdout: string; stderr: string; io: { stdout: (text: string) => void; stderr: (text: string) => void; stdoutIsTTY: () => boolean } } {
+  let stdout = "";
+  let stderr = "";
+  return {
+    get stdout() { return stdout; },
+    get stderr() { return stderr; },
+    io: { stdout: (text) => { stdout += text; }, stderr: (text) => { stderr += text; }, stdoutIsTTY: () => true },
+  };
+}
 
 // OCR v1.9.9: TestValidateColorMode
 test("TestValidateColorMode", () => {
@@ -39,7 +59,9 @@ test("TestAddColorFlags", () => {
 test("TestColorFlagsThroughRootCmd", async () => {
   for (const args of [
     ["--color=never", "version"],
+    ["--color", "always", "version"],
     ["version", "--color=never"],
+    ["version", "--color", "always"],
     ["version", "--color=always"],
   ]) {
     let stdout = "";
@@ -51,4 +73,58 @@ test("TestColorFlagsThroughRootCmd", async () => {
   let stderr = "";
   expect(await runCli(["version", "--color=sometimes"], { io: { stdout: () => {}, stderr: (text) => { stderr += text; } } })).toBe(1);
   expect(stderr).toContain('invalid --color value "sometimes"');
+});
+
+test("persistent color errors are shared by every command", async () => {
+  for (const args of [
+    ["review", "--color=sometimes"],
+    ["scan", "--color", "sometimes"],
+    ["review", "--color"],
+    ["scan", "--color=always", "--color=never"],
+  ]) {
+    const output = capture();
+    expect(await runCli(args, { io: output.io })).toBe(1);
+    expect(output.stderr).toContain("auto, always, never");
+  }
+});
+
+test("real review and scan preview rendering receives persistent color", async () => {
+  for (const command of ["review", "scan"] as const) {
+    const output = capture();
+    const code = await runCli([command, "--repo", process.cwd(), "--preview", "--color=always"], {
+      io: output.io,
+      reviewPreviewFactory: async () => preview,
+      scanPreviewFactory: async () => preview,
+    });
+    expect(code).toBe(0);
+    expect(output.stdout).toContain("\u001b[32m+1\u001b[0m");
+  }
+});
+
+test("machine output never carries ANSI", async () => {
+  for (const format of ["json", "sarif"] as const) {
+    const output = capture();
+    const code = await runCli(["review", "--repo", process.cwd(), "--format", format, "--color=always"], {
+      io: output.io,
+      reviewRunnerFactory: async () => ({
+        run: async () => [{ path: "main.go", startLine: 1, endLine: 1, content: "finding", category: "bug", severity: "high" }],
+        manifest: null,
+        warnings: [],
+        filesReviewed: 1,
+        inputTokens: 0,
+        outputTokens: 0,
+        totalTokens: 0,
+        cacheReadTokens: 0,
+        cacheWriteTokens: 0,
+        toolCalls: {},
+        sessionId: "",
+        budgetExceeded: false,
+        projectSummary: "",
+        resumeInfo: undefined,
+        diffs: [],
+      }),
+    });
+    expect(code).toBe(0);
+    expect(output.stdout).not.toContain("\u001b");
+  }
 });

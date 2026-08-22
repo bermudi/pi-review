@@ -453,19 +453,35 @@ export async function runCli(
     return parsed;
   })();
 
-  // Cobra's persistent root flag may precede the subcommand. Normalize that
-  // single placement into the subcommand option bag; post-command --color is
-  // handled by the ordinary flag parser below.
-  let rootColor: string | undefined;
-  if (args[0]?.startsWith("--color=")) {
-    rootColor = args[0]!.slice("--color=".length);
-    args = args.slice(1);
-  } else if (args[0] === "--color") {
-    rootColor = args[1];
-    args = args.slice(2);
-  }
-  if (rootColor !== undefined && !validateColorMode(rootColor)) {
-    io.stderr(`Error: ${colorModeError(rootColor).message}\n`);
+  let persistentColor: ReviewOptions["color"] | undefined;
+  try {
+    const normalized: string[] = [];
+    for (let index = 0; index < args.length; index += 1) {
+      const arg = args[index]!;
+      let value: string | undefined;
+      if (arg.startsWith("--color=")) {
+        value = arg.slice("--color=".length);
+      } else if (arg === "--color") {
+        const next = args[index + 1];
+        if (next === undefined || next.startsWith("--")) {
+          throw new CliUsageError(colorModeError("").message);
+        }
+        value = next;
+        index += 1;
+      } else {
+        normalized.push(arg);
+        continue;
+      }
+      if (persistentColor !== undefined) {
+        throw new CliUsageError("--color may be specified only once; must be one of auto, always, never");
+      }
+      if (!validateColorMode(value)) throw new CliUsageError(colorModeError(value).message);
+      persistentColor = value;
+    }
+    args = normalized;
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Unable to parse --color.";
+    io.stderr(`Error: ${message}\n`);
     return 1;
   }
 
@@ -478,13 +494,7 @@ export async function runCli(
   const first = args[0] ?? "";
   if (first === "--version" || first === "-V" || first === "version") {
     // Allow `pi-review version` or `pi-review --version` or `pi-review -V`
-    if (first === "version" && args.length === 2 && args[1]?.startsWith("--color=")) {
-      const mode = args[1]!.slice("--color=".length);
-      if (!validateColorMode(mode)) {
-        io.stderr(`Error: ${colorModeError(mode).message}\n`);
-        return 1;
-      }
-    } else if (first === "version" && args.length > 1) {
+    if (first === "version" && args.length > 1) {
       const extra = args[1] ?? "";
       io.stderr(`Error: unknown command "${extra}" for "pi-review version"\n\n${HELP_TEXT}`);
       return 1;
@@ -519,7 +529,8 @@ export async function runCli(
     let opts: ReviewOptions;
     try {
       opts = buildReviewOptions(map);
-      if (rootColor !== undefined) opts = { ...opts, color: rootColor as ReviewOptions["color"] };
+      if (persistentColor !== undefined) opts = { ...opts, color: persistentColor };
+      if (!validateColorMode(opts.color)) throw new CliUsageError(colorModeError(opts.color).message);
       validateReviewOptions(opts);
     } catch (err) {
       if (err instanceof CliUsageError) io.stderr(`Error: ${err.message}\n\n${HELP_TEXT}`);
@@ -641,7 +652,8 @@ export async function runCli(
     let opts: ScanOptions;
     try {
       opts = buildScanOptions(map);
-      if (rootColor !== undefined) opts = { ...opts, color: rootColor as ScanOptions["color"] };
+      if (persistentColor !== undefined) opts = { ...opts, color: persistentColor };
+      if (!validateColorMode(opts.color)) throw new CliUsageError(colorModeError(opts.color).message);
       validateScanOptions(opts);
     } catch (err) {
       if (err instanceof CliUsageError) io.stderr(`Error: ${err.message}\n\n${HELP_TEXT}`);

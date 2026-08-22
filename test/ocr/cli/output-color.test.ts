@@ -27,9 +27,18 @@ test("TestRenderComment_ColorEmitsEscapes", () => expect(renderComment(comment, 
 test("TestPrintDiffLine_NoColor", () => {
   expect(printDiffLine("+", "added line", "\u001b[92m", "\u001b[48;2;0;60;0m", false)).toBe("+ added line\n");
   expect(printDiffLine("-", "removed line", "\u001b[91m", "\u001b[48;2;70;0;0m", false)).toBe("- removed line\n");
+  expect(printDiffLine(" ", "context line", "\u001b[2m", "\u001b[48;2;38;38;38m", false)).toBe("  context line\n");
 });
 // OCR v1.9.9: TestStatusBadge_NoColor
-test("TestStatusBadge_NoColor", () => expect(statusBadge("added", false)).toBe("[A]"));
+test("TestStatusBadge_NoColor", () => {
+  expect(statusBadge("added", false)).toBe("[A]");
+  expect(statusBadge("modified", false)).toBe("[M]");
+  expect(statusBadge("deleted", false)).toBe("[D]");
+  expect(statusBadge("renamed", false)).toBe("[R]");
+  expect(statusBadge("binary", false)).toBe("[B]");
+  expect(statusBadge("scan", false)).toBe("[S]");
+  expect(statusBadge("unknown", false)).toBe("[?]");
+});
 // OCR v1.9.9: TestStatusBadge_Color
 test("TestStatusBadge_Color", () => {
   expect(statusBadge("added", true)).toBe("\u001b[32m[A]\u001b[0m");
