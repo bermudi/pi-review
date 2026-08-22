@@ -8,7 +8,7 @@
   "license": "Apache-2.0",
   "license_file": "LICENSES/Apache-2.0.txt",
   "notices": "THIRD_PARTY_NOTICES.md",
-  "note": "Prompt bytes are byte-identical to upstream. Provenance is kept in this adjacent metadata file and in src/ocr-v193/template/template.ts EXPECTED_PROMPT_HASHES so model input is unchanged. Modifications are distributed under GPL-3.0-or-later.",
+  "note": "Prompt bytes are byte-identical to upstream. Provenance is kept in this adjacent metadata file and in src/ocr/template/template.ts EXPECTED_PROMPT_HASHES so model input is unchanged. Modifications are distributed under GPL-3.0-or-later.",
   "files": [
     {
       "file": "main_task_system.md",

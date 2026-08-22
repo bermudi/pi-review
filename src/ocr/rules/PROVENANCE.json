@@ -8,28 +8,28 @@
   "license_file": "LICENSES/Apache-2.0.txt",
   "notices": "THIRD_PARTY_NOTICES.md",
   "loaders": [
-    "src/ocr-v193/rules/allowed_ext.ts (Ported from internal/config/allowlist/allowed_ext.go)",
-    "src/ocr-v193/rules/system_rules.ts (Ported from internal/config/rules/system_rules.go)"
+    "src/ocr/rules/allowed_ext.ts (Ported from internal/config/allowlist/allowed_ext.go)",
+    "src/ocr/rules/system_rules.ts (Ported from internal/config/rules/system_rules.go)"
   ],
   "note": "JSON and markdown files are byte-identical to upstream. Hashes are frozen in allowed_ext.ts and system_rules.ts and verified on every LoadDefault call.",
   "files": [
     {
-      "dest": "src/ocr-v193/rules/supported_file_types.json",
+      "dest": "src/ocr/rules/supported_file_types.json",
       "upstream": "internal/config/allowlist/supported_file_types.json",
       "sha256": "461152c7eba4010c8d7a84cb1e8182cf31fe58c62f95561be8829998f7bd4b7e"
     },
     {
-      "dest": "src/ocr-v193/rules/default_exclude_patterns.json",
+      "dest": "src/ocr/rules/default_exclude_patterns.json",
       "upstream": "internal/config/allowlist/default_exclude_patterns.json",
       "sha256": "93d96d1e3683d68d9e73ef35a955445e64d53dd9c48cc008356801928ee385c5"
     },
     {
-      "dest": "src/ocr-v193/rules/system_rules.json",
+      "dest": "src/ocr/rules/system_rules.json",
       "upstream": "internal/config/rules/system_rules.json",
       "sha256": "90a4dd5ab978877011eadd2b7386666342de2e154697647284adeb37908e4072"
     },
     {
-      "dest": "src/ocr-v193/rules/rule_docs/*.md (35 files)",
+      "dest": "src/ocr/rules/rule_docs/*.md (35 files)",
       "upstream": "internal/config/rules/rule_docs/*.md",
       "sha256_manifest": "see system_rules.ts EXPECTED_RULE_DOC_HASHES and this file"
     }
