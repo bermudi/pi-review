@@ -1,7 +1,7 @@
 #!/usr/bin/env bun
 // SPDX-License-Identifier: Apache-2.0
 // Gate 2 — One real OCR/Pi vertical slice (black-box)
-// See docs/ocr-v1.9.3-port-plan.md Gate 2.
+// See docs/ocr-port-plan.md Gate 2.
 
 import { spawn, spawnSync } from "node:child_process";
 import type { ChildProcess } from "node:child_process";
@@ -144,7 +144,7 @@ async function getOcrBinary(): Promise<string> {
   if (cachedOcrBinary && existsSync(cachedOcrBinary)) return cachedOcrBinary;
   verifyPinnedRef();
   const refCheckout = resolve(import.meta.dir, "../../../open-code-review");
-  const buildDir = await mkdtemp(join(tmpdir(), "ocr-v193-build-"));
+  const buildDir = await mkdtemp(join(tmpdir(), "ocr-build-"));
   cachedOcrBuildDir = buildDir;
   const archivePath = join(buildDir, "ocr.tar");
   const archiveRes = spawnSync("git", ["archive", "--format=tar", "-o", archivePath, PINNED_TAG], { cwd: refCheckout, encoding: "utf-8", timeout: 15000 });
@@ -169,7 +169,7 @@ async function cleanupOcrBinary(): Promise<void> {
 }
 
 // ---------------------------------------------------------------------------
-// Git fixture helpers (no import of test/ocr-v193/harness)
+// Git fixture helpers (no import of test/ocr/harness)
 // ---------------------------------------------------------------------------
 
 function gitSync(cwd: string, args: readonly string[]): string {

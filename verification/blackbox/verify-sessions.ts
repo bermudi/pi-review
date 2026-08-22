@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 // Gate 4 sessions sub-gate — checkpoint creation, interruption, trusted resume,
-// and terminal manifests. See docs/ocr-v1.9.3-port-plan.md Gate 4.
+// and terminal manifests. See docs/ocr-port-plan.md Gate 4.
 
 import { mkdtemp, rm, writeFile, mkdir } from "node:fs/promises";
 import { existsSync, readdirSync, readFileSync } from "node:fs";

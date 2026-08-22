@@ -1,7 +1,7 @@
 #!/usr/bin/env bun
 // SPDX-License-Identifier: Apache-2.0
 // Copyright 2026 alibaba/open-code-review Contributors
-// Ported from docs/ocr-v1.9.3-port-plan.md Phase 0 verifier at c35ddd7223f2b5540ce03aa43c9a25ef643fca27
+// Ported from docs/ocr-port-plan.md Phase 0 verifier at c35ddd7223f2b5540ce03aa43c9a25ef643fca27
 // Modifications are distributed as part of pi-reviewer under GPL-3.0-or-later.
 
 import { execSync, spawnSync } from "node:child_process";
@@ -96,14 +96,14 @@ function verifyPinnedRef(): void {
 
 function checkPrivateImports(): { count: number; violations: string[] } {
   const violations: string[] = [];
-  // Check src/ocr-v193 production code for forbidden patterns
-  const srcDir = "src/ocr-v193";
+  // Check src/ocr production code for forbidden patterns
+  const srcDir = "src/ocr";
   try {
     const rgAny = spawnSync("sh", ["-c", `rg -n "as any|: any" ${srcDir} --hidden 2>/dev/null | head -n 50`], { encoding: "utf-8" });
     const anyOut = (rgAny.stdout as string) ?? "";
     if (anyOut.trim().length > 0) {
       // Filter out comments? Hard fail: any occurrence is forbidden except maybe type assertions in non-prod? Phase 0 says no as any in parity production code
-      // But we allow test files to have as any? This check is for src/ocr-v193 only, not test/
+      // But we allow test files to have as any? This check is for src/ocr only, not test/
       violations.push(`found 'as any' / ': any' in parity production code:\n${anyOut.trim()}`);
     }
     const rgPrivate = spawnSync("sh", ["-c", `rg -n "pi-agent-core|pi-ai" src --hidden 2>/dev/null | head -n 50`], { encoding: "utf-8" });
@@ -120,13 +120,13 @@ function checkPrivateImports(): { count: number; violations: string[] } {
     if (importLines.length > 0) {
       violations.push(`private Pi imports found:\n${importLines.join("\n")}`);
     }
-    const rgAgent = spawnSync("sh", ["-c", `rg -n "session\\.agent\\.state\\.messages\\s*=" src/ocr-v193 --hidden 2>/dev/null | head -n 20`], { encoding: "utf-8" });
+    const rgAgent = spawnSync("sh", ["-c", `rg -n "session\\.agent\\.state\\.messages\\s*=" src/ocr --hidden 2>/dev/null | head -n 20`], { encoding: "utf-8" });
     const agentOut = (rgAgent.stdout as string) ?? "";
     if (agentOut.trim().length > 0) {
       violations.push(`mutable session.agent.state.messages assignment found (must use public session.state):\n${agentOut.trim()}`);
     }
     // Also check for mutable sessAny.agent write (read-only feature detection is ok, write is private)
-    const rgAnyAgent = spawnSync("sh", ["-c", `rg -n "sessAny\\.agent.*messages\\s*=" src/ocr-v193 --hidden 2>/dev/null | head -n 20`], { encoding: "utf-8" });
+    const rgAnyAgent = spawnSync("sh", ["-c", `rg -n "sessAny\\.agent.*messages\\s*=" src/ocr --hidden 2>/dev/null | head -n 20`], { encoding: "utf-8" });
     const anyAgentOut = (rgAnyAgent.stdout as string) ?? "";
     if (anyAgentOut.trim().length > 0) {
       violations.push(`sessAny.agent private write found:\n${anyAgentOut.trim()}`);
@@ -142,8 +142,8 @@ async function runNegativeTests(artifactsDir: string): Promise<{ assertions: num
   const fixtures: string[] = [];
 
   // Import trace modules dynamically (avoid top-level import failures)
-  const { TraceRecorder } = await import("../src/ocr-v193/trace/recorder.js");
-  const { compareTraces } = await import("../src/ocr-v193/trace/comparer.js");
+  const { TraceRecorder } = await import("../src/ocr/trace/recorder.js");
+  const { compareTraces } = await import("../src/ocr/trace/comparer.js");
 
   const commit = currentCommit();
 
@@ -231,7 +231,7 @@ async function runNegativeTests(artifactsDir: string): Promise<{ assertions: num
       // Simulate missing file handling: compareTraces requires both traces; missing file would be caught before compare.
       // Here we test that the harness verify routine correctly fails when a trace file is absent.
       // We just verify that our helper throws if given undefined.
-      const fakeMissing = undefined as unknown as import("../src/ocr-v193/trace/types.js").Trace;
+      const fakeMissing = undefined as unknown as import("../src/ocr/trace/types.js").Trace;
       if (!fakeMissing) throw new Error("missing OCR trace file: trace-ocr.json not found");
       return false;
     } catch (e) {
@@ -245,7 +245,7 @@ async function runNegativeTests(artifactsDir: string): Promise<{ assertions: num
   assertions += 1;
   const missingPi = (): boolean => {
     try {
-      const fakeMissing = undefined as unknown as import("../src/ocr-v193/trace/types.js").Trace;
+      const fakeMissing = undefined as unknown as import("../src/ocr/trace/types.js").Trace;
       if (!fakeMissing) throw new Error("missing Pi trace file: trace-pi.json not found");
       return false;
     } catch (e) {
@@ -319,7 +319,7 @@ async function main(): Promise<void> {
   // 6. Additional assertions: trace recorder ordinal sequencing
   let assertions = negAssertions;
   fixtures.push("trace-ordinal-sequencing");
-  const { TraceRecorder } = await import("../src/ocr-v193/trace/recorder.js");
+  const { TraceRecorder } = await import("../src/ocr/trace/recorder.js");
   const commit = currentCommit();
   const rec = new TraceRecorder("pi", "ordinal-check", commit);
   rec.recordRequest("m", [], []);

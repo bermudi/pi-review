@@ -9,7 +9,7 @@ function currentCommit(): string { try { return execSync("git rev-parse HEAD", {
 function fail(msg: string, dir?: string): never { console.log(JSON.stringify({ phase:"phase5-scan-session", commit: currentCommit(), fixtures:[], assertions:0, notApplicable:[], privateImports:-1, result:"fail" as const, error:msg, artifactsDir: dir ?? null })); console.error(`[verify:phase5-scan-session] FAIL: ${msg}`); process.exit(1);}
 function checkGitClean(): void { const d=spawnSync("git",["diff","--quiet"],{stdio:"ignore"}); if(d.status!==0) fail("dirty working tree"); const u=execSync("git ls-files --others --exclude-standard",{encoding:"utf-8"}).trim(); if(u.length>0) fail(`untracked files:\n${u}`);}
 function verifyPinnedRef(): void { const exp="c35ddd7223f2b5540ce03aa43c9a25ef643fca27"; const p="../open-code-review"; if(!existsSync(p)) fail(`missing ${p}`); try{ const c=execSync(`git -C ${p} rev-parse v1.9.3^{commit}`,{encoding:"utf-8"}).trim(); if(c!==exp) fail(`commit mismatch ${c}`);}catch(e){ const m=e instanceof Error?e.message:String(e); if(m.includes("FAIL")) throw e; fail(m); } }
-function checkPrivateImports(): number { const rg=spawnSync("sh",["-c",`rg -n "pi-agent-core|pi-ai" src --hidden 2>/dev/null | head -n 50`],{encoding:"utf-8"}); const out=(rg.stdout as string)??""; const lines=out.split("\n").filter(l=>{const t=l.trim(); if(t.startsWith("*")||t.startsWith("//")||t.includes("`pi-agent")) return false; return /from\s+["'][^"']*pi-agent/.test(l)||/import\s*\(.*pi-agent/.test(l)||/^\s*import\s+.*pi-agent/.test(l);}).join("\n"); if(lines.trim().length>0){ console.log(JSON.stringify({phase:"phase5-scan-session",commit:currentCommit(),fixtures:[],assertions:0,notApplicable:[],privateImports:1,result:"fail" as const,error:`private imports: ${lines}`,artifactsDir:null})); console.error(`FAIL private imports`); process.exit(1); } const rg2=spawnSync("sh",["-c",`rg -n "as any|: any" src\\/ocr-v193 --hidden 2>/dev/null | head -n 20`],{encoding:"utf-8"}); const o2=(rg2.stdout as string)??""; if(o2.trim().length>0){ console.log(JSON.stringify({phase:"phase5-scan-session",commit:currentCommit(),fixtures:[],assertions:0,notApplicable:[],privateImports:1,result:"fail" as const,error:`as any: ${o2}`,artifactsDir:null})); process.exit(1); } return 0; }
+function checkPrivateImports(): number { const rg=spawnSync("sh",["-c",`rg -n "pi-agent-core|pi-ai" src --hidden 2>/dev/null | head -n 50`],{encoding:"utf-8"}); const out=(rg.stdout as string)??""; const lines=out.split("\n").filter(l=>{const t=l.trim(); if(t.startsWith("*")||t.startsWith("//")||t.includes("`pi-agent")) return false; return /from\s+["'][^"']*pi-agent/.test(l)||/import\s*\(.*pi-agent/.test(l)||/^\s*import\s+.*pi-agent/.test(l);}).join("\n"); if(lines.trim().length>0){ console.log(JSON.stringify({phase:"phase5-scan-session",commit:currentCommit(),fixtures:[],assertions:0,notApplicable:[],privateImports:1,result:"fail" as const,error:`private imports: ${lines}`,artifactsDir:null})); console.error(`FAIL private imports`); process.exit(1); } const rg2=spawnSync("sh",["-c",`rg -n "as any|: any" src\\/ocr --hidden 2>/dev/null | head -n 20`],{encoding:"utf-8"}); const o2=(rg2.stdout as string)??""; if(o2.trim().length>0){ console.log(JSON.stringify({phase:"phase5-scan-session",commit:currentCommit(),fixtures:[],assertions:0,notApplicable:[],privateImports:1,result:"fail" as const,error:`as any: ${o2}`,artifactsDir:null})); process.exit(1); } return 0; }
 async function main(): Promise<void> {
   let artifactsDir=""; const args=process.argv.slice(2);
   for(let i=0;i<args.length;i++){ if(args[i]==="--artifacts"&&i+1<args.length) artifactsDir=args[i+1] as string; else if((args[i] as string).startsWith("--artifacts=")) artifactsDir=(args[i] as string).split("=")[1] as string; }
@@ -26,25 +26,25 @@ async function main(): Promise<void> {
   const phase4=spawnSync("bun",["run","scripts/verify-phase4-inputs.ts","--artifacts",join(artifactsDir,"phase4")],{encoding:"utf-8"});
   if(phase4.status!==0) fail(`Phase4 fail: ${phase4.stdout?.slice(0,800)} ${phase4.stderr?.slice(0,800)}`,artifactsDir);
   mkdirSync(artifactsDir,{recursive:true});
-  const { createTempRepo, applyWorkspaceChanges } = await import("../test/ocr-v193/harness/fixture.js");
-  const { startFakeServer } = await import("../test/ocr-v193/harness/fake-server.js");
-  const { compareRuns, formatMismatches } = await import("../test/ocr-v193/harness/comparer.js");
-  const { Provider: ScanProvider } = await import("../src/ocr-v193/scan/provider.js");
-  const { groupBatches, parseBatchStrategy } = await import("../src/ocr-v193/scan/batch.js");
-  const { Agent: ScanAgent, scanItemFingerprint } = await import("../src/ocr-v193/scan/scan.js");
-  const { previewScan } = await import("../src/ocr-v193/scan/preview.js");
-  const { SessionHistory } = await import("../src/ocr-v193/session/history.js");
-  const { ManifestBuilder, MANIFEST_SCHEMA_VERSION, OperationReview } = await import("../src/ocr-v193/session/manifest.js");
-  const { ResumeState, NewResumeLineage, ResumeLineageSchemaVersion } = await import("../src/ocr-v193/session/resume.js");
-  const { SessionFilePath, SessionsDir, newJSONLWriter, createMemoryWriter } = await import("../src/ocr-v193/session/persist.js");
-  const { loadDefaultTemplate } = await import("../src/ocr-v193/template/template.js");
-  const { outputText, outputTextWithWarnings, outputJsonWithWarnings, outputJsonNoFiles, outputRetryReportText, retryAttemptChain } = await import("../src/ocr-v193/cli/output.js");
-  const { outputSarifText, SARIF_SCHEMA, SARIF_VERSION } = await import("../src/ocr-v193/cli/sarif.js");
-  const { runCli: runOcrCli } = await import("../src/ocr-v193/cli/index.js");
-  const { createPiTransportForFile } = await import("../src/ocr-v193/pi-adapter/pi-transport.js");
-  const { CommentCollector } = await import("../src/ocr-v193/tool/collector.js");
-  const { Runner } = await import("../src/ocr-v193/llmloop/loop.js");
-  const { TraceRecorder } = await import("../src/ocr-v193/trace/recorder.js");
+  const { createTempRepo, applyWorkspaceChanges } = await import("../test/ocr/harness/fixture.js");
+  const { startFakeServer } = await import("../test/ocr/harness/fake-server.js");
+  const { compareRuns, formatMismatches } = await import("../test/ocr/harness/comparer.js");
+  const { Provider: ScanProvider } = await import("../src/ocr/scan/provider.js");
+  const { groupBatches, parseBatchStrategy } = await import("../src/ocr/scan/batch.js");
+  const { Agent: ScanAgent, scanItemFingerprint } = await import("../src/ocr/scan/scan.js");
+  const { previewScan } = await import("../src/ocr/scan/preview.js");
+  const { SessionHistory } = await import("../src/ocr/session/history.js");
+  const { ManifestBuilder, MANIFEST_SCHEMA_VERSION, OperationReview } = await import("../src/ocr/session/manifest.js");
+  const { ResumeState, NewResumeLineage, ResumeLineageSchemaVersion } = await import("../src/ocr/session/resume.js");
+  const { SessionFilePath, SessionsDir, newJSONLWriter, createMemoryWriter } = await import("../src/ocr/session/persist.js");
+  const { loadDefaultTemplate } = await import("../src/ocr/template/template.js");
+  const { outputText, outputTextWithWarnings, outputJsonWithWarnings, outputJsonNoFiles, outputRetryReportText, retryAttemptChain } = await import("../src/ocr/cli/output.js");
+  const { outputSarifText, SARIF_SCHEMA, SARIF_VERSION } = await import("../src/ocr/cli/sarif.js");
+  const { runCli: runOcrCli } = await import("../src/ocr/cli/index.js");
+  const { createPiTransportForFile } = await import("../src/ocr/pi-adapter/pi-transport.js");
+  const { CommentCollector } = await import("../src/ocr/tool/collector.js");
+  const { Runner } = await import("../src/ocr/llmloop/loop.js");
+  const { TraceRecorder } = await import("../src/ocr/trace/recorder.js");
   const fixtures: string[] = []; let assertions=0; const notApplicable: string[] = [];
   async function makePiEnv(id: string, fakeUrl: string){
     const cwd = await mkdtemp(join(tmpdir(),"p5-cwd-"));
@@ -137,7 +137,7 @@ async function main(): Promise<void> {
     const env=await makePiEnv(id,fake.url);
     try{
       const collector=new CommentCollector();
-      const { Runner: LlmRunner2 } = await import("../src/ocr-v193/llmloop/loop.js");
+      const { Runner: LlmRunner2 } = await import("../src/ocr/llmloop/loop.js");
       const runner=new LlmRunner2({model:"test-model",template:{MaxTokens:128000,MaxToolRequestTimes:30,MaxCompletionTokens:4096,MemoryCompressionTask:{Messages:[]}} as any, llmClient:env.adapter as any, mainToolDefs:[{type:"function",function:{name:"code_comment",description:""}},{type:"function",function:{name:"task_done",description:""}}] as any, commentCollector:collector as any, diffLookup:(p:string)=>null} as any);
       for(const it of filteredItems.slice(0,2)){
         await runner.RunPerFile(AbortSignal.timeout(15000) as any,[{role:"user",content:`Scan ${it.path} content:${it.content.slice(0,200)}`}] as any,it.path);
@@ -176,7 +176,7 @@ async function main(): Promise<void> {
     const vendorCustom=prev.entries.find(e=>e.path==="vendor/x.go");
     assertions++; if(vendorCustom&&vendorCustom.willReview===true) fail(`${id} custom vendor should be excluded`,join(artifactsDir,id));
     // Use real previewScan without custom isExcluded (allowlist) – all non-binary should be willReview
-    const realPrev=await (await import("../src/ocr-v193/scan/preview.js")).previewScan({repoDir:repo.dir});
+    const realPrev=await (await import("../src/ocr/scan/preview.js")).previewScan({repoDir:repo.dir});
     assertions++; if(realPrev.totalFiles===0) fail(`${id} realPrev 0`,join(artifactsDir,id));
     assertions++; if(!realPrev.entries.some(e=>e.path==="a.go"&&e.willReview===true)) fail(`${id} a.go willReview ${JSON.stringify(realPrev.entries)}`,join(artifactsDir,id));
     // scan agent preview same
@@ -349,7 +349,7 @@ async function main(): Promise<void> {
     const id="output-preview-exit"; fixtures.push(id);
     // preview text/json
     const preview={entries:[{path:"a.go",status:"modified",insertions:10,deletions:2,willReview:true},{path:"b.txt",status:"modified",insertions:5,deletions:0,willReview:false,excludeReason:"extension"}],totalInsertions:15,totalDeletions:2,totalFiles:2,reviewableCount:1,excludedCount:1} as any;
-    const {outputPreview}=await import("../src/ocr-v193/cli/output.js");
+    const {outputPreview}=await import("../src/ocr/cli/output.js");
     const {stdout:pt}=outputPreview(preview,"text");
     assertions++; if(!pt.includes("Will review")) fail(`${id} preview will review`,join(artifactsDir,id));
     assertions++; if(!pt.includes("Excluded from review")) fail(`${id} excluded`,join(artifactsDir,id));
@@ -450,7 +450,7 @@ async function main(): Promise<void> {
     assertions++; if(build.status!==0) fail(`${id} build failed ${build.stdout?.slice(0,500)} ${build.stderr?.slice(0,500)}`,join(artifactsDir,id));
     assertions++; if(!existsSync("dist/cli.js")) fail(`${id} dist/cli.js missing`,join(artifactsDir,id));
     assertions++; if(!existsSync("dist/index.js")) fail(`${id} dist/index.js missing`,join(artifactsDir,id));
-    // check that ocr-v193 cli is built or at least tsc check passes
+    // check that ocr cli is built or at least tsc check passes
     const check=spawnSync("bun",["run","check"],{encoding:"utf-8"});
     assertions++; if(check.status!==0) fail(`${id} tsc check failed ${check.stderr?.slice(0,500)}`,join(artifactsDir,id));
     console.error(`[verify:phase5-scan-session] PASS ${id}`);

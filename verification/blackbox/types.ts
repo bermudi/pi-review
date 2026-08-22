@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 // Ported from OCR v1.9.3 differential contract at c35ddd7223f2b5540ce03aa43c9a25ef643fca27
-// This is the fresh black-box harness for Gate 0 — it must not import src/**, dist/**, test/ocr-v193/harness or Pi private paths.
+// This is the fresh black-box harness for Gate 0 — it must not import src/**, dist/**, test/ocr/harness or Pi private paths.
 
 /**
  * What this file is for:

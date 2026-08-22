@@ -12,7 +12,7 @@ The fixed reference is OCR tag `v1.9.3`, signed tag object
 does not justify changing review semantics.
 
 The legacy precision-oriented engine has been removed by explicit user
-approval; `src/ocr-v193` is now the sole engine. Open Code Review v1.9.3
+approval; `src/ocr` is now the sole engine. Open Code Review v1.9.3
 remains the pinned behavioral reference. Inventory classification complete —
 0 pending (1895 cases; 321 not-applicable, 475 out-of-scope decisions
 remain); the `config`/`provider`/`login`/`MCP`/`telemetry`/`test-connection`
@@ -21,11 +21,11 @@ auth/model configuration is at `~/.pi/agent` and is only resolved/loaded via
 public Pi APIs). Do not claim full command-surface parity or a freshly
 verified gate unless the exact verifier passes at the final commit.
 
-The parity engine lives under `src/ocr-v193` with its own tests. It must not
+The parity engine lives under `src/ocr` with its own tests. It must not
 import removed legacy review policy. Reuse low-level utilities only after
 OCR-derived tests prove equivalent behavior. Treat the existing parity tree as
 `building`, not proven. Do not expand its scope or call a phase complete until
-the corresponding committed verifier in `docs/ocr-v1.9.3-port-plan.md` passes.
+the corresponding committed verifier in `docs/ocr-port-plan.md` passes.
 If Pi `0.84.2` cannot provide OCR round accounting, dynamic terminal-only
 tools, one restricted grace request, and OCR-controlled compression through
 public APIs, stop and report the blocker.
@@ -76,11 +76,10 @@ Use this upgrade procedure:
    release tag.
 
 Keep one implementation tree. Do not add `src/ocr-v199`, an OCR-version
-switch, or another retained engine. At the next baseline upgrade, migrate
-`src/ocr-v193` and `test/ocr-v193` once to stable `src/ocr` and `test/ocr`
-paths (with corresponding docs/scripts updates); subsequent upgrades modify
-that stable tree. Old baselines remain available through Git release tags and
-history, not runtime branches.
+switch, or another retained engine. The one-time migration to stable `src/ocr`
+and `test/ocr` paths is complete; subsequent upgrades modify that stable tree.
+Old baselines remain available through Git release tags and history, not runtime
+branches.
 
 “Port complete” means the pinned baseline has zero unclassified inventory
 cases and all required gates pass. It does not mean full OCR command-surface
@@ -117,7 +116,7 @@ policy independent of the Pi adapter so it can be tested with scripted model
 turns and compared against the reference CLI.
 
 `docs/architecture.md` describes the shipped OCR v1.9.3 architecture and
-`docs/ocr-v193-source-map.md` maps upstream files. `docs/ocr-v1.9.3-port-plan.md`
+`docs/ocr-source-map.md` maps upstream files. `docs/ocr-port-plan.md`
 is authoritative for migration; Gate 5’s transitional legacy retention has been
 closed by explicit removal approval and the cutover verifier now proves absence.
 

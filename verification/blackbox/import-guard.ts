@@ -7,7 +7,7 @@ import { join, relative } from "node:path";
 
 /**
  * Why we guard imports:
- * If the verifier accidentally imports src/** or test/ocr-v193/harness,
+ * If the verifier accidentally imports src/** or test/ocr/harness,
  * it's no longer black-box — it's testing a different path than the
  * installed product. This guard fails the gate if any verifier file
  * pulls in forbidden code, even indirectly via a shell-out to a bad script.
@@ -16,10 +16,10 @@ import { join, relative } from "node:path";
 const FORBIDDEN_PATTERNS: Array<{ pattern: RegExp; message: string }> = [
   { pattern: /^\s*import\s+.*from\s+["'][^"']*\/src\//, message: "imports src/**" },
   { pattern: /^\s*import\s+.*from\s+["']\.\.\/\.\.\/src\//, message: "imports src/** via relative" },
-  { pattern: /^\s*import\s+.*from\s+["'][^"']*src\/ocr-v193/, message: "imports src/ocr-v193" },
+  { pattern: /^\s*import\s+.*from\s+["'][^"']*src\/ocr/, message: "imports src/ocr" },
   { pattern: /import\s*\(\s*["'][^"']*src\//, message: "dynamic import of src/**" },
   { pattern: /^\s*import\s+.*from\s+["'][^"']*dist\//, message: "imports dist/** by relative path" },
-  { pattern: /^\s*import\s+.*from\s+["'][^"']*test\/ocr-v193\/harness/, message: "imports test/ocr-v193/harness" },
+  { pattern: /^\s*import\s+.*from\s+["'][^"']*test\/ocr\/harness/, message: "imports test/ocr/harness" },
   { pattern: /^\s*import\s+.*from\s+["'].*pi-agent-core/, message: "imports private pi-agent-core" },
   { pattern: /^\s*import\s+.*from\s+["'].*pi-ai/, message: "imports private pi-ai" },
   { pattern: /require\s*\(\s*["'][^"']*src\//, message: "requires src/**" },
@@ -29,7 +29,7 @@ const FORBIDDEN_PATTERNS: Array<{ pattern: RegExp; message: string }> = [
 const FORBIDDEN_SHELL_PATTERNS: Array<{ pattern: RegExp; message: string }> = [
   { pattern: /verify-phase/, message: "shells out to invalidated verify:phase* script" },
   { pattern: /scripts\/verify-/, message: "shells out to scripts/verify-*" },
-  { pattern: /test\/ocr-v193\/harness/, message: "shells out to harness that imports forbidden code" },
+  { pattern: /test\/ocr\/harness/, message: "shells out to harness that imports forbidden code" },
 ];
 
 export interface ImportViolation {

@@ -1,7 +1,7 @@
 #!/usr/bin/env bun
 // SPDX-License-Identifier: Apache-2.0
 // Gate 0 verifier — black-box integrity.
-// This file must not import src/**, dist/**, test/ocr-v193/harness, or private Pi paths.
+// This file must not import src/**, dist/**, test/ocr/harness, or private Pi paths.
 // Allowed: Bun/Node stdlib, zod, and files under verification/blackbox.
 
 import { execSync, spawnSync } from "node:child_process";
@@ -526,7 +526,7 @@ async function runNineTests(artifactDir: string): Promise<{ fixtures: string[]; 
     const { writeFileSync, readFileSync: readSync } = await import("node:fs");
     const { join: joinPath } = await import("node:path");
     const sampleFile = joinPath(tmpVerifierDir, "bad.ts");
-    writeFileSync(sampleFile, `import { something } from "../../src/ocr-v193/trace/recorder.js";\nconsole.log("bad");\n`, "utf-8");
+    writeFileSync(sampleFile, `import { something } from "../../src/ocr/trace/recorder.js";\nconsole.log("bad");\n`, "utf-8");
     // Also create a good file to ensure guard doesn't false-positive
     const goodFile = joinPath(tmpVerifierDir, "good.ts");
     writeFileSync(goodFile, `import { checkImports } from "./import-guard.js";\n`, "utf-8");

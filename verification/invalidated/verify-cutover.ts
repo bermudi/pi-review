@@ -46,7 +46,7 @@ async function main(): Promise<void> {
   assertions++; if(check.status!==0) fail(`tsc check failed ${check.stderr?.slice(0,800)}`,artifactsDir);
   // check manifest has no blocked for core
   fixtures.push("manifest-no-blocked");
-  const manifestText=readFileSync("docs/ocr-v193-reference-manifest.md","utf-8");
+  const manifestText=readFileSync("docs/ocr-reference-manifest.md","utf-8");
   assertions++; if(manifestText.includes("| blocked") && manifestText.match(/Diff workspace|Relocation|Comment pipeline|Pi adapter/)) {
     // if any core row is blocked, fail
     const blockedLines=manifestText.split("\n").filter(l=>l.includes("blocked")&& !l.includes("deferred"));
@@ -55,11 +55,11 @@ async function main(): Promise<void> {
   // check parity engine importable
   fixtures.push("parity-importable");
   try{
-    const mod=await import("../src/ocr-v193/cli/index.js");
+    const mod=await import("../src/ocr/cli/index.js");
     assertions++; if(typeof (mod as any).runOcrCli!=="function" && typeof (mod as any).runCli!=="function") fail(`parity cli not importable`,artifactsDir);
   }catch(e){ fail(`parity import failed: ${e instanceof Error?e.message:String(e)}`,artifactsDir); }
   try{
-    const mod2=await import("../src/ocr-v193/model/review.js");
+    const mod2=await import("../src/ocr/model/review.js");
     assertions++; if(!mod2) fail(`model import`,artifactsDir);
   }catch(e){ fail(`model import failed`,artifactsDir); }
   // check legacy still exists behind switch (docs should mention it)

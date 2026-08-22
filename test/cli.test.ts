@@ -6,10 +6,10 @@ import { spawnSync } from "node:child_process";
 
 import { runCli, HELP_TEXT, versionString } from "../src/cli.ts";
 
-import type { Preview } from "../src/ocr-v193/model/preview.ts";
-import type { ReviewOptions, ScanOptions } from "../src/ocr-v193/cli/shared.ts";
-import type { ReviewRunner } from "../src/ocr-v193/cli/review.ts";
-import type { ScanRunner } from "../src/ocr-v193/cli/scan.ts";
+import type { Preview } from "../src/ocr/model/preview.ts";
+import type { ReviewOptions, ScanOptions } from "../src/ocr/cli/shared.ts";
+import type { ReviewRunner } from "../src/ocr/cli/review.ts";
+import type { ScanRunner } from "../src/ocr/cli/scan.ts";
 
 function captureIo() {
   let stdout = "";
@@ -200,9 +200,9 @@ describe("thin OCR production adapter", () => {
     expect(cap.stdout()).toBe("");
   });
 
-  test("rejects --engine ocr-v193 as unknown flag", async () => {
+  test("rejects --engine ocr as unknown flag", async () => {
     const cap = captureIo();
-    const code = await runCli(["review", "--engine", "ocr-v193", "--repo", "/tmp"], { io: cap.io });
+    const code = await runCli(["review", "--engine", "ocr", "--repo", "/tmp"], { io: cap.io });
     expect(code).toBe(1);
     expect(cap.stderr()).toContain("unknown flag: --engine");
   });

@@ -25,7 +25,7 @@ function checkPrivateImports():number{
   const rg=spawnSync("sh",["-c",`rg -n "pi-agent-core|pi-ai" src --hidden 2>/dev/null | head -n 50`],{encoding:"utf-8"});
   const out=(rg.stdout as string)??""; const lines=out.split("\n").filter(l=>{const t=l.trim(); if(t.startsWith("*")||t.startsWith("//")||t.includes("`pi-agent")) return false; return /from\s+["'][^"']*pi-agent/.test(l)||/import\s*\(.*pi-agent/.test(l)||/^\s*import\s+.*pi-agent/.test(l);}).join("\n");
   if(lines.trim().length>0){ console.log(JSON.stringify({phase:"phase3-comments",commit:currentCommit(),fixtures:[],assertions:0,notApplicable:[],privateImports:1,result:"fail" as const,error:`private imports: ${lines}`,artifactsDir:null})); console.error(`FAIL private imports`); process.exit(1); }
-  const rg2=spawnSync("sh",["-c",`rg -n "as any|: any" src\\/ocr-v193 --hidden 2>/dev/null | head -n 20`],{encoding:"utf-8"});
+  const rg2=spawnSync("sh",["-c",`rg -n "as any|: any" src\\/ocr --hidden 2>/dev/null | head -n 20`],{encoding:"utf-8"});
   const o2=(rg2.stdout as string)??""; if(o2.trim().length>0){ console.log(JSON.stringify({phase:"phase3-comments",commit:currentCommit(),fixtures:[],assertions:0,notApplicable:[],privateImports:1,result:"fail" as const,error:`as any: ${o2}`,artifactsDir:null})); process.exit(1); }
   return 0;
 }
@@ -43,17 +43,17 @@ async function main():Promise<void>{
   if(phase2.status!==0) fail(`Phase2 fail: ${phase2.stdout?.slice(0,800)} ${phase2.stderr?.slice(0,800)}`,artifactsDir);
   mkdirSync(artifactsDir,{recursive:true});
 
-  const { createTempRepo, applyWorkspaceChanges } = await import("../test/ocr-v193/harness/fixture.js");
-  const { startFakeServer } = await import("../test/ocr-v193/harness/fake-server.js");
-  const { runOcrHarness } = await import("../test/ocr-v193/harness/ocr-runner.js");
-  const { runPiRealHarness } = await import("../test/ocr-v193/harness/pi-real-runner.js");
-  const { compareRuns, formatMismatches, writeArtifacts } = await import("../test/ocr-v193/harness/comparer.js");
-  const { CommentCollector } = await import("../src/ocr-v193/tool/collector.js");
-  const { Runner, MainLoopStop } = await import("../src/ocr-v193/llmloop/loop.js");
-  const { Agent } = await import("../src/ocr-v193/agent/agent.js");
-  const { CommentWorkerPool } = await import("../src/ocr-v193/llmloop/pool.js");
-  const { TraceRecorder } = await import("../src/ocr-v193/trace/recorder.js");
-  const { createPiTransportForFile } = await import("../src/ocr-v193/pi-adapter/pi-transport.js");
+  const { createTempRepo, applyWorkspaceChanges } = await import("../test/ocr/harness/fixture.js");
+  const { startFakeServer } = await import("../test/ocr/harness/fake-server.js");
+  const { runOcrHarness } = await import("../test/ocr/harness/ocr-runner.js");
+  const { runPiRealHarness } = await import("../test/ocr/harness/pi-real-runner.js");
+  const { compareRuns, formatMismatches, writeArtifacts } = await import("../test/ocr/harness/comparer.js");
+  const { CommentCollector } = await import("../src/ocr/tool/collector.js");
+  const { Runner, MainLoopStop } = await import("../src/ocr/llmloop/loop.js");
+  const { Agent } = await import("../src/ocr/agent/agent.js");
+  const { CommentWorkerPool } = await import("../src/ocr/llmloop/pool.js");
+  const { TraceRecorder } = await import("../src/ocr/trace/recorder.js");
+  const { createPiTransportForFile } = await import("../src/ocr/pi-adapter/pi-transport.js");
 
   const fixtures:string[]=[]; let assertions=0; const notApplicable:string[]=[];
 
@@ -124,8 +124,8 @@ async function main():Promise<void>{
     try{
       ocr=await ocrPromise;
       // build Pi Runner with diffLookup from this repo's diff
-      const { Provider, ModeWorkspace } = await import("../src/ocr-v193/diff/git.js");
-      const { Runner: GitRunner } = await import("../src/ocr-v193/diff/runner.js");
+      const { Provider, ModeWorkspace } = await import("../src/ocr/diff/git.js");
+      const { Runner: GitRunner } = await import("../src/ocr/diff/runner.js");
       const prov=new Provider({repoDir:repo.dir,mode:ModeWorkspace as unknown,runner:new GitRunner(16)} as never);
       const diffs=await prov.getDiff();
       const diffLookup=(p:string)=> diffs.find(d=> (d as {newPath:string}).newPath===p)??null;

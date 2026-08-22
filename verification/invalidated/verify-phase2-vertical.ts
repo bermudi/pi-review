@@ -1,6 +1,6 @@
 #!/usr/bin/env bun
 // SPDX-License-Identifier: Apache-2.0
-// Ported from docs/ocr-v1.9.3-port-plan.md Phase 2 verifier at c35ddd7223f2b5540ce03aa43c9a25ef643fca27
+// Ported from docs/ocr-port-plan.md Phase 2 verifier at c35ddd7223f2b5540ce03aa43c9a25ef643fca27
 import { execSync, spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, writeFileSync, rmSync } from "node:fs";
 import { mkdtempSync } from "node:fs";
@@ -75,7 +75,7 @@ function checkPrivateImports(): number {
     console.error(`[verify:phase2-vertical] FAIL private imports`);
     process.exit(1);
   }
-  const rgAny = spawnSync("sh", ["-c", `rg -n "as any|: any" src/ocr-v193 --hidden 2>/dev/null | head -n 20`], { encoding: "utf-8" });
+  const rgAny = spawnSync("sh", ["-c", `rg -n "as any|: any" src/ocr --hidden 2>/dev/null | head -n 20`], { encoding: "utf-8" });
   const anyOut = (rgAny.stdout as string) ?? "";
   if (anyOut.trim().length > 0) {
     console.log(
@@ -119,11 +119,11 @@ async function main(): Promise<void> {
   mkdirSync(artifactsDir, { recursive: true });
 
   // Imports for harness
-  const { createTempRepo, applyWorkspaceChanges } = await import("../test/ocr-v193/harness/fixture.js");
-  const { startFakeServer } = await import("../test/ocr-v193/harness/fake-server.js");
-  const { runOcrHarness } = await import("../test/ocr-v193/harness/ocr-runner.js");
-  const { runPiRealHarness } = await import("../test/ocr-v193/harness/pi-real-runner.js");
-  const { compareRuns, formatMismatches, writeArtifacts } = await import("../test/ocr-v193/harness/comparer.js");
+  const { createTempRepo, applyWorkspaceChanges } = await import("../test/ocr/harness/fixture.js");
+  const { startFakeServer } = await import("../test/ocr/harness/fake-server.js");
+  const { runOcrHarness } = await import("../test/ocr/harness/ocr-runner.js");
+  const { runPiRealHarness } = await import("../test/ocr/harness/pi-real-runner.js");
+  const { compareRuns, formatMismatches, writeArtifacts } = await import("../test/ocr/harness/comparer.js");
 
   const fixtures: string[] = [];
   let assertions = 0;

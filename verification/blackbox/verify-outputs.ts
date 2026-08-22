@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 // Gate 4 — output formats parity (black-box)
-// See docs/ocr-v1.9.3-port-plan.md Gate 4.
+// See docs/ocr-port-plan.md Gate 4.
 
 import { mkdtemp, rm, writeFile, mkdir } from "node:fs/promises";
 import { mkdtempSync } from "node:fs";
@@ -108,7 +108,7 @@ const PORT_RE = /\b127\.0\.0\.1:\d{4,5}\b|\b:\d{4,5}\b/g;
 // as [pi-review] where OCR v1.9.3 hardcodes [ocr] (stdout trace summary and
 // stderr diagnostics). Canonicalize both to [engine] so text fixtures compare
 // semantics, not branding. Mirrors comparer.ts normalizeStderr. Recorded in
-// docs/ocr-v193-reference-manifest.md (CLI row). SARIF driver name stays
+// docs/ocr-reference-manifest.md (CLI row). SARIF driver name stays
 // "OpenCodeReview" on both sides and is compared literally.
 const PREFIX_RE = /\[(?:ocr|pi-review)\]/g;
 

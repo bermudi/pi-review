@@ -4,19 +4,19 @@
 // review policy; it injects the real parity runners
 // and preview factories and preserves the OCR command/flag semantics directly.
 
-import { newResolver } from "./ocr-v193/rules/system_rules.js";
-import { previewDiffs } from "./ocr-v193/agent/preview.js";
-import type { Preview } from "./ocr-v193/model/preview.js";
-import type { ReviewOptions, ScanOptions } from "./ocr-v193/cli/shared.js";
-import { makeIo } from "./ocr-v193/cli/shared.js";
-import type { CliIoOverrides } from "./ocr-v193/cli/shared.js";
-import { runCli as runOcrCli, versionString, HELP_TEXT } from "./ocr-v193/cli/index.js";
-import type { ReviewRunner } from "./ocr-v193/cli/review.js";
-import type { ScanRunner } from "./ocr-v193/cli/scan.js";
-import { createReviewRunnerFactory, createScanRunnerFactory, createScanPreviewFactory } from "./ocr-v193/cli/factory.js";
+import { newResolver } from "./ocr/rules/system_rules.js";
+import { previewDiffs } from "./ocr/agent/preview.js";
+import type { Preview } from "./ocr/model/preview.js";
+import type { ReviewOptions, ScanOptions } from "./ocr/cli/shared.js";
+import { makeIo } from "./ocr/cli/shared.js";
+import type { CliIoOverrides } from "./ocr/cli/shared.js";
+import { runCli as runOcrCli, versionString, HELP_TEXT } from "./ocr/cli/index.js";
+import type { ReviewRunner } from "./ocr/cli/review.js";
+import type { ScanRunner } from "./ocr/cli/scan.js";
+import { createReviewRunnerFactory, createScanRunnerFactory, createScanPreviewFactory } from "./ocr/cli/factory.js";
 
-export { HELP_TEXT, versionString } from "./ocr-v193/cli/index.js";
-export type { CliIoOverrides } from "./ocr-v193/cli/shared.js";
+export { HELP_TEXT, versionString } from "./ocr/cli/index.js";
+export type { CliIoOverrides } from "./ocr/cli/shared.js";
 
 export type Utf8FileReader = (path: string, encoding: "utf8") => Promise<string> | string;
 

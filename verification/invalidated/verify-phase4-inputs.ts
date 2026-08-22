@@ -1,7 +1,7 @@
 #!/usr/bin/env bun
 // @ts-nocheck
 // SPDX-License-Identifier: Apache-2.0
-// Ported from docs/ocr-v1.9.3-port-plan.md Phase 4 verifier at c35ddd7223f2b5540ce03aa43c9a25ef643fca27
+// Ported from docs/ocr-port-plan.md Phase 4 verifier at c35ddd7223f2b5540ce03aa43c9a25ef643fca27
 import { execSync, spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { mkdtempSync } from "node:fs";
@@ -51,7 +51,7 @@ function checkPrivateImports(): number {
     console.error(`[verify:phase4-inputs] FAIL private imports`);
     process.exit(1);
   }
-  const rg2 = spawnSync("sh", ["-c", `rg -n "as any|: any" src\\/ocr-v193 --hidden 2>/dev/null | head -n 20`], { encoding: "utf-8" });
+  const rg2 = spawnSync("sh", ["-c", `rg -n "as any|: any" src\\/ocr --hidden 2>/dev/null | head -n 20`], { encoding: "utf-8" });
   const o2 = (rg2.stdout as string) ?? "";
   if (o2.trim().length > 0) {
     console.log(JSON.stringify({ phase: "phase4-inputs", commit: currentCommit(), fixtures: [], assertions: 0, notApplicable: [], privateImports: 1, result: "fail" as const, error: `as any found: ${o2}`, artifactsDir: null }));
@@ -85,19 +85,19 @@ async function main(): Promise<void> {
 
   mkdirSync(artifactsDir, { recursive: true });
 
-  const { createTempRepo, applyWorkspaceChanges } = await import("../test/ocr-v193/harness/fixture.js");
-  const { startFakeServer } = await import("../test/ocr-v193/harness/fake-server.js");
-  const { runOcrHarness } = await import("../test/ocr-v193/harness/ocr-runner.js");
-  const { runPiRealHarness } = await import("../test/ocr-v193/harness/pi-real-runner.js");
-  const { compareRuns, formatMismatches } = await import("../test/ocr-v193/harness/comparer.js");
-  const { Provider, ModeWorkspace, ModeRange, ModeCommit } = await import("../src/ocr-v193/diff/git.js");
-  const { Runner: GitRunner } = await import("../src/ocr-v193/diff/runner.js");
-  const { Agent } = await import("../src/ocr-v193/agent/agent.js");
-  const { CommentCollector } = await import("../src/ocr-v193/tool/collector.js");
-  const { TraceRecorder } = await import("../src/ocr-v193/trace/recorder.js");
-  const { createPiTransportForFile } = await import("../src/ocr-v193/pi-adapter/pi-transport.js");
-  const { loadDefaultTemplate } = await import("../src/ocr-v193/template/template.js");
-  const { previewDiffs } = await import("../src/ocr-v193/agent/preview.js");
+  const { createTempRepo, applyWorkspaceChanges } = await import("../test/ocr/harness/fixture.js");
+  const { startFakeServer } = await import("../test/ocr/harness/fake-server.js");
+  const { runOcrHarness } = await import("../test/ocr/harness/ocr-runner.js");
+  const { runPiRealHarness } = await import("../test/ocr/harness/pi-real-runner.js");
+  const { compareRuns, formatMismatches } = await import("../test/ocr/harness/comparer.js");
+  const { Provider, ModeWorkspace, ModeRange, ModeCommit } = await import("../src/ocr/diff/git.js");
+  const { Runner: GitRunner } = await import("../src/ocr/diff/runner.js");
+  const { Agent } = await import("../src/ocr/agent/agent.js");
+  const { CommentCollector } = await import("../src/ocr/tool/collector.js");
+  const { TraceRecorder } = await import("../src/ocr/trace/recorder.js");
+  const { createPiTransportForFile } = await import("../src/ocr/pi-adapter/pi-transport.js");
+  const { loadDefaultTemplate } = await import("../src/ocr/template/template.js");
+  const { previewDiffs } = await import("../src/ocr/agent/preview.js");
 
   const fixtures: string[] = [];
   let assertions = 0;
@@ -284,7 +284,7 @@ async function main(): Promise<void> {
       }
       assertions++; if (fakeOcr.requests.length === 0) fail(`range-pass OCR 0 requests`, join(artifactsDir, id));
       // Pi via Runner with diffLookup (proven path from phase3)
-      const { Runner } = await import("../src/ocr-v193/llmloop/loop.js");
+      const { Runner } = await import("../src/ocr/llmloop/loop.js");
       const piEnv = await makePiEnv(id + "-runner", fakePi.url, [{ type: "function", function: { name: "code_comment", description: "" } }, { type: "function", function: { name: "task_done", description: "" } }]);
       try {
         const collector = new CommentCollector();
@@ -359,7 +359,7 @@ async function main(): Promise<void> {
       // Pi Agent
       const provPi = new Provider({ repoDir: repo.dir, mode: ModeCommit, commit: head, runner: new GitRunner(16) });
       const piDiffs = await provPi.getDiff();
-      const { Runner } = await import("../src/ocr-v193/llmloop/loop.js");
+      const { Runner } = await import("../src/ocr/llmloop/loop.js");
       const piEnv = await makePiEnv(id + "-runner", fakePi.url, [{ type: "function", function: { name: "code_comment", description: "" } }, { type: "function", function: { name: "task_done", description: "" } }]);
       try {
         const collector = new CommentCollector();
@@ -511,7 +511,7 @@ async function main(): Promise<void> {
       // Instead test via Agent with 3 files and 6 turns more faithfully:
       // We'll run Agent directly with fake server that has 6 turns
       // Prove multi-file via Runner per file (sequential) — more deterministic than Agent concurrency
-      const { Runner } = await import("../src/ocr-v193/llmloop/loop.js");
+      const { Runner } = await import("../src/ocr/llmloop/loop.js");
       const piEnv2 = await makePiEnv(id + "-runner", fakePi.url, [{ type: "function", function: { name: "code_comment", description: "" } }, { type: "function", function: { name: "task_done", description: "" } }]);
       try {
         const prov = new Provider({ repoDir: repo.dir, mode: ModeWorkspace, runner: new GitRunner(16) });
@@ -612,8 +612,8 @@ async function main(): Promise<void> {
     const templateSmall = loadDefaultTemplate();
     const templateFiltered = { ...templateSmall, MaxTokens: 2000 } as unknown as typeof templateSmall;
     // Use Runner directly to avoid Agent's extra filtering/compression interplay; prove filtering via Provider+Agent logic
-    const { Runner } = await import("../src/ocr-v193/llmloop/loop.js");
-    const { PromptTokenLimit, countTokens } = await import("../src/ocr-v193/llmloop/compression.js");
+    const { Runner } = await import("../src/ocr/llmloop/loop.js");
+    const { PromptTokenLimit, countTokens } = await import("../src/ocr/llmloop/compression.js");
     const prov = new Provider({ repoDir: repo.dir, mode: ModeWorkspace, runner: new GitRunner(16) });
     const rawDiffs = await prov.getDiff();
     assertions++; if (rawDiffs.length !== 2) fail(`large-diff provider should have 2 got ${rawDiffs.length}`, join(artifactsDir, id));
@@ -685,7 +685,7 @@ async function main(): Promise<void> {
       assertions++; if (sealedDiffs.length !== originalDiffs.length) fail(`sealed diffs length mismatch ${sealedDiffs.length} vs ${originalDiffs.length}`, join(artifactsDir, id));
       assertions++; if (sealedDiffs.some(d=>d.newPath==="new.go")) fail(`sealed via Provider should not include new.go`, join(artifactsDir, id));
       // Now prove Agent with sealedInput still reviews sealed (via Runner for reliability)
-      const { Runner } = await import("../src/ocr-v193/llmloop/loop.js");
+      const { Runner } = await import("../src/ocr/llmloop/loop.js");
       const collector = new CommentCollector();
       const diffMap = new Map(sealedDiffs.map(d=>[d.newPath, d] as const));
       const runner = new Runner({ model: "test-model", template: { MaxTokens: 128000, MaxToolRequestTimes: 30, MaxCompletionTokens: 4096, MemoryCompressionTask: { Messages: [] } } as unknown as never, llmClient: env.adapter as unknown as never, mainToolDefs: [{ type: "function", function: { name: "code_comment", description: "" } }, { type: "function", function: { name: "task_done", description: "" } }] as unknown as never, commentCollector: collector as unknown as never, diffLookup: ((p:string)=> diffMap.get(p) ?? null) as unknown as never } as unknown as never);

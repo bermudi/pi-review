@@ -1,7 +1,7 @@
 # Pi 0.84.2 feasibility spike (Phase 1) — originally 0.82.1
 
 This directory contains the executable Phase 1 gate spike described in
-`docs/ocr-v1.9.3-port-plan.md`.
+`docs/ocr-port-plan.md`.
 
 ## What it proves
 

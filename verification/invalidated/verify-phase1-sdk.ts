@@ -1,7 +1,7 @@
 #!/usr/bin/env bun
 // SPDX-License-Identifier: Apache-2.0
 // Copyright 2026 alibaba/open-code-review Contributors
-// Ported from docs/ocr-v1.9.3-port-plan.md Phase 1 verifier at c35ddd7223f2b5540ce03aa43c9a25ef643fca27
+// Ported from docs/ocr-port-plan.md Phase 1 verifier at c35ddd7223f2b5540ce03aa43c9a25ef643fca27
 // Modifications are distributed as part of pi-reviewer under GPL-3.0-or-later.
 
 import { execSync, spawnSync } from "node:child_process";
@@ -52,20 +52,20 @@ function checkPrivateImports(): number {
     process.exit(1);
   }
   // also check for mutable session.agent write
-  const rgAgent = spawnSync("sh", ["-c", `rg -n "session\\.agent\\.state\\.messages\\s*=" src/ocr-v193 --hidden 2>/dev/null | head -n 20`], { encoding: "utf-8" });
+  const rgAgent = spawnSync("sh", ["-c", `rg -n "session\\.agent\\.state\\.messages\\s*=" src/ocr --hidden 2>/dev/null | head -n 20`], { encoding: "utf-8" });
   const agentOut = (rgAgent.stdout as string) ?? "";
   if (agentOut.trim().length > 0) {
     const out = { phase: "phase1-sdk", commit: currentCommit(), fixtures: [] as string[], assertions: 0, notApplicable: [], privateImports: 1, result: "fail" as const, error: `mutable private: ${agentOut}`, artifactsDir: null };
     console.log(JSON.stringify(out)); console.error(`[verify:phase1-sdk] FAIL mutable private: ${agentOut}`); process.exit(1);
   }
-  const rgAnyAgent = spawnSync("sh", ["-c", `rg -n "sessAny\\.agent.*messages\\s*=" src/ocr-v193 --hidden 2>/dev/null | head -n 20`], { encoding: "utf-8" });
+  const rgAnyAgent = spawnSync("sh", ["-c", `rg -n "sessAny\\.agent.*messages\\s*=" src/ocr --hidden 2>/dev/null | head -n 20`], { encoding: "utf-8" });
   const anyAgentOut = (rgAnyAgent.stdout as string) ?? "";
   if (anyAgentOut.trim().length > 0) {
     const out = { phase: "phase1-sdk", commit: currentCommit(), fixtures: [] as string[], assertions: 0, notApplicable: [], privateImports: 1, result: "fail" as const, error: `private sessAny.agent write: ${anyAgentOut}`, artifactsDir: null };
     console.log(JSON.stringify(out)); console.error(`FAIL sessAny`); process.exit(1);
   }
   // check for as any
-  const rgAny = spawnSync("sh", ["-c", `rg -n "as any|: any" src/ocr-v193 --hidden 2>/dev/null | head -n 20`], { encoding: "utf-8" });
+  const rgAny = spawnSync("sh", ["-c", `rg -n "as any|: any" src/ocr --hidden 2>/dev/null | head -n 20`], { encoding: "utf-8" });
   const anyOut = (rgAny.stdout as string) ?? "";
   if (anyOut.trim().length > 0) {
     const out = { phase: "phase1-sdk", commit: currentCommit(), fixtures: [] as string[], assertions: 0, notApplicable: [], privateImports: 1, result: "fail" as const, error: `as any found: ${anyOut}`, artifactsDir: null };
@@ -140,7 +140,7 @@ function startFakeServer(turns: readonly ScriptedTurn[], delayMs?: number): { se
 
 async function createPiTransport(serverUrl: string, tools: readonly { name:string; description:string; parameters: unknown }[], allowed: string[]): Promise<{ transport: any; cleanup: ()=>Promise<void>; serverRequests: CapturedRequest[] }> {
   // We use the public Pi adapter factory
-  const { createPiTransportForFile } = await import("../src/ocr-v193/pi-adapter/pi-transport.js");
+  const { createPiTransportForFile } = await import("../src/ocr/pi-adapter/pi-transport.js");
   const cwd = await mkdtemp(join(tmpdir(),"pi-p1-cwd-"));
   const agentDir = await mkdtemp(join(tmpdir(),"pi-p1-agent-"));
   const { writeFile } = await import("node:fs/promises");
@@ -157,10 +157,10 @@ async function createPiTransport(serverUrl: string, tools: readonly { name:strin
 }
 
 // Trace helper: wraps transport to record requests/responses and tool executions
-import { TraceRecorder } from "../src/ocr-v193/trace/recorder.js";
-import { Runner, MainLoopStop } from "../src/ocr-v193/llmloop/loop.js";
-import { CommentCollector } from "../src/ocr-v193/tool/collector.js";
-import { loadDefaultTemplate } from "../src/ocr-v193/template/template.js";
+import { TraceRecorder } from "../src/ocr/trace/recorder.js";
+import { Runner, MainLoopStop } from "../src/ocr/llmloop/loop.js";
+import { CommentCollector } from "../src/ocr/tool/collector.js";
+import { loadDefaultTemplate } from "../src/ocr/template/template.js";
 import { Type } from "typebox";
 
 function makeToolDefs(names: readonly string[]): any[] {

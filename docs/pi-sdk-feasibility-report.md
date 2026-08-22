@@ -1,7 +1,7 @@
 > **Superseded as gate evidence.** The old spike demonstrated useful Pi APIs, but it
 > did not prove OCR compression, an exact one-grace fence, or three empty retries
 > through the actual `PiTransport`. It must not be used to mark Phase 1 complete.
-> See `docs/ocr-v1.9.3-port-plan.md` for the active evidence-gated plan.
+> See `docs/ocr-port-plan.md` for the active evidence-gated plan.
 
 # Pi SDK feasibility report — Phase 1 gate (Pi 0.84.2 + OCR v1.9.3)
 
@@ -10,7 +10,7 @@
 **Reference:** OCR tag `v1.9.3`, signed tag object `4d796ae54cabdcf4e22b69ef502ed8871456a909`, commit `c35ddd7223f2b5540ce03aa43c9a25ef643fca27` (`../open-code-review`)  
 **Scope:** public Pi SDK only — no private/deep imports, no transitive `pi-agent-core` import, no monkey-patching. Spike uses documented exports from the direct dependency plus a local OpenAI-compatible HTTP server (`Bun.serve`) and a temporary `agentDir` with `models.json`/`auth.json`.
 
-This report is the executable evidence for the 9 required capability proofs in `docs/ocr-v1.9.3-port-plan.md` Phase 1. The spike is in `spike/feasibility-v2.ts` and `spike/feasibility-v3.ts`; this document summarises the public APIs used and the observed behaviour.
+This report is the executable evidence for the 9 required capability proofs in `docs/ocr-port-plan.md` Phase 1. The spike is in `spike/feasibility-v2.ts` and `spike/feasibility-v3.ts`; this document summarises the public APIs used and the observed behaviour.
 
 ---
 
@@ -76,7 +76,7 @@ With these additions, the parity engine can stay on the public surface without r
 Phase 1 is complete when this report is checked in. Only after that:
 
 1. check in the v1.9.3 source translation manifest and parity matrix;
-2. create isolated `src/ocr-v193` and `test/ocr-v193` roots;
+2. create isolated `src/ocr` and `test/ocr` roots;
 3. translate `internal/llmloop` and its tests;
 4. build the broader differential harness;
 5. port one minimal workspace review through `code_comment` and `task_done`.

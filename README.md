@@ -4,7 +4,7 @@
 Review v1.9.3's core behavior through the Pi SDK.
 
 > **Status:** the legacy precision-oriented engine has been removed by explicit
-> user approval; `src/ocr-v193` is now the sole engine and implements Open Code
+> user approval; `src/ocr` is now the sole engine and implements Open Code
 > Review v1.9.3 as the pinned behavioral reference (`v1.9.3` /
 > `4d796ae54cabdcf4e22b69ef502ed8871456a909` / `c35ddd7223f2b5540ce03aa43c9a25ef643fca27`).
 > Inventory classification complete — 0 pending (1895 cases) while 321
@@ -13,8 +13,8 @@ Review v1.9.3's core behavior through the Pi SDK.
 > surfaces are intentionally not ported (omitted boundary; runtime only
 > resolves/loads external Pi configuration via public Pi APIs from
 > `~/.pi/agent`, Pi's external auth/model location). Full command-surface
-> parity is not claimed. See `docs/ocr-v1.9.3-port-plan.md` and
-> `docs/ocr-v193-source-map.md`.
+> parity is not claimed. See `docs/ocr-port-plan.md` and
+> `docs/ocr-source-map.md`.
 
 The public library boundary is small; Pi sessions, prompts, and model-visible
 tools remain behind `Reviewer`.
@@ -190,7 +190,7 @@ The deliberate public boundary is `src/index.ts`:
 - review domain types
 - OCR-backed `PiTransport`/`OcrRunner`/`runOcrCli` utilities
 
-`src/ocr-v193/**` is the full port; see `docs/ocr-v193-source-map.md` for the upstream mapping.
+`src/ocr/**` is the full port; see `docs/ocr-source-map.md` for the upstream mapping.
 
 ## License and upstream attribution
 

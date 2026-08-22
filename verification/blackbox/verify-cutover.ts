@@ -4,7 +4,7 @@
 // Legacy engine has been removed by explicit user approval; verifier proves
 // absence of --engine switch, absence of legacy exports/modules, default
 // CLI reaches OCR tools, and a legacy engine request is rejected without
-// invoking a model. See docs/ocr-v1.9.3-port-plan.md Gate 5.
+// invoking a model. See docs/ocr-port-plan.md Gate 5.
 
 import { spawn, spawnSync } from "node:child_process";
 import { existsSync } from "node:fs";
@@ -245,7 +245,7 @@ async function main(): Promise<void> {
   expectCondition(!indexText.includes("reviewLegacy"), "src/index.ts must not export reviewLegacy");
   expectCondition(!indexText.includes("ReviewerLegacy"), "src/index.ts must not export ReviewerLegacy");
   expectCondition(!indexText.includes("createReviewerLegacy"), "src/index.ts must not export createReviewerLegacy");
-  expectCondition(/export\s*\{\s*review,\s*createReviewer,\s*Reviewer\s*\}\s*from\s*["']\.\/ocr-v193\/reviewer\.js["']/.test(indexText), "src/index.ts does not export parity Reviewer as default");
+  expectCondition(/export\s*\{\s*review,\s*createReviewer,\s*Reviewer\s*\}\s*from\s*["']\.\/ocr\/reviewer\.js["']/.test(indexText), "src/index.ts does not export parity Reviewer as default");
 
   // Deleted production modules must not exist
   const deletedModules = [
@@ -271,9 +271,9 @@ async function main(): Promise<void> {
   // Docs must not claim legacy is default (negative requirement excluded)
   const docFiles = await readdirRecursive(resolve("docs"), ".md");
   const disallowed: string[] = [];
-  const allowedPhrases = ["ocr-v193 (default)", "default review engine is the parity"];
+  const allowedPhrases = ["ocr (default)", "default review engine is the parity"];
   for (const file of docFiles) {
-    if (file.endsWith("ocr-v193-reference-manifest.md")) continue;
+    if (file.endsWith("ocr-reference-manifest.md")) continue;
     const content = await readFile(file, "utf-8");
     const lines = content.split("\n");
     for (let i = 0; i < lines.length; i++) {

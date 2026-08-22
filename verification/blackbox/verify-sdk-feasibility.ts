@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // Gate 1 — Public Pi SDK feasibility, black-box via packed package and loopback server.
 // Allowed: Bun/Node stdlib, zod, files under verification/blackbox, and the built package via public export in consumer driver.
-// Must not import src/**, test/ocr-v193/harness, or private Pi paths.
+// Must not import src/**, test/ocr/harness, or private Pi paths.
 
 import { execSync, spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, writeFileSync, readFileSync, rmSync } from "node:fs";
@@ -473,7 +473,7 @@ async function runScenarioInConsumer(opts: {
 function writeDriver(consumerDir: string): void {
   const driver = `// driver.mjs — Gate 1 tiny driver, runs inside consumer project
 // Uses only packed package public API and Pi public APIs, plus Node/Bun stdlib.
-// It does NOT import from src/** or test/ocr-v193/harness.
+// It does NOT import from src/** or test/ocr/harness.
 
 import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
