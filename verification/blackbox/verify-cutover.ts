@@ -369,7 +369,10 @@ async function main(): Promise<void> {
   });
 
   expectCondition(legacyRun.exitCode !== 0, `legacy rejected fixture should exit non-zero, got ${legacyRun.exitCode}`);
-  expectCondition(legacyRun.stderr.includes("unknown flag --engine") || legacyRun.stderr.includes("unknown command"), "legacy request must be rejected as unknown flag/command");
+  expectCondition(
+    /unknown flag(?::)? --engine/u.test(legacyRun.stderr) || legacyRun.stderr.includes("unknown command"),
+    "legacy request must be rejected as unknown flag/command",
+  );
   expectCondition(legacyRun.captures.length === 0, "legacy rejected fixture must not have invoked model (no provider captures expected)");
   fixtures.push("legacy-rejected");
   await legacyRepo.cleanup().catch(() => {});
