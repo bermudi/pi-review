@@ -8,7 +8,7 @@ import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
 import { Agent, hashFields, reviewItemFingerprint } from "../../../src/ocr/agent/agent.js";
-import { buildFilterCommentsJSON, parseFilterResponse, parseFilterToolCalls } from "../../../src/ocr/agent/filter.js";
+import { buildFilterCommentsJSON, parseFilterResponse, parseFilterToolCalls, REVIEW_FILTER_TOOLS } from "../../../src/ocr/agent/filter.js";
 import { formatToolDefs, BuildToolDefs } from "../../../src/ocr/agent/format.js";
 import { extFromPath } from "../../../src/ocr/agent/preview.js";
 import type { Diff } from "../../../src/ocr/model/diff.js";
@@ -74,7 +74,38 @@ describe("ocr agent helpers (ported from internal/agent/agent_test.go)", () => {
     expect(parseFilterToolCalls([call("approve_all_comments", "{}")], 5)?.size).toBe(0);
     expect(parseFilterToolCalls([call("other_tool", `{"comment_ids":["c-0"]}`)], 5)).toBeNull();
     expect([...parseFilterToolCalls([call("report_incorrect_comments", `{"comment_ids":["c-0","c-10"]}`)], 5)!.keys()]).toEqual([0]);
+    expect(parseFilterToolCalls([call("report_incorrect_comments", "{}")], 5)?.size).toBe(0);
     expect(parseFilterToolCalls([call("report_incorrect_comments", "not json")], 5)).toBeNull();
+  });
+
+  test("review filter tools retain OCR's complete ordered schema", () => {
+    expect(REVIEW_FILTER_TOOLS).toEqual([
+      {
+        type: "function",
+        function: {
+          name: "report_incorrect_comments",
+          description: "Report review comments that this diff proves to be factually wrong: either the code they target is absent from the diff, or one diff line literally contradicts their central claim. For every id listed you must be able to name that line. Do not use this for comments you merely find unconvincing, unverifiable, or low-value, nor for comments about memory safety, concurrency, linkage consistency, unused parameters, or behavioral changes.",
+          parameters: {
+            type: "object",
+            properties: {
+              analysis: { type: "array", description: "Work through every candidate comment BEFORE deciding. One entry per candidate: its id, whether its subject hits the protected-subject veto (Step 1) or the value veto (Step 2), the exact diff line that refutes it if any, and your final call. Only ids you conclude here as removable may appear in comment_ids.", items: { type: "string" } },
+              comment_ids: { type: "array", description: "IDs concluded removable in analysis, e.g. [\"c-0\", \"c-2\"]. Must not be empty.", items: { type: "string" } },
+            },
+            required: ["analysis", "comment_ids"],
+          },
+        },
+      },
+      {
+        type: "function",
+        function: {
+          name: "approve_all_comments",
+          description: "Keep every review comment. Call this whenever no comment clears the removal bar — including when comments look doubtful, cannot be verified from the diff alone, or seem minor. This is the expected outcome for most files.",
+          parameters: { type: "object", properties: {} },
+        },
+      },
+    ]);
+    const parameters = REVIEW_FILTER_TOOLS[0]?.function.parameters as { properties?: Record<string, unknown> };
+    expect(Object.keys(parameters.properties ?? {})).toEqual(["analysis", "comment_ids"]);
   });
 
   // OCR v1.9.3: TestParseFilterResponse

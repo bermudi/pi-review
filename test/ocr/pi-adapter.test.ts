@@ -8,6 +8,8 @@ import type { ChatRequest } from "../../src/ocr/llmloop/types.js";
 import { newTextMessage } from "../../src/ocr/llmloop/compression.js";
 
 function fakeSession(overrides: Record<string, unknown> = {}): unknown {
+  let activeTools: string[] = [];
+  const originalSetter = overrides["setActiveToolsByName"];
   return {
     state: { messages: [] as unknown[] },
     messages: [] as unknown[],
@@ -15,8 +17,14 @@ function fakeSession(overrides: Record<string, unknown> = {}): unknown {
     isIdle: true,
     isStreaming: false,
     sessionId: "test-session",
-    // Minimal Pi API for PiTransport fallback path: if subscribe/waitForIdle missing, PiTransport returns stub
     ...overrides,
+    setActiveToolsByName: (names: string[]) => {
+      if (typeof originalSetter === "function") {
+        (originalSetter as (requested: string[]) => void)(names);
+      }
+      activeTools = [...names];
+    },
+    getActiveToolNames: () => activeTools,
   };
 }
 
@@ -34,6 +42,7 @@ function eventSession(message: unknown): unknown {
   let listener: ((event: unknown) => void) | undefined;
   return fakeSession({
     setActiveToolsByName: () => {},
+    getActiveToolNames: () => [],
     subscribe: (next: (event: unknown) => void) => {
       listener = next;
       return () => {};
@@ -78,6 +87,7 @@ describe("ocr pi-adapter", () => {
     let capturedNames: string[] | null = null;
     const session = fakeSession({
       setActiveToolsByName: (names: string[]) => { capturedNames = names; },
+      getActiveToolNames: () => capturedNames ?? [],
       subscribe: (l: (e: unknown) => void) => { void l; return () => {}; },
       waitForIdle: async () => {},
       prompt: async () => {},
@@ -105,6 +115,7 @@ describe("ocr pi-adapter", () => {
     let abortCalled = false;
     const session = fakeSession({
       setActiveToolsByName: () => {},
+    getActiveToolNames: () => [],
       subscribe: () => () => {},
       waitForIdle: async () => { await new Promise(r => setTimeout(r, 100)); },
       prompt: async () => { await new Promise(r => setTimeout(r, 100)); },
@@ -246,6 +257,7 @@ describe("ocr pi-adapter", () => {
     try {
       const session = fakeSession({
         setActiveToolsByName: () => {},
+    getActiveToolNames: () => [],
         subscribe: () => () => {},
         prompt: async () => {
           throw new Error("SECRET_PROMPT_FAILURE");

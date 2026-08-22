@@ -91,6 +91,7 @@ test("ChatResponse content mirrors extractText for assistant message", async () 
     isStreaming: false,
     sessionId: "s",
     setActiveToolsByName: () => {},
+    getActiveToolNames: () => [],
     subscribe: (next: (e: unknown) => void) => { listener = next; return () => {}; },
     prompt: async () => {
       listener?.({ type: "turn_end", message: { role: "assistant", content: [{ type: "text", text: "hello world" }], stopReason: "stop" } });
@@ -107,6 +108,7 @@ test("ChatResponse content mirrors extractText for assistant message", async () 
 test("ChatResponse toolCalls extracted from toolCall blocks", async () => {
   const { PiTransport } = await import("../../../src/ocr/pi-adapter/pi-transport.js");
   let listener: ((e: unknown) => void) | undefined;
+  let activeTools: string[] = [];
   const session = {
     state: { messages: [] as unknown[] },
     messages: [] as unknown[],
@@ -114,7 +116,8 @@ test("ChatResponse toolCalls extracted from toolCall blocks", async () => {
     isIdle: true,
     isStreaming: false,
     sessionId: "s",
-    setActiveToolsByName: () => {},
+    setActiveToolsByName: (names: string[]) => { activeTools = names; },
+    getActiveToolNames: () => activeTools,
     subscribe: (next: (e: unknown) => void) => { listener = next; return () => {}; },
     prompt: async () => {
       listener?.({
@@ -143,6 +146,7 @@ test("ChatResponse nil content falls back to reasoning", async () => {
     isStreaming: false,
     sessionId: "s",
     setActiveToolsByName: () => {},
+    getActiveToolNames: () => [],
     subscribe: (next: (e: unknown) => void) => { listener = next; return () => {}; },
     prompt: async () => {
       listener?.({ type: "turn_end", message: { role: "assistant", content: "", reasoningContent: "fallback", stopReason: "stop" } });
@@ -167,6 +171,7 @@ test("ChatResponse empty toolCalls returns empty array", async () => {
     isStreaming: false,
     sessionId: "s",
     setActiveToolsByName: () => {},
+    getActiveToolNames: () => [],
     subscribe: (next: (e: unknown) => void) => { listener = next; return () => {}; },
     prompt: async () => {
       listener?.({ type: "turn_end", message: { role: "assistant", content: [{ type: "text", text: "no tools" }], stopReason: "stop" } });

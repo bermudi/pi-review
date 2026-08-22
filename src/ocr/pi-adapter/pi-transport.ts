@@ -39,6 +39,51 @@ import { classifyBoundaryError } from "../retry/boundary.js";
 
 type PiSession = Awaited<ReturnType<typeof createAgentSession>>["session"];
 
+export interface ActiveToolSession {
+  setActiveToolsByName(names: string[]): void;
+  getActiveToolNames(): readonly string[];
+}
+
+function sameToolNames(actual: readonly string[], requested: readonly string[]): boolean {
+  return actual.length === requested.length
+    && new Set(actual).size === actual.length
+    && actual.every((name) => requested.includes(name));
+}
+
+/**
+ * Synchronize Pi's public active-tool allowlist and prove the session accepted
+ * the exact set before prompting. Ignored unknown names and stale extras are
+ * security failures, not recoverable diagnostics.
+ */
+export function activateToolsFailClosed(session: ActiveToolSession, requested: readonly string[]): void {
+  if (new Set(requested).size !== requested.length) {
+    throw new Error(`Pi tool activation rejected duplicate requested tool names: ${requested.join(", ")}`);
+  }
+  try {
+    session.setActiveToolsByName([...requested]);
+  } catch (error) {
+    throw new Error(`Pi tool activation failed while setting [${requested.join(", ")}]: ${String(error)}`);
+  }
+  let active: readonly string[];
+  try {
+    active = session.getActiveToolNames();
+  } catch (error) {
+    throw new Error(`Pi tool activation failed while verifying [${requested.join(", ")}]: ${String(error)}`);
+  }
+  if (!sameToolNames(active, requested)) {
+    throw new Error(
+      `Pi tool activation mismatch: requested [${requested.join(", ")}], active [${active.join(", ")}]`,
+    );
+  }
+}
+
+export function assertUniqueToolNames(base: readonly ToolDef[], supplemental: readonly ToolDef[]): void {
+  const names = [...base, ...supplemental].map((tool) => tool.function.name);
+  if (new Set(names).size !== names.length) {
+    throw new Error(`Pi tool registration rejected duplicate tool names: ${names.join(", ")}`);
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Helpers — argument normalization and abort detection
 // ---------------------------------------------------------------------------
@@ -487,32 +532,14 @@ export class PiTransport implements TranscriptLlmTransport {
       this.promptRef.current = ocrSystemTexts;
     }
 
-    const sess = this.session as unknown as {
-      setActiveToolsByName?: (names: string[]) => void;
-      getActiveToolNames?: () => string[];
-    };
-    if (req.tools !== undefined) {
-      const names = req.tools.map((t) => t.function.name);
-      if (typeof sess.setActiveToolsByName === "function") {
-        try {
-          sess.setActiveToolsByName(names);
-        } catch {
-          // Non-fatal — allow request to proceed with previous allowlist
-          console.warn("[pi-adapter] tool allowlist sync failed stage=set_active_tools");
-        }
-      }
-    } else {
-      // Filter, compression, and plan turns carry no tool allowlist in OCR.
-      // Clear the allowlist so the provider request matches and the model
-      // returns a plain text response rather than a tool call.
-      if (typeof sess.setActiveToolsByName === "function") {
-        try {
-          sess.setActiveToolsByName([]);
-        } catch {
-          // ignore
-        }
-      }
+    const sess = this.session as unknown as Partial<ActiveToolSession>;
+    if (typeof sess.setActiveToolsByName !== "function" || typeof sess.getActiveToolNames !== "function") {
+      throw new Error("Pi session does not expose public active-tool verification APIs");
     }
+    activateToolsFailClosed(
+      sess as ActiveToolSession,
+      req.tools?.map((tool) => tool.function.name) ?? [],
+    );
 
     // -----------------------------------------------------------------
     // 2) Abort forwarding — forward AbortSignal -> session.abort()
@@ -831,6 +858,7 @@ export async function createPiTransportForFile(
   options: CreatePiTransportForFileOptions,
 ): Promise<PiTransport> {
   const { cwd, agentDir, tools, supplementalTools = [], model, sessionId, retryCollector } = options;
+  assertUniqueToolNames(tools, supplementalTools);
 
   const sessionManager = sessionId !== undefined && sessionId !== "" ? SessionManager.inMemory(cwd, { id: sessionId }) : SessionManager.inMemory(cwd);
   const settingsManager = SettingsManager.inMemory({

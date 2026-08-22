@@ -41,6 +41,7 @@ test("content empty falls back to reasoning content", async () => {
     isStreaming: false,
     sessionId: "s",
     setActiveToolsByName: () => {},
+    getActiveToolNames: () => [],
     subscribe: (next: (e: unknown) => void) => {
       listener = next;
       return () => {};

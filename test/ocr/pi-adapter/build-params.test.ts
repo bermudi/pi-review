@@ -21,6 +21,7 @@ test("ChatRequest role handling covers system/user/tool/assistant/unknown via Pi
     isStreaming: false,
     sessionId: "s",
     setActiveToolsByName: (names: string[]) => { capturedTools = names; },
+    getActiveToolNames: () => capturedTools ?? [],
     subscribe: (next: (e: unknown) => void) => { listener = next; return () => {}; },
     prompt: async () => {
       listener?.({ type: "turn_end", message: { role: "assistant", content: [{ type: "text", text: "ok" }], stopReason: "stop" } });
@@ -60,6 +61,7 @@ test("ChatRequest minimal tools stays unset", async () => {
     isStreaming: false,
     sessionId: "s",
     setActiveToolsByName: (names: string[]) => { capturedTools = names; },
+    getActiveToolNames: () => capturedTools ?? [],
     subscribe: (next: (e: unknown) => void) => { listener = next; return () => {}; },
     prompt: async () => { listener?.({ type: "turn_end", message: { role: "assistant", content: [{ type: "text", text: "ok" }], stopReason: "stop" } }); },
     waitForIdle: async () => {},

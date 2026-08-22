@@ -11,9 +11,11 @@ import type { ChatRequest } from "../../../src/ocr/llmloop/types.js";
 
 function fakeSessionWithMessage(message: unknown): unknown {
   let listener: ((event: unknown) => void) | undefined;
+  let activeTools: string[] = [];
   return {
     state: { messages: [] as unknown[] },
-    setActiveToolsByName: () => {},
+    setActiveToolsByName: (names: string[]) => { activeTools = names; },
+    getActiveToolNames: () => activeTools,
     subscribe: (next: (e: unknown) => void) => {
       listener = next;
       return () => {};
@@ -69,6 +71,7 @@ test("PiTransport records failed attempt with classification", async () => {
   const session = {
     state: { messages: [] as unknown[] },
     setActiveToolsByName: () => {},
+    getActiveToolNames: () => [],
     subscribe: () => () => {},
     prompt: async () => { throw new DOMException("Aborted", "AbortError"); },
     waitForIdle: async () => {},

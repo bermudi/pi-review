@@ -52,6 +52,7 @@ test("PiTransport captures streaming usage via turn_end assistant message", asyn
     isStreaming: false,
     sessionId: "s",
     setActiveToolsByName: () => {},
+    getActiveToolNames: () => [],
     subscribe: (next: (e: unknown) => void) => { listener = next; return () => {}; },
     prompt: async () => {
       listener?.({

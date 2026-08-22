@@ -1,7 +1,9 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright 2026 alibaba/open-code-review Contributors
 //
-// Ported from internal/agent/agent.go at c35ddd7223f2b5540ce03aa43c9a25ef643fca27.
+// Ported from internal/agent/agent.go at c35ddd7223f2b5540ce03aa43c9a25ef643fca27;
+// review-filter tool contract updated from OCR v1.9.5
+// c8b6a390b8ad447faf46d4764347167edff0ada2.
 // Modifications are distributed as part of pi-reviewer under
 // GPL-3.0-or-later;
 // see LICENSES/Apache-2.0.txt and THIRD_PARTY_NOTICES.md.
@@ -17,12 +19,30 @@ export const REVIEW_FILTER_TOOLS: readonly ToolDef[] = [
     type: "function",
     function: {
       name: "report_incorrect_comments",
-      description: "Report only comments the diff proves factually wrong.",
+      description:
+        "Report review comments that this diff proves to be factually wrong: either the code they target is absent from the diff, " +
+        "or one diff line literally contradicts their central claim. For every id listed you must be able to name that line. " +
+        "Do not use this for comments you merely find unconvincing, unverifiable, or low-value, nor for comments about memory safety, " +
+        "concurrency, linkage consistency, unused parameters, or behavioral changes.",
       parameters: {
         type: "object",
         properties: {
-          analysis: { type: "array", items: { type: "string" } },
-          comment_ids: { type: "array", items: { type: "string" } },
+          // Property order is load-bearing: OCR's Go map serialization sorts
+          // analysis before comment_ids so the model reasons before committing.
+          analysis: {
+            type: "array",
+            description:
+              "Work through every candidate comment BEFORE deciding. One entry per candidate: its id, " +
+              "whether its subject hits the protected-subject veto (Step 1) or the value veto (Step 2), " +
+              "the exact diff line that refutes it if any, and your final call. " +
+              "Only ids you conclude here as removable may appear in comment_ids.",
+            items: { type: "string" },
+          },
+          comment_ids: {
+            type: "array",
+            description: "IDs concluded removable in analysis, e.g. [\"c-0\", \"c-2\"]. Must not be empty.",
+            items: { type: "string" },
+          },
         },
         required: ["analysis", "comment_ids"],
       },
@@ -32,7 +52,9 @@ export const REVIEW_FILTER_TOOLS: readonly ToolDef[] = [
     type: "function",
     function: {
       name: "approve_all_comments",
-      description: "Keep every review comment.",
+      description:
+        "Keep every review comment. Call this whenever no comment clears the removal bar — including when comments look doubtful, " +
+        "cannot be verified from the diff alone, or seem minor. This is the expected outcome for most files.",
       parameters: { type: "object", properties: {} },
     },
   },
@@ -57,12 +79,17 @@ export function parseFilterToolCalls(calls: readonly ToolCall[], total: number):
       console.error(`[pi-review] Review filter: failed to parse tool call arguments: ${String(error)}`);
       continue;
     }
-    if (raw === null || typeof raw !== "object") continue;
+    if (raw === null || typeof raw !== "object" || Array.isArray(raw)) {
+      console.error("[pi-review] Review filter: failed to parse tool call arguments: expected object");
+      continue;
+    }
     const ids = (raw as Record<string, unknown>)["comment_ids"];
-    if (!Array.isArray(ids)) continue;
+    if (ids !== undefined && (!Array.isArray(ids) || !ids.every((id) => typeof id === "string"))) {
+      console.error("[pi-review] Review filter: failed to parse tool call arguments: comment_ids must be strings");
+      continue;
+    }
     indices ??= new Map<number, unknown>();
-    for (const id of ids) {
-      if (typeof id !== "string") continue;
+    for (const id of ids ?? []) {
       const match = /^c-(\d+)$/.exec(id);
       if (match === null) continue;
       const index = Number(match[1]);
