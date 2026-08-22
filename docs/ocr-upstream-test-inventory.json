@@ -5683,8 +5683,15 @@
         {
           "name": "TestScanBudgetJSON",
           "delta": "added",
-          "disposition": "pending",
-          "reason": "OCR v1.9.9 added requires explicit new evidence or revalidation; prior v1.9.3 coverage is not inherited."
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr/cli/scan-budget-json.test.ts",
+              "title": "TestScanBudgetJSON",
+              "ocrVersion": "v1.9.9"
+            }
+          ]
         }
       ]
     },
@@ -16059,8 +16066,15 @@
         {
           "name": "TestBudgetExceededFlag",
           "delta": "added",
-          "disposition": "pending",
-          "reason": "OCR v1.9.9 added requires explicit new evidence or revalidation; prior v1.9.3 coverage is not inherited."
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr/scan/budget.test.ts",
+              "title": "TestBudgetExceededFlag",
+              "ocrVersion": "v1.9.9"
+            }
+          ]
         }
       ]
     },
@@ -16729,8 +16743,15 @@
         {
           "name": "TestProvider_Enumerate_SniffError",
           "delta": "changed_body",
-          "disposition": "pending",
-          "reason": "OCR v1.9.9 changed body requires explicit new evidence or revalidation; prior v1.9.3 coverage is not inherited."
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr/scan/provider.test.ts",
+              "title": "TestProvider_Enumerate_SniffError",
+              "ocrVersion": "v1.9.9"
+            }
+          ]
         }
       ]
     },

@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright 2026 alibaba/open-code-review Contributors
-// Ported from internal/scan/budget_test.go at c35ddd7223f2b5540ce03aa43c9a25ef643fca27
-// localPath test/ocr/scan/budget.test.ts -> internal/scan/budget_test.go
+// Ported from internal/scan/budget_test.go at c35ddd7223f2b5540ce03aa43c9a25ef643fca27;
+// aggregate-budget state revalidated from OCR v1.9.9
+// internal/scan/budget_exceeded_test.go.
 
 import { describe, test, expect } from "bun:test";
 import { Agent, NewAgent } from "../../../src/ocr/scan/scan.js";
@@ -79,6 +80,32 @@ function makeToolRegistry(): { get: (name: string) => unknown; freeze: () => voi
 }
 
 describe("ocr scan budget (ported from internal/scan/budget_test.go)", () => {
+  // OCR v1.9.9: TestBudgetExceededFlag
+  test("TestBudgetExceededFlag", async () => {
+    for (const tc of [
+      { name: "gate trips", budget: 120000, items: 10, want: true },
+      { name: "unlimited budget", budget: 0, items: 5, want: false },
+    ]) {
+      const agent = NewAgent({
+        template: budgetTestTemplate(),
+        llmClient: new FakeBudgetClient(50000) as unknown as AnyLlmClient,
+        commentCollector: new CommentCollector() as unknown as never,
+        tools: makeToolRegistry() as unknown as never,
+        maxConcurrency: 1,
+        maxTokensBudget: tc.budget,
+        session: new SessionHistory("/tmp", "main", "test", { reviewMode: "full_scan" }) as unknown as never,
+        skipPlan: true,
+        skipDedup: true,
+        skipSummary: true,
+      } as unknown as never);
+      const priv = agent as unknown as ScanAgentPrivate;
+      priv.items = makeScanItems(tc.items);
+      priv.currentDate = "2026-06-26 10:00";
+      await priv.dispatchSubtasks(new AbortController().signal);
+      expect(agent.BudgetExceeded(), tc.name).toBe(tc.want);
+    }
+  });
+
   // OCR v1.9.3: TestBudgetGate_StopsBeforeExceeding
   test("TestBudgetGate_StopsBeforeExceeding", async () => {
     const perCall = 50000;

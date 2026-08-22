@@ -40,6 +40,11 @@ sessions preserve completed checkpoints but record interrupted and undispatched
 work as cancelled. The production factory now uses that same single Agent-owned
 session/finalization boundary; remaining inventory work is still pending.
 
+The scan budget/enumeration tranche translates three v1.9.9 cases. Aggregate
+scan budget truncation remains warning-derived JSON status while exposing
+`budget_exceeded`; unreadable binary-sniff candidates are skipped without
+disturbing remaining ordered files. Remaining inventory work is still pending.
+
 Existing `src/ocr` code is **candidate implementation**, not proven
 parity. Do not delete or rewrite it merely because its old verifiers were
 unsound. Reuse it only when a new gate proves its behavior.

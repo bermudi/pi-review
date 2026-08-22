@@ -195,10 +195,10 @@ describe("ocr scan provider (ported from internal/scan/provider_test.go)", () =>
     } finally { await repo.cleanup(); }
   });
 
-  // OCR v1.9.3: TestProvider_Enumerate_SniffError
+  // OCR v1.9.9: TestProvider_Enumerate_SniffError
   test("TestProvider_Enumerate_SniffError", async () => {
-    // Skip on root (permission bypass)
-    if (typeof process.getuid === "function" && process.getuid() === 0) return;
+    // Windows read-only permissions and root both permit opening chmod(0000).
+    if (process.platform === "win32" || (typeof process.getuid === "function" && process.getuid() === 0)) return;
     const repo = await initTestRepo();
     try {
       await writeFileEnsure(repo.dir, "ok.go", "package ok\n");

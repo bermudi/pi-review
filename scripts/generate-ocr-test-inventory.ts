@@ -2240,7 +2240,7 @@ const localCoverage: readonly LocalCoverage[] = [
   },
   {
     localPath: "test/ocr/scan/budget.test.ts",
-    upstreamPaths: ["internal/scan/budget_test.go"],
+    upstreamPaths: ["internal/scan/budget_test.go", "internal/scan/budget_exceeded_test.go"],
   },
   {
     localPath: "test/ocr/scan/dedup.test.ts",
@@ -2441,6 +2441,10 @@ const localCoverage: readonly LocalCoverage[] = [
   {
     localPath: "test/ocr/cli/scan-cmd.test.ts",
     upstreamPaths: ["cmd/opencodereview/scan_cmd_test.go"],
+  },
+  {
+    localPath: "test/ocr/cli/scan-budget-json.test.ts",
+    upstreamPaths: ["cmd/opencodereview/scan_budget_json_test.go"],
   },
   {
     localPath: "test/ocr/cli/scan-helpers.test.ts",
