@@ -191,45 +191,12 @@ test("buildToolRegistry returns non-nil registry", () => {
   }
 });
 
-test("runReviewContext rejects invalid commit before calling preview or runner", async () => {
+test("runCli rejects invalid commit before calling preview or runner", async () => {
   const dir = initTestGitRepo();
-  const orig = process.cwd();
   try {
-    const { runReviewContext } = await import("../../../src/ocr-v193/cli/review.js");
-    const io = {
-      cwd: () => dir,
-      env: () => ({}) as Record<string, string | undefined>,
-      stdout: () => {},
-      stderr: () => {},
-      onSignal: () => {},
-      offSignal: () => {},
-    } as unknown as import("../../../src/ocr-v193/cli/shared.js").CliIo;
-    const baseOpts = {
-      toolConfigPath: "",
-      rulePath: "",
-      repoDir: dir,
-      from: "",
-      to: "",
-      commit: "nonexistent-ref-xyz",
-      resume: "",
-      excludes: "",
-      outputFormat: "text" as const,
-      audience: "human" as const,
-      background: "",
-      backgroundFile: "",
-      provider: "",
-      model: "",
-      concurrency: 8,
-      perFileTimeout: 10,
-      maxTools: 0,
-      maxGitProcs: 16,
-      maxTokens: 0,
-      maxTokensBudget: 0,
-      noFilter: false,
-      preview: false,
-    } as unknown as import("../../../src/ocr-v193/cli/shared.js").ReviewOptions;
-
+    const { runCli } = await import("../../../src/ocr-v193/cli/index.js");
     let previewCalled = false;
+    let runnerCalled = false;
     const previewFactory = async () => {
       previewCalled = true;
       return {
@@ -241,22 +208,6 @@ test("runReviewContext rejects invalid commit before calling preview or runner",
         excludedCount: 0,
       } as unknown as import("../../../src/ocr-v193/model/preview.js").Preview;
     };
-    await expect(
-      runReviewContext({
-        io,
-        opts: { ...baseOpts, preview: true } as unknown as import("../../../src/ocr-v193/cli/shared.js").ReviewOptions,
-        version: "test",
-        traceId: "",
-        llmIdentity: undefined,
-        retryReport: null,
-        startMs: Date.now(),
-        previewFactory,
-        runnerFactory: undefined,
-      }),
-    ).rejects.toThrow();
-    expect(previewCalled).toBe(false);
-
-    let runnerCalled = false;
     const runnerFactory = async () => {
       runnerCalled = true;
       return {
@@ -277,22 +228,44 @@ test("runReviewContext rejects invalid commit before calling preview or runner",
         diffs: [],
       } as unknown as import("../../../src/ocr-v193/cli/review.js").ReviewRunner;
     };
-    await expect(
-      runReviewContext({
+    const makeIo = () => {
+      let stdout = "";
+      let stderr = "";
+      return {
+        io: {
+          cwd: () => dir,
+          env: () => ({}) as Record<string, string | undefined>,
+          stdout: (s: string) => { stdout += s; },
+          stderr: (s: string) => { stderr += s; },
+          onSignal: () => {},
+          offSignal: () => {},
+        } as unknown as import("../../../src/ocr-v193/cli/shared.js").CliIo,
+        get stdoutText() { return stdout; },
+        get stderrText() { return stderr; },
+      };
+    };
+    // Non-preview run: runner must not be called on invalid commit
+    {
+      const { io } = makeIo();
+      const code = await runCli(["review", "--commit", "nonexistent-ref-xyz", "--repo", dir], {
         io,
-        opts: { ...baseOpts, preview: false } as unknown as import("../../../src/ocr-v193/cli/shared.js").ReviewOptions,
-        version: "test",
-        traceId: "",
-        llmIdentity: undefined,
-        retryReport: null,
-        startMs: Date.now(),
-        previewFactory: undefined,
-        runnerFactory,
-      }),
-    ).rejects.toThrow();
-    expect(runnerCalled).toBe(false);
+        reviewRunnerFactory: runnerFactory as never,
+      });
+      expect(code).toBe(1);
+      expect(runnerCalled).toBe(false);
+    }
+    // Preview run: preview must not be called on invalid commit
+    {
+      previewCalled = false;
+      const { io } = makeIo();
+      const code = await runCli(["review", "--commit", "nonexistent-ref-xyz", "--repo", dir, "--preview"], {
+        io,
+        reviewPreviewFactory: previewFactory as never,
+      });
+      expect(code).toBe(1);
+      expect(previewCalled).toBe(false);
+    }
   } finally {
-    try { process.chdir(orig); } catch {}
     fs.rmSync(dir, { recursive: true, force: true });
   }
 });
