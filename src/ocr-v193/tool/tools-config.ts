@@ -1,8 +1,9 @@
 // SPDX-License-Identifier: Apache-2.0
-// Ported from internal/config/toolsconfig/tools.json at c35ddd7223f2b5540ce03aa43c9a25ef643fca27.
+// Ported from internal/config/toolsconfig/tools.json and toolsconfig.go at c35ddd7223f2b5540ce03aa43c9a25ef643fca27.
 // Tool definitions are verbatim from the pinned OCR checkout.
 // Modifications distributed under GPL-3.0-or-later.
 
+import * as fs from "node:fs";
 import type { ToolDef } from "../llmloop/types.js";
 
 /**
@@ -220,4 +221,214 @@ export function mainTaskToolDefs(): readonly ToolDef[] {
 /** Plan-task defs — tiny set for plan phase (if needed). */
 export function planTaskToolDefs(): readonly ToolDef[] {
   return toolDefsForPhase(true);
+}
+
+// ---------------------------------------------------------------------------
+// Toolsconfig loader — mirrors internal/config/toolsconfig/toolsconfig.go
+// ---------------------------------------------------------------------------
+
+/**
+ * ToolConfigEntry mirrors Go's toolsconfig.ToolConfigEntry.
+ * JSON fields use snake_case as in tools.json; we accept both forms.
+ */
+export interface ToolConfigEntry {
+  readonly name: string;
+  readonly plan_task: boolean;
+  readonly main_task: boolean;
+  readonly definition: unknown;
+  // camelCase aliases for convenience (not serialized)
+  readonly PlanTask?: boolean;
+  readonly MainTask?: boolean;
+  readonly Definition?: unknown;
+}
+
+function normalizeEntry(raw: unknown): ToolConfigEntry {
+  if (typeof raw !== "object" || raw === null || Array.isArray(raw)) {
+    throw new Error("unmarshal tools file: entry must be an object");
+  }
+  const rec = raw as Record<string, unknown>;
+  const name = rec["name"];
+  if (typeof name !== "string" || name.trim() === "") {
+    throw new Error("unmarshal tools file: entry missing non-empty string field 'name'");
+  }
+  const planRaw = rec["plan_task"] ?? rec["PlanTask"] ?? rec["planTask"];
+  const mainRaw = rec["main_task"] ?? rec["MainTask"] ?? rec["mainTask"];
+  const planTask = typeof planRaw === "boolean" ? planRaw : false;
+  const mainTask = typeof mainRaw === "boolean" ? mainRaw : false;
+  const def = rec["definition"] ?? rec["Definition"];
+  if (def === undefined || def === null) {
+    throw new Error(`unmarshal tools file: entry ${JSON.stringify(name)} missing 'definition'`);
+  }
+  if (typeof def !== "object" || Array.isArray(def)) {
+    throw new Error(`unmarshal tools file: entry ${JSON.stringify(name)} definition must be an object`);
+  }
+  // Object-root validation: if parameters present, type must be object. We warn but do not fail at Load —
+  // BuildToolDefs will enforce and skip invalid entries, matching Go's warning behavior.
+  return {
+    name: name,
+    plan_task: planTask,
+    main_task: mainTask,
+    definition: def,
+  } as ToolConfigEntry;
+}
+
+/**
+ * Default entries derived from the embedded tools.json (same order as DEFAULT_TOOL_DEFS).
+ * These are used when Load("") is called, mirroring Go's embed fallback.
+ */
+const DEFAULT_TOOL_ENTRIES: readonly ToolConfigEntry[] = (() => {
+  const defs = DEFAULT_TOOL_DEFS as readonly ToolDef[];
+  const flags: Record<string, { plan: boolean; main: boolean }> = {
+    task_done: { plan: false, main: true },
+    code_comment: { plan: false, main: true },
+    file_read: { plan: false, main: true },
+    code_search: { plan: true, main: true },
+    file_read_diff: { plan: true, main: true },
+    file_find: { plan: true, main: true },
+  };
+  return defs.map((d) => {
+    const n = d.function.name as string;
+    const f = flags[n] ?? { plan: false, main: false };
+    const rawDef: unknown = {
+      name: d.function.name,
+      description: d.function.description,
+      parameters: d.function.parameters,
+    };
+    return {
+      name: n,
+      plan_task: f.plan,
+      main_task: f.main,
+      definition: rawDef,
+    } as ToolConfigEntry;
+  });
+})();
+
+/**
+ * Load parses the tools config file. When path is empty, falls back to
+ * the embedded default tools configuration — mirrors Go's toolsconfig.Load.
+ * Validates external input at the boundary and preserves order/raw schema.
+ */
+export function loadToolConfig(path: string): ToolConfigEntry[] {
+  if (path === "" || path === undefined) {
+    // Return a shallow copy to prevent mutation
+    return [...DEFAULT_TOOL_ENTRIES];
+  }
+  if (typeof path !== "string") {
+    throw new Error(`read tools file ${String(path)}: path must be a string`);
+  }
+  let st: fs.Stats;
+  try {
+    st = fs.statSync(path);
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    throw new Error(`read tools file ${path}: ${msg}`);
+  }
+  if (st.isDirectory()) {
+    throw new Error(`read tools file ${path}: is a directory`);
+  }
+  let data: string;
+  try {
+    data = fs.readFileSync(path, "utf8");
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    throw new Error(`read tools file ${path}: ${msg}`);
+  }
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(data);
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    throw new Error(`unmarshal tools file: ${msg}`);
+  }
+  if (!Array.isArray(parsed)) {
+    throw new Error("unmarshal tools file: top-level JSON must be an array");
+  }
+  const out: ToolConfigEntry[] = [];
+  for (const raw of parsed) {
+    out.push(normalizeEntry(raw));
+  }
+  return out;
+}
+
+/**
+ * ToolDefsByPhase mirrors Go's (t *ToolConfigEntry) ToolDefsByPhase.
+ * planOnly=true returns definition only when plan_task is true.
+ */
+export function toolDefsByPhase(entry: ToolConfigEntry, planOnly: boolean): [unknown, boolean] {
+  const plan = entry.plan_task ?? entry.PlanTask ?? false;
+  const main = entry.main_task ?? entry.MainTask ?? false;
+  if (planOnly && plan) return [entry.definition ?? entry.Definition, true];
+  if (!planOnly && main) return [entry.definition ?? entry.Definition, true];
+  return [undefined, false];
+}
+
+/**
+ * buildToolDefs converts ToolConfigEntry slice into ToolDef[], filtering by phase
+ * and preserving order and raw definition — mirrors Go's agent.BuildToolDefs.
+ * Validates object-root schemas and bounded capabilities at the boundary:
+ * - parameters must be object-root when present
+ * - mutation tools (shell/edit/write/exec) are not granted via registry; they remain stubbed
+ */
+export function buildToolDefs(entries: readonly ToolConfigEntry[], planOnly: boolean): readonly ToolDef[] {
+  const out: ToolDef[] = [];
+  for (const e of entries) {
+    const [defRaw, ok] = toolDefsByPhase(e, planOnly);
+    if (!ok) continue;
+    if (defRaw === undefined || defRaw === null) continue;
+    // Validate that defRaw is an object with at least a name
+    if (typeof defRaw !== "object" || Array.isArray(defRaw)) {
+      // Mimic Go's warning and skip
+      try {
+        console.error(`[pi-review] WARNING: failed to parse tool definition ${JSON.stringify(e.name)}: definition must be an object`);
+      } catch {}
+      continue;
+    }
+    const rec = defRaw as Record<string, unknown>;
+    const fnName = typeof rec["name"] === "string" ? (rec["name"] as string) : e.name;
+    // Object-root validation: if parameters present, must be type object
+    const params = rec["parameters"] as Record<string, unknown> | undefined;
+    if (params !== undefined && params !== null) {
+      if (typeof params !== "object" || Array.isArray(params)) {
+        try { console.error(`[pi-review] WARNING: failed to parse tool definition ${JSON.stringify(e.name)}: parameters must be an object`);} catch {}
+        continue;
+      }
+      const pType = (params as Record<string, unknown>)["type"];
+      if (pType !== undefined && pType !== "object") {
+        try { console.error(`[pi-review] WARNING: failed to parse tool definition ${JSON.stringify(e.name)}: parameters.type must be "object"`);} catch {}
+        continue;
+      }
+    }
+    // Bounded capabilities: deny explicit mutation tool names via custom config.
+    // This does not affect the 6 built-in allowlisted tools.
+    const lower = fnName.toLowerCase();
+    const isBuiltIn = ["task_done", "code_comment", "file_read", "code_search", "file_read_diff", "file_find"].includes(lower);
+    if (!isBuiltIn) {
+      const denyList = ["shell", "exec", "edit", "write", "apply_patch", "run_shell", "bash", "sh", "mutation"];
+      const isDenied = denyList.some((d) => lower.includes(d));
+      if (isDenied) {
+        try { console.error(`[pi-review] WARNING: tool ${JSON.stringify(fnName)} denied: mutation capabilities not allowed via custom tools config`);} catch {}
+        continue;
+      }
+    }
+    const raw = JSON.stringify(defRaw);
+    const fn: Record<string, unknown> = {
+      name: fnName,
+      description: typeof rec["description"] === "string" ? rec["description"] : "",
+      parameters: rec["parameters"] ?? { type: "object", properties: {} },
+      RawDefinition: raw,
+    };
+    out.push({
+      type: "function",
+      function: fn as unknown as ToolDef["function"],
+    });
+  }
+  return out;
+}
+
+/**
+ * Convenience: load and build in one step for factory wiring.
+ */
+export function loadToolDefs(path: string, planOnly: boolean): readonly ToolDef[] {
+  const entries = loadToolConfig(path);
+  return buildToolDefs(entries, planOnly);
 }

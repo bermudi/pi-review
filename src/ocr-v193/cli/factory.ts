@@ -16,7 +16,7 @@ import type { LlmComment } from "../model/review.js";
 import { loadDefaultTemplate, loadDefaultScanTemplate, applyLanguage, applyLanguageScan } from "../template/template.js";
 import { newResolver, type FileFilter } from "../rules/system_rules.js";
 import { minimatch } from "minimatch";
-import { mainTaskToolDefs, planTaskToolDefs } from "../tool/tools-config.js";
+import { mainTaskToolDefs, planTaskToolDefs, loadToolConfig, buildToolDefs } from "../tool/tools-config.js";
 import { CommentCollector } from "../tool/collector.js";
 import { CommentWorkerPool } from "../llmloop/pool.js";
 import { Agent, newAgent, reviewItemFingerprint } from "../agent/agent.js";
@@ -62,8 +62,22 @@ export function createReviewRunnerFactory(
       template = { ...template, MaxTokens: opts.maxTokens };
     }
 
-    const mainToolDefs = mainTaskToolDefs();
-    const planToolDefs = planTaskToolDefs();
+    let mainToolDefs: readonly import("../llmloop/types.js").ToolDef[];
+    let planToolDefs: readonly import("../llmloop/types.js").ToolDef[];
+    if (opts.toolConfigPath !== "" && opts.toolConfigPath !== undefined) {
+      try {
+        const entries = loadToolConfig(opts.toolConfigPath);
+        mainToolDefs = buildToolDefs(entries, false);
+        planToolDefs = buildToolDefs(entries, true);
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : String(e);
+        // Mirror Go's "load tools: %w" wrapping from shared.go loadLLMRuntime
+        throw new Error(msg.startsWith("read tools file") || msg.startsWith("unmarshal tools file") ? `load tools: ${msg}` : `load tools: ${msg}`);
+      }
+    } else {
+      mainToolDefs = mainTaskToolDefs();
+      planToolDefs = planTaskToolDefs();
+    }
 
     const ruleSet = newResolver(repoDir, opts.rulePath);
     const ruleResolver = ruleSet.resolver;
@@ -432,7 +446,18 @@ export function createScanRunnerFactory(
     const cwd = repoDir;
     const agentDirEnv = process.env["PI_CODING_AGENT_DIR"];
     const agentDir = agentDirEnv !== undefined && agentDirEnv !== "" ? agentDirEnv : `${process.env["HOME"] ?? "/tmp"}/.pi/agent`;
-    const allMainToolDefs = mainTaskToolDefs();
+    let allMainToolDefs: readonly import("../llmloop/types.js").ToolDef[];
+    if (opts.toolConfigPath !== "" && opts.toolConfigPath !== undefined) {
+      try {
+        const entries = loadToolConfig(opts.toolConfigPath);
+        allMainToolDefs = buildToolDefs(entries, false);
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : String(e);
+        throw new Error(msg.startsWith("read tools file") || msg.startsWith("unmarshal tools file") ? `load tools: ${msg}` : `load tools: ${msg}`);
+      }
+    } else {
+      allMainToolDefs = mainTaskToolDefs();
+    }
     const mainToolDefs = allMainToolDefs.filter((t) => t.function.name !== "file_read_diff");
 
     const transport = await createPiTransportForFile({ cwd, agentDir, tools: mainToolDefs });

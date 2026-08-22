@@ -1321,6 +1321,14 @@ const scopeOverrides: ReadonlyMap<string, Scope> = new Map<string, Scope>([
       reason: "background file loading, sanitation, delimiters, limits and merge ordering are core CLI review input handling",
     },
   ],
+  [
+    "internal/config/toolsconfig/toolsconfig_test.go",
+    {
+      kind: "in_scope",
+      area: "tool",
+      reason: "tool configuration loading and phase filtering are core to advertised model capabilities and CLI --tools wiring",
+    },
+  ],
 ]);
 
 const localCoverage: readonly LocalCoverage[] = [
@@ -1697,6 +1705,10 @@ const localCoverage: readonly LocalCoverage[] = [
   {
     localPath: "test/ocr-v193/cli/background-file.test.ts",
     upstreamPaths: ["cmd/opencodereview/background_file_test.go"],
+  },
+  {
+    localPath: "test/ocr-v193/tool/toolsconfig.test.ts",
+    upstreamPaths: ["internal/config/toolsconfig/toolsconfig_test.go"],
   },
 ];
 

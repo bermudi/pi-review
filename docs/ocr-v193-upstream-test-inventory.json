@@ -7473,35 +7473,65 @@
       "path": "internal/config/toolsconfig/toolsconfig_test.go",
       "blob": "895a4532da94d40851196309904242fcb01f9eb6",
       "scope": {
-        "kind": "needs_decision",
-        "area": "internal/config",
-        "reason": "not yet classified by the OCR v1.9.3 core-port source map"
+        "kind": "in_scope",
+        "area": "tool",
+        "reason": "tool configuration loading and phase filtering are core to advertised model capabilities and CLI --tools wiring"
       },
       "tests": [
         {
           "name": "TestLoad_CustomFile",
-          "disposition": "pending_scope",
-          "reason": "not yet classified by the OCR v1.9.3 core-port source map"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/tool/toolsconfig.test.ts",
+              "title": "load custom file"
+            }
+          ]
         },
         {
           "name": "TestLoad_Default",
-          "disposition": "pending_scope",
-          "reason": "not yet classified by the OCR v1.9.3 core-port source map"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/tool/toolsconfig.test.ts",
+              "title": "load default tools"
+            }
+          ]
         },
         {
           "name": "TestLoad_FileNotFound",
-          "disposition": "pending_scope",
-          "reason": "not yet classified by the OCR v1.9.3 core-port source map"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/tool/toolsconfig.test.ts",
+              "title": "load file not found"
+            }
+          ]
         },
         {
           "name": "TestLoad_InvalidJSON",
-          "disposition": "pending_scope",
-          "reason": "not yet classified by the OCR v1.9.3 core-port source map"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/tool/toolsconfig.test.ts",
+              "title": "load invalid JSON"
+            }
+          ]
         },
         {
           "name": "TestToolDefsByPhase",
-          "disposition": "pending_scope",
-          "reason": "not yet classified by the OCR v1.9.3 core-port source map"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/tool/toolsconfig.test.ts",
+              "title": "toolDefsByPhase filtering"
+            }
+          ]
         }
       ]
     },
