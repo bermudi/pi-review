@@ -6,15 +6,31 @@ import { formatVersion, HELP_TEXT } from "../../../src/ocr-v193/cli/index.js";
 
 // OCR v1.9.3: TestPrintVersion_Dev
 test("versionString dev contains base name and arch", () => {
-  const got = formatVersion({ version: "dev", commit: "", date: "", platform: process.platform, arch: process.arch });
+  const got = formatVersion({
+    version: "dev",
+    ocrVersion: "v1.9.3",
+    commit: "",
+    date: "",
+    platform: process.platform,
+    arch: process.arch,
+  });
   expect(got).toContain("pi-review dev");
   expect(got).toContain(`${process.platform}/${process.arch}`);
+  expect(got).toContain("OCR compatibility: v1.9.3");
 });
 
 // OCR v1.9.3: TestPrintVersion_WithCommitAndDate
 test("versionString with commit and date contains all parts", () => {
-  const got = formatVersion({ version: "1.2.3", commit: "abc1234", date: "2026-01-01", platform: "linux", arch: "amd64" });
+  const got = formatVersion({
+    version: "1.2.3",
+    ocrVersion: "v1.9.9",
+    commit: "abc1234",
+    date: "2026-01-01",
+    platform: "linux",
+    arch: "amd64",
+  });
   expect(got).toContain("1.2.3");
+  expect(got).toContain("OCR compatibility: v1.9.9");
   expect(got).toContain("abc1234");
   expect(got).toContain("2026-01-01");
   expect(got).toContain("linux/amd64");

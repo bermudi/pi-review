@@ -155,9 +155,14 @@ describe("thin OCR production adapter", () => {
   test("version via version subcommand", async () => {
     const cap = captureIo();
     const code = await runCli(["version"], { io: cap.io });
+    const packageJson = JSON.parse(fs.readFileSync(path.join(import.meta.dir, "..", "package.json"), "utf8")) as {
+      readonly version?: unknown;
+    };
     expect(code).toBe(0);
     expect(cap.stdout()).toBe(versionString());
-    expect(cap.stdout()).toContain("pi-review");
+    expect(typeof packageJson.version).toBe("string");
+    expect(cap.stdout()).toContain(`pi-review ${String(packageJson.version)}`);
+    expect(cap.stdout()).toContain("OCR compatibility: v1.9.3");
     expect(cap.stderr()).toBe("");
   });
 

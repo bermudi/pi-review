@@ -33,7 +33,7 @@ public APIs, stop and report the blocker.
 ## Upstream Releases and Upgrade Policy
 
 `pi-reviewer` supports exactly one pinned OCR behavioral baseline at a time.
-The current package line is `0.2.x`, based on OCR `v1.9.3`. A newer OCR release
+The current package line is `0.3.x`, based on OCR `v1.9.3`. A newer OCR release
 does not retroactively make that baseline incomplete; it starts a separate,
 explicit upgrade. Do not opportunistically sync OCR `main` or mix behavior
 from multiple OCR releases.
@@ -42,7 +42,7 @@ Package and OCR versions are related but independent:
 
 - package patches fix the current OCR baseline without changing it;
 - changing the pinned OCR baseline requires at least a package minor release
-  (`v0.3.0` is the intended line for an OCR `v1.9.9` upgrade);
+  (`v0.4.0` is the intended line for an OCR `v1.9.9` upgrade);
 - normal SemVer rules still govern public CLI/library breaking changes; and
 - an annotated package release tag must point at the exact commit whose full
   inventory and packed-install gates passed. Creating or pushing a release tag

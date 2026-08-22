@@ -38,12 +38,14 @@ import { flagErrorWithSuggestion } from "./flag-suggest.js";
 // Version / help text — mirrors Go root.go + version.go
 // ---------------------------------------------------------------------------
 
-export const VERSION = "0.2.0";
+export const VERSION = "0.3.0";
 export const GIT_COMMIT = "";
 export const BUILD_DATE = "";
+export const OCR_COMPATIBILITY_VERSION = "v1.9.3";
 
 export interface BuildInfo {
   readonly version: string;
+  readonly ocrVersion: string;
   readonly commit: string;
   readonly date: string;
   readonly platform: string;
@@ -54,6 +56,7 @@ export function formatVersion(info: BuildInfo): string {
   let s = `pi-review ${info.version}`;
   if (info.commit !== "") s += ` (${info.commit})`;
   s += ` ${info.platform}/${info.arch}\n`;
+  s += `OCR compatibility: ${info.ocrVersion}\n`;
   if (info.date !== "") s += `built at: ${info.date}\n`;
   s += "https://github.com/bermudi/pi-reviewer\n";
   return s;
@@ -62,6 +65,7 @@ export function formatVersion(info: BuildInfo): string {
 export function versionString(): string {
   return formatVersion({
     version: VERSION,
+    ocrVersion: OCR_COMPATIBILITY_VERSION,
     commit: GIT_COMMIT,
     date: BUILD_DATE,
     platform: process.platform,

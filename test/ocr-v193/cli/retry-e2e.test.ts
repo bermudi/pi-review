@@ -104,7 +104,7 @@ async function runCaptured(
     code = await runReviewContext({
       io,
       opts,
-      version: "0.2.0",
+      version: "test-version",
       traceId: "trace-e2e",
       llmIdentity: { model: "claude-test" },
       retryReport: retryReportOverride ?? null,
