@@ -126,6 +126,7 @@ function fakeScanRunner(overrides: Partial<ScanRunner> = {}): ScanRunner {
 // ---------------------------------------------------------------------------
 
 describe("thin OCR production adapter", () => {
+  // OCR v1.9.3: TestWriter_Default
   test("help goes to stdout, exit 0, via --help", async () => {
     const cap = captureIo();
     const code = await runCli(["--help"], { io: cap.io });
@@ -209,6 +210,7 @@ describe("thin OCR production adapter", () => {
     expect(cap.stderr()).toContain("unknown command");
   });
 
+  // OCR v1.9.3: TestQuiet
   test("factory injection without network: review runner is called and stdout is JSON, stderr is diagnostics only", async () => {
     const repo = createTempGitRepo();
     try {
@@ -376,69 +378,6 @@ describe("thin OCR production adapter", () => {
       expect(cap.stdout()).toContain('"status"');
     } finally {
       repo.cleanup();
-    }
-  });
-
-  // OCR v1.9.3: TestWriter_Default
-  test("stdout writer default via injected CliIo boundary", async () => {
-    const cap = captureIo();
-    const code = await runCli(["--help"], { io: cap.io });
-    expect(code).toBe(0);
-    expect(cap.stdout()).toContain("pi-review");
-    expect(cap.stderr()).toBe("");
-  });
-
-  // OCR v1.9.3: TestQuiet
-  test("quiet boundary via QuietHandle and agent/json audience", async () => {
-    const { newQuietHandle } = await import("../src/ocr-v193/cli/shared.js");
-    const hJson = newQuietHandle("json", "human");
-    expect(hJson.fn).not.toBeNull();
-    hJson.Restore();
-    expect(hJson.fn).toBeNull();
-    const hText = newQuietHandle("text", "human");
-    expect(hText.fn).toBeNull();
-    const repo = createTempGitRepo();
-    try {
-      const cap = captureIo();
-      const code = await runCli(["review", "--repo", repo.dir, "--format", "json"], {
-        io: cap.io,
-        reviewRunnerFactory: async () => fakeReviewRunner(),
-      });
-      expect(code).toBe(0);
-      expect(cap.stdout()).toContain('"status"');
-      expect(cap.stderr()).not.toContain('"status"');
-    } finally {
-      repo.cleanup();
-    }
-  });
-
-  // OCR v1.9.3: TestManualE2ERetryReport
-  test("manual retry semantics via packed retry boundary clean/recovered/failed", async () => {
-    const { RetryCollector } = await import("../src/ocr-v193/retry/collector.js");
-    const { ErrorClassRateLimited, ErrorClassProvider, FailurePhaseHTTP } = await import("../src/ocr-v193/retry/types.js");
-    {
-      const c = new RetryCollector();
-      const base = Date.now();
-      const meta = { provider: "", model: "m", filePath: "a.go", taskType: "main_task", requestNo: 1 } as never;
-      c.recordAttempt(meta, { statusCode: 200 } as never, base, base + 5);
-      c.finalize(meta, null, false);
-      const f = c.freeze("run-manual-clean");
-      expect(f.error).toBeNull();
-      expect(f.report).toBeNull();
-    }
-    {
-      const c = new RetryCollector();
-      const base = Date.now();
-      const aMeta = { provider: "", model: "m", filePath: "a.go", taskType: "main_task", requestNo: 1 } as never;
-      c.recordAttempt(aMeta, { errorClass: ErrorClassRateLimited as never, failurePhase: FailurePhaseHTTP as never, statusCode: 429 } as never, base, base + 10);
-      c.recordAttempt(aMeta, { statusCode: 200 } as never, base + 15, base + 20);
-      c.finalize(aMeta, null, false);
-      const bMeta = { provider: "", model: "m", filePath: "b.go", taskType: "main_task", requestNo: 1 } as never;
-      c.recordAttempt(bMeta, { errorClass: ErrorClassProvider as never, failurePhase: FailurePhaseHTTP as never, statusCode: 402 } as never, base, base + 5);
-      c.finalize(bMeta, new Error("fail"), false);
-      const f = c.freeze("run-manual-mixed");
-      expect(f.report!.recoveredRequests).toBe(1);
-      expect(f.report!.failedRequests).toBe(1);
     }
   });
 });

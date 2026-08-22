@@ -26,40 +26,40 @@
       "path": "cmd/opencodereview/arg_errors_test.go",
       "blob": "8c7ea24bec1b820582a091fe20cc9f75800b1c01",
       "scope": {
-        "kind": "in_scope",
-        "area": "cli-output",
-        "reason": "positional argument validators and friendly error formatting are core CLI input handling for review/scan/version"
+        "kind": "out_of_scope",
+        "area": "cmd/opencodereview",
+        "reason": "Cobra positional-argument families (config set <key> <value>, config unset <key>, rules check <file-path>, session show/comments <session-id>, delegate rule <path...>, completion <shell>) are omitted from Pi's reduced review/scan/version surface; friendly count errors and validators for those families are not applicable"
       },
       "tests": [
         {
           "name": "TestArgCountErrors_AreActionable",
-          "disposition": "not_applicable",
-          "reason": "Pi replaces OCR's multi-command Cobra tree (config set/unset, rules check, session show/comments, delegate rule, completion) with reduced pi-review review/scan/version surface; friendly count errors for those deferred commands are not applicable via public Pi CLI, Pi's flag-only parsing and version zero-arg handling are verified via flag-suggest and zero-args tests."
+          "disposition": "out_of_scope",
+          "reason": "Cobra positional-argument families (config set <key> <value>, config unset <key>, rules check <file-path>, session show/comments <session-id>, delegate rule <path...>, completion <shell>) are omitted from Pi's reduced review/scan/version surface; friendly count errors and validators for those families are not applicable"
         },
         {
           "name": "TestArgCountErrors_MatchHelpOutput",
-          "disposition": "not_applicable",
-          "reason": "Pi replaces OCR's UseLine-carrying argCountError for many positional commands with static HELP_TEXT for review/scan; the property that error carries UseLine is not applicable via public Pi CLI where review/scan take no positional args and version uses unknown-command error; covered validators verify placeholder extraction separately."
+          "disposition": "out_of_scope",
+          "reason": "Cobra positional-argument families (config set <key> <value>, config unset <key>, rules check <file-path>, session show/comments <session-id>, delegate rule <path...>, completion <shell>) are omitted from Pi's reduced review/scan/version surface; friendly count errors and validators for those families are not applicable"
         },
         {
           "name": "TestEveryPositionalCommandUsesFriendlyErrors",
-          "disposition": "not_applicable",
-          "reason": "Pi replaces OCR's exhaustive command-tree walk for friendly errors with a reduced command set (review/scan are flag-only, version is zero-arg); the invariant is preserved for pi's commands and verified via parent-cmd and zero-args boundary tests, exhaustive walk over deferred commands is not applicable."
+          "disposition": "out_of_scope",
+          "reason": "Cobra positional-argument families (config set <key> <value>, config unset <key>, rules check <file-path>, session show/comments <session-id>, delegate rule <path...>, completion <shell>) are omitted from Pi's reduced review/scan/version surface; friendly count errors and validators for those families are not applicable"
         },
         {
           "name": "TestPositionalSignature",
-          "disposition": "not_applicable",
-          "reason": "Pi replaces OCR's Cobra positionalSignature helper for building friendly arg errors with static HELP_TEXT and flag-only review/scan parsing; the placeholder extraction from Use strings for omitted config/delegate/rules/completion commands is not applicable via public Pi CLI which has no positional placeholders."
+          "disposition": "out_of_scope",
+          "reason": "Cobra positional-argument families (config set <key> <value>, config unset <key>, rules check <file-path>, session show/comments <session-id>, delegate rule <path...>, completion <shell>) are omitted from Pi's reduced review/scan/version surface; friendly count errors and validators for those families are not applicable"
         },
         {
           "name": "TestValidArgNames",
-          "disposition": "not_applicable",
-          "reason": "Pi replaces OCR's ValidArgs tab-stripping helper for completion enumeration with Pi's reduced command set where enumeration is not exposed; the tab-separated ValidArgs handling for omitted completion command is not applicable via public Pi CLI."
+          "disposition": "out_of_scope",
+          "reason": "Cobra positional-argument families (config set <key> <value>, config unset <key>, rules check <file-path>, session show/comments <session-id>, delegate rule <path...>, completion <shell>) are omitted from Pi's reduced review/scan/version surface; friendly count errors and validators for those families are not applicable"
         },
         {
           "name": "TestValidInvocationsStillResolve",
-          "disposition": "not_applicable",
-          "reason": "Pi replaces OCR's exactArgs/minimumArgs Cobra validators for positional commands with flag-only review/scan and zero-arg version; those validators for omitted positional families are not applicable via public Pi CLI where no positional args are accepted."
+          "disposition": "out_of_scope",
+          "reason": "Cobra positional-argument families (config set <key> <value>, config unset <key>, rules check <file-path>, session show/comments <session-id>, delegate rule <path...>, completion <shell>) are omitted from Pi's reduced review/scan/version surface; friendly count errors and validators for those families are not applicable"
         }
       ]
     },
@@ -1809,15 +1809,14 @@
       "tests": [
         {
           "name": "TestManualE2ERetryReport",
-          "disposition": "equivalent",
+          "disposition": "covered",
           "evidence": [
             {
               "kind": "bun-test-annotation",
-              "path": "test/cli.test.ts",
-              "title": "manual retry semantics via packed retry boundary clean/recovered/failed"
+              "path": "test/ocr-v193/cli/retry-e2e.test.ts",
+              "title": "clean run emits no retry report"
             }
-          ],
-          "reason": "equivalent via test/cli.test.ts"
+          ]
         }
       ]
     },
@@ -15497,7 +15496,7 @@
             {
               "kind": "bun-test-annotation",
               "path": "test/cli.test.ts",
-              "title": "quiet boundary via QuietHandle and agent/json audience"
+              "title": "factory injection without network: review runner is called and stdout is JSON, stderr is diagnostics only"
             }
           ],
           "reason": "equivalent via test/cli.test.ts"
@@ -15509,7 +15508,7 @@
             {
               "kind": "bun-test-annotation",
               "path": "test/cli.test.ts",
-              "title": "stdout writer default via injected CliIo boundary"
+              "title": "help goes to stdout, exit 0, via --help"
             }
           ],
           "reason": "equivalent via test/cli.test.ts"

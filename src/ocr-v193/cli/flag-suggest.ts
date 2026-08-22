@@ -6,6 +6,8 @@
 // GPL-3.0-or-later;
 // see LICENSES/Apache-2.0.txt and THIRD_PARTY_NOTICES.md.
 
+import { CliUsageError } from "./shared.js";
+
 /**
  * Flag suggestion helper — mirrors OCR's flagErrorWithSuggestion / suggestFlag / levenshtein.
  * Used to turn "unknown flag: --forma" into "Did you mean --format?" via edit distance <3.
@@ -71,7 +73,10 @@ export function flagErrorWithSuggestion(available: readonly string[], err: Error
   if (unknown === "") return err;
   const suggestion = suggestFlag(available, unknown);
   if (suggestion !== "") {
-    // Preserve original error as cause if supported
+    // Preserve CliUsageError for CLI error handling
+    if (err instanceof CliUsageError) {
+      return new CliUsageError(`${msg}${suggestion}`);
+    }
     const wrapped = new Error(`${msg}${suggestion}`, { cause: err });
     return wrapped;
   }

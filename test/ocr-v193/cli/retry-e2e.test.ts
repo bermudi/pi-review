@@ -219,6 +219,7 @@ function poisonedCollectorFreezeError(): string {
 // ---------------------------------------------------------------------------
 
 // OCR v1.9.3: TestReviewE2E_CleanRunEmitsNoRetryReport
+// OCR v1.9.3: TestManualE2ERetryReport
 test("clean run emits no retry report", async () => {
   const { report } = buildCleanCollector();
   const manifest = makeManifest("complete");

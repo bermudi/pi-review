@@ -32,7 +32,7 @@ import {
   resolveBackgroundFilePath,
 } from "./background.js";
 import { getCommitMessage, resolveRepoDir, validateReviewRefs } from "./git.js";
-import { suggestFlag } from "./flag-suggest.js";
+import { flagErrorWithSuggestion } from "./flag-suggest.js";
 
 // ---------------------------------------------------------------------------
 // Version / help text — mirrors Go root.go + version.go
@@ -46,19 +46,27 @@ export interface BuildInfo {
   readonly version: string;
   readonly commit: string;
   readonly date: string;
+  readonly platform: string;
+  readonly arch: string;
 }
 
 export function formatVersion(info: BuildInfo): string {
   let s = `pi-review ${info.version}`;
   if (info.commit !== "") s += ` (${info.commit})`;
-  s += ` ${process.platform}/${process.arch}\n`;
+  s += ` ${info.platform}/${info.arch}\n`;
   if (info.date !== "") s += `built at: ${info.date}\n`;
   s += "https://github.com/bermudi/pi-reviewer\n";
   return s;
 }
 
 export function versionString(): string {
-  return formatVersion({ version: VERSION, commit: GIT_COMMIT, date: BUILD_DATE });
+  return formatVersion({
+    version: VERSION,
+    commit: GIT_COMMIT,
+    date: BUILD_DATE,
+    platform: process.platform,
+    arch: process.arch,
+  });
 }
 
 export const HELP_TEXT = `pi-review - AI-Powered Code Review CLI
@@ -242,9 +250,7 @@ function parseFlags(
       const spec = byLong.get(key);
       if (!spec) {
         const available = specs.map((s) => s.name);
-        const sug = suggestFlag(available, key);
-        const base = `unknown flag: --${key}`;
-        throw new CliUsageError(sug !== "" ? `${base}${sug}` : base);
+        throw flagErrorWithSuggestion(available, new CliUsageError(`unknown flag: --${key}`));
       }
       if (spec.takesValue) {
         let val: string;
@@ -275,9 +281,7 @@ function parseFlags(
         const spec = byShort.get(shortKey);
         if (!spec) {
           const available = specs.map((s) => s.name);
-          const sug = suggestFlag(available, shortKey);
-          const base = `unknown flag: -${shortKey}`;
-          throw new CliUsageError(sug !== "" ? `${base}${sug}` : base);
+          throw flagErrorWithSuggestion(available, new CliUsageError(`unknown flag: -${shortKey}`));
         }
         if (!spec.takesValue) throw new CliUsageError(`-${shortKey} does not take a value`);
         const val = tok.slice(eq2 + 1);
@@ -291,9 +295,7 @@ function parseFlags(
         const spec = byShort.get(chars);
         if (!spec) {
           const available = specs.map((s) => s.name);
-          const sug = suggestFlag(available, chars);
-          const base = `unknown flag: -${chars}`;
-          throw new CliUsageError(sug !== "" ? `${base}${sug}` : base);
+          throw flagErrorWithSuggestion(available, new CliUsageError(`unknown flag: -${chars}`));
         }
         if (spec.takesValue) {
           const nxt = argv[i + 1];
@@ -315,9 +317,7 @@ function parseFlags(
         const spec = byShort.get(ch);
         if (!spec) {
           const available = specs.map((s) => s.name);
-          const sug = suggestFlag(available, ch);
-          const base = `unknown flag: -${ch}`;
-          throw new CliUsageError(sug !== "" ? `${base}${sug}` : base);
+          throw flagErrorWithSuggestion(available, new CliUsageError(`unknown flag: -${ch}`));
         }
         if (spec.takesValue) throw new CliUsageError(`flag -${ch} requires a value and cannot be combined`);
         if (out.has(spec.name)) throw new CliUsageError(`duplicate --${spec.name}`);
