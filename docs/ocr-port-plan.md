@@ -60,6 +60,13 @@ injected routers replace OCR's mutable global stdout swapping: human progress
 goes to stderr, agent progress is suppressed, and nested quiet scopes restore
 only their own router. Remaining inventory work is still pending.
 
+The final runtime-boundary tranche classifies four v1.9.9 OCR adapter tests as
+not applicable through public Pi APIs: Pi owns runtime configuration and lacks
+a provider-wire `tool_choice` request field. Active-tool verification and
+stage-only filter tooling remain tested; this is not a claim of required-tool
+wire equivalence. The inventory is classified, but release/packed-install
+verification remains separate.
+
 Existing `src/ocr` code is **candidate implementation**, not proven
 parity. Do not delete or rewrite it merely because its old verifiers were
 unsound. Reuse it only when a new gate proves its behavior.

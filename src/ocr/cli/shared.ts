@@ -516,7 +516,9 @@ export function addOutputFlags(): FlagDef[] {
 }
 
 // ---------------------------------------------------------------------------
-// loadLLMRuntime — mirrors Go loadLLMRuntime (minimal shim for tests)
+// loadLLMRuntime — narrow compatibility seam for legacy callers only.
+// Pi settings/provider configuration is deliberately owned by Pi, not parsed
+// from OCR's ~/.opencodereview/config.json.
 // ---------------------------------------------------------------------------
 
 export interface LlmRuntime {
@@ -543,25 +545,11 @@ export async function loadLLMRuntime(
       throw new Error(`load tools: ${(e as Error).message}`);
     }
   }
-  const home = process.env["HOME"] ?? "";
-  const cfgPath = `${home}/.opencodereview/config.json`;
-  if (home !== "" && existsSync(cfgPath)) {
-    try {
-      const raw = readFileSync(cfgPath, "utf8");
-      JSON.parse(raw);
-    } catch (e) {
-      throw new Error(`load app config: ${(e as Error).message}`);
-    }
-  }
   const url = process.env["OCR_LLM_URL"] ?? process.env["ANTHROPIC_BASE_URL"] ?? "";
   const token = process.env["OCR_LLM_TOKEN"] ?? process.env["ANTHROPIC_AUTH_TOKEN"] ?? "";
   const model = process.env["OCR_LLM_MODEL"] ?? process.env["ANTHROPIC_MODEL"] ?? "";
   if (url === "" || token === "" || model === "") {
-    const cfgExists = home !== "" && existsSync(cfgPath);
-    if (!cfgExists) {
-      throw new Error("resolve LLM endpoint: no endpoint configured");
-    }
-    throw new Error("resolve LLM endpoint: incomplete config");
+    throw new Error("resolve LLM endpoint: no endpoint configured");
   }
   let host = "";
   try { host = new URL(url).host.toLowerCase(); } catch { host = ""; }

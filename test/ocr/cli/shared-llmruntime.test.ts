@@ -66,11 +66,10 @@ test("loadLLMRuntime unresolvable endpoint", withTempHome(async () => {
   await expect(loadLLMRuntime(tpl as unknown as { applyLanguage: (s: string) => void }, "", {})).rejects.toThrow(/resolve LLM endpoint/);
 }));
 
-// OCR v1.9.3: TestLoadLLMRuntime_BadAppConfig
-test("loadLLMRuntime bad app config", withTempHome(async (home) => {
+test("loadLLMRuntime ignores OCR app config because Pi owns runtime settings", withTempHome(async (home) => {
   const cfgDir = join(home, ".opencodereview");
   mkdirSync(cfgDir, { recursive: true });
   writeFileSync(join(cfgDir, "config.json"), "{not json", "utf8");
   const tpl = { applyLanguage: () => {} };
-  await expect(loadLLMRuntime(tpl as unknown as { applyLanguage: (s: string) => void }, "", {})).rejects.toThrow(/load app config/);
+  await expect(loadLLMRuntime(tpl as unknown as { applyLanguage: (s: string) => void }, "", {})).rejects.toThrow(/resolve LLM endpoint/);
 }));

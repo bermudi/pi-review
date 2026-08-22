@@ -111,3 +111,26 @@ test("agent audience still delivers command errors to stderr", async () => {
   expect(stderr).toContain("transport exploded");
   expect(stdout).toBe("");
 });
+
+test("injected Pi transport setup failure is nonzero with no clean document", async () => {
+  let stdout = "";
+  let stderr = "";
+  const code = await runCli(["review", "--repo", process.cwd(), "--format", "json"], {
+    io: {
+      stdout: (text) => { stdout += text; },
+      stderr: (text) => { stderr += text; },
+      cwd: () => process.cwd(),
+      env: () => ({}),
+      onSignal: () => {},
+      offSignal: () => {},
+    },
+    reviewRunnerFactory: (opts, signal) => createReviewRunnerFactory(
+      opts,
+      process.cwd(),
+      { createTransport: async () => { throw new Error("Pi session setup failed"); } },
+    )(signal),
+  });
+  expect(code).toBe(1);
+  expect(stderr).toContain("Pi session setup failed");
+  expect(stdout).toBe("");
+});

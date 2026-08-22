@@ -6489,8 +6489,8 @@
         {
           "name": "TestLoadLLMRuntime_BadAppConfig",
           "delta": "changed_body",
-          "disposition": "pending",
-          "reason": "OCR v1.9.9 changed body requires explicit new evidence or revalidation; prior v1.9.3 coverage is not inherited."
+          "disposition": "not_applicable",
+          "reason": "Pi owns settings, model, and provider configuration through its public runtime APIs; pi-reviewer does not parse OCR ~/.opencodereview/config.json. Injected transport/session setup failures surface at the CLI command boundary as nonzero stderr errors, so an OCR app-config parser failure is not applicable."
         },
         {
           "name": "TestLoadLLMRuntime_BadToolConfig",
@@ -11412,8 +11412,8 @@
         {
           "name": "TestBuildAnthropicParams_ToolChoice",
           "delta": "added",
-          "disposition": "pending",
-          "reason": "OCR v1.9.9 added requires explicit new evidence or revalidation; prior v1.9.3 coverage is not inherited."
+          "disposition": "not_applicable",
+          "reason": "Pi replaces OCR's Anthropic provider-wire serializer with public AgentSession prompt execution. Pi 0.84.2 exposes active-tool allowlists but no public per-request provider-wire tool_choice field, so required-tool serialization is not applicable without private imports or a fake field."
         },
         {
           "name": "TestBuildOpenAIParams_AllRoles",
@@ -11446,8 +11446,8 @@
         {
           "name": "TestBuildOpenAIParams_ToolChoice",
           "delta": "added",
-          "disposition": "pending",
-          "reason": "OCR v1.9.9 added requires explicit new evidence or revalidation; prior v1.9.3 coverage is not inherited."
+          "disposition": "not_applicable",
+          "reason": "Pi replaces OCR's OpenAI provider-wire serializer with public AgentSession prompt execution. Pi 0.84.2 exposes active-tool allowlists but no public per-request provider-wire tool_choice field, so required-tool serialization is not applicable without private imports or a fake field."
         },
         {
           "name": "TestBuildToolInputSchema",
@@ -13172,8 +13172,8 @@
         {
           "name": "TestBuildResponsesParams_ToolChoice",
           "delta": "added",
-          "disposition": "pending",
-          "reason": "OCR v1.9.9 added requires explicit new evidence or revalidation; prior v1.9.3 coverage is not inherited."
+          "disposition": "not_applicable",
+          "reason": "Pi replaces OCR's Responses API provider-wire serializer with public AgentSession prompt execution. Pi 0.84.2 exposes active-tool allowlists but no public per-request provider-wire tool_choice field, so required-tool serialization is not applicable without private imports or a fake field."
         },
         {
           "name": "TestBuildResponsesParams_Tools",

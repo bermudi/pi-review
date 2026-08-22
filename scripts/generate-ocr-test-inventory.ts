@@ -573,6 +573,27 @@ const upgradeEquivalentTests: ReadonlyMap<string, readonly Evidence[]> = new Map
   ],
 ]);
 
+// Added/changed OCR tests that Pi cannot implement through public APIs need a
+// per-test boundary decision; a whole-file exemption would hide unrelated work.
+const upgradeNotApplicableTests: ReadonlyMap<string, string> = new Map<string, string>([
+  [
+    "cmd/opencodereview/shared_llmruntime_test.go::TestLoadLLMRuntime_BadAppConfig",
+    "Pi owns settings, model, and provider configuration through its public runtime APIs; pi-reviewer does not parse OCR ~/.opencodereview/config.json. Injected transport/session setup failures surface at the CLI command boundary as nonzero stderr errors, so an OCR app-config parser failure is not applicable.",
+  ],
+  [
+    "internal/llm/client_params_test.go::TestBuildAnthropicParams_ToolChoice",
+    "Pi replaces OCR's Anthropic provider-wire serializer with public AgentSession prompt execution. Pi 0.84.2 exposes active-tool allowlists but no public per-request provider-wire tool_choice field, so required-tool serialization is not applicable without private imports or a fake field.",
+  ],
+  [
+    "internal/llm/client_params_test.go::TestBuildOpenAIParams_ToolChoice",
+    "Pi replaces OCR's OpenAI provider-wire serializer with public AgentSession prompt execution. Pi 0.84.2 exposes active-tool allowlists but no public per-request provider-wire tool_choice field, so required-tool serialization is not applicable without private imports or a fake field.",
+  ],
+  [
+    "internal/llm/responses_client_test.go::TestBuildResponsesParams_ToolChoice",
+    "Pi replaces OCR's Responses API provider-wire serializer with public AgentSession prompt execution. Pi 0.84.2 exposes active-tool allowlists but no public per-request provider-wire tool_choice field, so required-tool serialization is not applicable without private imports or a fake field.",
+  ],
+]);
+
 const notApplicableTests: ReadonlyMap<string, string> = new Map<string, string>([
   // ---- pi-adapter provider registry: Pi replaces OCR static registry with Pi ModelRuntime ----
   [
@@ -2800,6 +2821,18 @@ function validateOverrides(
       }
     }
   }
+  for (const [key, reason] of upgradeNotApplicableTests) {
+    const [path, name] = key.split("::");
+    if (!path || !name) throw new Error(`upgradeNotApplicableTests key must be "path::TestName", got ${JSON.stringify(key)}`);
+    if (!testNamesByPath.get(path)?.has(name)) throw new Error(`upgradeNotApplicableTests references unknown active test ${key}`);
+    const deltaEntry = delta.tests.find((test) => test.path === path && test.name === name);
+    if (deltaEntry?.kind !== "added" && deltaEntry?.kind !== "changed_body") {
+      throw new Error(`upgradeNotApplicableTests ${key} requires an added or changed-body v1.9.9 test`);
+    }
+    if (reason.length < 20 || !reason.toLowerCase().includes("not applicable")) {
+      throw new Error(`upgradeNotApplicableTests ${key} must state its concrete not-applicable boundary`);
+    }
+  }
   for (const [key, reason] of notApplicableTests) {
     const [path, name] = key.split("::");
     if (!path || !name) throw new Error(`notApplicableTests key must be "path::TestName", got ${JSON.stringify(key)}`);
@@ -2904,6 +2937,10 @@ function generateInventory(): Inventory {
               evidence: revalidationEvidence,
               reason: `v1.9.9 revalidated equivalent via ${revalidationEvidence.map((item) => item.path).join(", ")}`,
             };
+          }
+          const testOmissionReason = upgradeNotApplicableTests.get(id);
+          if (testOmissionReason !== undefined) {
+            return { name, delta: change, disposition: "not_applicable", reason: testOmissionReason };
           }
           const omissionReason = upgradeNotApplicableByPath.get(path);
           if (omissionReason !== undefined) {

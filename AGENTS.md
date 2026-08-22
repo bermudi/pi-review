@@ -16,8 +16,9 @@ The legacy precision-oriented engine has been removed by explicit user
 approval; `src/ocr` is now the sole engine. Open Code Review v1.9.3 remains
 the shipped behavioral reference. The active v1.9.9 target is pinned to tag
 object `c95d3907d5448354d3f8a33f2ae5e4f23fdf1c94`, commit
-`4b6874bd23106b5c68bea6d230bb60303b9f0961`; its delta inventory has pending
-cases, so do not claim v1.9.9 parity or a freshly verified gate. The
+`4b6874bd23106b5c68bea6d230bb60303b9f0961`; its delta inventory is
+classified, but final release/packed-install verification is still required,
+so do not claim v1.9.9 parity or a release gate. The
 `config`/`provider`/`login`/`MCP`/`telemetry`/`test-connection` command
 surfaces are intentionally not ported (omitted boundary; Pi's external
 auth/model configuration is at `~/.pi/agent` and is only resolved/loaded via
