@@ -15,8 +15,6 @@
  * fns so `bun test` never needs a paid model.
  */
 
-import * as path from "node:path";
-import { spawnSync } from "node:child_process";
 import type { CliIo, CliIoOverrides } from "./shared.js";
 import { CliUsageError, makeIo, defaultReviewOptions, defaultScanOptions } from "./shared.js";
 import type { ReviewOptions, ScanOptions } from "./shared.js";
@@ -393,28 +391,6 @@ function buildScanOptions(map: Map<string, string | boolean>): ScanOptions {
     (out as unknown as Record<string, unknown>)["maxTools"] = 10;
   }
   return out;
-}
-
-// ---------------------------------------------------------------------------
-// Background file handling — mirrors Go review_cmd.go executeReview background
-// ---------------------------------------------------------------------------
-
-function effectiveRepoDirForBackground(repoOpt: string, cwd: string): string {
-  if (repoOpt !== "") {
-    try {
-      return path.resolve(repoOpt);
-    } catch {
-      return repoOpt;
-    }
-  }
-  try {
-    const top = spawnSync("git", ["-C", cwd, "rev-parse", "--show-toplevel"], { encoding: "utf8" });
-    const out = (top.stdout as string | undefined)?.trim() ?? "";
-    if (top.status === 0 && out !== "") return out;
-  } catch {
-    // ignore
-  }
-  return cwd;
 }
 
 // ---------------------------------------------------------------------------
