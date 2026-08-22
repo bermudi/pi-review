@@ -1,6 +1,6 @@
 #!/usr/bin/env bun
 // SPDX-License-Identifier: Apache-2.0
-// Gate 5 — cutover: shipped CLI and library are single-engine OCR v1.9.3.
+// Gate 5 — cutover: shipped CLI and library are single-engine OCR v1.9.9.
 // Legacy engine has been removed by explicit user approval; verifier proves
 // absence of --engine switch, absence of legacy exports/modules, default
 // CLI reaches OCR tools, and a legacy engine request is rejected without

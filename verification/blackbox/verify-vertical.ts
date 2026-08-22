@@ -31,9 +31,9 @@ function getSanitizedEnv(): Record<string, string> {
 // Constants
 // ---------------------------------------------------------------------------
 
-const PINNED_TAG = "v1.9.3";
-const PINNED_TAG_OBJECT = "4d796ae54cabdcf4e22b69ef502ed8871456a909";
-const PINNED_COMMIT = "c35ddd7223f2b5540ce03aa43c9a25ef643fca27";
+const PINNED_TAG = "v1.9.9";
+const PINNED_TAG_OBJECT = "c95d3907d5448354d3f8a33f2ae5e4f23fdf1c94";
+const PINNED_COMMIT = "4b6874bd23106b5c68bea6d230bb60303b9f0961";
 
 interface VerticalGateReport {
   readonly gate: "vertical";
@@ -152,7 +152,7 @@ async function getOcrBinary(): Promise<string> {
   mkdirSync(extractDir, { recursive: true });
   const tarRes = spawnSync("tar", ["-xf", archivePath, "-C", extractDir], { encoding: "utf-8", timeout: 10000 });
   if (tarRes.status !== 0) throw new Error(`tar extract failed: ${tarRes.stderr ?? tarRes.stdout}`);
-  const binaryPath = join(buildDir, "ocr-v1.9.3");
+  const binaryPath = join(buildDir, "ocr-v1.9.9");
   const goBuild = spawnSync("go", ["build", "-o", binaryPath, "./cmd/opencodereview"], { cwd: extractDir, encoding: "utf-8", timeout: 60000 });
   if (goBuild.status !== 0) throw new Error(`go build ocr failed: ${goBuild.stderr ?? goBuild.stdout}`);
   cachedOcrBinary = binaryPath;
@@ -391,7 +391,7 @@ async function runPiSubprocess(opts: {
     OCR_LLM_MODEL: "test-model",
     OCR_LLM_PROTOCOL: "openai",
   };
-  // Use packed pi-review bin (sole OCR v1.9.3 engine, no --engine switch).
+  // Use packed pi-review bin (sole OCR v1.9.9 engine, no --engine switch).
   // Command: <consumerBinPath> review --repo <repo> --model test-openai/test-model --concurrency 1 --format json
   const args = ["review", "--repo", opts.repoDir, "--model", "test-openai/test-model", "--concurrency", "1", "--no-filter", "--format", "json"];
   // consumerBinPath is typically /tmp/consumer/node_modules/.bin/pi-review which is a shell wrapper; spawn via bun? Use that path directly.

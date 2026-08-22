@@ -154,6 +154,12 @@ function currentCommit(): string {
   }
 }
 
+function gitOutput(cwd: string, args: readonly string[]): string {
+  const result = spawnSync("git", args, { cwd, encoding: "utf-8" });
+  if (result.status !== 0) throw new Error(`git ${args.join(" ")} failed: ${result.stderr}`);
+  return result.stdout.trim();
+}
+
 function fail(report: Gate1Report, msg: string): never {
   console.error(`[verify:sdk-feasibility] FAIL: ${msg}`);
   console.error(`Artifacts: ${report.artifactDir}`);
@@ -205,8 +211,8 @@ function checkGitClean(): void {
 }
 
 function verifyPinnedRef(): { tagObject: string; commit: string } {
-  const expectedTagObject = "4d796ae54cabdcf4e22b69ef502ed8871456a909";
-  const expectedCommit = "c35ddd7223f2b5540ce03aa43c9a25ef643fca27";
+  const expectedTagObject = "c95d3907d5448354d3f8a33f2ae5e4f23fdf1c94";
+  const expectedCommit = "4b6874bd23106b5c68bea6d230bb60303b9f0961";
   const ocrPath = "../open-code-review";
   if (!existsSync(ocrPath)) {
     const r: Gate1Report = {
@@ -226,7 +232,7 @@ function verifyPinnedRef(): { tagObject: string; commit: string } {
     };
     fail(r, `pinned checkout missing at ${ocrPath}`);
   }
-  const commit = execSync(`git -C ${ocrPath} rev-parse v1.9.3^{commit}`, { encoding: "utf-8" }).trim();
+  const commit = gitOutput(ocrPath, ["rev-parse", "v1.9.9^{commit}"]);
   if (commit !== expectedCommit) {
     const r: Gate1Report = {
       gate: "sdk-feasibility",
@@ -245,9 +251,9 @@ function verifyPinnedRef(): { tagObject: string; commit: string } {
     };
     fail(r, `pinned commit mismatch: expected ${expectedCommit} got ${commit}`);
   }
-  const tagObject = execSync(`git -C ${ocrPath} rev-parse v1.9.3`, { encoding: "utf-8" }).trim();
+  const tagObject = gitOutput(ocrPath, ["rev-parse", "v1.9.9"]);
   if (tagObject !== expectedTagObject) {
-    const cat = execSync(`git -C ${ocrPath} cat-file -p v1.9.3`, { encoding: "utf-8" });
+    const cat = gitOutput(ocrPath, ["cat-file", "-p", "v1.9.9"]);
     if (!cat.includes(expectedCommit) || tagObject !== expectedTagObject) {
       const r: Gate1Report = {
         gate: "sdk-feasibility",
@@ -1779,4 +1785,3 @@ main().catch((e: unknown) => {
   console.log(JSON.stringify(r));
   process.exit(1);
 });
-

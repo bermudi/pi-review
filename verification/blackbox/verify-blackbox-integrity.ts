@@ -29,6 +29,12 @@ function currentCommit(): string {
   }
 }
 
+function gitOutput(cwd: string, args: readonly string[]): string {
+  const result = spawnSync("git", args, { cwd, encoding: "utf-8" });
+  if (result.status !== 0) throw new Error(`git ${args.join(" ")} failed: ${result.stderr}`);
+  return result.stdout.trim();
+}
+
 function fail(report: Gate0Report, msg: string): never {
   // Diagnostics to stderr, exactly one JSON to stdout
   console.error(`[verify:blackbox-integrity] FAIL: ${msg}`);
@@ -84,8 +90,8 @@ function checkGitClean(): void {
 }
 
 function verifyPinnedRef(): { tagObject: string; commit: string } {
-  const expectedTagObject = "4d796ae54cabdcf4e22b69ef502ed8871456a909";
-  const expectedCommit = "c35ddd7223f2b5540ce03aa43c9a25ef643fca27";
+  const expectedTagObject = "c95d3907d5448354d3f8a33f2ae5e4f23fdf1c94";
+  const expectedCommit = "4b6874bd23106b5c68bea6d230bb60303b9f0961";
   const ocrPath = "../open-code-review";
   if (!existsSync(ocrPath)) {
     const commit = currentCommit();
@@ -106,7 +112,7 @@ function verifyPinnedRef(): { tagObject: string; commit: string } {
     };
     fail(report, `pinned checkout missing at ${ocrPath}`);
   }
-  const commit = execSync(`git -C ${ocrPath} rev-parse v1.9.3^{commit}`, { encoding: "utf-8" }).trim();
+  const commit = gitOutput(ocrPath, ["rev-parse", "v1.9.9^{commit}"]);
   if (commit !== expectedCommit) {
     const r: Gate0Report = {
       gate: "blackbox-integrity",
@@ -126,13 +132,13 @@ function verifyPinnedRef(): { tagObject: string; commit: string } {
     fail(r, `pinned commit mismatch: expected ${expectedCommit} got ${commit}`);
   }
   // Tag object check — use rev-parse to get tag object sha
-  const tagObject = execSync(`git -C ${ocrPath} rev-parse v1.9.3`, { encoding: "utf-8" }).trim();
+  const tagObject = gitOutput(ocrPath, ["rev-parse", "v1.9.9"]);
   // For annotated tags, this is the tag object sha; for lightweight it would be commit sha.
-  // The plan says signed tag object is 4d796..., so we verify it matches.
+  // The plan records a signed annotated tag object, so verify it matches.
   const tagObjectToReport = tagObject;
   if (tagObject !== expectedTagObject) {
     // Try to verify via cat-file that it's at least an annotated tag pointing to commit
-    const cat = execSync(`git -C ${ocrPath} cat-file -p v1.9.3`, { encoding: "utf-8" });
+    const cat = gitOutput(ocrPath, ["cat-file", "-p", "v1.9.9"]);
     if (!cat.includes(expectedCommit)) {
       const r: Gate0Report = {
         gate: "blackbox-integrity",
