@@ -206,7 +206,7 @@ export function fileReadRef(mode: ReviewMode, opts: Pick<ReviewOptions, "to" | "
   return ref;
 }
 
-function reviewModeFromOptions(opts: Pick<ReviewOptions, "from" | "to" | "commit">): string {
+export function reviewModeFromOptions(opts: Pick<ReviewOptions, "from" | "to" | "commit">): string {
   const commit = (opts as Record<string, unknown>)["commit"] as string | undefined ?? "";
   const from = (opts as Record<string, unknown>)["from"] as string | undefined ?? "";
   const to = (opts as Record<string, unknown>)["to"] as string | undefined ?? "";

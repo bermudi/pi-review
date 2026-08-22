@@ -1353,6 +1353,14 @@ const scopeOverrides: ReadonlyMap<string, Scope> = new Map<string, Scope>([
       reason: "suggestdiff line diff is core CLI rendering for suggestion display; used by cmd/opencodereview/output.go via buildDiffLines",
     },
   ],
+  [
+    "cmd/opencodereview/misc_helpers_test.go",
+    {
+      kind: "in_scope",
+      area: "cli-output",
+      reason: "miscellaneous review/session CLI helpers (reviewModeFromOptions, sanitizeEndpointHost, shortSessionID, completeSessionIDs) are core CLI behavior",
+    },
+  ],
 ]);
 
 const localCoverage: readonly LocalCoverage[] = [
@@ -1745,6 +1753,10 @@ const localCoverage: readonly LocalCoverage[] = [
   {
     localPath: "test/ocr-v193/cli/suggestdiff.test.ts",
     upstreamPaths: ["internal/suggestdiff/diff_test.go"],
+  },
+  {
+    localPath: "test/ocr-v193/cli/misc-helpers.test.ts",
+    upstreamPaths: ["cmd/opencodereview/misc_helpers_test.go"],
   },
 ];
 

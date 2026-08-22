@@ -1800,30 +1800,54 @@
       "path": "cmd/opencodereview/misc_helpers_test.go",
       "blob": "3fb3ee59a034d7b4cc11a196bedf805b77f6fffc",
       "scope": {
-        "kind": "needs_decision",
-        "area": "cmd/opencodereview",
-        "reason": "not yet classified by the OCR v1.9.3 core-port source map"
+        "kind": "in_scope",
+        "area": "cli-output",
+        "reason": "miscellaneous review/session CLI helpers (reviewModeFromOptions, sanitizeEndpointHost, shortSessionID, completeSessionIDs) are core CLI behavior"
       },
       "tests": [
         {
           "name": "TestCompleteSessionIDs",
-          "disposition": "pending_scope",
-          "reason": "not yet classified by the OCR v1.9.3 core-port source map"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/cli/misc-helpers.test.ts",
+              "title": "TestCompleteSessionIDs with args and fresh repo yields no completions"
+            }
+          ]
         },
         {
           "name": "TestReviewModeFromOptions",
-          "disposition": "pending_scope",
-          "reason": "not yet classified by the OCR v1.9.3 core-port source map"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/cli/misc-helpers.test.ts",
+              "title": "TestReviewModeFromOptions precedence and fallbacks"
+            }
+          ]
         },
         {
           "name": "TestSanitizeEndpointHost",
-          "disposition": "pending_scope",
-          "reason": "not yet classified by the OCR v1.9.3 core-port source map"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/cli/misc-helpers.test.ts",
+              "title": "TestSanitizeEndpointHost edge handling"
+            }
+          ]
         },
         {
           "name": "TestShortSessionID",
-          "disposition": "pending_scope",
-          "reason": "not yet classified by the OCR v1.9.3 core-port source map"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/cli/misc-helpers.test.ts",
+              "title": "TestShortSessionID truncation and pass-through"
+            }
+          ]
         }
       ]
     },
