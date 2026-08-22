@@ -584,9 +584,7 @@ export class PiTransport implements TranscriptLlmTransport {
       //    session.state.messages if it diverges.
       // -----------------------------------------------------------------
       const sessAny = this.session as unknown as {
-        state?: { messages?: unknown[] };
-        messages?: unknown[];
-        agent?: { state?: { messages?: unknown[] } };
+        agent?: { messages?: unknown[] };
         isIdle?: boolean;
         isStreaming?: boolean;
         subscribe?: (l: (e: unknown) => void) => () => void;
@@ -596,25 +594,18 @@ export class PiTransport implements TranscriptLlmTransport {
       };
 
       const getStateMessages = (): unknown[] => {
-        if (sessAny.state !== undefined && Array.isArray(sessAny.state.messages)) return sessAny.state.messages;
-        if (Array.isArray(sessAny.messages)) return sessAny.messages as unknown[];
+        if (sessAny.agent !== undefined && Array.isArray(sessAny.agent.messages)) return sessAny.agent.messages;
         return [];
       };
 
       const setStateMessages = (msgs: unknown[]): void => {
-        // Public path: session.state.messages (feasibility row 7, public `get state(): AgentState`)
-        try {
-          if (sessAny.state !== undefined && "messages" in sessAny.state) {
-            (sessAny.state as { messages: unknown[] }).messages = msgs;
-          }
-        } catch (error: unknown) {
-          console.warn("[pi-adapter] setStateMessages state failed stage=history_sync", error);
+        if (sessAny.agent === undefined || !Array.isArray(sessAny.agent.messages)) {
+          throw new Error("Pi session does not expose public agent.messages history replacement");
         }
-        // Fallback for alternate shape exposed by some SDK builds
-        try {
-          if (Array.isArray(sessAny.messages)) (sessAny as unknown as { messages: unknown[] }).messages = msgs;
-        } catch (error: unknown) {
-          console.warn("[pi-adapter] setStateMessages fallback failed stage=history_sync", error);
+        sessAny.agent.messages = msgs;
+        if (sessAny.agent.messages.length !== msgs.length
+          || sessAny.agent.messages.some((message, index) => JSON.stringify(message) !== JSON.stringify(msgs[index]))) {
+          throw new Error("Pi agent.messages history replacement was not applied");
         }
       };
 
@@ -938,6 +929,7 @@ export async function createPiTransportForFile(
   });
 
   const allowedNames = tools.map((t) => t.function.name);
+  const registeredNames = [...tools, ...supplementalTools].map((t) => t.function.name);
 
   const createOpts: Record<string, unknown> = {
     cwd,
@@ -946,7 +938,7 @@ export async function createPiTransportForFile(
     settingsManager,
     resourceLoader,
     customTools,
-    tools: allowedNames,
+    tools: registeredNames,
   };
   if (model !== undefined) {
     createOpts["model"] = model;
@@ -956,6 +948,17 @@ export async function createPiTransportForFile(
   }
 
   const { session } = await createAgentSession(createOpts as unknown as Parameters<typeof createAgentSession>[0]);
-
+  try {
+    activateToolsFailClosed(session as unknown as ActiveToolSession, allowedNames);
+  } catch (error) {
+    const disposable = session as unknown as { dispose?: () => Promise<void>; abort?: () => Promise<void> };
+    try {
+      if (typeof disposable.dispose === "function") await disposable.dispose();
+      else if (typeof disposable.abort === "function") await disposable.abort();
+    } catch {
+      // Preserve the activation failure: a session that cannot be narrowed is never returned.
+    }
+    throw error;
+  }
   return new PiTransport(session as PiSession, promptRef, sessionManager, retryCollector);
 }
