@@ -324,7 +324,7 @@ async function main(): Promise<void> {
     fixtureId: "default-parity-workspace",
     binPath: actualBin,
     repoDir: defaultRepo.dir,
-    args: ["review", "--repo", defaultRepo.dir, "--model", "test-openai/test-model", "--no-filter", "--json", "--max-tool-rounds", "5", "--concurrency", "1"],
+    args: ["review", "--repo", defaultRepo.dir, "--model", "test-openai/test-model", "--no-filter", "--format", "json", "--max-tools", "5", "--concurrency", "1"],
     responses: makeOneCommentResponses("Validate nil handling.", "func Add(a int, b int) int { return a + b }"),
     timeoutMs: 60_000,
   });
@@ -346,7 +346,7 @@ async function main(): Promise<void> {
     fixtureId: "incomplete-partial",
     binPath: actualBin,
     repoDir: incompleteRepo.dir,
-    args: ["review", "--repo", incompleteRepo.dir, "--model", "test-openai/test-model", "--no-filter", "--json", "--max-tool-rounds", "5", "--concurrency", "1"],
+    args: ["review", "--repo", incompleteRepo.dir, "--model", "test-openai/test-model", "--no-filter", "--format", "json", "--max-tools", "5", "--concurrency", "1"],
     responses: makeIncompleteResponses("Incomplete review coverage.", "func Add(a int, b int) int { return a + b }"),
     timeoutMs: 60_000,
   });
@@ -363,7 +363,7 @@ async function main(): Promise<void> {
     fixtureId: "legacy-rejected",
     binPath: actualBin,
     repoDir: legacyRepo.dir,
-    args: ["review", "--engine", "legacy", "--repo", legacyRepo.dir, "--model", "test-openai/test-model", "--no-filter", "--json", "--max-tool-rounds", "5", "--concurrency", "1"],
+    args: ["review", "--engine", "legacy", "--repo", legacyRepo.dir, "--model", "test-openai/test-model", "--no-filter", "--format", "json", "--max-tools", "5", "--concurrency", "1"],
     responses: makeOneCommentResponses("Validate nil handling.", "func Add(a int, b int) int { return a + b }"),
     timeoutMs: 60_000,
   });

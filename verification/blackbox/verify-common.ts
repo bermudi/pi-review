@@ -678,7 +678,7 @@ async function runPiSubprocess(opts: {
     OCR_LLM_PROTOCOL: "openai",
   };
   // Use packed pi-review bin (sole engine, no --engine switch); scan subcommand likewise.
-  const extra = opts.command ?? ["--no-filter", "--json"];
+  const extra = opts.command ?? ["--no-filter", "--format", "json"];
   const hasPreview = extra.includes("--preview");
   const subcommand = opts.subcommand ?? "review";
   const args: string[] = [subcommand, "--repo", opts.repoDir, "--concurrency", "1", ...extra];
@@ -1008,8 +1008,8 @@ function compareCoreReview(opts: CompareCoreOptions): { equal: boolean; mismatch
   if (piCmdStr.includes("--engine")) {
     pushMismatch("process.command.pi.engine", piCmdStr, piCmdStr, "Pi command must not contain --engine (legacy switch removed)");
   }
-  if (!piCmdStr.includes("review") || !piCmdStr.includes("--repo") || !piCmdStr.includes("--json")) {
-    pushMismatch("process.command.pi", piCmdStr, piCmdStr, "Pi command must be pi-review review --repo <dir> --model ... --json");
+  if (!piCmdStr.includes("review") || !piCmdStr.includes("--repo") || !piCmdStr.includes("--format")) {
+    pushMismatch("process.command.pi", piCmdStr, piCmdStr, "Pi command must be pi-review review --repo <dir> --model ... --format json");
   }
 
   // 2. Provider request counts — both must have contacted server

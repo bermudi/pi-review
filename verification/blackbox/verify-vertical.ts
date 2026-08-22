@@ -392,8 +392,8 @@ async function runPiSubprocess(opts: {
     OCR_LLM_PROTOCOL: "openai",
   };
   // Use packed pi-review bin (sole OCR v1.9.3 engine, no --engine switch).
-  // Command: <consumerBinPath> review --repo <repo> --model test-openai/test-model --concurrency 1 --json
-  const args = ["review", "--repo", opts.repoDir, "--model", "test-openai/test-model", "--concurrency", "1", "--no-filter", "--json"];
+  // Command: <consumerBinPath> review --repo <repo> --model test-openai/test-model --concurrency 1 --format json
+  const args = ["review", "--repo", opts.repoDir, "--model", "test-openai/test-model", "--concurrency", "1", "--no-filter", "--format", "json"];
   // consumerBinPath is typically /tmp/consumer/node_modules/.bin/pi-review which is a shell wrapper; spawn via bun? Use that path directly.
   // If it's a JS file (dist/cli.js), run via bun. Detect.
   let bin = opts.consumerBinPath;
@@ -706,8 +706,8 @@ function compareVertical(opts: {
   if (piCmdStr.includes("--engine")) {
     pushMismatch("process.command.pi.engine", piCmdStr, piCmdStr, "Pi command must not contain --engine (legacy switch removed)");
   }
-  if (!piCmdStr.includes("review") || !piCmdStr.includes("--repo") || !piCmdStr.includes("--json")) {
-    pushMismatch("process.command.pi", piCmdStr, piCmdStr, "Pi command must be pi-review review --repo <dir> --model ... --json");
+  if (!piCmdStr.includes("review") || !piCmdStr.includes("--repo") || !piCmdStr.includes("--format")) {
+    pushMismatch("process.command.pi", piCmdStr, piCmdStr, "Pi command must be pi-review review --repo <dir> --model ... --format json");
   }
 
   // 2. Provider request counts — both must have contacted server

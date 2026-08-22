@@ -660,7 +660,7 @@ async function runPiSubprocess(opts: {
     OCR_LLM_PROTOCOL: "openai",
   };
   // Use packed pi-review bin (sole OCR v1.9.3 engine, no --engine switch).
-  const extra = opts.command ?? ["--no-filter", "--json"];
+  const extra = opts.command ?? ["--no-filter", "--format", "json"];
   const hasPreview = extra.includes("--preview");
   const args = ["review", "--repo", opts.repoDir, "--concurrency", "1", ...extra];
   if (!hasPreview) {
@@ -985,8 +985,8 @@ function compareCoreReview(opts: CompareCoreOptions): { equal: boolean; mismatch
   if (piCmdStr.includes("--engine")) {
     pushMismatch("process.command.pi.engine", piCmdStr, piCmdStr, "Pi command must not contain --engine (legacy switch removed)");
   }
-  if (!piCmdStr.includes("review") || !piCmdStr.includes("--repo") || !piCmdStr.includes("--json")) {
-    pushMismatch("process.command.pi", piCmdStr, piCmdStr, "Pi command must be pi-review review --repo <dir> --model ... --json");
+  if (!piCmdStr.includes("review") || !piCmdStr.includes("--repo") || !piCmdStr.includes("--format")) {
+    pushMismatch("process.command.pi", piCmdStr, piCmdStr, "Pi command must be pi-review review --repo <dir> --model ... --format json");
   }
 
   // 2. Provider request counts — both must have contacted server
@@ -1328,7 +1328,7 @@ async function runFamilyFixture(opts: {
   const piAgent = await createPiAgentDir(serverPi.url);
 
   const ocrExtra = opts.ocrCommandExtra ?? ["--format", "json", "--no-filter"];
-  const piExtra = opts.piCommandExtra ?? ["--no-filter", "--json"];
+  const piExtra = opts.piCommandExtra ?? ["--no-filter", "--format", "json"];
 
   let ocrResult: { stdout: string; stderr: string; exitCode: number | null; signal: string | null } | null = null;
   let piResult: { stdout: string; stderr: string; exitCode: number | null; signal: string | null; command: readonly string[] } | null = null;
@@ -1421,7 +1421,7 @@ async function runFamily3(context: FixtureContext, judgment: "keep" | "remove", 
     context,
     makeRepo: createTempRepo,
     ocrCommandExtra: ["--format", "json"],
-    piCommandExtra: ["--json"],
+    piCommandExtra: ["--format", "json"],
     ocrResponses: responses,
     piResponses: responses,
   });
@@ -1460,7 +1460,7 @@ async function runFamily5(context: FixtureContext): Promise<FamilyResult> {
     context,
     makeRepo: async () => repo,
     ocrCommandExtra: ["--from", "HEAD~1", "--to", "HEAD", "--format", "json", "--no-filter"],
-    piCommandExtra: ["--no-filter", "--json", "--from", "HEAD~1", "--to", "HEAD"],
+    piCommandExtra: ["--no-filter", "--format", "json", "--from", "HEAD~1", "--to", "HEAD"],
     ocrResponses: responses,
     piResponses: responses,
   });
@@ -1492,7 +1492,7 @@ async function runFamily6(context: FixtureContext): Promise<FamilyResult> {
     context,
     makeRepo: async () => repo,
     ocrCommandExtra: ["--commit", commit, "--format", "json", "--no-filter"],
-    piCommandExtra: ["--no-filter", "--json", "--commit", commit],
+    piCommandExtra: ["--no-filter", "--format", "json", "--commit", commit],
     ocrResponses: responses,
     piResponses: responses,
   });
@@ -1653,7 +1653,7 @@ async function runFamily8(context: FixtureContext): Promise<FamilyResult> {
     context,
     makeRepo: async () => repo,
     ocrCommandExtra: ["--format", "json", "--no-filter", "--timeout", "120"],
-    piCommandExtra: ["--no-filter", "--json"],
+    piCommandExtra: ["--no-filter", "--format", "json"],
     ocrResponses: responses,
     piResponses: responses,
     timeoutMs: 240000,
@@ -1926,7 +1926,7 @@ async function main(): Promise<void> {
         consumerBinPath,
         consumerDir,
         agentDir: piAgent.dir,
-        command: ["--preview", "--json"],
+        command: ["--preview", "--format", "json"],
       });
       assertions++;
 
