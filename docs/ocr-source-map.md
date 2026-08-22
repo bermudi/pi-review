@@ -65,6 +65,10 @@ byte-identical top-level tests; its pending cases are v1.9.9 upgrade work.
   `Model` plus runtime to the session boundary. Review resume seals and
   validates identity before child persistence; reuse and background failures
   are propagated rather than silently treated as success.
+- Model identity crosses the factory/resume seam as separate `provider` and
+  `model` fields. The review factory explicitly maps sealed identity hash names
+  to the resume contract before validation; it never compares collapsed
+  `provider/model` strings.
 
 This map is the Phase 2 contract from `docs/ocr-port-plan.md`. Each row identifies OCR production and test scope, whether Pi code is reused/wrapped/replaced, and where the TypeScript home lives. It is not a completion ledger. The exhaustive, path-qualified disposition of every pinned upstream test is `docs/ocr-upstream-test-inventory.json`, checked by `test/ocr/manifest-coverage.test.ts`. No parity engine may import `src/{reviewer,pi-runner,prompts,tools,phase-tools,resolver,change-map}` policy — reuse only after OCR-derived tests prove parity.
 

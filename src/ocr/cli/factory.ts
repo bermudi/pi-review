@@ -37,7 +37,7 @@ import { CommentWorkerPool } from "../llmloop/pool.js";
 import { Agent, newAgent } from "../agent/agent.js";
 import { Agent as ScanAgent, NewAgent as NewScanAgent } from "../scan/scan.js";
 import { reviewModeString } from "../agent/util.js";
-import { PiTransport, createPiTransportForFile } from "../pi-adapter/pi-transport.js";
+import { createPiTransportForFile, type PiModelIdentity } from "../pi-adapter/pi-transport.js";
 import { FileReader, DiffMap, FileReadProvider, FileReadDiffProvider, CodeSearchProvider, FileFindProvider } from "../tool/filereader.js";
 import { Registry } from "../tool/definitions.js";
 import { buildToolRegistry } from "./git.js";
@@ -62,7 +62,7 @@ type PiModel = NonNullable<NonNullable<Parameters<typeof createPiTransportForFil
 export interface PiModelSelection {
   readonly model: PiModel;
   readonly modelRuntime: ModelRuntime;
-  readonly identity: string;
+  readonly identity: PiModelIdentity;
 }
 
 /** Resolve the documented `provider/model` selector through Pi's public model runtime. */
@@ -79,7 +79,7 @@ export async function resolvePiModelSelection(
   });
   let selectedProvider = provider;
   let selectedModel = selector;
-  const slash = selector.indexOf("/");
+  const slash = provider === "" ? selector.indexOf("/") : -1;
   if (slash >= 0) {
     const embeddedProvider = selector.slice(0, slash);
     const embeddedModel = selector.slice(slash + 1);
@@ -113,7 +113,19 @@ export async function resolvePiModelSelection(
   if (model === undefined) {
     throw new Error(`unknown model "${selectedProvider}/${selectedModel}" in Pi configuration`);
   }
-  return { model, modelRuntime: runtime, identity: `${model.provider}/${model.id}` };
+  return { model, modelRuntime: runtime, identity: { provider: model.provider, model: model.id } };
+}
+
+function transportModelIdentity(transport: unknown): PiModelIdentity | undefined {
+  if (typeof transport !== "object" || transport === null) return undefined;
+  const getter = (transport as { modelIdentity?: unknown }).modelIdentity;
+  if (typeof getter !== "function") return undefined;
+  const identity = (getter as () => unknown)();
+  if (typeof identity !== "object" || identity === null) return undefined;
+  const value = identity as Record<string, unknown>;
+  return typeof value["provider"] === "string" && typeof value["model"] === "string"
+    ? { provider: value["provider"], model: value["model"] }
+    : undefined;
 }
 
 /**
@@ -226,13 +238,20 @@ export function createReviewRunnerFactory(
       model: selection?.model,
       modelRuntime: selection?.modelRuntime,
     });
-    const modelId = transport instanceof PiTransport
-      ? transport.modelIdentity() ?? selection?.identity ?? "test-model"
-      : selection?.identity ?? (opts.model !== "" ? opts.model : "test-model");
+    const identity = transportModelIdentity(transport) ?? selection?.identity ?? {
+      provider: opts.provider,
+      model: opts.model !== "" ? opts.model : "test-model",
+    };
+    const modelId = identity.model;
     if (resume !== null && resumeIdentity !== null) {
       const validation = resume.ValidateResume({
-        identity: resumeIdentity,
-        provider: opts.provider,
+        identity: {
+          mode: resumeIdentity.mode,
+          sourceArtifactSha256: resumeIdentity.sourceArtifactSHA256,
+          ruleConfigSha256: resumeIdentity.ruleConfigSHA256,
+          repositorySha256: resumeIdentity.repositorySHA256,
+        },
+        provider: identity.provider,
         model: modelId,
         providerExplicit: opts.provider !== "",
         modelExplicit: opts.model !== "",
@@ -262,7 +281,7 @@ export function createReviewRunnerFactory(
         resumedFrom: resume?.SessionID ?? "",
       });
       session._attachPersist(jsonlWriterToPersistHandle(writer));
-      session.RecordResumeLineage(NewResumeLineage(resume, runId, opts.provider, modelId));
+      session.RecordResumeLineage(NewResumeLineage(resume, runId, identity.provider, modelId));
     } catch (err) {
       const cause = err instanceof Error ? err : new Error(String(err));
       session._setPersistInitErr(new Error(`create session writer: ${cause.message}`, { cause }));
@@ -469,7 +488,7 @@ export function createScanRunnerFactory(
       commentWorkerPool: workerPool,
       maxConcurrency: opts.concurrency > 0 ? opts.concurrency : 8,
       concurrentTaskTimeoutMinutes: opts.perFileTimeout > 0 ? opts.perFileTimeout : 10,
-      model: transport.modelIdentity() ?? selection?.identity ?? modelIdFromModel(opts.model),
+      model: (transportModelIdentity(transport) ?? selection?.identity ?? { provider: opts.provider, model: modelIdFromModel(opts.model) }).model,
       background: opts.background,
       maxFileSizeBytes: template.MaxFileSizeBytes,
       maxTokensBudget,

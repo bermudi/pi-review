@@ -43,6 +43,10 @@ export interface ActiveToolSession {
   setActiveToolsByName(names: string[]): void;
   getActiveToolNames(): readonly string[];
 }
+export interface PiModelIdentity {
+  readonly provider: string;
+  readonly model: string;
+}
 
 function sameToolNames(actual: readonly string[], requested: readonly string[]): boolean {
   return actual.length === requested.length
@@ -419,10 +423,10 @@ export class PiTransport implements TranscriptLlmTransport {
   }
 
   /** Domain-safe identity for manifests and resume validation. */
-  modelIdentity(): string | undefined {
+  modelIdentity(): PiModelIdentity | undefined {
     const model = (this.session as unknown as { model?: { provider?: unknown; id?: unknown } }).model;
     if (typeof model?.provider !== "string" || typeof model.id !== "string") return undefined;
-    return `${model.provider}/${model.id}`;
+    return { provider: model.provider, model: model.id };
   }
 
   /** Dispose the underlying Pi session — await to surface cleanup failure. */

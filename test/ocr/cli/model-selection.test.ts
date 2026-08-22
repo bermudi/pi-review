@@ -13,15 +13,20 @@ test("resolves explicit provider/model through public Pi ModelRuntime", async ()
         "test-provider": {
           baseUrl: "https://example.invalid/v1",
           api: "openai-completions",
-          models: [{ id: "test-model", name: "Test", reasoning: false, input: ["text"], contextWindow: 4096, maxTokens: 1024 }],
+          models: [
+            { id: "test-model", name: "Test", reasoning: false, input: ["text"], contextWindow: 4096, maxTokens: 1024 },
+            { id: "vendor/test-model", name: "Slash", reasoning: false, input: ["text"], contextWindow: 4096, maxTokens: 1024 },
+          ],
         },
       },
     }));
     const selected = await resolvePiModelSelection(dir, "", "test-provider/test-model");
     if (selected === null) throw new Error("model selection unexpectedly empty");
-    expect(selected.identity).toBe("test-provider/test-model");
+    expect(selected.identity).toEqual({ provider: "test-provider", model: "test-model" });
     expect(selected.model.id).toBe("test-model");
-    await expect(resolvePiModelSelection(dir, "other", "test-provider/test-model")).rejects.toThrow("does not match");
+    const slashId = await resolvePiModelSelection(dir, "test-provider", "vendor/test-model");
+    expect(slashId?.identity).toEqual({ provider: "test-provider", model: "vendor/test-model" });
+    await expect(resolvePiModelSelection(dir, "other", "test-provider/test-model")).rejects.toThrow("unknown model");
     await expect(resolvePiModelSelection(dir, "", "missing/model")).rejects.toThrow("unknown model");
   } finally {
     rmSync(dir, { recursive: true, force: true });
