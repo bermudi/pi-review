@@ -236,7 +236,7 @@ function parseFlags(
         if (eq !== -1) val = tok.slice(eq + 1);
         else {
           const nxt = argv[i + 1];
-          if (nxt === undefined || nxt.startsWith("-")) throw new CliUsageError(`--${key} requires a value`);
+          if (nxt === undefined || (nxt.startsWith("-") && !/^-?\d+$/u.test(nxt))) throw new CliUsageError(`--${key} requires a value`);
           val = nxt;
           i++;
         }

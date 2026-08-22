@@ -1421,100 +1421,208 @@
       "path": "cmd/opencodereview/flags_test.go",
       "blob": "3a9a4db574d31c1bfbc598b24864bc4f3fa24905",
       "scope": {
-        "kind": "needs_decision",
-        "area": "cmd/opencodereview",
-        "reason": "not yet classified by the OCR v1.9.3 core-port source map"
+        "kind": "in_scope",
+        "area": "cli-output",
+        "reason": "review flag parsing and validation for diff, budget, and output modes are core CLI review input handling"
       },
       "tests": [
         {
           "name": "TestParseReviewFlags_BudgetFlagsDefaultZero",
-          "disposition": "pending_scope",
-          "reason": "not yet classified by the OCR v1.9.3 core-port source map"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/cli/review-flags.test.ts",
+              "title": "parseReviewFlags budget default is zero"
+            }
+          ]
         },
         {
           "name": "TestParseReviewFlags_BudgetFlagsParsed",
-          "disposition": "pending_scope",
-          "reason": "not yet classified by the OCR v1.9.3 core-port source map"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/cli/review-flags.test.ts",
+              "title": "parseReviewFlags max-tokens-budget parsed as 120000"
+            }
+          ]
         },
         {
           "name": "TestParseReviewFlags_ConflictingModes",
-          "disposition": "pending_scope",
-          "reason": "not yet classified by the OCR v1.9.3 core-port source map"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/cli/review-flags.test.ts",
+              "title": "parseReviewFlags conflicting from/to with commit is rejected"
+            }
+          ]
         },
         {
           "name": "TestParseReviewFlags_FromWithoutTo",
-          "disposition": "pending_scope",
-          "reason": "not yet classified by the OCR v1.9.3 core-port source map"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/cli/review-flags.test.ts",
+              "title": "parseReviewFlags from without to is rejected"
+            }
+          ]
         },
         {
           "name": "TestParseReviewFlags_InvalidAudience",
-          "disposition": "pending_scope",
-          "reason": "not yet classified by the OCR v1.9.3 core-port source map"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/cli/review-flags.test.ts",
+              "title": "parseReviewFlags invalid audience is rejected"
+            }
+          ]
         },
         {
           "name": "TestParseReviewFlags_MaxTokensParsed",
-          "disposition": "pending_scope",
-          "reason": "not yet classified by the OCR v1.9.3 core-port source map"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/cli/review-flags.test.ts",
+              "title": "parseReviewFlags max-tokens is parsed as 200000"
+            }
+          ]
         },
         {
           "name": "TestParseReviewFlags_MaxToolsBelowMin",
-          "disposition": "pending_scope",
-          "reason": "not yet classified by the OCR v1.9.3 core-port source map"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/cli/review-flags.test.ts",
+              "title": "parseReviewFlags max-tools below minimum is clamped to 10"
+            }
+          ]
         },
         {
           "name": "TestParseReviewFlags_NegativeMaxGitProcs",
-          "disposition": "pending_scope",
-          "reason": "not yet classified by the OCR v1.9.3 core-port source map"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/cli/review-flags.test.ts",
+              "title": "parseReviewFlags negative max-git-procs is rejected"
+            }
+          ]
         },
         {
           "name": "TestParseReviewFlags_NegativeMaxTokens",
-          "disposition": "pending_scope",
-          "reason": "not yet classified by the OCR v1.9.3 core-port source map"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/cli/review-flags.test.ts",
+              "title": "parseReviewFlags negative max-tokens is rejected"
+            }
+          ]
         },
         {
           "name": "TestParseReviewFlags_NegativeMaxTokensBudget",
-          "disposition": "pending_scope",
-          "reason": "not yet classified by the OCR v1.9.3 core-port source map"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/cli/review-flags.test.ts",
+              "title": "parseReviewFlags negative max-tokens-budget is rejected"
+            }
+          ]
         },
         {
           "name": "TestParseReviewFlags_NegativeMaxTools",
-          "disposition": "pending_scope",
-          "reason": "not yet classified by the OCR v1.9.3 core-port source map"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/cli/review-flags.test.ts",
+              "title": "parseReviewFlags negative max-tools is rejected"
+            }
+          ]
         },
         {
           "name": "TestParseReviewFlags_PreviewWithResume",
-          "disposition": "pending_scope",
-          "reason": "not yet classified by the OCR v1.9.3 core-port source map"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/cli/review-flags.test.ts",
+              "title": "parseReviewFlags preview with resume is rejected"
+            }
+          ]
         },
         {
           "name": "TestParseReviewFlags_ShortFlags",
-          "disposition": "pending_scope",
-          "reason": "not yet classified by the OCR v1.9.3 core-port source map"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/cli/review-flags.test.ts",
+              "title": "parseReviewFlags short flags -c -f -p"
+            }
+          ]
         },
         {
           "name": "TestParseReviewFlags_ToWithoutFrom",
-          "disposition": "pending_scope",
-          "reason": "not yet classified by the OCR v1.9.3 core-port source map"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/cli/review-flags.test.ts",
+              "title": "parseReviewFlags to without from is rejected"
+            }
+          ]
         },
         {
           "name": "TestParseReviewFlagsBackgroundFile",
-          "disposition": "pending_scope",
-          "reason": "not yet classified by the OCR v1.9.3 core-port source map"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/cli/review-flags.test.ts",
+              "title": "parseReviewFlags handles background-file long and short flags"
+            }
+          ]
         },
         {
           "name": "TestParseReviewFlagsModelOverride",
-          "disposition": "pending_scope",
-          "reason": "not yet classified by the OCR v1.9.3 core-port source map"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/cli/review-flags.test.ts",
+              "title": "parseReviewFlags model override sets model and preserves text/human defaults"
+            }
+          ]
         },
         {
           "name": "TestParseReviewFlagsProviderAndModelOverrides",
-          "disposition": "pending_scope",
-          "reason": "not yet classified by the OCR v1.9.3 core-port source map"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/cli/review-flags.test.ts",
+              "title": "parseReviewFlags provider and model overrides"
+            }
+          ]
         },
         {
           "name": "TestParseReviewFlagsResume",
-          "disposition": "pending_scope",
-          "reason": "not yet classified by the OCR v1.9.3 core-port source map"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/cli/review-flags.test.ts",
+              "title": "parseReviewFlags resume with from/to"
+            }
+          ]
         }
       ]
     },

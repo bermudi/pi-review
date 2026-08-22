@@ -1329,6 +1329,14 @@ const scopeOverrides: ReadonlyMap<string, Scope> = new Map<string, Scope>([
       reason: "tool configuration loading and phase filtering are core to advertised model capabilities and CLI --tools wiring",
     },
   ],
+  [
+    "cmd/opencodereview/flags_test.go",
+    {
+      kind: "in_scope",
+      area: "cli-output",
+      reason: "review flag parsing and validation for diff, budget, and output modes are core CLI review input handling",
+    },
+  ],
 ]);
 
 const localCoverage: readonly LocalCoverage[] = [
@@ -1709,6 +1717,10 @@ const localCoverage: readonly LocalCoverage[] = [
   {
     localPath: "test/ocr-v193/tool/toolsconfig.test.ts",
     upstreamPaths: ["internal/config/toolsconfig/toolsconfig_test.go"],
+  },
+  {
+    localPath: "test/ocr-v193/cli/review-flags.test.ts",
+    upstreamPaths: ["cmd/opencodereview/flags_test.go"],
   },
 ];
 
