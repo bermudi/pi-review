@@ -19,6 +19,10 @@ The active, unshipped upgrade target is OCR `v1.9.9`, tag object
 `docs/ocr-upstream-test-delta.json`; pending delta cases must be ported and
 re-verified before the target can replace the shipped baseline.
 
+The first v1.9.9 upgrade tranche translates 11 changed/additional cases:
+v1.9.5 cross-file relocation and v1.9.5/v1.9.6 rule-language assets. The
+remaining v1.9.9 inventory is still pending; this is not a completion claim.
+
 Existing `src/ocr` code is **candidate implementation**, not proven
 parity. Do not delete or rewrite it merely because its old verifiers were
 unsound. Reuse it only when a new gate proves its behavior.

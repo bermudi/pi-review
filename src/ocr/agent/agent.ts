@@ -493,6 +493,8 @@ export class Agent {
       commentCollector: commentCollector as unknown as never,
       toolRegistry: toolRegistry as unknown as never,
       diffLookup: diffLookup as unknown as never,
+      // The cross-file resolver must see only this review's selected diffs.
+      allDiffs: () => this.diffs.map((diff) => normalizeDiff(diff)),
       commentWorkerPool: this.commentWorkerPool as unknown as never,
       session: this.sessionHistory as unknown as never,
       newRequestMeta: this.newRequestMeta.bind(this) as unknown as never,

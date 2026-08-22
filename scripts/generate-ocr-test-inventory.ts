@@ -2139,6 +2139,10 @@ const localCoverage: readonly LocalCoverage[] = [
     upstreamPaths: ["internal/diff/relocation_test.go"],
   },
   {
+    localPath: "test/ocr/diff/relocate-across-files.test.ts",
+    upstreamPaths: ["internal/diff/relocate_across_files_test.go"],
+  },
+  {
     localPath: "test/ocr/tool/code-comment.test.ts",
     upstreamPaths: ["internal/tool/code_comment_test.go"],
   },
@@ -2907,7 +2911,7 @@ function generateInventory(): Inventory {
       if ((t.disposition === "covered" || t.disposition === "equivalent") && t.evidence) {
         for (const e of t.evidence) {
           const src = readFileSync(resolve(repoRoot, e.path), "utf8");
-          if (!src.includes(`// OCR v1.9.3: ${t.name}`)) {
+          if (!src.includes(`// OCR ${e.ocrVersion}: ${t.name}`)) {
             throw new Error(`Evidence ${e.path} does not contain annotation for ${file.path}::${t.name}`);
           }
         }

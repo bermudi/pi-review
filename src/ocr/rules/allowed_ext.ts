@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright 2026 alibaba/open-code-review Contributors
 //
-// Ported from internal/config/allowlist/allowed_ext.go at c35ddd7223f2b5540ce03aa43c9a25ef643fca27.
+// Ported from internal/config/allowlist/allowed_ext.go at c35ddd7223f2b5540ce03aa43c9a25ef643fca27;
+// allowlist assets updated from OCR v1.9.6 at 24c2dd0cde63f56b19079ccf128cf88ab523cadf.
 // Modifications are distributed as part of pi-reviewer under
 // GPL-3.0-or-later;
 // see LICENSES/Apache-2.0.txt and THIRD_PARTY_NOTICES.md.
@@ -37,17 +38,17 @@ import * as crypto from "node:crypto";
 import { minimatch } from "minimatch";
 
 // ---------------------------------------------------------------------------
-// Frozen hashes — must match the pinned v1.9.3 checkout (4d796ae..., c35ddd...)
-// computed via `sha256sum` on the original files. The loader verifies them
+// Frozen hashes — must match OCR v1.9.6's language/allowlist assets
+// (24c2dd0cde63f56b19079ccf128cf88ab523cadf). The loader verifies them
 // when verifyHashes is true (default); `bun test` must fail if the JSON bytes
 // diverge.
 // ---------------------------------------------------------------------------
 
 export const EXPECTED_SUPPORTED_FILE_TYPES_HASH =
-  "461152c7eba4010c8d7a84cb1e8182cf31fe58c62f95561be8829998f7bd4b7e";
+  "c9e5c41a53f578601bd469562619cdbf4d60c7e7e51689735870245546a186f5";
 
 export const EXPECTED_DEFAULT_EXCLUDE_PATTERNS_HASH =
-  "93d96d1e3683d68d9e73ef35a955445e64d53dd9c48cc008356801928ee385c5";
+  "181b07ac1d2ec895bceed17e84b2b32ddccb02a3fa1739b53028846655ddb6a9";
 
 // ---------------------------------------------------------------------------
 // Hash helpers

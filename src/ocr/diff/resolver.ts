@@ -1,7 +1,9 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright 2026 alibaba/open-code-review Contributors
 //
-// Ported from internal/diff/resolver.go at c35ddd7223f2b5540ce03aa43c9a25ef643fca27.
+// Ported from internal/diff/resolver.go at c35ddd7223f2b5540ce03aa43c9a25ef643fca27;
+// cross-file relocation added from OCR v1.9.5 commit
+// 9a371c9b3610fb4e9892bd50b72941e26201c2c1.
 // Modifications are distributed as part of pi-reviewer under
 // GPL-3.0-or-later;
 // see LICENSES/Apache-2.0.txt and THIRD_PARTY_NOTICES.md.
@@ -64,6 +66,43 @@ export function resolveComment(cm: LlmComment, d: Diff): boolean {
 }
 
 export const ResolveComment = resolveComment;
+
+/**
+ * Re-file a comment only when its quoted code resolves uniquely in another
+ * reviewed diff. This is OCR v1.9.5's model-free relocation step: it runs
+ * before LLM relocation so the original quoted evidence is not overwritten.
+ */
+export function relocateAcrossFiles(cm: LlmComment | null | undefined, diffs: readonly Diff[]): [string, boolean] {
+  if (cm === null || cm === undefined || cm.existingCode === "" || cm.existingCode === undefined || diffs.length === 0) {
+    return ["", false];
+  }
+
+  const hits: Array<{ path: string; startLine: number; endLine: number }> = [];
+  for (const d of diffs) {
+    if (d.newPath === cm.path || d.oldPath === cm.path) continue;
+    const probe: LlmComment = {
+      ...cm,
+      startLine: 0,
+      endLine: 0,
+    };
+    if (!resolveComment(probe, d)) continue;
+    hits.push({
+      path: d.newPath === "" ? d.oldPath : d.newPath,
+      startLine: probe.startLine ?? 0,
+      endLine: probe.endLine ?? 0,
+    });
+    if (hits.length > 1) return ["", false];
+  }
+  if (hits.length !== 1) return ["", false];
+
+  const hit = hits[0]!;
+  cm.path = hit.path;
+  cm.startLine = hit.startLine;
+  cm.endLine = hit.endLine;
+  return [hit.path, true];
+}
+
+export const RelocateAcrossFiles = relocateAcrossFiles;
 
 // ---------------------------------------------------------------------------
 // Internal helpers — mirrors Go helpers

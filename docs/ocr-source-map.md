@@ -9,6 +9,16 @@ Active upgrade target (not shipped): tag `v1.9.9`, signed tag object
 `docs/ocr-upstream-test-delta.json` records added, removed, changed-body, and
 byte-identical top-level tests; its pending cases are v1.9.9 upgrade work.
 
+### v1.9.9 upgrade translations
+
+- OCR v1.9.5 commit `9a371c9b3610fb4e9892bd50b72941e26201c2c1`:
+  `internal/diff/resolver.go` cross-file comment re-filing is ported in
+  `src/ocr/diff/resolver.ts` and invoked by the review runner over its selected
+  diffs.
+- OCR v1.9.5/v1.9.6 language assets: `src/ocr/rules` carries the Swift,
+  Jupyter, R, Zig, Elm, Thrift, Cap'n Proto, Jsonnet, and allowlist changes.
+  `src/ocr/rules/PROVENANCE.json` records the mixed per-file origins.
+
 This map is the Phase 2 contract from `docs/ocr-port-plan.md`. Each row identifies OCR production and test scope, whether Pi code is reused/wrapped/replaced, and where the TypeScript home lives. It is not a completion ledger. The exhaustive, path-qualified disposition of every pinned upstream test is `docs/ocr-upstream-test-inventory.json`, checked by `test/ocr/manifest-coverage.test.ts`. No parity engine may import `src/{reviewer,pi-runner,prompts,tools,phase-tools,resolver,change-map}` policy — reuse only after OCR-derived tests prove parity.
 
 | OCR v1.9.3 source | Pi port home | Production files (Go) | Upstream test scope | Reuse policy |

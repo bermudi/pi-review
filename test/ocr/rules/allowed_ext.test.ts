@@ -2,7 +2,8 @@
 // Copyright 2026 alibaba/open-code-review Contributors
 //
 // Ported from internal/config/allowlist/allowed_ext_test.go at
-// c35ddd7223f2b5540ce03aa43c9a25ef643fca27.
+// c35ddd7223f2b5540ce03aa43c9a25ef643fca27; updated for OCR v1.9.9
+// language cases from v1.9.5/v1.9.6.
 
 import { expect, test } from "bun:test";
 
@@ -22,6 +23,8 @@ const allowedExtensionCases: ReadonlyArray<readonly [string, boolean]> = [
   [".phtml", true],
   [".PHTML", true],
   [".rs", true],
+  [".R", true],
+  [".r", true],
   [".ets", true],
   [".ETS", true],
   [".json5", true],
@@ -60,6 +63,26 @@ const allowedExtensionCases: ReadonlyArray<readonly [string, boolean]> = [
   [".NIMS", true],
   [".nimble", true],
   [".NIMBLE", true],
+  [".ipynb", true],
+  [".IPYNB", true],
+  [".elm", true],
+  [".ELM", true],
+  [".properties", true],
+  [".PROPERTIES", true],
+  [".po", true],
+  [".PO", true],
+  [".pot", true],
+  [".POT", true],
+  [".jsonnet", true],
+  [".JSONNET", true],
+  [".libsonnet", true],
+  [".LIBSONNET", true],
+  [".zig", true],
+  [".ZIG", true],
+  [".thrift", true],
+  [".THRIFT", true],
+  [".capnp", true],
+  [".CAPNP", true],
   [".txt", false],
   [".md", false],
   [".png", false],
@@ -67,7 +90,7 @@ const allowedExtensionCases: ReadonlyArray<readonly [string, boolean]> = [
   ["", false],
 ];
 
-// OCR v1.9.3: TestIsAllowedExt
+// OCR v1.9.9: TestIsAllowedExt
 test.each(allowedExtensionCases)("isAllowedExt(%p) = %p", (ext, want) => {
   expect(isAllowedExt(ext)).toBe(want);
 });
@@ -122,6 +145,20 @@ const excludedPathCases: ReadonlyArray<readonly [string, string, boolean]> = [
   ["julia test nested", "MyPkg/test/unit/foo.jl", true],
   ["julia non-test", "src/model.jl", false],
 
+  ["swift Tests suffix", "MyAppTests/UserTests.swift", true],
+  ["swift Tests suffix nested", "Tests/AppTests/UserTests.swift", true],
+  ["swift UITests suffix", "MyAppUITests/LaunchTests.swift", true],
+  ["swift Test suffix", "MyAppTests/UserTest.swift", true],
+  ["swift Test dir helper", "Tests/AppTests/Mocks/MockService.swift", true],
+  ["swift tests dir lowercase", "tests/AppTests/Helpers/Helper.swift", true],
+  ["swift non-test", "Sources/App/User.swift", false],
+  ["swift helper with test in name", "Sources/App/TestSupport.swift", false],
+
+  ["r test directory", "tests/parser_test.R", true],
+  ["r nested test directory", "packages/core/tests/unit/parser_test.R", true],
+  ["r non-test", "src/parser.R", false],
+  ["r tests in filename", "src/tests_helper.R", false],
+
   ["haskell test directory", "test/Parser.hs", true],
   ["haskell nested test directory", "packages/core/test/unit/Parser.hs", true],
   ["haskell spec file", "src/ParserSpec.hs", true],
@@ -137,6 +174,44 @@ const excludedPathCases: ReadonlyArray<readonly [string, string, boolean]> = [
   ["nim nested test directory", "packages/core/tests/unit/parser_test.nim", true],
   ["nim non-test", "src/parser.nim", false],
   ["nim tests in filename", "src/tests_helper.nim", false],
+
+  ["elm test directory", "tests/ParserTest.elm", true],
+  ["elm nested test directory", "packages/core/tests/unit/ParserTest.elm", true],
+  ["elm non-test", "src/Parser.elm", false],
+  ["elm tests in filename", "src/TestsHelper.elm", false],
+
+  ["kitex_gen at root", "kitex_gen/api/service.go", true],
+  ["kitex_gen nested", "app/rpc/kitex_gen/user/user.go", true],
+  ["thrift idl is reviewed", "idl/service.thrift", false],
+  ["hand-written generated-ish dir name", "services/generated_client/client.go", false],
+  ["gen in package name only", "internal/generator/main.go", false],
+  ["kitex_gen holding non-Go file", "kitex_gen/api/schema.json", false],
+
+  ["capnp generated header", "src/schema.capnp.h", true],
+  ["capnp generated go", "tunnelrpc/proto/tunnelrpc.capnp.go", true],
+  ["capnp generated rust", "src/element_capnp.rs", true],
+  ["capnp generated typescript", "src/rpc.capnp.ts", true],
+  ["capnp generated python", "schema/addressbook_capnp.py", true],
+  ["capnp schema is reviewed", "schema/addressbook.capnp", false],
+  ["capnp in filename only", "src/capnp_helpers.go", false],
+
+  ["jsonnet vendor root", "vendor/github.com/grafana/jsonnet-libs/ksonnet-util/kausal.libsonnet", true],
+  ["jsonnet vendor nested dir", "jsonnet/vendor/foo/main.jsonnet", true],
+  ["jsonnet non-vendor lib", "lib/config.libsonnet", false],
+  ["jsonnet non-vendor env", "environments/prod/main.jsonnet", false],
+  ["go under vendor still reviewed", "vendor/github.com/pkg/errors/errors.go", false],
+  ["php under vendor still reviewed", "vendor/monolog/monolog/src/Logger.php", false],
+
+  ["zig test directory", "test/parser.zig", true],
+  ["zig nested test directory", "src/test/unit/parser.zig", true],
+  ["zig _test suffix", "src/parser_test.zig", true],
+  ["zig non-test", "src/parser.zig", false],
+  ["zig test in filename", "src/testutil.zig", false],
+
+  ["ipynb checkpoint at root", ".ipynb_checkpoints/analysis-checkpoint.ipynb", true],
+  ["ipynb checkpoint nested", "notebooks/eda/.ipynb_checkpoints/eda-checkpoint.ipynb", true],
+  ["ipynb outside checkpoints", "notebooks/eda/eda.ipynb", false],
+  ["ipynb checkpoints without dot", "notebooks/ipynb_checkpoints/eda.ipynb", false],
 
   ["jest snapshot dir", "src/__snapshots__/App.test.js.snap", true],
   ["snap file", "src/components/Button.snap", true],
@@ -165,7 +240,7 @@ const excludedPathCases: ReadonlyArray<readonly [string, string, boolean]> = [
   ["case insensitive java", "com/FooTEST.java", true],
 ];
 
-// OCR v1.9.3: TestIsExcludedPath
+// OCR v1.9.9: TestIsExcludedPath
 test.each(excludedPathCases)("%s", (_name, filePath, want) => {
   expect(isExcludedPath(filePath)).toBe(want);
 });

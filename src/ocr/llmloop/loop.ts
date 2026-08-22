@@ -35,7 +35,7 @@ import {
 import { createHash } from "node:crypto";
 import type { LlmComment } from "../model/types.js";
 import type { Diff } from "../model/diff.js";
-import { resolveComment } from "../diff/resolver.js";
+import { relocateAcrossFiles, resolveComment } from "../diff/resolver.js";
 import type { SessionHistory, TaskRecord, TaskType } from "../session/history.js";
 
 // Re-export for external consumers
@@ -621,6 +621,9 @@ export class Runner {
       const diffLookup = (this.deps.diffLookup ?? (this.deps as unknown as Record<string, unknown>)["DiffLookup"]) as
         | ((path: string) => unknown)
         | undefined;
+      const allDiffs = (this.deps.allDiffs ?? (this.deps as unknown as Record<string, unknown>)["AllDiffs"]) as
+        | (() => readonly unknown[])
+        | undefined;
       const templateAny = this.deps.template as unknown as Record<string, unknown>;
       const reLocationTaskRaw = (templateAny["ReLocationTask"] ?? templateAny["reLocationTask"]) as
         | { Messages?: readonly Message[]; messages?: readonly { readonly role: string; readonly content: string }[] }
@@ -716,16 +719,39 @@ export class Runner {
             d = null;
           }
         }
-        if (d !== null && cm.existingCode && cm.existingCode !== "") {
+        if (cm.existingCode && cm.existingCode !== "") {
           const alreadyResolved = (cm.startLine ?? 0) > 0 || (cm.endLine ?? 0) > 0;
           if (!alreadyResolved) {
             let ok = false;
-            try {
-              ok = resolveComment(cm as unknown as Parameters<typeof resolveComment>[0], d);
-            } catch {
-              ok = false;
+            if (d !== null) {
+              try {
+                ok = resolveComment(cm as unknown as Parameters<typeof resolveComment>[0], d);
+              } catch {
+                ok = false;
+              }
             }
-            if (!ok && reLocationTaskRaw) {
+            // OCR v1.9.5 searches the reviewed set before asking the model:
+            // the model could overwrite the original cross-file evidence.
+            if (!ok && allDiffs) {
+              try {
+                const reviewedDiffs = allDiffs()
+                  .map((raw) => normalizeDiff(raw))
+                  .filter((candidate): candidate is Diff => candidate !== null);
+                const from = cm.path;
+                const [to, relocated] = relocateAcrossFiles(cm, reviewedDiffs);
+                ok = relocated;
+                if (relocated) {
+                  this.recordWarning(
+                    "comment_refiled",
+                    to,
+                    `comment filed against ${from} describes code in ${to}; re-filed`,
+                  );
+                }
+              } catch {
+                ok = false;
+              }
+            }
+            if (!ok && d !== null && reLocationTaskRaw) {
               const msgs = buildReLocationMessagesLocal(cm, d, reLocationTaskRaw as unknown as never);
               if (msgs && msgs.length > 0) {
                 const sessRel = this.getSession();

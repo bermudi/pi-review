@@ -28,6 +28,7 @@ function makeRunner(opts: {
   collector?: CommentCollector;
   pool?: CommentWorkerPool;
   diffLookup?: (path: string) => Diff | null;
+  allDiffs?: () => readonly Diff[];
   reLocationTask?: { messages: readonly { role: string; content: string }[] } | null;
   templateOverrides?: Record<string, unknown>;
   mainToolDefs?: readonly ToolDef[];
@@ -59,6 +60,7 @@ function makeRunner(opts: {
     commentCollector: collector as unknown as never,
     commentWorkerPool: opts.pool as unknown as never,
     diffLookup: opts.diffLookup as unknown as never,
+    allDiffs: opts.allDiffs as unknown as never,
   } as unknown as never);
   return { runner, transport, collector };
 }
@@ -102,6 +104,34 @@ describe("ocr loop Phase 5 — comment processing", () => {
     expect(comments[0]!.startLine).toBe(2);
     expect(comments[0]!.endLine).toBe(2);
     expect(comments[0]!.content).toBe("issue");
+  });
+
+  test("code_comment re-files a uniquely resolved cross-file excerpt before LLM relocation", async () => {
+    const header: Diff = {
+      oldPath: "span.h", newPath: "span.h", diff: "@@ -1 +1 @@\n+void f(void);\n", newFileContent: "",
+      isBinary: false, isDeleted: false, isNew: false, isRenamed: false, insertions: 1, deletions: 0,
+    };
+    const implementation: Diff = {
+      oldPath: "span.c", newPath: "span.c", diff: "@@ -10 +10,2 @@\n+if (bad) return;\n+cleanup();\n", newFileContent: "",
+      isBinary: false, isDeleted: false, isNew: false, isRenamed: false, insertions: 2, deletions: 0,
+    };
+    const { runner, transport, collector } = makeRunner({
+      diffLookup: (path) => (path === "span.h" ? header : null),
+      allDiffs: () => [header, implementation],
+      responses: [
+        { toolCalls: [{ id: "1", name: "code_comment", arguments: JSON.stringify({ comments: [{ content: "cleanup skipped", existing_code: "if (bad) return;\ncleanup();" }] }) }] },
+        { toolCalls: [{ id: "2", name: "task_done", arguments: JSON.stringify({ state: "DONE" }) }] },
+      ],
+    });
+    await runner.RunPerFile(new AbortController().signal, [newTextMessage("user", "review span.h")], "span.h");
+    expect(collector.Comments()[0]?.path).toBe("span.c");
+    expect(collector.Comments()[0]?.startLine).toBe(10);
+    expect(runner.warnings()).toContainEqual({
+      type: "comment_refiled",
+      file: "span.c",
+      message: "comment filed against span.h describes code in span.c; re-filed",
+    });
+    expect(transport.requests.length).toBe(2);
   });
 
   // Local regression: relocation retry succeeds with an LLM-provided code block.

@@ -1,5 +1,5 @@
 {
-  "provenance": "Verbatim config imports for OCR v1.9.3 parity engine",
+  "provenance": "Verbatim config imports for the OCR v1.9.3 shipped baseline and v1.9.5/v1.9.6 language upgrade",
   "upstream": "alibaba/open-code-review",
   "tag": "v1.9.3",
   "tag_object": "4d796ae54cabdcf4e22b69ef502ed8871456a909",
@@ -16,22 +16,43 @@
     {
       "dest": "src/ocr/rules/supported_file_types.json",
       "upstream": "internal/config/allowlist/supported_file_types.json",
-      "sha256": "461152c7eba4010c8d7a84cb1e8182cf31fe58c62f95561be8829998f7bd4b7e"
+      "sha256": "c9e5c41a53f578601bd469562619cdbf4d60c7e7e51689735870245546a186f5",
+      "origin": {
+        "tag": "v1.9.6",
+        "tag_object": "5759585290c8db31be5ed2c9bd966210624f1222",
+        "commit": "24c2dd0cde63f56b19079ccf128cf88ab523cadf"
+      }
     },
     {
       "dest": "src/ocr/rules/default_exclude_patterns.json",
       "upstream": "internal/config/allowlist/default_exclude_patterns.json",
-      "sha256": "93d96d1e3683d68d9e73ef35a955445e64d53dd9c48cc008356801928ee385c5"
+      "sha256": "181b07ac1d2ec895bceed17e84b2b32ddccb02a3fa1739b53028846655ddb6a9",
+      "origin": {
+        "tag": "v1.9.6",
+        "tag_object": "5759585290c8db31be5ed2c9bd966210624f1222",
+        "commit": "24c2dd0cde63f56b19079ccf128cf88ab523cadf"
+      }
     },
     {
       "dest": "src/ocr/rules/system_rules.json",
       "upstream": "internal/config/rules/system_rules.json",
-      "sha256": "90a4dd5ab978877011eadd2b7386666342de2e154697647284adeb37908e4072"
+      "sha256": "444c44022016a023159fc0a4fbab81111c712b95bc46cdef2d1093b56fcbd4fb",
+      "origin": {
+        "tag": "v1.9.6",
+        "tag_object": "5759585290c8db31be5ed2c9bd966210624f1222",
+        "commit": "24c2dd0cde63f56b19079ccf128cf88ab523cadf"
+      }
     },
     {
-      "dest": "src/ocr/rules/rule_docs/*.md (35 files)",
+      "dest": "src/ocr/rules/rule_docs/*.md (42 files)",
       "upstream": "internal/config/rules/rule_docs/*.md",
-      "sha256_manifest": "see system_rules.ts EXPECTED_RULE_DOC_HASHES and this file"
+      "sha256_manifest": "see system_rules.ts EXPECTED_RULE_DOC_HASHES and this file",
+      "default_origin": {
+        "tag": "v1.9.3",
+        "tag_object": "4d796ae54cabdcf4e22b69ef502ed8871456a909",
+        "commit": "c35ddd7223f2b5540ce03aa43c9a25ef643fca27"
+      },
+      "note": "Mixed origins; see rule_docs entries below."
     }
   ],
   "rule_docs": [
@@ -61,6 +82,16 @@
       "sha256": "bc24216e887e782d18b41448ba70ec149db60fca69ce270e69fe0285a4dd1996"
     },
     {
+      "file": "capnp.md",
+      "upstream": "internal/config/rules/rule_docs/capnp.md",
+      "sha256": "31bd6e7319d85e5f3b15212cb41825b631e0806d9e8c0790a5183c361393b386",
+      "origin": {
+        "tag": "v1.9.6",
+        "tag_object": "5759585290c8db31be5ed2c9bd966210624f1222",
+        "commit": "6c4a89faaf68b03031a42061a7071307caa32784"
+      }
+    },
+    {
       "file": "cargo_toml.md",
       "upstream": "internal/config/rules/rule_docs/cargo_toml.md",
       "sha256": "0c0fd9e692e217d850ea66691e73775bcf045b1faf06d3814a43242d8dd8a593"
@@ -79,6 +110,16 @@
       "file": "default.md",
       "upstream": "internal/config/rules/rule_docs/default.md",
       "sha256": "ababeb873e9c249a701c35afa115f8ee8e32b856d0fcebf6232a7d2bef03abd0"
+    },
+    {
+      "file": "elm.md",
+      "upstream": "internal/config/rules/rule_docs/elm.md",
+      "sha256": "a1d394cb495cfc2cc8f9c682945e3cc744091e9ebc58e0a692a2287a22d1e580",
+      "origin": {
+        "tag": "v1.9.6",
+        "tag_object": "5759585290c8db31be5ed2c9bd966210624f1222",
+        "commit": "7ef8e50bd2e571e82de8d2398dfe5f9964c96fb3"
+      }
     },
     {
       "file": "freemarker.md",
@@ -119,6 +160,16 @@
       "file": "json.md",
       "upstream": "internal/config/rules/rule_docs/json.md",
       "sha256": "5ec3f0fea279f3b63d417621ece604de89f40a3a5946fdd8e5e07aad8d64d410"
+    },
+    {
+      "file": "jsonnet.md",
+      "upstream": "internal/config/rules/rule_docs/jsonnet.md",
+      "sha256": "22d24192a4fb87b8a263a2f921bcf4e946145ef7b59d6fb88ec7cdc907fb25c9",
+      "origin": {
+        "tag": "v1.9.6",
+        "tag_object": "5759585290c8db31be5ed2c9bd966210624f1222",
+        "commit": "b741d7d0b5a81f01434fa221ca4a688d851abd3f"
+      }
     },
     {
       "file": "julia.md",
@@ -191,14 +242,44 @@
       "sha256": "9f449a1a60a1aba04e3a32de7854be0407d7acc4316f0364a124e79fcc7f8595"
     },
     {
+      "file": "r.md",
+      "upstream": "internal/config/rules/rule_docs/r.md",
+      "sha256": "ae45b3705e663329a64a63ec198e792f3c12c6d73a34492d15ad8b42ba8c4e56",
+      "origin": {
+        "tag": "v1.9.6",
+        "tag_object": "5759585290c8db31be5ed2c9bd966210624f1222",
+        "commit": "9a01ec0427cadf24ddd327a83bf815134626791f"
+      }
+    },
+    {
       "file": "rust.md",
       "upstream": "internal/config/rules/rule_docs/rust.md",
       "sha256": "e8f947933540302f0a96d2eced84a28851a10d9bbeaaeffa0677ac11adb4d5ff"
     },
     {
+      "file": "swift.md",
+      "upstream": "internal/config/rules/rule_docs/swift.md",
+      "sha256": "38d69073741b6b355803dfd6631c01d4f4f999ab438667abcf911e591045036b",
+      "origin": {
+        "tag": "v1.9.5",
+        "tag_object": "43ac4eb66ec1d26af05c657dbda317276aef5c32",
+        "commit": "44a946a68dec074128fec139dd65eda69b7692a6"
+      }
+    },
+    {
       "file": "terraform.md",
       "upstream": "internal/config/rules/rule_docs/terraform.md",
       "sha256": "d2a5877ef8fdfb5cb1883aabf1ad7130894b01996292ae5e096ec1f35f78b92a"
+    },
+    {
+      "file": "thrift.md",
+      "upstream": "internal/config/rules/rule_docs/thrift.md",
+      "sha256": "0403f77502963820e119a957c2c356dea6553e8bdd6408acbe400ae2bc1e1a71",
+      "origin": {
+        "tag": "v1.9.6",
+        "tag_object": "5759585290c8db31be5ed2c9bd966210624f1222",
+        "commit": "6c4a89faaf68b03031a42061a7071307caa32784"
+      }
     },
     {
       "file": "ts_js_tsx_jsx.md",
@@ -209,6 +290,21 @@
       "file": "yaml.md",
       "upstream": "internal/config/rules/rule_docs/yaml.md",
       "sha256": "39cd95b21cf24f214cf1cfb080ae31e6441844496cbf49d573590200980872eb"
+    },
+    {
+      "file": "zig.md",
+      "upstream": "internal/config/rules/rule_docs/zig.md",
+      "sha256": "6dcb998feec178c3d8bda0d6947dbc34553cb4f435c6eebc02d65aaeef1a9582",
+      "origin": {
+        "tag": "v1.9.6",
+        "tag_object": "5759585290c8db31be5ed2c9bd966210624f1222",
+        "commit": "c4d3f52b725bf8acd336fffceda404628c7749d2"
+      }
     }
-  ]
+  ],
+  "default_origin": {
+    "tag": "v1.9.3",
+    "tag_object": "4d796ae54cabdcf4e22b69ef502ed8871456a909",
+    "commit": "c35ddd7223f2b5540ce03aa43c9a25ef643fca27"
+  }
 }

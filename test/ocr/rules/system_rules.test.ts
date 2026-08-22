@@ -2,7 +2,8 @@
 // Copyright 2026 alibaba/open-code-review Contributors
 //
 // Ported from internal/config/rules/system_rules_test.go at
-// c35ddd7223f2b5540ce03aa43c9a25ef643fca27.
+// c35ddd7223f2b5540ce03aa43c9a25ef643fca27; selected language cases
+// revalidated against OCR v1.9.9.
 
 import { describe, expect, test } from "bun:test";
 import { mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, statSync, symlinkSync, writeFileSync } from "node:fs";
@@ -154,11 +155,27 @@ const defaultRuleCases: ReadonlyArray<readonly [string, string]> = [
   ["src/parser.nim", "Memory and Lifetime Safety"],
   ["scripts/build.nims", "Memory and Lifetime Safety"],
   ["project.nimble", "Memory and Lifetime Safety"],
+  ["Sources/App/ContentView.swift", "Swift Review Principles"],
+  ["MyApp/Models/UserStore.swift", "Swift Review Principles"],
+  ["ChattyFit/ChattyFit/Views/WorkoutSessionView.swift", "SwiftUI State and Lifecycle"],
+  ["src/Main.elm", "Elm Architecture"],
+  ["app/Page/Home.elm", "Elm Architecture"],
+  ["lib/config.libsonnet", "Late Binding"],
+  ["environments/prod/main.jsonnet", "Late Binding"],
+  ["jsonnet/kube-prometheus/components/grafana.libsonnet", "Late Binding"],
+  ["src/foo.R", "R Code Review Principles"],
+  ["analysis/plots.r", "R Code Review Principles"],
+  ["src/main.zig", "Illegal Behavior"],
+  ["build.zig", "Illegal Behavior"],
+  ["idl/service.thrift", "Field IDs and Wire Compatibility"],
+  ["if/common.thrift", "Field IDs and Wire Compatibility"],
+  ["schema/addressbook.capnp", "Ordinals and Wire Compatibility"],
+  ["src/rpc.capnp", "Ordinals and Wire Compatibility"],
 ];
 
 const defaultSystemRule = loadDefaultSystemRule();
 
-// OCR v1.9.3: TestResolve_DefaultRules
+// OCR v1.9.9: TestResolve_DefaultRules
 test.each(defaultRuleCases)("default rule resolves %s", (filePath, wantSubstring) => {
   expect(resolveSystemRule(defaultSystemRule, filePath)).toContain(wantSubstring);
 });
@@ -167,11 +184,11 @@ const fallbackPaths: ReadonlyArray<readonly [string]> = [
   ["readme.md"],
   ["docs/architecture.txt"],
   ["Makefile"],
-  ["ios/ViewController.swift"],
   ["ios/ViewController.m"],
+  ["ios/ViewController.mm"],
 ];
 
-// OCR v1.9.3: TestResolve_FallbackToDefault
+// OCR v1.9.9: TestResolve_FallbackToDefault
 test.each(fallbackPaths)("unmatched path %s falls back to the default", (filePath) => {
   expect(resolveSystemRule(defaultSystemRule, filePath)).toBe(defaultSystemRule.DefaultRule);
 });
@@ -829,7 +846,7 @@ test("resolveRuleEntries empty rules stay", () => {
   expect(entries[2]?.Rule).toBe("\t\n");
 });
 
-// OCR v1.9.3: TestResolveRuleEntries_SymlinkSafety
+// OCR v1.9.9: TestResolveRuleEntries_SymlinkSafety
 test("resolveRuleEntries symlink to non-whitelisted is rejected", () => {
   withTempDir((dir) => {
     const sensitiveFile = join(dir, "secret.json");
@@ -1016,7 +1033,7 @@ test("loadRuleFile reads and validates", () => {
   });
 });
 
-// OCR v1.9.3: TestLoadGlobalRule
+// OCR v1.9.9: TestLoadGlobalRule
 test("loadGlobalRule handles missing, directory, invalid, valid", () => {
   // missing file is not an error
   withTempDir((home) =>
@@ -1059,7 +1076,7 @@ test("loadGlobalRule handles missing, directory, invalid, valid", () => {
   );
 });
 
-// OCR v1.9.3: TestSystemRulesIntegrity
+// OCR v1.9.9: TestSystemRulesIntegrity
 describe("SystemRulesIntegrity", () => {
   test("file_existence", () => {
     const rule = loadDefaultSystemRule();

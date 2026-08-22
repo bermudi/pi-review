@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright 2026 alibaba/open-code-review Contributors
 //
-// Ported from internal/config/rules/system_rules.go at c35ddd7223f2b5540ce03aa43c9a25ef643fca27.
+// Ported from internal/config/rules/system_rules.go at c35ddd7223f2b5540ce03aa43c9a25ef643fca27;
+// language assets updated through OCR v1.9.6 at 24c2dd0cde63f56b19079ccf128cf88ab523cadf.
 // Modifications are distributed as part of pi-reviewer under
 // GPL-3.0-or-later;
 // see LICENSES/Apache-2.0.txt and THIRD_PARTY_NOTICES.md.
@@ -41,15 +42,16 @@ import * as crypto from "node:crypto";
 import { minimatch } from "minimatch";
 
 // ---------------------------------------------------------------------------
-// Frozen hashes — pinned at v1.9.3 (4d796ae..., c35ddd...)
+// Frozen hashes — mixed v1.9.3/v1.9.5/v1.9.6 assets; per-file provenance is
+// recorded in PROVENANCE.json.
 // ---------------------------------------------------------------------------
 
 export const EXPECTED_SYSTEM_RULES_HASH =
-  "90a4dd5ab978877011eadd2b7386666342de2e154697647284adeb37908e4072";
+  "444c44022016a023159fc0a4fbab81111c712b95bc46cdef2d1093b56fcbd4fb";
 
 /**
  * SHA-256 of each verbatim rule-doc file as shipped in
- * internal/config/rules/rule_docs/*.md at v1.9.3.
+ * internal/config/rules/rule_docs/*.md at their recorded upstream origins.
  *
  * Generation:
  *   sha256sum ../open-code-review/internal/config/rules/rule_docs/*.md
@@ -59,11 +61,13 @@ export const EXPECTED_RULE_DOC_HASHES: Readonly<Record<string, string>> = {
   "astro.md": "9ecfe0ab7035f413eb8172dd437de6502d781e229fac69857c9cc0ea5d17be4e",
   "bicep.md": "ec9907d0e062f8bc71e84beafa3055d894cf8a8748082e47a52cc04108763681",
   "build_gradle.md": "f511a3c5df99e0022d33edf28d00f43d4e7e0d7f7496ff1035b4f4a7ea4705a4",
+  "capnp.md": "31bd6e7319d85e5f3b15212cb41825b631e0806d9e8c0790a5183c361393b386",
   "c.md": "bc24216e887e782d18b41448ba70ec149db60fca69ce270e69fe0285a4dd1996",
   "cargo_toml.md": "0c0fd9e692e217d850ea66691e73775bcf045b1faf06d3814a43242d8dd8a593",
   "composer_json.md": "839a18f91961cbb5eff20300028afae5b7bed185eaccfc6cef8e758b67832476",
   "cpp.md": "06df79df2454cb2003be6e52e4f6d58f9ce5ce51bc7e31e0be2e417af315e130",
   "default.md": "ababeb873e9c249a701c35afa115f8ee8e32b856d0fcebf6232a7d2bef03abd0",
+  "elm.md": "a1d394cb495cfc2cc8f9c682945e3cc744091e9ebc58e0a692a2287a22d1e580",
   "freemarker.md": "3b1eb68367f4d955d73e13dd139e71408a01884276cb4f7e151095c2a2c5d4c7",
   "github_config.md": "64af359e7fcb8a0bdba88738e5429836d5efddc89851b042c9114985e7d22b95",
   "github_workflows.md": "801de96a1a8de9d2a4f18f60b5c29c17d58ca49de201b9f66b5c16c1e9d83866",
@@ -72,6 +76,7 @@ export const EXPECTED_RULE_DOC_HASHES: Readonly<Record<string, string>> = {
   "haskell.md": "94032848f52f79e2fe42c77ffa189395e62b6df2f1198c85f82e1bb806b4bf2a",
   "java.md": "06668355abc6f5f4f703215870228c1e913e4360bf30ae682bb04d36b57b4837",
   "json.md": "5ec3f0fea279f3b63d417621ece604de89f40a3a5946fdd8e5e07aad8d64d410",
+  "jsonnet.md": "22d24192a4fb87b8a263a2f921bcf4e946145ef7b59d6fb88ec7cdc907fb25c9",
   "julia.md": "3a55c6e22a2d092b5dcf200ff851e67e58a1d39538801489a2ad7153a6360ebb",
   "kotlin.md": "816c6930855936bf987de87ae6847d954da015ed4af37a8bee2cb9e3128afae1",
   "mapper_dao_xml.md": "8ff3a60e38e44986f82cba70cbbe7782ed4ea294486048336a14d173cf92678e",
@@ -86,10 +91,14 @@ export const EXPECTED_RULE_DOC_HASHES: Readonly<Record<string, string>> = {
   "properties.md": "d4c304229aec069b009cf3a762c0fcb16d8944c4f059187533a745e36e35fb82",
   "protobuf.md": "1dfcb6d6ec336f815f2c28ff5bfde8fb5563ae54386affdc26d315ce28b05cb7",
   "python.md": "9f449a1a60a1aba04e3a32de7854be0407d7acc4316f0364a124e79fcc7f8595",
+  "r.md": "ae45b3705e663329a64a63ec198e792f3c12c6d73a34492d15ad8b42ba8c4e56",
   "rust.md": "e8f947933540302f0a96d2eced84a28851a10d9bbeaaeffa0677ac11adb4d5ff",
+  "swift.md": "38d69073741b6b355803dfd6631c01d4f4f999ab438667abcf911e591045036b",
   "terraform.md": "d2a5877ef8fdfb5cb1883aabf1ad7130894b01996292ae5e096ec1f35f78b92a",
+  "thrift.md": "0403f77502963820e119a957c2c356dea6553e8bdd6408acbe400ae2bc1e1a71",
   "ts_js_tsx_jsx.md": "a365402a1884650cac3309f4c366020777452ef2f5f8d3ea474b9534004c5714",
   "yaml.md": "39cd95b21cf24f214cf1cfb080ae31e6441844496cbf49d573590200980872eb",
+  "zig.md": "6dcb998feec178c3d8bda0d6947dbc34553cb4f435c6eebc02d65aaeef1a9582",
 } as const;
 
 // ---------------------------------------------------------------------------
@@ -707,4 +716,3 @@ export function newResolver(repoDir: string, customRulePath: string): { resolver
 /** Go-compatible PascalCase aliases. */
 export const NewResolver = newResolver;
 export const LoadDefaultResolver = newResolver;
-

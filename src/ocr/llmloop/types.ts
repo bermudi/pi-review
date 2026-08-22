@@ -204,6 +204,10 @@ export interface RunnerDeps {
   readonly diffLookup?: DiffLookup;
   /** Legacy alias for diffLookup (Go field name). */
   readonly DiffLookup?: DiffLookup;
+  /** Reviewed diffs used to re-file a uniquely resolved cross-file comment. */
+  readonly allDiffs?: () => readonly DiffLike[];
+  /** Legacy alias for allDiffs (Go field name). */
+  readonly AllDiffs?: () => readonly DiffLike[];
   /** Session history for TaskRecord creation (mirrors Go Deps.Session). */
   readonly session?: SessionHistory;
   /** Legacy alias for session (Go field name Session). */
