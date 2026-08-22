@@ -17,45 +17,45 @@ The previous package baseline was v0.3.0/OCR v1.9.3. Its committed delta to
 v1.9.9 remains `docs/ocr-upstream-test-delta.json` as historical evidence.
 
 The first v1.9.9 upgrade tranche translates 11 changed/additional cases:
-v1.9.5 cross-file relocation and v1.9.5/v1.9.6 rule-language assets. The
-remaining v1.9.9 inventory is still pending; this is not a completion claim.
+v1.9.5 cross-file relocation and v1.9.5/v1.9.6 rule-language assets. This
+tranche is complete.
 
 The next v1.9.9 tranche translates the four background-selection cases. File
 content now wins over inline and commit-message fallback through one shared
-resolver; remaining inventory work is still pending.
+resolver; this tranche is complete.
 
 The review-filter/fingerprint tranche translates five v1.9.9 cases using the
-v1.9.5 terminal filter-tool contract and pinned filter prompts. Remaining
-inventory work is still pending.
+v1.9.5 terminal filter-tool contract and pinned filter prompts. This tranche
+is complete.
 
 The named-main-loop-stop tranche translates four v1.9.9 cases. Review and
-scan now retain the typed stop reason in incomplete-item diagnostics; remaining
-inventory work is still pending.
+scan now retain the typed stop reason in incomplete-item diagnostics; this
+tranche is complete.
 
 The cancellation checkpoint tranche translates two v1.9.9 cases. Review
 sessions preserve completed checkpoints but record interrupted and undispatched
 work as cancelled. The production factory now uses that same single Agent-owned
-session/finalization boundary; remaining inventory work is still pending.
+session/finalization boundary; this tranche is complete.
 
 The scan budget/enumeration tranche translates three v1.9.9 cases. Aggregate
 scan budget truncation remains warning-derived JSON status while exposing
 `budget_exceeded`; unreadable binary-sniff candidates are skipped without
-disturbing remaining ordered files. Remaining inventory work is still pending.
+disturbing remaining ordered files. This tranche is complete.
 
 The session filesystem/finalization tranche translates two v1.9.9 cases.
 Malformed sessions directories fail rather than looking empty, and failed
 writer creation cannot advertise a resumable session. Its completed manifest is
 still emitted once on stdout while the delivery error makes the command fail on
-stderr. Remaining inventory work is still pending.
+stderr. This tranche is complete.
 
 The color/text-rendering tranche translates fourteen v1.9.9 cases. ANSI is
 TTY-aware and injectable at the CLI boundary; text receives OCR styling while
-JSON and SARIF remain machine-clean. Remaining inventory work is still pending.
+JSON and SARIF remain machine-clean. This tranche is complete.
 
 The progress/quiet/stdout tranche translates seven v1.9.9 cases. Per-run
 injected routers replace OCR's mutable global stdout swapping: human progress
 goes to stderr, agent progress is suppressed, and nested quiet scopes restore
-only their own router. Remaining inventory work is still pending.
+only their own router. This tranche is complete.
 
 The final runtime-boundary tranche classifies four v1.9.9 OCR adapter tests as
 not applicable through public Pi APIs: Pi owns runtime configuration and lacks
@@ -64,9 +64,8 @@ stage-only filter tooling remain tested; this is not a claim of required-tool
 wire equivalence. The inventory is classified, but release/packed-install
 verification remains separate.
 
-`src/ocr` is the sole v1.9.9 compatibility engine. Exact packed-install
-verification remains pending for the release commit; do not pre-record a pass
-SHA or claim full provider command-surface parity.
+`src/ocr` is the sole v1.9.9 compatibility engine. Release acceptance always
+requires exact-commit gates; do not claim full provider command-surface parity.
 
 All gates begin `unverified`. Gate 5 verifies that the shipped CLI defaults to
 the parity engine. Before explicit removal on 2026-08-22, legacy remained

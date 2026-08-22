@@ -8,8 +8,8 @@ Review v1.9.9's core behavior through the Pi SDK.
 > Review v1.9.9 as the shipped behavioral reference (`v1.9.9` /
 > `c95d3907d5448354d3f8a33f2ae5e4f23fdf1c94` / `4b6874bd23106b5c68bea6d230bb60303b9f0961`).
 > The inventory is complete: 1,997 cases, with 1,015 covered, 112 equivalent,
-> 388 not applicable, and 482 out of scope. Final packed-install verification
-> is still pending for the release commit. The
+> 388 not applicable, and 482 out of scope. Any release or tag must pass
+> exact-commit packed-install and cutover gates. The
 > `config`/`provider`/`login`/`MCP`/`telemetry`/`test-connection` command
 > surfaces are intentionally not ported (omitted boundary; runtime only
 > resolves/loads external Pi configuration via public Pi APIs from
@@ -176,8 +176,9 @@ There is no model-visible shell, edit, or write tool.
 - Resume is per-session (`--resume ID`); it requires the same target/options and resumes a single prior session, not cross-run coverage merging.
 - Workspace evidence is live and may change during a long review; range/commit evidence is pinned.
 - The CLI requires an explicit `review` or `scan` subcommand.
-- Inventory classification complete (0 pending, 1895 cases; 321
-  not-applicable, 475 out-of-scope): `config`/`provider`/`MCP`/`telemetry`/
+- Inventory classification complete (0 pending, 1,997 cases; 1,015 covered,
+  112 equivalent, 388 not-applicable, 482 out-of-scope):
+  `config`/`provider`/`MCP`/`telemetry`/
   `test-connection` command surfaces intentionally not ported (omitted
   boundary; Pi's external auth/model configuration lives at `~/.pi/agent` and
   is only resolved/loaded at runtime via public Pi APIs); full
@@ -196,5 +197,5 @@ The deliberate public boundary is `src/index.ts`:
 ## License and upstream attribution
 
 `pi-reviewer` is licensed under [GPL-3.0-or-later](LICENSE). It ports Open Code
-Review v1.9.3 (Apache-2.0) — see [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)
+Review v1.9.9 (Apache-2.0) — see [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)
 and [LICENSES/Apache-2.0.txt](LICENSES/Apache-2.0.txt).

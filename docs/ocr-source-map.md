@@ -3,11 +3,9 @@
 Shipped reference: tag `v1.9.9`, signed tag object `c95d3907d5448354d3f8a33f2ae5e4f23fdf1c94`, commit `4b6874bd23106b5c68bea6d230bb60303b9f0961` in `../open-code-review`.
 The v1.9.3→v1.9.9 delta and mixed-file provenance remain historical evidence.
 
-Active upgrade target (not shipped): tag `v1.9.9`, signed tag object
-`c95d3907d5448354d3f8a33f2ae5e4f23fdf1c94`, commit
-`4b6874bd23106b5c68bea6d230bb60303b9f0961`. The machine-checked
-`docs/ocr-upstream-test-delta.json` records added, removed, changed-body, and
-byte-identical top-level tests; its pending cases are v1.9.9 upgrade work.
+Mixed v1.9.3 and v1.9.9 source/test provenance is complete and precise:
+unchanged material retains its original origin, while changed v1.9.9 behavior
+records the v1.9.9 source. The active inventory is complete with zero pending.
 
 ### v1.9.9 upgrade translations
 

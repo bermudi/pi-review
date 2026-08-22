@@ -26,8 +26,9 @@ The shipped reference for every translated file remains under
   reports that same good SSH signature and `No principal matched.` The absence
   of a matching local allowed-signers principal applies to every one of those
   observations; it is not an identity-trust verification.
-- Status: inventory only. The target has explicit pending core cases and must
-  not be described as shipped or parity-complete.
+- Status: the v1.9.9 inventory is complete (1,997 cases: 1,015 covered, 112
+  equivalent, 388 not applicable, 482 out of scope). The signer-trust caveat
+  above remains; release acceptance always requires gates on the exact commit.
 
 ## Verification status (recovery plan v2)
 
@@ -41,13 +42,13 @@ until the new black-box gates pass.
 | Gate 0 — black-box integrity | `verified` | `bun run verify:blackbox-integrity` | `7ba1659841edc09ac88bbbc677564b88c83fc4a4` | `verification/blackbox` 9 fixtures 13 assertions, pack `9fb755364ff1ce507c174ab1a10626d1f804fa6a88981f06b2b75a1ec7308ad7`, artifacts `/tmp/verify-blackbox-*`; re-verified after packed-install workspace fix (commit `3c5fc57d`)
 | Gate 1 — public Pi SDK feasibility | `verified` | `bun run verify:sdk-feasibility` | `a8f97c827a98839d54d5bd70b100bc833e1f166b` | `verification/blackbox` 7 fixtures 17 assertions (7+7 adversarial), pack `a8e518c6`, artifacts `/tmp/verify-sdk-*` — OCR empty-tool-result (file_read ""), separate arrival/delivery (delivered flag, no usage on stalled), per-session usage equality, real concurrent adversarial via capture mutation, no any, hasEmptyResultError required |
 | Gate 2 — vertical slice | `verified` | `bun run verify:vertical` | `01b7741b27a2f3fdd51721b0c878d05185b6fcfa` | `verification/blackbox` 2 fixtures 22 assertions, pack `c903869c`, OCR tag object `4d796ae54cabdcf4e22b69ef502ed8871456a909`/commit `c35ddd7223f2b5540ce03aa43c9a25ef643fca27`; positive fixture `vertical-workspace-one-file-one-comment` (2 provider requests, 1 comment, exit 0, deep message+schema parity); negative fixture `vertical-mismatch-comment-content` (mutated provider response, mismatch correctly detected at `stdout.comments[0].content` via deep `provider_request[1].messages` comparison); forbiddenImports=0; artifacts `/tmp/verify-vertical-mCTxt7` |
-| Gate 3 — core diff review | `verified` | `bun run verify:core-review` | `5a19c8cfd5ee1efc6a841807a3aca46c95238477` | 10 fixtures, 194 assertions, pack `5ecae700e9f73f8d40dd2c2da9f0fff45aa5e8c58b7bd991cf529d385a2e3351`, OCR tag object `4d796ae54cabdcf4e22b69ef502ed8871456a909`/commit `c35ddd7223f2b5540ce03aa43c9a25ef643fca27`; families: `vertical-workspace-one-file-one-comment`, `vertical-mismatch-comment-content`, `core-preview-selection-exclusion`, `core-relocation-line`, `core-filter-keep`, `core-filter-remove`, `core-range-two-commits`, `core-commit-sha`, `core-multi-file-orchestration` (includes `core-multi-file-planning`), `core-incomplete-partial`; `notObservable`: `planning:not_triggered_below_threshold`; forbiddenImports=0; artifacts `/tmp/core-extended3` |
-| Gate 4 — scan/session/output | `verified` | `bun run verify:scan`; `verify:sessions`; `verify:outputs` | `7ba1659841edc09ac88bbbc677564b88c83fc4a4` | `verify:scan` 2 fixtures 11 assertions; `verify:sessions` 3 fixtures 29 assertions (checkpoint creation, kill+resume, mutation); `verify:outputs` 4 fixtures 20 assertions (text, json, json+agent, sarif); pack `9fb755364ff1ce507c174ab1a10626d1f804fa6a88981f06b2b75a1ec7308ad7`; re-verified because commit `200ff83b` renamed the `[ocr]` progress prefix to `[pi-review]` and silently regressed `verify:outputs` (not CI-run); deviation since user-approved and canonicalized to `[engine]` in both comparators; OCR tag object `4d796ae54cabdcf4e22b69ef502ed8871456a909`/commit `c35ddd7223f2b5540ce03aa43c9a25ef643fca27`; forbiddenImports=0; artifacts `/tmp/verify-scan-*`, `/tmp/verify-sessions-*`, `/tmp/verify-outputs-*` |
-| Gate 5 — cutover | `verified` | `bun run verify:cutover` | `fe7b8bb529131d7a37cad27081bf35da37d7d15b` | 8 fixtures, 32 assertions, pack `4c41b8023920671ded7fa77aa5d80a2bfc86ae2576f38fa11d161eebbb122d66`; OCR sole engine, `--engine` rejected without provider capture (unknown-flag error), legacy modules/exports absent; CLI and library defaults are parity (ocr) with parity tool schemas; incomplete fixture exits non-zero; OCR tag object `4d796ae54cabdcf4e22b69ef502ed8871456a909`/commit `c35ddd7223f2b5540ce03aa43c9a25ef643fca27`; forbiddenImports=0; artifacts `/tmp/verify-cutover-*` |
+| Gate 3 — core diff review | `verified` | `bun run verify:core-review` | `5e0fe41f` | v1.9.9: 10 fixtures, 194 assertions; `core-filter-keep` and `core-filter-remove` match pinned OCR; forbiddenImports=0. |
+| Gate 4 — scan/session/output | `verified` | `bun run verify:outputs` | `678b4af7` | v1.9.9 outputs: 4 fixtures, 20 assertions, package hash `bc65f399f02d1d37e406cbead385a5d33493e2fec0702d7d5779ff5b7f8dae28`; JSON/SARIF remain machine-clean. |
+| Gate 5 — cutover | `verified` | `bun run verify:cutover` | `678b4af7` | v1.9.9 cutover: 8 fixtures, 32 assertions, package hash `bc65f399f02d1d37e406cbead385a5d33493e2fec0702d7d5779ff5b7f8dae28`; sole engine and `--engine` rejection verified. |
 
 Ledger rule: only the recovery plan v2 black-box gates may set `verified`.
-Existing source rows describe candidate implementation and historical test
-results; their old uses of “verified” are not current gate status.
+Old v1.9.3 source rows and gate records are historical superseded evidence;
+the v1.9.9 rows above are the current gate status.
 
 ## Port vectors (source -> dest, to be filled as files land)
 
@@ -161,4 +162,8 @@ to claim completion. The machine-checked authority is
 | Empty-round recovery | specified (host-orchestrated) | Pi is `stop` without steer; host must `followUp`/`prompt` with OCR retry string 3x — gap documented |
 | Deferred shells: provider TUI, viewer, MCP/delegate, telemetry, IDE plugins, GH Action | deferred | Visible, not blocking core port |
 
-Run `bun run spike/feasibility-v2.ts` (+ `feasibility-v3.ts`) to re-prove SDK rows; the differential harness (`bun run harness --all`) runs 4 deterministic fixtures (workspace, multi-tool, empty, budget-grace) with field-level mismatch artifacts and fails if `../open-code-review` does not contain the pinned tag/commit (check `git -C ../open-code-review cat-file -p v1.9.3` and `rev-parse`). Use `bun run test/ocr/harness/index.ts --fixture <name>` for single fixture.
+Current v1.9.9 evidence: core review passed at `5e0fe41f` (194 assertions, 10
+fixtures); outputs passed at `678b4af7` (20 assertions, 4 fixtures); cutover
+passed at `678b4af7` (32 assertions, 8 fixtures, package hash
+`bc65f399f02d1d37e406cbead385a5d33493e2fec0702d7d5779ff5b7f8dae28`).
+These are recorded evidence, not a substitute for exact-commit release gates.

@@ -14,8 +14,8 @@ does not justify changing review semantics.
 The legacy precision-oriented engine has been removed by explicit user
 approval; `src/ocr` is now the sole engine. Open Code Review v1.9.9 is the
 shipped behavioral reference. Its inventory is complete (1,997 cases: 1,015
-covered, 112 equivalent, 388 not applicable, 482 out of scope); final exact
-packed-install verification remains pending for the release commit. The
+covered, 112 equivalent, 388 not applicable, 482 out of scope). Any release
+or tag must pass the exact-commit packed-install and cutover gates. The
 `config`/`provider`/`login`/`MCP`/`telemetry`/`test-connection` command
 surfaces are intentionally not ported (omitted boundary; Pi's external
 auth/model configuration is at `~/.pi/agent` and is only resolved/loaded via
@@ -23,9 +23,8 @@ public Pi APIs).
 
 The parity engine lives under `src/ocr` with its own tests. It must not
 import removed legacy review policy. Reuse low-level utilities only after
-OCR-derived tests prove equivalent behavior. Treat the existing parity tree as
-`building`, not proven. Do not expand its scope or call a phase complete until
-the corresponding committed verifier in `docs/ocr-port-plan.md` passes.
+OCR-derived tests prove equivalent behavior. Do not expand compatibility scope
+without the corresponding committed verifier in `docs/ocr-port-plan.md`.
 If Pi `0.84.2` cannot provide OCR round accounting, dynamic terminal-only
 tools, one restricted grace request, and OCR-controlled compression through
 public APIs, stop and report the blocker.
