@@ -188,12 +188,7 @@ function requireValidRef(flag: string, value: string): void {
   if (value.startsWith("-")) throw new CliUsageError(`${flag} value "${value}" is not a valid git ref: refs must not start with '-'`);
 }
 
-export function validateReviewRefs(repoDir: string, opts: Pick<ReviewOptions, "from" | "to" | "commit">): void {
-  void repoDir;
-  if (opts.commit.startsWith("-")) throw new CliUsageError(`--commit value "${opts.commit}" is not a valid git ref: refs must not start with '-'`);
-  if (opts.from.startsWith("-")) throw new CliUsageError(`--from value "${opts.from}" is not a valid git ref: refs must not start with '-'`);
-  if (opts.to.startsWith("-")) throw new CliUsageError(`--to value "${opts.to}" is not a valid git ref: refs must not start with '-'`);
-}
+export { validateReviewRefs } from "./git.js";
 
 export function reviewResultError(runErr: Error | null | undefined, manifest: RunManifest | null | undefined): Error | null {
   if (runErr) return runErr;

@@ -1337,6 +1337,14 @@ const scopeOverrides: ReadonlyMap<string, Scope> = new Map<string, Scope>([
       reason: "review flag parsing and validation for diff, budget, and output modes are core CLI review input handling",
     },
   ],
+  [
+    "cmd/opencodereview/git_test.go",
+    {
+      kind: "in_scope",
+      area: "cli-output",
+      reason: "git repository resolution, commit validation, and tool registry setup are core CLI review input handling",
+    },
+  ],
 ]);
 
 const localCoverage: readonly LocalCoverage[] = [
@@ -1721,6 +1729,10 @@ const localCoverage: readonly LocalCoverage[] = [
   {
     localPath: "test/ocr-v193/cli/review-flags.test.ts",
     upstreamPaths: ["cmd/opencodereview/flags_test.go"],
+  },
+  {
+    localPath: "test/ocr-v193/cli/git.test.ts",
+    upstreamPaths: ["cmd/opencodereview/git_test.go"],
   },
 ];
 

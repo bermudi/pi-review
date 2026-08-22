@@ -1630,75 +1630,153 @@
       "path": "cmd/opencodereview/git_test.go",
       "blob": "52aaa5666e500e473576d124e599718d8bbbee5d",
       "scope": {
-        "kind": "needs_decision",
-        "area": "cmd/opencodereview",
-        "reason": "not yet classified by the OCR v1.9.3 core-port source map"
+        "kind": "in_scope",
+        "area": "cli-output",
+        "reason": "git repository resolution, commit validation, and tool registry setup are core CLI review input handling"
       },
       "tests": [
         {
           "name": "TestBuildToolRegistry",
-          "disposition": "pending_scope",
-          "reason": "not yet classified by the OCR v1.9.3 core-port source map"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/cli/git.test.ts",
+              "title": "buildToolRegistry returns non-nil registry"
+            }
+          ]
         },
         {
           "name": "TestGetCommitMessage",
-          "disposition": "pending_scope",
-          "reason": "not yet classified by the OCR v1.9.3 core-port source map"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/cli/git.test.ts",
+              "title": "getCommitMessage returns trimmed initial commit message"
+            }
+          ]
         },
         {
           "name": "TestGetCommitMessage_InvalidCommit",
-          "disposition": "pending_scope",
-          "reason": "not yet classified by the OCR v1.9.3 core-port source map"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/cli/git.test.ts",
+              "title": "getCommitMessage throws for invalid commit"
+            }
+          ]
         },
         {
           "name": "TestRequireGitRepo_Invalid",
-          "disposition": "pending_scope",
-          "reason": "not yet classified by the OCR v1.9.3 core-port source map"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/cli/git.test.ts",
+              "title": "requireGitRepo fails for non-git directory"
+            }
+          ]
         },
         {
           "name": "TestRequireGitRepo_Valid",
-          "disposition": "pending_scope",
-          "reason": "not yet classified by the OCR v1.9.3 core-port source map"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/cli/git.test.ts",
+              "title": "requireGitRepo succeeds for valid git repo"
+            }
+          ]
         },
         {
           "name": "TestResolveRepoDir_EmptyUsesWd",
-          "disposition": "pending_scope",
-          "reason": "not yet classified by the OCR v1.9.3 core-port source map"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/cli/git.test.ts",
+              "title": "resolveRepoDir empty uses cwd"
+            }
+          ]
         },
         {
           "name": "TestResolveRepoDir_NotGitRepo",
-          "disposition": "pending_scope",
-          "reason": "not yet classified by the OCR v1.9.3 core-port source map"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/cli/git.test.ts",
+              "title": "resolveRepoDir fails for non-git directory with not a git repository"
+            }
+          ]
         },
         {
           "name": "TestResolveRepoDir_ValidGitRepo",
-          "disposition": "pending_scope",
-          "reason": "not yet classified by the OCR v1.9.3 core-port source map"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/cli/git.test.ts",
+              "title": "resolveRepoDir succeeds for valid git repo"
+            }
+          ]
         },
         {
           "name": "TestRunGitCmd_Failure",
-          "disposition": "pending_scope",
-          "reason": "not yet classified by the OCR v1.9.3 core-port source map"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/cli/git.test.ts",
+              "title": "runGitCmd fails in non-git directory"
+            }
+          ]
         },
         {
           "name": "TestRunGitCmd_Success",
-          "disposition": "pending_scope",
-          "reason": "not yet classified by the OCR v1.9.3 core-port source map"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/cli/git.test.ts",
+              "title": "runGitCmd succeeds in git repo with non-empty output"
+            }
+          ]
         },
         {
           "name": "TestValidateReviewRefs_EmptySkipped",
-          "disposition": "pending_scope",
-          "reason": "not yet classified by the OCR v1.9.3 core-port source map"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/cli/git.test.ts",
+              "title": "validateReviewRefs skips empty refs"
+            }
+          ]
         },
         {
           "name": "TestValidateReviewRefs_InvalidCommit",
-          "disposition": "pending_scope",
-          "reason": "not yet classified by the OCR v1.9.3 core-port source map"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/cli/git.test.ts",
+              "title": "validateReviewRefs fails for invalid commit ref"
+            }
+          ]
         },
         {
           "name": "TestValidateReviewRefs_ValidCommit",
-          "disposition": "pending_scope",
-          "reason": "not yet classified by the OCR v1.9.3 core-port source map"
+          "disposition": "covered",
+          "evidence": [
+            {
+              "kind": "bun-test-annotation",
+              "path": "test/ocr-v193/cli/git.test.ts",
+              "title": "validateReviewRefs succeeds for valid commit HEAD"
+            }
+          ]
         }
       ]
     },
