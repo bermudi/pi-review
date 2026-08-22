@@ -18,6 +18,11 @@ test("resolves explicit provider/model through public Pi ModelRuntime", async ()
             { id: "vendor/test-model", name: "Slash", reasoning: false, input: ["text"], contextWindow: 4096, maxTokens: 1024 },
           ],
         },
+        "other-provider": {
+          baseUrl: "https://example.invalid/v1",
+          api: "openai-completions",
+          models: [{ id: "test-model", name: "Other", reasoning: false, input: ["text"], contextWindow: 4096, maxTokens: 1024 }],
+        },
       },
     }));
     const selected = await resolvePiModelSelection(dir, "", "test-provider/test-model");
@@ -26,9 +31,15 @@ test("resolves explicit provider/model through public Pi ModelRuntime", async ()
     expect(selected.model.id).toBe("test-model");
     const slashId = await resolvePiModelSelection(dir, "test-provider", "vendor/test-model");
     expect(slashId?.identity).toEqual({ provider: "test-provider", model: "vendor/test-model" });
+    await expect(resolvePiModelSelection(dir, "test-provider", "")).rejects.toThrow("ambiguous");
+    await expect(resolvePiModelSelection(dir, "", "test-model")).rejects.toThrow("ambiguous");
     await expect(resolvePiModelSelection(dir, "other", "test-provider/test-model")).rejects.toThrow("unknown model");
     await expect(resolvePiModelSelection(dir, "", "missing/model")).rejects.toThrow("unknown model");
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
+});
+
+test("leaves Pi default selection untouched without flags", async () => {
+  expect(await resolvePiModelSelection("/does/not/matter", "", "")).toBeNull();
 });

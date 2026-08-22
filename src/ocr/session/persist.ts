@@ -375,8 +375,13 @@ export function newJSONLWriter(
   opts: { reviewMode?: string; diffFrom?: string; diffTo?: string; diffCommit?: string; scanPaths?: string[]; resumedFrom?: string } = {},
 ): JsonlWriter {
   const w = new JsonlWriter(sessionId, repoDir, gitBranch, model, opts);
-  w.open();
-  w.WriteSessionStart(new Date());
+  try {
+    w.open();
+    w.WriteSessionStart(new Date());
+  } catch (error) {
+    w.close();
+    throw error;
+  }
   return w;
 }
 

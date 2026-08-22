@@ -51,10 +51,25 @@ import { newJSONLWriter, type JsonlWriter } from "../session/persist.js";
 import { ResumeState, LoadResumeState, LoadReviewResumeState, NewResumeLineage } from "../session/resume.js";
 import type { ResumeLineage } from "../session/resume.js";
 import { resolveIdentity } from "../agent/identity.js";
+import type { AnyLlmClient } from "../llmloop/types.js";
 
 export interface ReviewFactoryDeps {
   /** Test seam for a deterministic local transport; production uses Pi. */
-  readonly createTransport?: typeof createPiTransportForFile;
+  readonly createTransport?: RuntimeTransportFactory;
+}
+
+/** Runtime-owned transport: factory code may use no provider details beyond this seam. */
+export type RuntimeTransport = AnyLlmClient & {
+  dispose(): Promise<void>;
+  modelIdentity?(): PiModelIdentity | undefined;
+};
+
+export type RuntimeTransportFactory = (
+  options: Parameters<typeof createPiTransportForFile>[0],
+) => Promise<RuntimeTransport>;
+
+export interface ScanFactoryDeps {
+  readonly createTransport?: RuntimeTransportFactory;
 }
 
 type PiModel = NonNullable<NonNullable<Parameters<typeof createPiTransportForFile>[0]>["model"]>;
@@ -272,8 +287,9 @@ export function createReviewRunnerFactory(
       operation: "review",
       resumedFrom: resume?.SessionID ?? "",
     }, runId);
+    let writer: JsonlWriter | null = null;
     try {
-      const writer = newJSONLWriter(runId, repoDir, gitBranch, modelId, {
+      writer = newJSONLWriter(runId, repoDir, gitBranch, modelId, {
         reviewMode,
         diffFrom: from,
         diffTo: to,
@@ -283,6 +299,7 @@ export function createReviewRunnerFactory(
       session._attachPersist(jsonlWriterToPersistHandle(writer));
       session.RecordResumeLineage(NewResumeLineage(resume, runId, identity.provider, modelId));
     } catch (err) {
+      writer?.close();
       const cause = err instanceof Error ? err : new Error(String(err));
       session._setPersistInitErr(new Error(`create session writer: ${cause.message}`, { cause }));
     }
@@ -338,9 +355,16 @@ export function createReviewRunnerFactory(
 
     const warnings = agent.warningsList();
 
-    await transport.dispose().catch((e) => {
-      warnings.push({ type: "transport_dispose_error", file: "", message: String((e as Error).message) });
-    });
+    try {
+      await transport.dispose();
+    } catch (error) {
+      const disposeError = error instanceof Error ? error : new Error(String(error));
+      if (runError !== null) {
+        runError = new AggregateError([runError, disposeError], `${runError.message}; additionally, transport disposal failed: ${disposeError.message}`, { cause: runError });
+      } else {
+        runError = disposeError;
+      }
+    }
 
     const reviewRunner: ReviewRunner = {
       run: async (_sig?: AbortSignal): Promise<LlmComment[]> => {
@@ -379,6 +403,7 @@ export function createScanRunnerFactory(
   opts: ScanOptions,
   _ioCwd: string,
   progress?: ProgressSink,
+  deps: ScanFactoryDeps = {},
 ): (signal?: AbortSignal) => Promise<ScanRunner> {
   return async (signal?: AbortSignal): Promise<ScanRunner> => {
     const effectiveSignal = signal ?? new AbortController().signal;
@@ -422,20 +447,6 @@ export function createScanRunnerFactory(
       }
     }
 
-    const gitBranch = detectGitBranch(repoDir);
-    const runId = randomUUID();
-    const session = new SessionHistory(repoDir, gitBranch, modelIdFromModel(opts.model), {
-      reviewMode: ReviewModeFullScan,
-      scanPaths,
-      resumedFrom: resume?.SessionID ?? "",
-    }, runId);
-    const writer = newJSONLWriter(runId, repoDir, gitBranch, modelIdFromModel(opts.model), {
-      reviewMode: ReviewModeFullScan,
-      scanPaths,
-      resumedFrom: resume?.SessionID ?? "",
-    });
-    session._attachPersist(jsonlWriterToPersistHandle(writer));
-
     const collector = new CommentCollector();
     const workerPool = new CommentWorkerPool(opts.concurrency > 0 ? opts.concurrency : 8);
 
@@ -465,13 +476,31 @@ export function createScanRunnerFactory(
     const mainToolDefs = allMainToolDefs.filter((t) => t.function.name !== "file_read_diff");
 
     const selection = await resolvePiModelSelection(agentDir, opts.provider, opts.model);
-    const transport = await createPiTransportForFile({
+    const createTransport = deps.createTransport ?? createPiTransportForFile;
+    const transport = await createTransport({
       cwd,
       agentDir,
       tools: mainToolDefs,
       model: selection?.model,
       modelRuntime: selection?.modelRuntime,
     });
+    const modelIdentity = transportModelIdentity(transport) ?? selection?.identity ?? {
+      provider: opts.provider,
+      model: modelIdFromModel(opts.model),
+    };
+    const gitBranch = detectGitBranch(repoDir);
+    const runId = randomUUID();
+    const session = new SessionHistory(repoDir, gitBranch, modelIdentity.model, {
+      reviewMode: ReviewModeFullScan,
+      scanPaths,
+      resumedFrom: resume?.SessionID ?? "",
+    }, runId);
+    const writer = newJSONLWriter(runId, repoDir, gitBranch, modelIdentity.model, {
+      reviewMode: ReviewModeFullScan,
+      scanPaths,
+      resumedFrom: resume?.SessionID ?? "",
+    });
+    session._attachPersist(jsonlWriterToPersistHandle(writer));
 
     const maxTokensBudget = opts.maxTokensBudget > 0 ? opts.maxTokensBudget : (template.MaxTokensBudget ?? 0);
 
@@ -488,7 +517,7 @@ export function createScanRunnerFactory(
       commentWorkerPool: workerPool,
       maxConcurrency: opts.concurrency > 0 ? opts.concurrency : 8,
       concurrentTaskTimeoutMinutes: opts.perFileTimeout > 0 ? opts.perFileTimeout : 10,
-      model: (transportModelIdentity(transport) ?? selection?.identity ?? { provider: opts.provider, model: modelIdFromModel(opts.model) }).model,
+      model: modelIdentity.model,
       background: opts.background,
       maxFileSizeBytes: template.MaxFileSizeBytes,
       maxTokensBudget,
@@ -512,10 +541,14 @@ export function createScanRunnerFactory(
 
     await session.Finalize();
 
-    await transport.dispose().catch((e) => {
-      const warn = { type: "transport_dispose_error", file: "", message: String((e as Error).message) };
-      void warn;
-    });
+    try {
+      await transport.dispose();
+    } catch (error) {
+      const disposeError = error instanceof Error ? error : new Error(String(error));
+      runError = runError === null
+        ? disposeError
+        : new AggregateError([runError, disposeError], `${runError.message}; additionally, transport disposal failed: ${disposeError.message}`, { cause: runError });
+    }
 
     const inputTokens = agent.TotalInputTokens();
     const outputTokens = agent.TotalOutputTokens();
@@ -526,7 +559,10 @@ export function createScanRunnerFactory(
     const warnings = agent.Warnings();
 
     const scanRunner: ScanRunner = {
-      run: async (_sig?: AbortSignal): Promise<LlmComment[]> => comments,
+      run: async (_sig?: AbortSignal): Promise<LlmComment[]> => {
+        if (runError !== null) throw runError;
+        return comments;
+      },
       manifest: null,
       warnings,
       filesReviewed: agent.FilesReviewed(),
