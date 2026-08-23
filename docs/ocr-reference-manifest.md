@@ -1,9 +1,10 @@
-# OCR reference manifest — shipped v1.9.9
+# OCR reference manifest — frozen v1.9.9 fork point
 
-The shipped reference for every translated file remains under
-`docs/ocr-port-plan.md`.
+This manifest records source provenance and the completed fork audit. It is
+not a promise to track later OCR releases and is not the normal release gate.
+See `docs/ocr-port-plan.md` for the historical migration.
 
-## Shipped reference
+## Frozen reference
 
 - Release: https://github.com/alibaba/open-code-review/releases/tag/v1.9.9
 - Tag: `v1.9.9`
@@ -28,7 +29,8 @@ The shipped reference for every translated file remains under
   observations; it is not an identity-trust verification.
 - Status: the v1.9.9 inventory is complete (1,997 cases: 1,015 covered, 112
   equivalent, 388 not applicable, 482 out of scope). The signer-trust caveat
-  above remains; release acceptance always requires gates on the exact commit.
+  above remains. `verify:ocr-baseline` reruns the frozen audit when explicitly
+  requested; normal release acceptance uses `verify:release`.
 
 ## Verification status (recovery plan v2)
 

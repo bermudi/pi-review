@@ -649,13 +649,6 @@ async function main(): Promise<void> {
     else if (args[i]!.startsWith("--artifacts=")) artifactDir = args[i]!.split("=")[1] ?? "";
   }
 
-  const pre = spawnSync("bun", ["run", "verify:scan"], { encoding: "utf-8", timeout: 900_000 });
-  if (pre.status !== 0) {
-    console.error(`[verify:sessions] prerequisite verify:scan failed`);
-    console.error(pre.stderr || pre.stdout || "");
-    process.exit(1);
-  }
-
   checkGitClean();
 
   if (!artifactDir) artifactDir = await mkdtemp(join(tmpdir(), "verify-sessions-artifacts-"));

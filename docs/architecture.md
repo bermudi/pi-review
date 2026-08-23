@@ -1,13 +1,12 @@
-# Architecture — OCR v1.9.9 Port (sole engine)
+# Architecture — pi-reviewer engine
 
-`pi-reviewer` is a behavioral port of Open Code Review v1.9.9 onto the Pi
-SDK. The legacy precision-oriented engine has been removed by explicit user
-approval; `src/ocr` is now the sole engine and `src/cli.ts` is a thin
-production adapter over it. The pinned reference is OCR tag `v1.9.9`
-(`4d796ae54cabdcf4e22b69ef502ed8871456a909` / `c35ddd7223f2b5540ce03aa43c9a25ef643fca27`)
-in `../open-code-review`. The detailed upstream-to-TypeScript file map is in
-`docs/ocr-source-map.md`; `docs/ocr-port-plan.md` defines the
-migration gates.
+`pi-reviewer` is an independently maintained review engine built on the Pi
+SDK. It was derived from Open Code Review v1.9.9; the frozen fork reference is
+tag object `c95d3907d5448354d3f8a33f2ae5e4f23fdf1c94`, commit
+`4b6874bd23106b5c68bea6d230bb60303b9f0961`. The legacy precision-oriented
+engine has been removed; `src/ocr` is the sole engine and `src/cli.ts` is a
+thin production adapter. The directory name and historical source map preserve
+provenance, not an ongoing obligation to track OCR releases.
 
 The public library seam is:
 
@@ -17,11 +16,11 @@ import { review, createReviewer, Reviewer } from "pi-reviewer";
 ```
 
 Pi sessions, model resolution, prompts, and model-visible tool definitions do
-not cross that boundary. `src/index.ts` exports only the OCR-backed
-`review`/`createReviewer`/`Reviewer`, domain types, and a small set of
-OCR-backed utilities (`PiTransport`, `OcrRunner`, `runOcrCli`).
+not cross that boundary. `src/index.ts` exports only
+`review`/`createReviewer`/`Reviewer`, domain types, and a small retained set of
+compatibility utilities (`PiTransport`, `OcrRunner`, `runOcrCli`).
 
-## End-to-end pipeline (OCR parity)
+## End-to-end pipeline
 
 1. **Acquire and validate Git target — `src/ocr/diff`, `src/ocr/cli/git.ts`.**
    Validate repository, refs, paths, and symlink boundaries. Workspace
@@ -76,6 +75,15 @@ becomes a clean review; partial/failed work remains visible.
 
 Exit codes: `0` for `complete`/`skipped`, `2` for `partial`, `1` for `failed` or
 invalid usage. Help exits `0`.
+
+Each concurrently reviewed or scanned file owns an isolated Pi
+`AgentSession`. Its plan, main, compression, relocation, and filter stages
+reuse that file's session; independent files never share mutable Pi history or
+route through `followUp`.
+
+Normal releases use `bun run verify:release`, which has no OCR checkout
+dependency. `bun run verify:ocr-baseline` is the optional frozen-reference
+audit and runs each differential group once without recursive prerequisites.
 
 ## Security and read-only guarantees
 

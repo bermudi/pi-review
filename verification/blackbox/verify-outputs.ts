@@ -352,19 +352,6 @@ async function main(): Promise<void> {
 
   checkWorkingTreeClean(artifactDir);
 
-  console.error("[verify:outputs] building distributable...");
-  const buildRes = spawnSync("bun", ["run", "build"], { encoding: "utf-8", timeout: 120_000, stdio: ["ignore", "pipe", "pipe"] });
-  if (buildRes.status !== 0) {
-    failHere("bun run build failed: " + (buildRes.stderr || buildRes.stdout || ""), artifactDir);
-  }
-
-  console.error("[verify:outputs] running prerequisite verify:scan...");
-  const pre = spawnSync("bun", ["run", "verify:scan", "--artifacts", join(artifactDir, "prereq-scan")], { encoding: "utf-8", timeout: 900_000, stdio: ["ignore", "pipe", "pipe"] });
-  if (pre.status !== 0) {
-    failHere("prerequisite verify:scan failed: " + (pre.stderr || pre.stdout || ""), artifactDir);
-  }
-  console.error("[verify:outputs] prerequisite verify:scan passed");
-
   const pack: PackResult = await runPackedInstallSmoke();
   const ocrBinary = await getOcrBinary();
 

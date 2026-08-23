@@ -32,7 +32,9 @@
     "verify:outputs": "bun run verification/blackbox/verify-outputs.ts",
     "verify:cutover": "bun run verification/blackbox/verify-cutover.ts",
     "check:ocr-test-inventory": "bun run scripts/generate-ocr-test-delta.ts --check && bun run scripts/generate-ocr-test-inventory.ts --check",
-    "verify:ocr-test-port": "bun run check:ocr-test-inventory && bun run scripts/generate-ocr-test-inventory.ts --check --require-complete"
+    "verify:ocr-test-port": "bun run check:ocr-test-inventory && bun run scripts/generate-ocr-test-inventory.ts --check --require-complete",
+    "verify:release": "bun run verification/release/verify-release.ts",
+    "verify:ocr-baseline": "bun run verification/ocr-baseline/verify-ocr-baseline.ts"
   },
   "main": "dist/index.js",
   "engines": {
@@ -43,7 +45,7 @@
     "import": "./dist/index.js"
   },
   "version": "0.4.0",
-  "description": "Open Code Review v1.9.9 port powered by the Pi SDK",
+  "description": "Independent code review engine for the Pi SDK, derived from Open Code Review v1.9.9",
   "license": "GPL-3.0-or-later",
   "author": "bermudi",
   "homepage": "https://github.com/bermudi/pi-reviewer#readme",

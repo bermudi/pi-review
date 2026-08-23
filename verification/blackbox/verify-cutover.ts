@@ -198,21 +198,6 @@ async function main(): Promise<void> {
   forbiddenImportDetails = guard.violations.map((v) => `${v.file}:${v.line} ${v.reason}`);
   if (guard.count !== 0) failNow("forbidden imports in verifier tree");
 
-  for (const script of ["verify:scan", "verify:sessions", "verify:outputs"]) {
-    console.error(`[verify:cutover] running prerequisite ${script}...`);
-    const r = spawnSync("bun", ["run", script], {
-      encoding: "utf-8",
-      timeout: 900_000,
-      stdio: ["ignore", "pipe", "pipe"],
-    });
-    if (r.status !== 0) {
-      failNow(`prerequisite ${script} failed`, {
-        prerequisiteError: String(r.stderr ?? "").slice(0, 2000),
-      });
-    }
-    fixtures.push(`prereq-${script}`);
-  }
-
   checkGitClean();
 
   console.error("[verify:cutover] packing and installing package...");

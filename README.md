@@ -1,21 +1,22 @@
 # pi-reviewer
 
-`pi-reviewer` is a TypeScript library and `pi-review` CLI for running Open Code
-Review v1.9.9's core behavior through the Pi SDK.
+`pi-reviewer` is an independently maintained TypeScript review engine and
+`pi-review` CLI built on the Pi SDK.
 
 > **Status:** the legacy precision-oriented engine has been removed by explicit
-> user approval; `src/ocr` is now the sole engine and implements Open Code
-> Review v1.9.9 as the shipped behavioral reference (`v1.9.9` /
+> user approval; `src/ocr` is now the sole engine. It was derived from Open
+> Code Review v1.9.9, which is the frozen fork point (`v1.9.9` /
 > `c95d3907d5448354d3f8a33f2ae5e4f23fdf1c94` / `4b6874bd23106b5c68bea6d230bb60303b9f0961`).
 > The inventory is complete: 1,997 cases, with 1,015 covered, 112 equivalent,
-> 388 not applicable, and 482 out of scope. Any release or tag must pass
-> exact-commit packed-install and cutover gates. The
+> 388 not applicable, and 482 out of scope. Future pi-reviewer releases follow
+> this project's own contracts and SemVer rather than tracking OCR releases.
+> The
 > `config`/`provider`/`login`/`MCP`/`telemetry`/`test-connection` command
 > surfaces are intentionally not ported (omitted boundary; runtime only
 > resolves/loads external Pi configuration via public Pi APIs from
 > `~/.pi/agent`, Pi's external auth/model location). Full command-surface
-> parity is not claimed. See `docs/ocr-port-plan.md` and
-> `docs/ocr-source-map.md`.
+> parity is not claimed. Historical migration evidence remains in
+> `docs/ocr-port-plan.md` and `docs/ocr-source-map.md`.
 
 The public library boundary is small; Pi sessions, prompts, and model-visible
 tools remain behind `Reviewer`.
@@ -33,9 +34,13 @@ bun install
 bun run check
 bun test
 bun run build
+bun run verify:release
 ```
 
-`bun run check` runs the strict TypeScript check. `bun test` runs the Bun test suite. `bun run build` creates the bundled `dist/cli.js` and `dist/index.js` entry points plus declarations; the package exposes the CLI as `pi-review`.
+`verify:release` is the self-contained exact-commit release gate: typecheck,
+tests, one build, one packed install, and installed CLI/library smoke tests. It
+does not require an OCR checkout. `verify:ocr-baseline` is the optional frozen
+OCR 1.9.9 differential audit and is not required for normal patch releases.
 
 From a checkout without a build:
 
@@ -48,7 +53,8 @@ When the package is installed, use its binary as `pi-review`.
 
 ## CLI
 
-`pi-review` exposes two OCR-compatible subcommands. Both use `pi-review review|scan [flags]`; there is no `--engine` switch.
+`pi-review` exposes `review` and `scan` subcommands. Both use
+`pi-review review|scan [flags]`; there is no `--engine` switch.
 
 ```bash
 # Review the current workspace (unstaged changes vs HEAD)
@@ -84,7 +90,8 @@ pi-review review --repo . --preview --format json
 - `--max-tokens N` — per-file prompt token ceiling (0 = default)
 - `--max-tokens-budget N` — cap total token usage (0 = unlimited)
 - `-b, --background TEXT` / `-B, --background-file PATH` — business context
-- `--provider NAME` / `--model NAME` — override LLM provider/model for this run
+- `--provider NAME` / `--model NAME` — override the Pi provider/model; model
+  selectors accept Pi thinking suffixes such as `provider/model:high`
 - `--tools PATH` — JSON tools config (default: embedded)
 - `-p, --preview` — preview files without running the LLM
 - `--no-filter` — keep all raw comments without LLM post-filtering
@@ -95,7 +102,7 @@ Output goes to stdout (`text`/`json`/`sarif`); diagnostics and progress go to st
 
 ### Exit status
 
-`text`/`json`/`sarif` share the OCR exit contract:
+`text`/`json`/`sarif` share one exit contract:
 
 | terminal state | Exit code |
 | --- | ---: |
@@ -151,14 +158,14 @@ const commit = { repository: ".", mode: { kind: "commit" as const, ref: "HEAD" }
 
 Path safety, binary/deletion, user-exclude, and resource ceilings are enforced at the acquisition boundary; filtered files appear in `excluded` rather than being sent to a model.
 
-## Pipeline (OCR parity)
+## Review pipeline
 
 1. Resolve and validate the Git target.
-2. Apply OCR-compatible selection, rules, and limits.
+2. Apply deterministic selection, rules, and limits.
 3. Optionally run a `PLAN_TASK` pre-pass per file.
 4. Run the per-file `MAIN_TASK` loop with `code_comment` / `task_done` and bounded evidence tools (`file_read`, `code_search`, `file_find`, `file_read_diff`).
-5. Relocate, validate, and filter comments as OCR does.
-6. Enforce OCR-compatible round/context/time/token/recovery and the single restricted grace request.
+5. Relocate, validate, and filter comments.
+6. Enforce bounded round/context/time/token/recovery behavior and the single restricted grace request.
 7. Emit `text`/`json`/`sarif` with coverage, warnings, and exit code; support `scan`, checkpoints/resume (`--resume`), and `preview`.
 
 There is no model-visible shell, edit, or write tool.
@@ -190,12 +197,14 @@ The deliberate public boundary is `src/index.ts`:
 
 - `Reviewer`, `review`, `createReviewer`
 - review domain types
-- OCR-backed `PiTransport`/`OcrRunner`/`runOcrCli` utilities
+- retained `PiTransport`/`OcrRunner`/`runOcrCli` compatibility utilities
 
-`src/ocr/**` is the full port; see `docs/ocr-source-map.md` for the upstream mapping.
+`src/ocr/**` is the independently maintained engine. Its name and source map
+preserve fork provenance; they do not imply ongoing upstream synchronization.
 
 ## License and upstream attribution
 
-`pi-reviewer` is licensed under [GPL-3.0-or-later](LICENSE). It ports Open Code
-Review v1.9.9 (Apache-2.0) — see [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)
-and [LICENSES/Apache-2.0.txt](LICENSES/Apache-2.0.txt).
+`pi-reviewer` is licensed under [GPL-3.0-or-later](LICENSE). It contains
+material derived from Open Code Review v1.9.9 (Apache-2.0)—see
+[THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) and
+[LICENSES/Apache-2.0.txt](LICENSES/Apache-2.0.txt).

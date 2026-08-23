@@ -103,17 +103,6 @@ async function main(): Promise<void> {
     if (args[i] === "--artifacts" && i + 1 < args.length) artifactDir = resolve(args[i + 1]!);
   }
 
-  const pre: string[] = [];
-  for (const s of ["blackbox-integrity", "sdk-feasibility", "vertical", "core-review"]) {
-    const r = spawnSync("bun", ["run", `verify:${s}`], { encoding: "utf-8", timeout: 900_000 });
-    if (r.status !== 0) {
-      console.error(`[verify:scan] prerequisite verify:${s} failed`);
-      console.error(r.stderr || r.stdout || "");
-      process.exit(1);
-    }
-    pre.push(s);
-  }
-
   checkGitClean();
 
   if (!artifactDir) artifactDir = await mkdtemp(join(tmpdir(), "verify-scan-artifacts-"));

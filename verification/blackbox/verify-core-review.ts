@@ -1691,19 +1691,6 @@ async function main(): Promise<void> {
 
   const log = (msg: string): void => console.error(`[verify:core-review] ${msg}`);
 
-  // Gate 0 and Gate 1 prerequisite
-  log("checking Gate 0 and Gate 1 prerequisites...");
-  const gate0 = spawnSync("bun", ["run", "verification/blackbox/verify-blackbox-integrity.ts"], { encoding: "utf-8", timeout: 900000 });
-  if (gate0.status !== 0) {
-    fail(`Gate 2 requires Gate 0 to pass. Gate0 exit ${String(gate0.status)}: ${String(gate0.stdout ?? "").slice(0, 800)} ${String(gate0.stderr ?? "").slice(0, 800)}`, artifactDir);
-  }
-  log("Gate 0 PASS");
-  const gate1 = spawnSync("bun", ["run", "verification/blackbox/verify-sdk-feasibility.ts"], { encoding: "utf-8", timeout: 900000 });
-  if (gate1.status !== 0) {
-    fail(`Gate 2 requires Gate 1 to pass. Gate1 exit ${String(gate1.status)}: ${String(gate1.stdout ?? "").slice(0, 800)} ${String(gate1.stderr ?? "").slice(0, 800)}`, artifactDir);
-  }
-  log("Gate 1 PASS");
-
   // Import guard
   const guard = checkImports(resolve("verification/blackbox"));
   if (guard.count !== 0) {

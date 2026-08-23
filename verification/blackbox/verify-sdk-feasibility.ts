@@ -831,31 +831,6 @@ async function main(): Promise<void> {
     fail(r, `forbidden imports: ${violations.map((v) => `${v.file}:${v.line} ${v.reason}`).join("; ")}`);
   }
 
-  console.error("[verify:sdk-feasibility] checking Gate 0 prerequisite...");
-  const gate0 = spawnSync("bun", ["run", "verify:blackbox-integrity", "--artifacts", join(artifactDir, "gate0")], {
-    encoding: "utf-8",
-    timeout: 120000,
-  });
-  if (gate0.status !== 0) {
-    const r: Gate1Report = {
-      gate: "sdk-feasibility",
-      commit,
-      ocrTagObject: tagObject,
-      ocrCommit,
-      packageArchiveHash: null,
-      fixtures: [],
-      assertions: 0,
-      notObservable: [],
-      forbiddenImports,
-      forbiddenImportDetails: [],
-      result: "fail",
-      artifactDir,
-      error: `Gate 0 prerequisite failed: ${gate0.stderr?.slice(0, 1000)}`,
-    };
-    fail(r, `Gate 0 prerequisite failed`);
-  }
-  console.error("[verify:sdk-feasibility] Gate 0 PASS");
-
   console.error("[verify:sdk-feasibility] packing...");
   const pack = await runPackedInstallSmoke();
   const packageArchiveHash = pack.archiveHash;

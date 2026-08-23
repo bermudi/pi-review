@@ -1,4 +1,10 @@
-# OCR v1.9.9 shipped parity plan — black-box evidence first
+# Historical OCR v1.9.9 fork plan — black-box evidence
+
+> **Frozen evidence:** this migration is complete. It is not the active
+> development or release process. Normal releases use
+> `bun run verify:release`; `bun run verify:ocr-baseline` reruns this frozen
+> audit only when intentionally requested. Future OCR releases are not
+> automatic pi-reviewer upgrade targets.
 
 ## Decision and current status
 
@@ -64,8 +70,10 @@ stage-only filter tooling remain tested; this is not a claim of required-tool
 wire equivalence. The inventory is classified, but release/packed-install
 verification remains separate.
 
-`src/ocr` is the sole v1.9.9 compatibility engine. Release acceptance always
-requires exact-commit gates; do not claim full provider command-surface parity.
+`src/ocr` is the sole engine derived from the v1.9.9 fork point. The
+differential gates below establish historical compatibility evidence; normal
+release acceptance is now the independent exact-commit release gate. Do not
+claim full provider command-surface parity.
 
 All gates begin `unverified`. Gate 5 verifies that the shipped CLI defaults to
 the parity engine. Before explicit removal on 2026-08-22, legacy remained
