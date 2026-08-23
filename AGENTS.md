@@ -106,7 +106,7 @@ turns and, when useful, compared against the frozen reference CLI.
 `docs/ocr-port-plan.md` are historical migration evidence. They are not
 mandatory ledgers for independent development.
 
-## Durable v1.9.9 Port Lessons
+## Durable Engineering Lessons from the v1.9.9 Fork
 
 These are implementation constraints discovered by differential and
 packed-install testing, not optional style preferences.
@@ -138,10 +138,18 @@ packed-install testing, not optional style preferences.
   then verify the resulting message list exactly. A warning followed by stale
   history is not recovery; it changes the model request and must fail.
 - Resolve explicit `--provider`/`--model` selectors through Pi's public
-  `ModelRuntime` before creating transports, session files, or writers. Keep
+  CLI resolver before creating transports, session files, or writers. Pi
+  selectors may end in a thinking-level suffix such as
+  `provider/model:high`; resolve that to the base model plus a separate
+  `thinkingLevel`, never look up the full suffixed string as a model ID. Keep
   provider and model as separate structured fields: model IDs may themselves
   contain `/`, and guessed or concatenated identities corrupt resume hashes
   and manifests.
+- Pi terminal events with `stop_reason=error` and prompt rejections are real
+  request failures, not empty model responses. Preserve the original exception
+  as an internal cause, expose a bounded stage/stop diagnostic, and never feed
+  an empty response into a parser. Provider errors may contain secrets, so do
+  not print their raw message.
 
 ### Sessions, resume, and ownership
 
@@ -174,8 +182,12 @@ packed-install testing, not optional style preferences.
 - OCR v1.9.9 text summaries include the successful session ID for both review
   and scan. Machine formats carry it in their structured result. ANSI color is
   never allowed in JSON or SARIF.
+- Invalid usage and runtime setup failures are different boundaries. Help
+  belongs with syntax errors; a valid command run outside Git should emit only
+  the repository error plus a concise `cd`/`--repo` hint. Do not dump the full
+  help page or invent a zero-token usage summary when no runner started.
 
-### Upgrade evidence
+### Frozen baseline and release evidence
 
 - Compare exact top-level Go test-function bytes between pinned releases.
   Added and changed-body tests require evidence from the new OCR version;
@@ -193,6 +205,12 @@ packed-install testing, not optional style preferences.
   parent checkout. Build `dist` before invoking a verifier that packs the
   current package. Documentation changes also change the release commit and
   therefore require a new exact-commit `verify:release` run.
+- Focused verification gates are leaves: they must never invoke other gates.
+  Sequencing belongs only to `verify:release` and the optional
+  `verify:ocr-baseline` orchestrator. Normal release verification builds once,
+  packs/installs once, and has no OCR checkout dependency. The frozen audit
+  runs each differential group once and requires one package hash across all
+  reports; do not recreate the old recursive prerequisite graph.
 - A cryptographically good upstream tag signature is not the same as a trusted
   signer identity. Record `No principal matched` honestly when the local
   allowed-signers configuration cannot bind the key to a principal.
