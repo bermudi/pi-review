@@ -61,7 +61,11 @@ When the package is installed, use its binary as `pi-review`.
 pi-review review --repo . --model provider/model --format json
 
 # Range: diff from merge-base of --from to --to
-pi-review review --repo /path/to/repo --from main --to feature --model provider/model
+pi-review review \
+  --repo /path/to/repo \
+  --from main \
+  --to feature \
+  --model provider/model:high
 
 # Single commit
 pi-review review --repo /path/to/repo --commit HEAD --model provider/model
@@ -99,6 +103,31 @@ pi-review review --repo . --preview --format json
 **Scan flags** are analogous with `--path`, `--no-plan`, `--no-dedup`, `--no-summary`, and `--batch`. See `pi-review scan --help`.
 
 Output goes to stdout (`text`/`json`/`sarif`); diagnostics and progress go to stderr, so `--format json` remains machine-readable.
+
+### Repository and model selection
+
+Run `pi-review` inside the target Git repository, or pass its path explicitly:
+
+```bash
+pi-review review \
+  --repo /home/me/src/project \
+  --from origin/main \
+  --to main
+```
+
+A valid review command run outside Git returns a concise repository error and
+`--repo` hint; it does not dump the full help page.
+
+Model selectors use the same syntax as Pi. A suffix selects the thinking level
+without becoming part of the model ID:
+
+```bash
+pi-review review --model openai-codex/gpt-5.6-sol:high
+```
+
+The default concurrency is eight. Each file owns an isolated Pi session while
+its plan, review, relocation, and filter stages reuse that file's history.
+Independent files never share mutable model history.
 
 ### Exit status
 
