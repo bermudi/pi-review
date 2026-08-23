@@ -194,7 +194,7 @@ test("invalid model creates no factory transport", async () => {
       { ...defaultReviewOptions(), repoDir: dir, model: "missing/model" },
       dir,
       { createTransport: async () => { created += 1; return scripted(async () => {}); } },
-    )()).rejects.toThrow("unknown model");
+    )()).rejects.toThrow("not found");
     expect(created).toBe(0);
   } finally {
     fs.rmSync(dir, { recursive: true, force: true });

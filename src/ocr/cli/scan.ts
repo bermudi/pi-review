@@ -246,27 +246,21 @@ export async function runScanContext(ctx: ScanContext): Promise<number> {
   if (runner?.budgetExceeded && terminal !== "failed") terminal = "partial";
 
   if (runErr || terminal === "failed") {
-    const fallback = runner
-      ? {
-          warnings: runner.warnings,
-          toolCalls: runner.toolCalls,
-          sessionId: runner.sessionId,
-          totalTokens: runner.totalTokens,
-          inputTokens: runner.inputTokens,
-          outputTokens: runner.outputTokens,
-          filesReviewed: runner.filesReviewed,
-          budgetExceeded: runner.budgetExceeded,
-        }
-      : {
-          warnings: [] as AgentWarning[],
-          toolCalls: {} as Record<string, number>,
-          sessionId: "",
-          totalTokens: 0,
-          inputTokens: 0,
-          outputTokens: 0,
-          filesReviewed: 0,
-          budgetExceeded: false,
-        };
+    if (runner === null) {
+      const combined = [runErr, emitErr].filter((e): e is Error => e !== null);
+      if (combined.length > 0) throw new Error(combined.map((e) => e.message).join(": "));
+      return 1;
+    }
+    const fallback = {
+      warnings: runner.warnings,
+      toolCalls: runner.toolCalls,
+      sessionId: runner.sessionId,
+      totalTokens: runner.totalTokens,
+      inputTokens: runner.inputTokens,
+      outputTokens: runner.outputTokens,
+      filesReviewed: runner.filesReviewed,
+      budgetExceeded: runner.budgetExceeded,
+    };
     if (opts.outputFormat === "json") {
       io.stderr(
         `${JSON.stringify(

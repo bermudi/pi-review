@@ -547,19 +547,22 @@ export async function runCli(
       }
     }
 
-        // Resolve repository and validate refs before any ref-bearing Git command,
+    // Resolve repository and validate refs before any ref-bearing Git command,
     // matching Go executeReview order: loadCommonContext → validateReviewRefs → getCommitMessage.
     let resolvedRepoDir: string;
     try {
       resolvedRepoDir = opts.repoDir !== "" ? resolveRepoDir(opts.repoDir) : resolveRepoDir(io.cwd());
     } catch (e) {
-      io.stderr(`Error: ${String((e as Error).message)}\n\n${HELP_TEXT}`);
+      io.stderr(
+        `Error: ${String((e as Error).message)}\n` +
+        "Hint: run pi-review from a Git repository or pass --repo /path/to/repository.\n",
+      );
       return 1;
     }
     try {
       validateReviewRefs(resolvedRepoDir, opts);
     } catch (e) {
-      io.stderr(`Error: ${String((e as Error).message)}\n\n${HELP_TEXT}`);
+      io.stderr(`Error: ${String((e as Error).message)}\n`);
       return 1;
     }
 

@@ -190,6 +190,23 @@ describe("thin OCR production adapter", () => {
     expect(cap.stdout()).toBe("");
   });
 
+  test("review outside Git reports a repository hint without dumping help", async () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "cli-not-git-"));
+    try {
+      const cap = captureIo();
+      const code = await runCli(["review", "--from", "origin/main", "--to", "main"], {
+        io: { ...cap.io, cwd: () => dir },
+      });
+      expect(code).toBe(1);
+      expect(cap.stderr()).toContain("is not a git repository");
+      expect(cap.stderr()).toContain("pass --repo /path/to/repository");
+      expect(cap.stderr()).not.toContain("Review flags:");
+      expect(cap.stdout()).toBe("");
+    } finally {
+      fs.rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
   test("rejects --engine at review level as unknown flag without invoking model", async () => {
     let factoryCalled = false;
     const cap = captureIo();

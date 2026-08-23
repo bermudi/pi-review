@@ -360,39 +360,31 @@ export async function runReviewContext(ctx: ReviewContext): Promise<number> {
   const terminal: string = (manifest?.terminalState as string | undefined) ?? (runErr ? "failed" : comments.length === 0 ? "skipped" : "complete");
 
   if (runErr || terminal === "failed") {
+    // Model resolution, transport creation, and other factory failures happen
+    // before a review exists. Do not invent a zero-usage review summary for a
+    // run that never started.
+    if (runner === null) {
+      const combined = [runErr, emitErr].filter((e): e is Error => e !== null);
+      if (combined.length > 0) throw new Error(combined.map((e) => e.message).join(": "));
+      return 1;
+    }
     // Mirror Go: failure usage goes to stderr
-    const failedProvider: ResultProvider = runner
-      ? {
-          Diffs: () => runner!.diffs,
-          FilesReviewed: () => runner!.filesReviewed,
-          TotalInputTokens: () => runner!.inputTokens,
-          TotalOutputTokens: () => runner!.outputTokens,
-          TotalTokensUsed: () => runner!.totalTokens,
-          TotalCacheReadTokens: () => runner!.cacheReadTokens,
-          TotalCacheWriteTokens: () => runner!.cacheWriteTokens,
-          Warnings: () => runner!.warnings,
-          ProjectSummary: () => runner!.projectSummary,
-          ToolCalls: () => runner!.toolCalls,
-          SessionID: () => runner!.sessionId,
-          BudgetExceeded: () => runner!.budgetExceeded,
-          RunManifest: () => runner!.manifest,
-          ResumeInfo: () => runner!.resumeInfo,
-        }
-      : {
-          Diffs: () => [],
-          FilesReviewed: () => 0,
-          TotalInputTokens: () => 0,
-          TotalOutputTokens: () => 0,
-          TotalTokensUsed: () => 0,
-          TotalCacheReadTokens: () => 0,
-          TotalCacheWriteTokens: () => 0,
-          Warnings: () => [],
-          ProjectSummary: () => "",
-          ToolCalls: () => ({}),
-          SessionID: () => "",
-          BudgetExceeded: () => false,
-          RunManifest: () => null,
-        };
+    const failedProvider: ResultProvider = {
+      Diffs: () => runner.diffs,
+      FilesReviewed: () => runner.filesReviewed,
+      TotalInputTokens: () => runner.inputTokens,
+      TotalOutputTokens: () => runner.outputTokens,
+      TotalTokensUsed: () => runner.totalTokens,
+      TotalCacheReadTokens: () => runner.cacheReadTokens,
+      TotalCacheWriteTokens: () => runner.cacheWriteTokens,
+      Warnings: () => runner.warnings,
+      ProjectSummary: () => runner.projectSummary,
+      ToolCalls: () => runner.toolCalls,
+      SessionID: () => runner.sessionId,
+      BudgetExceeded: () => runner.budgetExceeded,
+      RunManifest: () => runner.manifest,
+      ResumeInfo: () => runner.resumeInfo,
+    };
     // Emit failure usage only if manifest not already published with retry report
     const failureReport = emitted ? null : effectiveRetryReport;
     // Text vs JSON handling is inside shared retry helper; here we do best-effort

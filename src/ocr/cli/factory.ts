@@ -7,7 +7,7 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 import { randomUUID } from "node:crypto";
 import { spawnSync } from "node:child_process";
-import { ModelRuntime } from "@earendil-works/pi-coding-agent";
+import { ModelRuntime, resolveCliModel } from "@earendil-works/pi-coding-agent";
 
 import type { ReviewOptions, ScanOptions } from "./shared.js";
 import type { ProgressSink } from "../progress.js";
@@ -212,6 +212,7 @@ export interface PiModelSelection {
   readonly model: PiModel;
   readonly modelRuntime: ModelRuntime;
   readonly identity: PiModelIdentity;
+  readonly thinkingLevel?: NonNullable<Parameters<typeof createPiTransportForFile>[0]>["thinkingLevel"];
 }
 
 /** Resolve the documented `provider/model` selector through Pi's public model runtime. */
@@ -226,36 +227,29 @@ export async function resolvePiModelSelection(
     modelsPath: path.join(agentDir, "models.json"),
     refreshOnCreate: false,
   });
-  let selectedProvider = provider;
-  let selectedModel = selector;
-  const slash = provider === "" ? selector.indexOf("/") : -1;
-  if (slash >= 0) {
-    const embeddedProvider = selector.slice(0, slash);
-    const embeddedModel = selector.slice(slash + 1);
-    if (embeddedProvider === "" || embeddedModel === "") {
-      throw new Error(`invalid --model "${selector}": use provider/model`);
-    }
-    if (provider !== "" && provider !== embeddedProvider) {
-      throw new Error(`--provider "${provider}" does not match --model "${selector}"`);
-    }
-    selectedProvider = embeddedProvider;
-    selectedModel = embeddedModel;
+  if (selector !== "") {
+    const resolved = resolveCliModel({
+      cliProvider: provider === "" ? undefined : provider,
+      cliModel: selector,
+      modelRuntime: runtime,
+    });
+    if (resolved.error !== undefined) throw new Error(resolved.error);
+    if (resolved.model === undefined) throw new Error(`unknown model "${selector}" in Pi configuration`);
+    return {
+      model: resolved.model,
+      modelRuntime: runtime,
+      identity: { provider: resolved.model.provider, model: resolved.model.id },
+      ...(resolved.thinkingLevel === undefined ? {} : { thinkingLevel: resolved.thinkingLevel }),
+    };
   }
+
+  const selectedProvider = provider;
+  const selectedModel = selector;
   let model: PiModel | undefined;
-  if (selectedProvider !== "" && selectedModel !== "") {
-    model = runtime.getModel(selectedProvider, selectedModel);
-  } else if (selectedProvider !== "") {
+  if (selectedProvider !== "") {
     const matches = runtime.getModels(selectedProvider);
     if (matches.length !== 1) {
       throw new Error(`--provider "${selectedProvider}" is ambiguous; specify --model ${selectedProvider}/model`);
-    }
-    model = matches[0];
-  } else {
-    const matches = runtime.getModels().filter((candidate) => candidate.id === selectedModel);
-    if (matches.length !== 1) {
-      throw new Error(matches.length === 0
-        ? `unknown --model "${selector}"; use provider/model`
-        : `--model "${selector}" is ambiguous; use provider/model`);
     }
     model = matches[0];
   }
@@ -385,6 +379,7 @@ export function createReviewRunnerFactory(
       retryCollector,
       model: selection?.model,
       modelRuntime: selection?.modelRuntime,
+      thinkingLevel: selection?.thinkingLevel,
     });
     let deferredRunError: Error | null = null;
     return await withOwnedTransport(transport, async () => {
@@ -618,6 +613,7 @@ export function createScanRunnerFactory(
       tools: mainToolDefs,
       model: selection?.model,
       modelRuntime: selection?.modelRuntime,
+      thinkingLevel: selection?.thinkingLevel,
     });
     return await withOwnedTransport(transport, async () => {
     const modelIdentity = transportModelIdentity(transport) ?? selection?.identity ?? {

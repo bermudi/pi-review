@@ -388,6 +388,8 @@ export interface CreatePiTransportForFileOptions {
   readonly model?: NonNullable<Parameters<typeof createAgentSession>[0]>["model"];
   /** Matching public runtime that owns credentials and custom models. */
   readonly modelRuntime?: ModelRuntime;
+  /** Pi thinking level parsed from the public provider/model:level selector. */
+  readonly thinkingLevel?: NonNullable<Parameters<typeof createAgentSession>[0]>["thinkingLevel"];
   /** Optional session affinity id for SessionManager (maps to prompt_cache_key / x-session-affinity via Pi providers). */
   readonly sessionId?: string;
   /** Optional retry collector for per-round observability; one Pi request = one attempt. */
@@ -883,7 +885,7 @@ export class PiTransport implements TranscriptLlmTransport {
 export async function createPiTransportForFile(
   options: CreatePiTransportForFileOptions,
 ): Promise<PiTransport> {
-  const { cwd, agentDir, tools, supplementalTools = [], model, modelRuntime, sessionId, retryCollector } = options;
+  const { cwd, agentDir, tools, supplementalTools = [], model, modelRuntime, thinkingLevel, sessionId, retryCollector } = options;
   assertUniqueToolNames(tools, supplementalTools);
 
   const sessionManager = sessionId !== undefined && sessionId !== "" ? SessionManager.inMemory(cwd, { id: sessionId }) : SessionManager.inMemory(cwd);
@@ -966,6 +968,9 @@ export async function createPiTransportForFile(
   }
   if (modelRuntime !== undefined) {
     createOpts["modelRuntime"] = modelRuntime;
+  }
+  if (thinkingLevel !== undefined) {
+    createOpts["thinkingLevel"] = thinkingLevel;
   }
 
   const { session } = await createAgentSession(createOpts as unknown as Parameters<typeof createAgentSession>[0]);

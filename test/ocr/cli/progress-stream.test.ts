@@ -132,5 +132,6 @@ test("injected Pi transport setup failure is nonzero with no clean document", as
   });
   expect(code).toBe(1);
   expect(stderr).toContain("Pi session setup failed");
+  expect(stderr).not.toContain("usage on failure");
   expect(stdout).toBe("");
 });
