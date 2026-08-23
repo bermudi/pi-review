@@ -128,6 +128,12 @@ packed-install testing, not optional style preferences.
 
 ### Pi runtime adaptation
 
+- A Pi `AgentSession` is mutable and must never be shared by concurrent file
+  reviews. Production review and scan use one transport/session per file
+  affinity; that file's plan, main, compression, relocation, and filter stages
+  reuse its session. Do not route an independent file through `followUp` on a
+  busy session. Default concurrency is eight, so tests must exercise more than
+  one file and prove separate creation and disposal.
 - Pi `0.84.2` must know every bounded tool that may be activated later when the
   session is created. Register the normal and supplemental stage tools, then
   immediately narrow the active set to the exact tools allowed for the first

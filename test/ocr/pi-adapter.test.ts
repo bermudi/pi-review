@@ -198,13 +198,17 @@ describe("ocr pi-adapter", () => {
       });
       const transport = transportFor(session);
 
-      await transport.complete(toolRequest(), AbortSignal.timeout(1000));
-
-      const line = String(warning.mock.calls[0]?.[0]);
-      expect(line).toContain("kind=session_error");
-      expect(line).toContain("stop_reason=error");
-      expect(line).not.toContain("SECRET_PROVIDER_ERROR");
-      expect(line).not.toContain("SECRET_ERROR_DETAIL");
+      let thrown: unknown;
+      try {
+        await transport.complete(toolRequest(), AbortSignal.timeout(1000));
+      } catch (error) {
+        thrown = error;
+      }
+      expect(thrown).toBeInstanceOf(Error);
+      expect((thrown as Error).message).toBe("Pi assistant turn ended with stop reason error");
+      expect((thrown as Error).message).not.toContain("SECRET_PROVIDER_ERROR");
+      expect((thrown as Error).message).not.toContain("SECRET_ERROR_DETAIL");
+      expect(warning).not.toHaveBeenCalled();
     } finally {
       warning.mockRestore();
     }
@@ -266,12 +270,17 @@ describe("ocr pi-adapter", () => {
       });
       const transport = transportFor(session);
 
-      await transport.complete(toolRequest(), AbortSignal.timeout(1000));
-
-      const line = String(warning.mock.calls[0]?.[0]);
-      expect(line).toContain("kind=session_error");
-      expect(line).toContain("stage=prompt");
-      expect(line).not.toContain("SECRET_PROMPT_FAILURE");
+      let thrown: unknown;
+      try {
+        await transport.complete(toolRequest(), AbortSignal.timeout(1000));
+      } catch (error) {
+        thrown = error;
+      }
+      expect(thrown).toBeInstanceOf(Error);
+      expect((thrown as Error).message).toBe("Pi session prompt failed before an assistant response");
+      expect((thrown as Error).message).not.toContain("SECRET_PROMPT_FAILURE");
+      expect((thrown as Error).cause).toBeInstanceOf(Error);
+      expect(warning).not.toHaveBeenCalled();
     } finally {
       warning.mockRestore();
     }

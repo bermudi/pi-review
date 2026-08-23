@@ -184,6 +184,56 @@ test("ChatResponse empty toolCalls returns empty array", async () => {
   expect(res.toolCalls).toHaveLength(0);
 });
 
+test("Pi assistant error stop rejects instead of becoming an empty response", async () => {
+  const { PiTransport } = await import("../../../src/ocr/pi-adapter/pi-transport.js");
+  let listener: ((e: unknown) => void) | undefined;
+  let activeTools: string[] = [];
+  const session = {
+    state: { messages: [] as unknown[] },
+    messages: [] as unknown[],
+    agent: { state: { messages: [] as unknown[] } },
+    isIdle: true,
+    isStreaming: false,
+    sessionId: "s",
+    setActiveToolsByName: (names: string[]) => { activeTools = names; },
+    getActiveToolNames: () => activeTools,
+    subscribe: (next: (e: unknown) => void) => { listener = next; return () => {}; },
+    prompt: async () => {
+      listener?.({ type: "turn_end", message: { role: "assistant", content: [], stopReason: "error" } });
+    },
+    waitForIdle: async () => {},
+    abort: async () => {},
+  };
+  const transport = new PiTransport(session as never);
+  await expect(transport.complete(
+    { model: "m", messages: [newTextMessage("user", "hi")], maxTokens: 10, tools: [{ type: "function", function: { name: "task_done" } }] } as never,
+    AbortSignal.timeout(1000) as never,
+  )).rejects.toThrow("Pi assistant turn ended with stop reason error");
+});
+
+test("Pi prompt failure preserves its error instead of returning an empty response", async () => {
+  const { PiTransport } = await import("../../../src/ocr/pi-adapter/pi-transport.js");
+  const session = {
+    state: { messages: [] as unknown[] },
+    messages: [] as unknown[],
+    agent: { state: { messages: [] as unknown[] } },
+    isIdle: true,
+    isStreaming: false,
+    sessionId: "s",
+    setActiveToolsByName: () => {},
+    getActiveToolNames: () => [],
+    subscribe: () => () => {},
+    prompt: async () => { throw new Error("provider unavailable"); },
+    waitForIdle: async () => {},
+    abort: async () => {},
+  };
+  const transport = new PiTransport(session as never);
+  await expect(transport.complete(
+    { model: "m", messages: [newTextMessage("user", "hi")], maxTokens: 10 } as never,
+    AbortSignal.timeout(1000) as never,
+  )).rejects.toThrow("Pi session prompt failed before an assistant response");
+});
+
 // OCR v1.9.3: TestExtractText_Default
 test("extractText default non-string returns empty", () => {
   const m = { role: "user", content: 42 as unknown as string } as unknown as Message;

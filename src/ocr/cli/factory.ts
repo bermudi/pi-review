@@ -51,7 +51,7 @@ import { newJSONLWriter, type JsonlWriter } from "../session/persist.js";
 import { ResumeState, LoadResumeState, LoadReviewResumeState, NewResumeLineage } from "../session/resume.js";
 import type { ResumeLineage } from "../session/resume.js";
 import { resolveIdentity } from "../agent/identity.js";
-import type { AnyLlmClient } from "../llmloop/types.js";
+import type { AnyLlmClient, ChatRequest, ChatResponse } from "../llmloop/types.js";
 
 export interface ReviewFactoryDeps {
   /** Test seam for a deterministic local transport; production uses Pi. */
@@ -67,6 +67,108 @@ export type RuntimeTransport = AnyLlmClient & {
 export type RuntimeTransportFactory = (
   options: Parameters<typeof createPiTransportForFile>[0],
 ) => Promise<RuntimeTransport>;
+
+type RuntimeTransportOptions = Parameters<typeof createPiTransportForFile>[0];
+
+function requestAffinityKey(req: ChatRequest): string {
+  const filePath = req.requestMeta?.filePath;
+  if (filePath !== undefined && filePath !== "") return `file:${filePath}`;
+
+  // Production Runner requests carry a task-scoped session ID ending in the
+  // stable hash of the file path. The task name changes between plan, main,
+  // compression, relocation, and filter stages; the scope hash does not.
+  const sessionId = req.sessionId;
+  if (sessionId !== undefined && sessionId !== "") {
+    const scope = /-([0-9a-f]{16})$/u.exec(sessionId)?.[1];
+    return scope !== undefined ? `scope:${scope}` : `session:${sessionId}`;
+  }
+  throw new Error("Pi request has no file or session affinity; refusing to share a concurrent session");
+}
+
+async function completeWithTransport(
+  transport: RuntimeTransport,
+  signal: AbortSignal,
+  req: ChatRequest,
+): Promise<ChatResponse> {
+  const goStyle = (transport as { CompletionsWithCtx?: (sig: AbortSignal, request: ChatRequest) => Promise<ChatResponse> }).CompletionsWithCtx;
+  if (typeof goStyle === "function") return goStyle.call(transport, signal, req);
+  const complete = (transport as { complete?: (sig: AbortSignal, request: ChatRequest) => Promise<ChatResponse> }).complete;
+  if (typeof complete === "function") return complete.call(transport, signal, req);
+  throw new Error("runtime transport must provide complete or CompletionsWithCtx");
+}
+
+/**
+ * One Pi AgentSession cannot safely serve concurrent file conversations:
+ * prompt/followUp and history replacement are mutable session operations.
+ * Keep one transport per file affinity while preserving one transport across
+ * that file's plan, main, compression, relocation, and filter stages.
+ */
+class FileScopedTransportPool {
+  private readonly byAffinity = new Map<string, Promise<RuntimeTransport>>();
+  private readonly owned = new Set<RuntimeTransport>();
+  private unclaimedInitial: RuntimeTransport | null;
+  private disposed = false;
+
+  constructor(
+    initial: RuntimeTransport,
+    private readonly createTransport: RuntimeTransportFactory,
+    private readonly options: RuntimeTransportOptions,
+  ) {
+    this.unclaimedInitial = initial;
+    this.owned.add(initial);
+  }
+
+  modelIdentity(): PiModelIdentity | undefined {
+    return this.unclaimedInitial?.modelIdentity?.() ?? [...this.owned][0]?.modelIdentity?.();
+  }
+
+  async complete(signal: AbortSignal, req: ChatRequest): Promise<ChatResponse> {
+    return this.CompletionsWithCtx(signal, req);
+  }
+
+  async CompletionsWithCtx(signal: AbortSignal, req: ChatRequest): Promise<ChatResponse> {
+    if (this.disposed) throw new Error("Pi transport pool is disposed");
+    const key = requestAffinityKey(req);
+    let pending = this.byAffinity.get(key);
+    if (pending === undefined) {
+      if (this.unclaimedInitial !== null) {
+        const initial = this.unclaimedInitial;
+        this.unclaimedInitial = null;
+        pending = Promise.resolve(initial);
+      } else {
+        pending = this.createTransport({ ...this.options, sessionId: req.sessionId }).then((transport) => {
+          this.owned.add(transport);
+          return transport;
+        });
+      }
+      this.byAffinity.set(key, pending);
+      void pending.catch(() => {
+        if (this.byAffinity.get(key) === pending) this.byAffinity.delete(key);
+      });
+    }
+    return completeWithTransport(await pending, signal, req);
+  }
+
+  async dispose(): Promise<void> {
+    if (this.disposed) return;
+    this.disposed = true;
+    await Promise.allSettled(this.byAffinity.values());
+    const results = await Promise.allSettled([...this.owned].map(async (transport) => transport.dispose()));
+    const errors = results
+      .filter((result): result is PromiseRejectedResult => result.status === "rejected")
+      .map((result) => result.reason instanceof Error ? result.reason : new Error(String(result.reason)));
+    if (errors.length === 1) throw errors[0];
+    if (errors.length > 1) throw new AggregateError(errors, `${String(errors.length)} Pi transports failed to dispose`);
+  }
+}
+
+async function createFileScopedTransportPool(
+  createTransport: RuntimeTransportFactory,
+  options: RuntimeTransportOptions,
+): Promise<RuntimeTransport> {
+  const initial = await createTransport(options);
+  return new FileScopedTransportPool(initial, createTransport, options);
+}
 
 async function withOwnedTransport<T>(
   transport: RuntimeTransport,
@@ -274,9 +376,8 @@ export function createReviewRunnerFactory(
 
     const retryCollector = new RetryCollector();
     const selection = await resolvePiModelSelection(agentDir, opts.provider, opts.model);
-    // One Pi transport per review invocation; concurrency=1 serialises per-file use.
     const createTransport = deps.createTransport ?? createPiTransportForFile;
-    const transport = await createTransport({
+    const transport = await createFileScopedTransportPool(createTransport, {
       cwd,
       agentDir,
       tools: mainToolDefs,
@@ -511,7 +612,7 @@ export function createScanRunnerFactory(
 
     const selection = await resolvePiModelSelection(agentDir, opts.provider, opts.model);
     const createTransport = deps.createTransport ?? createPiTransportForFile;
-    const transport = await createTransport({
+    const transport = await createFileScopedTransportPool(createTransport, {
       cwd,
       agentDir,
       tools: mainToolDefs,

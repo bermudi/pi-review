@@ -678,6 +678,7 @@ export class PiTransport implements TranscriptLlmTransport {
       let assistantObservation: PiAssistantObservation | undefined;
       let assistantSource: "turn_end" | "agent_end" | "state" | "none" = "none";
       let invocationFailureStage: "prompt" | "follow_up" | "continue" | "wait_for_idle" | undefined;
+      let invocationError: Error | undefined;
       let turnEnded = false;
       const stateMessageCountBeforeDrive = getStateMessages().length;
 
@@ -759,25 +760,37 @@ export class PiTransport implements TranscriptLlmTransport {
           // Round 1 or no agent.continue available: use prompt()
           const isIdle = sessAny.isIdle !== undefined ? sessAny.isIdle : true;
           if (isIdle) {
-            await (sessAny.prompt as (t: string) => Promise<void>)(promptText).catch(() => {
-              if (!turnEnded) invocationFailureStage = "prompt";
+            await (sessAny.prompt as (t: string) => Promise<void>)(promptText).catch((error: unknown) => {
+              if (!turnEnded) {
+                invocationFailureStage = "prompt";
+                invocationError = error instanceof Error ? error : new Error(String(error));
+              }
             });
           } else {
             const followUp = sessAny.followUp as ((t: string) => Promise<void>) | undefined;
             if (typeof followUp === "function") {
-              await followUp(promptText).catch(() => {
-                if (!turnEnded) invocationFailureStage = "follow_up";
+              await followUp(promptText).catch((error: unknown) => {
+                if (!turnEnded) {
+                  invocationFailureStage = "follow_up";
+                  invocationError = error instanceof Error ? error : new Error(String(error));
+                }
               });
             } else {
-              await (sessAny.prompt as (t: string) => Promise<void>)(promptText).catch(() => {
-                if (!turnEnded) invocationFailureStage = "prompt";
+              await (sessAny.prompt as (t: string) => Promise<void>)(promptText).catch((error: unknown) => {
+                if (!turnEnded) {
+                  invocationFailureStage = "prompt";
+                  invocationError = error instanceof Error ? error : new Error(String(error));
+                }
               });
             }
           }
         } else {
           // Round 2+: continue from the existing transcript (no new user message)
-          await sessAgent.continue().catch(() => {
-            if (!turnEnded) invocationFailureStage = "continue";
+          await sessAgent.continue().catch((error: unknown) => {
+            if (!turnEnded) {
+              invocationFailureStage = "continue";
+              invocationError = error instanceof Error ? error : new Error(String(error));
+            }
           });
         }
 
@@ -785,8 +798,11 @@ export class PiTransport implements TranscriptLlmTransport {
         // next complete() call (row 1). Abort after turn_end will cause prompt/
         // continue to reject; catch so we can use the captured assistant message.
         if (typeof sessAny.waitForIdle === "function") {
-          await sessAny.waitForIdle().catch(() => {
-            if (!turnEnded) invocationFailureStage = "wait_for_idle";
+          await sessAny.waitForIdle().catch((error: unknown) => {
+            if (!turnEnded) {
+              invocationFailureStage = "wait_for_idle";
+              invocationError = error instanceof Error ? error : new Error(String(error));
+            }
           });
         }
 
@@ -802,20 +818,25 @@ export class PiTransport implements TranscriptLlmTransport {
           }
         }
 
+        if (invocationFailureStage !== undefined) {
+          const message = `Pi session ${invocationFailureStage.replaceAll("_", " ")} failed before an assistant response`;
+          throw new Error(
+            message,
+            invocationError === undefined ? undefined : { cause: invocationError },
+          );
+        }
+        if (assistantObservation?.stopReason === "error" || assistantObservation?.stopReason === "aborted") {
+          throw new Error(`Pi assistant turn ended with stop reason ${assistantObservation.stopReason}`);
+        }
+
         if (expectsToolCall && capturedToolCalls.length === 0) {
-          if (invocationFailureStage !== undefined) {
-            console.warn(
-              `[pi-adapter] no tool calls kind=session_error source=${assistantSource} stage=${invocationFailureStage}`,
-            );
-          } else if (assistantObservation === undefined) {
+          if (assistantObservation === undefined) {
             console.warn("[pi-adapter] no tool calls kind=missing_assistant_event source=none");
           } else {
             const kind =
               assistantObservation.invalidToolBlocks > 0
                 ? "tool_call_extraction_failed"
-                : assistantObservation.stopReason === "error" || assistantObservation.stopReason === "aborted"
-                  ? "session_error"
-                  : assistantObservation.text.length > 0
+                : assistantObservation.text.length > 0
                     ? "assistant_text_only"
                     : "assistant_empty";
             console.warn(
