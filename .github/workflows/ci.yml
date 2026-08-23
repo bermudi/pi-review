@@ -15,7 +15,7 @@ permissions:
 
 jobs:
   quality:
-    name: check, test, build
+    name: release verification
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
@@ -27,18 +27,5 @@ jobs:
 
       - run: bun install --frozen-lockfile
 
-      - name: Typecheck
-        run: bun run check
-
-      - name: Test
-        run: bun test
-
-      - name: Build
-        run: bun run build
-
-      - name: Upload dist
-        uses: actions/upload-artifact@v4
-        with:
-          name: dist-${{ github.sha }}
-          path: dist/
-          retention-days: 7
+      - name: Verify release
+        run: bun run verify:release
