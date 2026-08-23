@@ -756,6 +756,7 @@ export class Runner {
               const msgs = buildReLocationMessagesLocal(cm, d, reLocationTaskRaw as unknown as never);
               if (msgs && msgs.length > 0) {
                 const sessRel = this.getSession();
+                const baseSessionIdRel = sessRel?.sessionId ?? this.deps.sessionId;
                 let rlRec: TaskRecord | undefined;
                 let rlStart = Date.now();
                 let requestMetaRel: RequestMeta | undefined;
@@ -769,7 +770,9 @@ export class Runner {
                   model: this.deps.model,
                   messages: msgs,
                   maxTokens: getCompletionTokenLimit(this.deps.template),
-                  ...(sessRel ? { sessionId: sessionTaskKey(sessRel.sessionId, "re_location_task", cm.path) } : {}),
+                  ...(baseSessionIdRel !== undefined && baseSessionIdRel !== ""
+                    ? { sessionId: sessionTaskKey(baseSessionIdRel, "re_location_task", cm.path) }
+                    : {}),
                   ...(requestMetaRel ? { requestMeta: requestMetaRel } : {}),
                 };
                 try {
@@ -930,6 +933,7 @@ export class Runner {
     });
 
     const sessComp = this.getSession();
+    const baseSessionIdComp = sessComp?.sessionId ?? this.deps.sessionId;
     let compRec: TaskRecord | undefined;
     let compStart = Date.now();
     let compMeta: RequestMeta | undefined;
@@ -943,7 +947,9 @@ export class Runner {
       model: this.deps.model,
       messages: compressionMsgs,
       maxTokens: getCompletionTokenLimit(this.deps.template),
-      ...(sessComp ? { sessionId: sessionTaskKey(sessComp.sessionId, "memory_compression_task", _filePath) } : {}),
+      ...(baseSessionIdComp !== undefined && baseSessionIdComp !== ""
+        ? { sessionId: sessionTaskKey(baseSessionIdComp, "memory_compression_task", _filePath) }
+        : {}),
       ...(compMeta ? { requestMeta: compMeta } : {}),
     };
 
