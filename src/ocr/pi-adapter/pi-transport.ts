@@ -155,6 +155,22 @@ function createAbortError(): Error {
   }
 }
 
+/**
+ * Build the error to throw when `signal` is aborted. Surfaces the signal's
+ * abort reason — e.g. the per-file deadline ("file task timeout") or run
+ * cancellation ("review was cancelled") — so logs and failure classification
+ * can distinguish a deadline from a cancellation. A bare abort (no reason)
+ * keeps the generic AbortError.
+ */
+function abortErrorFromSignal(signal: AbortSignal): Error {
+  const reason = (signal as AbortSignal & { reason?: unknown }).reason;
+  if (reason instanceof Error) {
+    if (reason.name === "AbortError") return reason;
+    if (reason.message !== "") return new Error(reason.message, { cause: reason });
+  }
+  return createAbortError();
+}
+
 // ---------------------------------------------------------------------------
 // OCR Message -> Pi AgentMessage translation helpers
 // ---------------------------------------------------------------------------
@@ -457,7 +473,7 @@ export class PiTransport implements TranscriptLlmTransport {
   ): Promise<ChatResponse> {
     const { req, signal } = normalizeCompleteArgs(a, b);
 
-    if (signal.aborted) throw createAbortError();
+    if (signal.aborted) throw abortErrorFromSignal(signal);
 
     const meta = (req as unknown as { requestMeta?: import("../retry/meta.js").RequestMeta }).requestMeta;
     const collector = this.retryCollector;
@@ -499,11 +515,10 @@ export class PiTransport implements TranscriptLlmTransport {
             fp = c.failurePhase as string;
           }
           collector!.recordAttempt(meta as import("../retry/meta.js").RequestMeta, { errorClass: ec as never, failurePhase: fp as never }, startedAt, endedAt);
-          const cancelled = isAbortError(err) || (() => {
-            if (!signal.aborted) return false;
-            const r = (signal as unknown as { reason?: unknown }).reason;
-            return r === undefined ? true : isAbortError(r);
-          })();
+          // Any abort of the request signal — bare abort, run cancellation
+          // ("review was cancelled"), or the per-file deadline ("file task
+          // timeout") — cancels the request; it is not a provider failure.
+          const cancelled = isAbortError(err) || signal.aborted;
           collector!.finalize(meta as import("../retry/meta.js").RequestMeta, err, cancelled);
         }
         throw err;
@@ -576,7 +591,7 @@ export class PiTransport implements TranscriptLlmTransport {
 
     try {
       // Quick abort check before driving session
-      if (signal.aborted) throw createAbortError();
+      if (signal.aborted) throw abortErrorFromSignal(signal);
 
       // -----------------------------------------------------------------
       // 3) History sync via session.state.messages replacement when needed
@@ -747,7 +762,7 @@ export class PiTransport implements TranscriptLlmTransport {
       });
 
       try {
-        if (signal.aborted) throw createAbortError();
+        if (signal.aborted) throw abortErrorFromSignal(signal);
 
         // Drive Pi: use prompt() for round 1 (last message is user), or
         // agent.continue() for round 2+ (last message is tool result).
@@ -808,7 +823,7 @@ export class PiTransport implements TranscriptLlmTransport {
           });
         }
 
-        if (signal.aborted) throw createAbortError();
+        if (signal.aborted) throw abortErrorFromSignal(signal);
 
         // Fallback: if no turn_end was observed (e.g., empty history path),
         // derive response from current state messages.

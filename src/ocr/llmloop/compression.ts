@@ -11,6 +11,13 @@ export const TOKEN_SOFT_THRESHOLD = tokenSoftThreshold;
 export const TOKEN_WARNING_THRESHOLD = tokenWarningThreshold;
 
 /**
+ * Background compression job deadline. The timer starts when the job is
+ * triggered, not when its LLM request starts, so time queued behind main
+ * rounds counts against it.
+ */
+export const COMPRESSION_JOB_TIMEOUT_MS = 5 * 60 * 1000;
+
+/**
  * PromptTokenLimit returns tokenWarningThreshold (80%) of maxTokens.
  * Mirrors Go int(float64(maxTokens)*0.80). Non-positive input is not
  * special-cased — each caller decides what that means.
@@ -332,7 +339,9 @@ function createJob(snapshotLen: number, timeoutMs: number): InternalJob {
   const done = new Promise<void>((resolve) => {
     resolveDone = resolve;
   });
-  const timeout = setTimeout(() => abortController.abort(), timeoutMs);
+  // Abort with an explicit reason so the failure log distinguishes the
+  // compression deadline from other aborts (a bare abort logs as "Aborted").
+  const timeout = setTimeout(() => abortController.abort(new Error("memory compression task timed out")), timeoutMs);
   const wrappedResolve = (): void => {
     clearTimeout(timeout);
     resolveDone();
@@ -391,11 +400,12 @@ export class CompressionState {
     messages: readonly Message[],
     filePath: string,
     compressor: (snapshot: readonly Message[], filePath: string, signal: AbortSignal) => Promise<Message[]>,
+    timeoutMs: number = COMPRESSION_JOB_TIMEOUT_MS,
   ): Promise<void> | null {
     if (this.pendingJob !== null) return null;
 
     const snapshot = copyMessages(messages);
-    const job = createJob(messages.length, 5 * 60 * 1000);
+    const job = createJob(messages.length, timeoutMs);
     this.pendingJob = job;
 
     const worker = (async () => {

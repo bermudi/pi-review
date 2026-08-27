@@ -300,6 +300,30 @@ describe("ocr llmloop pending upstream runner tests", () => {
     expect(state.hasPendingJob()).toBe(false);
   });
 
+  // pi-reviewer: the background compression job deadline must abort with an
+  // explicit reason so the failure log distinguishes it from other aborts.
+  test("background compression job timeout aborts with an explicit reason", async () => {
+    const state = new CompressionState();
+    let observedReason: unknown;
+    const worker = state.triggerAsyncCompression(
+      [newTextMessage("user", "hello")],
+      "a.go",
+      (_snapshot, _path, signal) =>
+        new Promise<Message[]>((_resolve, reject) => {
+          signal.addEventListener("abort", () => {
+            observedReason = (signal as AbortSignal & { reason?: unknown }).reason;
+            reject(new Error("aborted"));
+          }, { once: true });
+        }),
+      20, // test-only deadline override; production default is COMPRESSION_JOB_TIMEOUT_MS
+    );
+    expect(worker).not.toBeNull();
+    await worker;
+    expect(observedReason).toBeInstanceOf(Error);
+    expect((observedReason as Error).message).toBe("memory compression task timed out");
+    expect(state.hasPendingJob()).toBe(false);
+  });
+
   // OCR v1.9.3: TestTryApplyPendingCompression_NilJob
   test("applying absent compression returns false", () => {
     const state = new CompressionState();

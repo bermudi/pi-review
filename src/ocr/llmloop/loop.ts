@@ -467,6 +467,17 @@ export class Runner {
 
         const succeed = await this.addNextMessage(signal, content, calls as ToolCall[], results, messages, filePath, st);
         if (!succeed) {
+          if (signal.aborted) {
+            // Compression failed because the file's signal was aborted (the
+            // per-file deadline or run cancellation), not because the context
+            // was incompressible. Surface the abort cause instead of masking
+            // it as a compression stop.
+            const reason = (signal as AbortSignal & { reason?: unknown }).reason;
+            const abortErr = reason instanceof Error && reason.message !== ""
+              ? new Error(reason.message, { cause: reason })
+              : new Error(reason !== undefined ? String(reason) : "context cancelled");
+            return { completed: false, stop: MainLoopStop.StopNone, error: abortErr };
+          }
           console.log(`[pi-review] Context compression exceeded threshold for ${filePath}, stopping.`);
           stop = MainLoopStop.StopCompression;
           break;

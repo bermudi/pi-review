@@ -295,6 +295,11 @@ export function classifyItemError(err: unknown): [FailureClass, string] {
   if (isWrappedError(err, errDeadlineExceeded) || errorContains(err, "deadline exceeded") || errorContains(err, "DeadlineExceeded")) {
     return [FailureTimeout, "file review exceeded its time limit"];
   }
+  // Per-file task deadline (pi-reviewer's "file task timeout" abort reason),
+  // including transport/loop wrappers that carry the reason in their message.
+  if (isWrappedError(err, errFileTaskTimeout) || errorContains(err, "file task timeout")) {
+    return [FailureTimeout, "file review exceeded its time limit"];
+  }
   if (isWrappedError(err, errCanceled) || errorContains(err, "canceled") || errorContains(err, "cancelled") || (err instanceof Error && err.name === "AbortError" && errorContains(err, "canceled"))) {
     // Also check generic AbortError without message — treat as cancelled
     // But must distinguish deadline vs cancelled: deadline check already above.
@@ -383,6 +388,11 @@ export const errDeadlineExceeded = new Error("context deadline exceeded");
 export const errCanceled = new Error("context canceled");
 export const ErrDeadlineExceeded = errDeadlineExceeded;
 export const ErrCanceled = errCanceled;
+// pi-reviewer per-file deadline: each file task's merged signal aborts with
+// this reason when concurrentTaskTimeoutMinutes elapses (see run()). It must
+// classify as timeout, mirroring the Go context.DeadlineExceeded handling.
+export const errFileTaskTimeout = new Error("file task timeout");
+export const ErrFileTaskTimeout = errFileTaskTimeout;
 
 export class Agent {
   public diffs: Diff[] = [];

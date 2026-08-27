@@ -150,6 +150,13 @@ packed-install testing, not optional style preferences.
   as an internal cause, expose a bounded stage/stop diagnostic, and never feed
   an empty response into a parser. Provider errors may contain secrets, so do
   not print their raw message.
+- Abort signals carry reasons: the per-file deadline aborts with
+  `file task timeout` and run cancellation with `review was cancelled`. The Pi
+  transport must surface `signal.reason` instead of a bare
+  `AbortError: Aborted`, treat any signal abort as a cancelled (not failed)
+  request in the retry report, and classify deadline reasons as timeout. A
+  deadline firing during memory compression must be reported as the deadline,
+  never masked as a compression stop.
 
 ### Sessions, resume, and ownership
 

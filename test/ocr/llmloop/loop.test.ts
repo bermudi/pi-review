@@ -804,6 +804,61 @@ describe("ocr llmloop Runner (ported)", () => {
     await runner.waitBackground();
   });
 
+  // pi-reviewer regression: a file-signal abort during the compression request
+  // (e.g. the per-file deadline) must surface the abort reason as the subtask
+  // error instead of masking it as StopCompression ("main_task did not
+  // complete before stopping").
+  test("signal abort during compression surfaces the abort reason, not StopCompression", async () => {
+    const controller = new AbortController();
+    let calls = 0;
+    const adapter = {
+      CompletionsWithCtx: async (_signal: AbortSignal, _req: unknown): Promise<unknown> => {
+        calls++;
+        if (calls === 1) {
+          return {
+            content: "",
+            toolCalls: [{ id: "c1", type: "function", function: { name: "file_read", arguments: JSON.stringify({ path: "main.go" }) } }],
+            usage: { PromptTokens: 5, CompletionTokens: 5, CacheReadTokens: 0, CacheWriteTokens: 0 },
+          };
+        }
+        // Compression request: the per-file deadline fires mid-flight and the
+        // transport rejects with the abort reason (see pi-transport).
+        controller.abort(new Error("file task timeout"));
+        throw new Error("file task timeout");
+      },
+    };
+    const deps = {
+      model: "fake",
+      template: {
+        MaxTokens: 20,
+        MaxToolRequestTimes: 10,
+        MaxCompletionTokens: 1000,
+        MemoryCompressionTask: { Messages: [newTextMessage("user", "Summarize: {{context}}")] },
+      },
+      llmClient: adapter,
+      mainToolDefs: [
+        { type: "function", function: { name: "code_comment" } },
+        { type: "function", function: { name: "task_done" } },
+        { type: "function", function: { name: "file_read" } },
+      ] as readonly ToolDef[],
+      commentCollector: createCollector() as unknown,
+      toolRegistry: fileReadRegistry("package main\n"),
+    };
+    const runner = new Runner(deps as unknown as ConstructorParameters<typeof Runner>[0]);
+
+    const big = "word ".repeat(100);
+    const msgs: Message[] = [newTextMessage("user", big)];
+
+    const result = await runner.RunPerFile(controller.signal, msgs, "main.go");
+
+    expect(result.completed).toBe(false);
+    expect(result.stop).toBe(MainLoopStop.StopNone);
+    expect(result.error).toBeInstanceOf(Error);
+    expect(result.error?.message).toBe("file task timeout");
+    expect(calls).toBe(2);
+    await runner.waitBackground();
+  });
+
   // Additional local regression: grace tools remain restricted to review tools.
   test("grace tool defs filters to code_comment and task_done only", () => {
     const defs: ToolDef[] = [

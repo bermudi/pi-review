@@ -650,8 +650,12 @@ describe("ocr agent coverage (ported)", () => {
     const cases: Case[] = [
       { name: "deadline", err: new Error("context deadline exceeded"), wantClass: FailureTimeout },
       { name: "deadline_wrapped", err: new Error(`review ${secret}: context deadline exceeded`, { cause: new Error("context deadline exceeded") }), wantClass: FailureTimeout },
+      { name: "file_task_timeout", err: new Error("file task timeout"), wantClass: FailureTimeout },
+      { name: "file_task_timeout_wrapped", err: new Error("LLM completion error: file task timeout"), wantClass: FailureTimeout },
+      { name: "file_task_timeout_cause", err: new Error("file task timeout", { cause: new Error("file task timeout") }), wantClass: FailureTimeout },
       { name: "cancelled", err: new Error("context canceled"), wantClass: FailureCancelled },
       { name: "cancelled_wrapped", err: new Error(`aborted ${secret}: context canceled`, { cause: new Error("context canceled") }), wantClass: FailureCancelled },
+      { name: "run_cancelled", err: new Error("review was cancelled"), wantClass: FailureCancelled },
       { name: "main_task_empty", err: errMainTaskEmpty, wantClass: FailureConfiguration },
       { name: "main_task_empty_wrapped", err: new Error(`subtask ${secret}: ${errMainTaskEmpty.message}`, { cause: errMainTaskEmpty }), wantClass: FailureConfiguration },
       { name: "default_provider", err: new Error(secret), wantClass: FailureProvider },
