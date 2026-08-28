@@ -39,8 +39,8 @@ bun run verify:release
 
 `verify:release` is the self-contained exact-commit release gate: typecheck,
 tests, one build, one packed install, and installed CLI/library smoke tests. It
-does not require an OCR checkout. `verify:ocr-baseline` is the optional frozen
-OCR 1.9.9 differential audit and is not required for normal patch releases.
+does not require an OCR checkout. The complete OCR 1.9.9 fork audit is
+preserved at the `v0.4.0` tag.
 
 From a checkout without a build:
 

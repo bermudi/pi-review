@@ -1,10 +1,9 @@
 # Historical OCR v1.9.9 fork plan — black-box evidence
 
 > **Frozen evidence:** this migration is complete. It is not the active
-> development or release process. Normal releases use
-> `bun run verify:release`; `bun run verify:ocr-baseline` reruns this frozen
-> audit only when intentionally requested. Future OCR releases are not
-> automatic pi-reviewer upgrade targets.
+> development or release process. Normal releases use `bun run verify:release`;
+> the tooling that produced this evidence is preserved at tag `v0.4.0`. Future
+> OCR releases are not automatic pi-reviewer upgrade targets.
 
 ## Decision and current status
 

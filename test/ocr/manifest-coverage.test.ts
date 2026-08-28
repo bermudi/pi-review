@@ -5,7 +5,6 @@
 // blob, and top-level Test name through the generator's --check mode.
 
 import { describe, expect, test } from "bun:test";
-import { spawnSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 
@@ -56,15 +55,6 @@ const repoRoot = process.cwd();
 const inventoryPath = resolve(repoRoot, "docs/ocr-upstream-test-inventory.json");
 
 describe("OCR v1.9.9 exhaustive upstream-test inventory", () => {
-  test("exactly matches the pinned Git tree and local coverage annotations", () => {
-    const check = spawnSync(
-      "bun",
-      ["run", "check:ocr-test-inventory"],
-      { cwd: repoRoot, encoding: "utf8" },
-    );
-    expect(check.status, `${check.stdout}${check.stderr}`).toBe(0);
-  }, 15_000);
-
   test("uses closed, internally consistent dispositions", () => {
     const inventory = JSON.parse(readFileSync(inventoryPath, "utf8")) as Inventory;
     expect(inventory.schemaVersion).toBe(3);

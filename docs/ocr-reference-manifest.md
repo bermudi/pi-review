@@ -29,8 +29,8 @@ See `docs/ocr-port-plan.md` for the historical migration.
   observations; it is not an identity-trust verification.
 - Status: the v1.9.9 inventory is complete (1,997 cases: 1,015 covered, 112
   equivalent, 388 not applicable, 482 out of scope). The signer-trust caveat
-  above remains. `verify:ocr-baseline` reruns the frozen audit when explicitly
-  requested; normal release acceptance uses `verify:release`.
+  above remains. The audit tooling that produced this evidence is preserved at
+  tag `v0.4.0`; normal release acceptance uses `verify:release`.
 
 ## Verification status (recovery plan v2)
 

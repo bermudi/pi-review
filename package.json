@@ -22,19 +22,7 @@
     "build": "bun run clean && bun build ./src/cli.ts ./src/index.ts --outdir ./dist --target bun --packages external && tsc -p tsconfig.build.json && bun -e 'import { mkdirSync, copyFileSync, cpSync } from \"node:fs\"; import { basename, join } from \"node:path\"; const d = `dist`; const copy = (s, t) => copyFileSync(s, join(d, t)); copy(`src/ocr/template/task-template.json`, `task-template.json`); copy(`src/ocr/template/scan-template.json`, `scan-template.json`); copy(`src/ocr/rules/supported_file_types.json`, `supported_file_types.json`); copy(`src/ocr/rules/default_exclude_patterns.json`, `default_exclude_patterns.json`); copy(`src/ocr/rules/system_rules.json`, `system_rules.json`); cpSync(`src/ocr/template/prompts`, join(d, `prompts`), { recursive: true, filter: (src) => basename(src) !== `PROVENANCE.json` }); cpSync(`src/ocr/rules/rule_docs`, join(d, `rule_docs`), { recursive: true, filter: (src) => basename(src) !== `PROVENANCE.json` }); console.log(`copied runtime data files`)'",
     "start": "bun run src/cli.ts",
     "clean": "bun -e 'import { rm } from \"node:fs/promises\"; await rm(\"dist\", { recursive: true, force: true })'",
-    "harness": "bun run test/ocr/harness/index.ts --all",
-    "verify:blackbox-integrity": "bun run verification/blackbox/verify-blackbox-integrity.ts",
-    "verify:sdk-feasibility": "bun run verification/blackbox/verify-sdk-feasibility.ts",
-    "verify:vertical": "bun run verification/blackbox/verify-vertical.ts",
-    "verify:core-review": "bun run verification/blackbox/verify-core-review.ts",
-    "verify:scan": "bun run verification/blackbox/verify-scan.ts",
-    "verify:sessions": "bun run verification/blackbox/verify-sessions.ts",
-    "verify:outputs": "bun run verification/blackbox/verify-outputs.ts",
-    "verify:cutover": "bun run verification/blackbox/verify-cutover.ts",
-    "check:ocr-test-inventory": "bun run scripts/generate-ocr-test-delta.ts --check && bun run scripts/generate-ocr-test-inventory.ts --check",
-    "verify:ocr-test-port": "bun run check:ocr-test-inventory && bun run scripts/generate-ocr-test-inventory.ts --check --require-complete",
-    "verify:release": "bun run verification/release/verify-release.ts",
-    "verify:ocr-baseline": "bun run verification/ocr-baseline/verify-ocr-baseline.ts"
+    "verify:release": "bun run verification/release/verify-release.ts"
   },
   "main": "dist/index.js",
   "engines": {

@@ -30,13 +30,7 @@ the review engine's internal behavior.
 `docs/ocr-upstream-test-inventory.json` records every `*_test.go` file,
 blob, and top-level `Test*` declaration in the pinned OCR tree. It includes
 ported behavior, tests awaiting translation, explicit scope decisions, and
-deferred shells; omitted files cannot pass the inventory check.
-
-```bash
-# Prove the checked-in inventory still matches the pinned Git objects and
-# adjacent local OCR annotations.
-bun run check:ocr-test-inventory
-
-# Completion gate: also fail while any test is pending translation or scope.
-bun run verify:ocr-test-port
-```
+deferred shells. The inventory and the generators that produced it are frozen
+fork evidence, preserved at tag `v0.4.0`; `manifest-coverage.test.ts` still
+proves the checked-in inventory is internally consistent with local test
+annotations.

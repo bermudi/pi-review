@@ -82,8 +82,7 @@ reuse that file's session; independent files never share mutable Pi history or
 route through `followUp`.
 
 Normal releases use `bun run verify:release`, which has no OCR checkout
-dependency. `bun run verify:ocr-baseline` is the optional frozen-reference
-audit and runs each differential group once without recursive prerequisites.
+dependency. The complete frozen-reference audit is preserved at tag `v0.4.0`.
 
 ## Security and read-only guarantees
 

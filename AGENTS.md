@@ -56,16 +56,10 @@ This exact-commit gate performs typechecking, the full local suite, one build,
 one packed install, and independent CLI/library smoke tests. It must not depend
 on `../open-code-review`.
 
-The frozen baseline audit is optional:
-
-```bash
-bun run verify:ocr-baseline
-```
-
-Run it when cutting the `v0.4.0` fork point, when intentionally changing a
-frozen compatibility behavior, or when auditing provenance—not for every
-patch. It requires the pinned neighboring checkout and runs each differential
-group once without recursive gate invocation.
+The complete fork audit—differential groups, upstream inventory, and packed
+differential fixtures—is frozen at tag `v0.4.0`. `main` carries no
+OCR-checkout-dependent tooling; provenance questions are answered against that
+tag and the pinned reference checkout, not by rerunning gates on `main`.
 
 Annotated release tags must point at the exact commit whose `verify:release`
 gate passed. Creating or pushing a release tag still requires explicit user
@@ -212,12 +206,10 @@ packed-install testing, not optional style preferences.
   parent checkout. Build `dist` before invoking a verifier that packs the
   current package. Documentation changes also change the release commit and
   therefore require a new exact-commit `verify:release` run.
-- Focused verification gates are leaves: they must never invoke other gates.
-  Sequencing belongs only to `verify:release` and the optional
-  `verify:ocr-baseline` orchestrator. Normal release verification builds once,
-  packs/installs once, and has no OCR checkout dependency. The frozen audit
-  runs each differential group once and requires one package hash across all
-  reports; do not recreate the old recursive prerequisite graph.
+- `verify:release` is the only orchestrator: it sequences typechecking, the
+  full local suite, one build, and one packed install, and has no OCR checkout
+  dependency. Do not recreate the old recursive prerequisite graph or
+  OCR-dependent release gates.
 - A cryptographically good upstream tag signature is not the same as a trusted
   signer identity. Record `No principal matched` honestly when the local
   allowed-signers configuration cannot bind the key to a principal.
@@ -301,5 +293,4 @@ interactions are covered without paid/network model calls, strict typechecking
 passes, the distributable build succeeds, and `verify:release` passes on the
 exact release commit. Error, abort, partial-coverage, malformed-tool, budget,
 compression, grace, concurrency, cleanup, and resume paths deserve tests
-alongside the happy path. Run `verify:ocr-baseline` only under the independent
-maintenance policy above.
+alongside the happy path.
