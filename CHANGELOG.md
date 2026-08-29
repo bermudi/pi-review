@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+- `file_find` now supports subpath and cross-platform queries: queries
+  containing `/` or `\\` fall back to full repository-relative path matching
+  when basename matching finds nothing, and backslash separators are
+  normalized. Tool schema descriptions updated to match. Adopted surgically
+  from OCR commit `47192a2` (v1.11.0, PR #1075).
+- The other-changed-files prompt context now includes per-file churn stats —
+  `STATUS   path (+N/-M)` — so the model can gauge each sibling file's diff
+  size before requesting it. Mechanism adopted from OCR commit `43ef414`
+  (v1.11.0, PRs #1078/#1082).
 - Relicense the project from GPL-2.0-only to GPL-3.0-or-later, add Apache-2.0
   attribution for the Open Code Review v1.9.3 source port, and pin that release
   as the behavioral compatibility target.

@@ -1193,6 +1193,9 @@ export class Agent {
   private buildChangeFilesExcept(excludePath: string): string {
     // Mirror Go Agent.buildChangeFilesExcept: write a newline after every
     // non-excluded entry except the final element of a.diffs (by original index).
+    // Churn suffix (+N/-M) adopted from OCR commit 43ef414 (v1.11.0, PRs
+    // #1078/#1082): exposes each sibling file's diff size so the model can
+    // judge whether requesting its full diff is worth the context cost.
     let out = "";
     for (let i = 0; i < this.diffs.length; i++) {
       const dRaw = this.diffs[i]!;
@@ -1203,7 +1206,7 @@ export class Agent {
       if (d.isNew) status = "ADDED";
       else if (d.isDeleted) status = "DELETED";
       else if (d.oldPath !== d.newPath) status = "RENAMED";
-      out += `${status}   ${d.newPath}`;
+      out += `${status}   ${d.newPath} (+${d.insertions}/-${d.deletions})`;
       if (i < this.diffs.length - 1) {
         out += "\n";
       }

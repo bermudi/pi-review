@@ -174,3 +174,60 @@ test("TestShouldSkipFile", async () => {
     fs.rmSync(dir, { recursive: true, force: true });
   }
 });
+
+// Adopted from OCR commit 47192a2 (v1.11.0, PR #1075): TestFileFind_PathWithSubdirectory
+test("TestFileFind_PathWithSubdirectory", async () => {
+  const dir = setupFileFindRepo();
+  try {
+    const p = NewFileFind(new FileReader({ RepoDir: dir, Mode: 0 as never, Ref: "" }));
+
+    // Directory-scoped subpath query (forward slashes) must resolve to the
+    // nested file, not just match against the base filename.
+    const got = await p.Execute(undefined, { query_name: "pkg/util" });
+    expect(got).toContain("pkg/util.go");
+
+    // Windows-style backslash separators in query_name must be normalized
+    // so cross-platform agents resolve the same file.
+    const gotWin = await p.Execute(undefined, { query_name: "pkg\\util.go" });
+    expect(gotWin).toContain("pkg/util.go");
+
+    // A directory-prefix query should match every file under that directory.
+    const gotDir = await p.Execute(undefined, { query_name: "pkg/" });
+    expect(gotDir).toContain("pkg/util.go");
+
+    // Case-insensitive subpath query still resolves after normalization.
+    const gotCI = await p.Execute(undefined, { query_name: "PKG/UTIL" });
+    expect(gotCI).toContain("pkg/util.go");
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+// Adopted from OCR commit 47192a2 (v1.11.0, PR #1075): TestFileFind_BasenamePrecisionAndFallback
+test("TestFileFind_BasenamePrecisionAndFallback", async () => {
+  const dir = setupFileFindRepo();
+  // Write an extra file under pkg/ that does NOT have 'util' in its basename.
+  fs.mkdirSync(path.join(dir, "pkg"), { recursive: true });
+  fs.writeFileSync(path.join(dir, "pkg", "helper.go"), "package pkg\n", { mode: 0o644 });
+  spawnSync("git", ["add", "."], { cwd: dir });
+  try {
+    const p = NewFileFind(new FileReader({ RepoDir: dir, Mode: 0 as never, Ref: "" }));
+
+    // 1. Pure filename query "util" matches basename "util.go", staying
+    // precise without including "pkg/helper.go".
+    const gotUtil = await p.Execute(undefined, { query_name: "util" });
+    expect(gotUtil).toContain("pkg/util.go");
+    expect(gotUtil.includes("pkg/helper.go")).toBe(false);
+
+    // 2. Subpath query "pkg/helper" matches nothing in the basename pass and
+    // falls back to the full relative path match.
+    const gotSubpath = await p.Execute(undefined, { query_name: "pkg/helper" });
+    expect(gotSubpath).toContain("pkg/helper.go");
+
+    // 3. A subpath query matching nothing at all still reports not found.
+    const gotNone = await p.Execute(undefined, { query_name: "no_such_dir/no_such_file" });
+    expect(gotNone).toContain("not found");
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});

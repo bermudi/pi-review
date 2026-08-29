@@ -416,14 +416,15 @@ describe("ocr agent helpers (ported from internal/agent/agent_test.go)", () => {
     expect(empty.RunManifest()).toBeNull();
   });
 
-  // OCR v1.9.3: TestBuildChangeFilesExcept
+  // OCR v1.9.3: TestBuildChangeFilesExcept; churn suffix (+N/-M) adopted from
+  // OCR commit 43ef414 (v1.11.0, PRs #1078/#1082).
   test("TestBuildChangeFilesExcept", () => {
     const a = makeAgent();
     (a as unknown as { diffs: Diff[] }).diffs = [
-      createDiff({ newPath: "main.go", oldPath: "main.go" }),
-      createDiff({ newPath: "helper.go", oldPath: "helper.go", isNew: true }),
-      createDiff({ newPath: "removed.go", oldPath: "removed.go", isDeleted: true }),
-      createDiff({ newPath: "renamed.go", oldPath: "old_name.go" }),
+      createDiff({ newPath: "main.go", oldPath: "main.go", insertions: 7, deletions: 2 }),
+      createDiff({ newPath: "helper.go", oldPath: "helper.go", isNew: true, insertions: 5 }),
+      createDiff({ newPath: "removed.go", oldPath: "removed.go", isDeleted: true, deletions: 20 }),
+      createDiff({ newPath: "renamed.go", oldPath: "old_name.go", insertions: 3, deletions: 4 }),
       createDiff({ newPath: "bin.dat", oldPath: "bin.dat", isBinary: true }),
     ];
     const got = (a as unknown as { buildChangeFilesExcept: (p: string) => string }).buildChangeFilesExcept("main.go");
@@ -432,5 +433,22 @@ describe("ocr agent helpers (ported from internal/agent/agent_test.go)", () => {
     expect(got.includes("DELETED")).toBe(true);
     expect(got.includes("RENAMED")).toBe(true);
     expect(got.includes("bin.dat")).toBe(false);
+    // Exact shape: STATUS   path (+N/-M), one per line. The trailing newline
+    // mirrors the Go original's index-based separator (the skipped binary
+    // entry is the final element of a.diffs).
+    expect(got).toBe(
+      "ADDED   helper.go (+5/-0)\nDELETED   removed.go (+0/-20)\nRENAMED   renamed.go (+3/-4)\n",
+    );
+  });
+
+  // Churn stats reflect each file's own insertions/deletions and default to
+  // (+0/-0) when the diff carries no counts (adopted from OCR commit 43ef414).
+  test("TestBuildChangeFilesExcept_ChurnDefaults", () => {
+    const a = makeAgent();
+    (a as unknown as { diffs: Diff[] }).diffs = [
+      createDiff({ newPath: "only.go", oldPath: "only.go" }),
+    ];
+    const got = (a as unknown as { buildChangeFilesExcept: (p: string) => string }).buildChangeFilesExcept("other.go");
+    expect(got).toBe("MODIFIED   only.go (+0/-0)");
   });
 });

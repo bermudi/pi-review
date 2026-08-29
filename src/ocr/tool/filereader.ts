@@ -815,6 +815,14 @@ export class FileFindProvider {
     if (queryName.trim() === "") return "// The file was not found";
     const caseSensitive = Boolean(realArgs["case_sensitive"]);
 
+    // Adopted from OCR commit 47192a2 (v1.11.0, PR #1075): normalize
+    // Windows-style backslash separators so subpath queries (e.g.
+    // `pkg\util.go`) resolve identically on every platform.
+    const query = queryName.replaceAll("\\", "/");
+    // Precompute the query comparison form once; the file list can be large,
+    // so avoid recomputing toLowerCase(query) on every iteration.
+    const queryCmp = caseSensitive ? query : query.toLowerCase();
+
     let files: string[];
     try {
       files = await this.listGitFiles(signal);
@@ -823,15 +831,29 @@ export class FileFindProvider {
       throw e;
     }
 
+    // Pass 1: match against the base filename (maintains precision for pure
+    // filename queries). Adopted from OCR commit 47192a2 (#1075).
     const matched: string[] = [];
     for (const f of files) {
       const base = f.includes("/") ? f.slice(f.lastIndexOf("/") + 1) : f;
-      const match = caseSensitive
-        ? base.includes(queryName)
-        : base.toLowerCase().includes(queryName.toLowerCase());
-      if (match) {
+      const baseCmp = caseSensitive ? base : base.toLowerCase();
+      if (baseCmp.includes(queryCmp)) {
         matched.push(f);
         if (matched.length >= fileFindMaxCount) break;
+      }
+    }
+
+    // Pass 2 (fallback): only when basename matching found nothing, match
+    // against the full repository-relative path — enables directory-scoped
+    // queries such as `pkg/util` or `internal/diff`. Adopted from OCR
+    // commit 47192a2 (#1075).
+    if (matched.length === 0) {
+      for (const f of files) {
+        const pathCmp = caseSensitive ? f : f.toLowerCase();
+        if (pathCmp.includes(queryCmp)) {
+          matched.push(f);
+          if (matched.length >= fileFindMaxCount) break;
+        }
       }
     }
 
