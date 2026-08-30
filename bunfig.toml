@@ -1,0 +1,2 @@
+[test]
+preload = ["./test/support/hermetic-agent-dir.ts"]

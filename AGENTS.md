@@ -232,6 +232,15 @@ packed-install testing, not optional style preferences.
   itself (OCR announces the budget only via the terminal grace round). Do
   not remove these notices to restore OCR parity; their contract is pinned in
   `test/ocr/llmloop/loop.test.ts`.
+- Model resolution may harvest provider registrations from user-scope pi
+  extensions (`src/ocr/cli/extension-providers.ts`). This is host-side,
+  user-scope-only, fail-open (a broken extension costs its provider only),
+  and offline: extension code executes only under the agent directory in a
+  neutral working directory — repository extensions are never scanned or
+  executed — and only provider configs cross into the ModelRuntime. The
+  "never load extensions into review sessions" red line is untouched: review
+  sessions stay extension-free. Invariants are pinned in
+  `test/ocr/cli/extension-providers.test.ts`.
 - The removed atomic `submit_review`, deterministic change map, and mandatory
   citation verifier are not part of the maintained review path and must not be
   reintroduced as defaults.

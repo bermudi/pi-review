@@ -38,6 +38,7 @@ import { Agent, newAgent } from "../agent/agent.js";
 import { Agent as ScanAgent, NewAgent as NewScanAgent } from "../scan/scan.js";
 import { reviewModeString } from "../agent/util.js";
 import { createPiTransportForFile, type PiModelIdentity } from "../pi-adapter/pi-transport.js";
+import { harvestExtensionProviders, shortErrorReason } from "./extension-providers.js";
 import { FileReader, DiffMap, FileReadProvider, FileReadDiffProvider, CodeSearchProvider, FileFindProvider } from "../tool/filereader.js";
 import { Registry } from "../tool/definitions.js";
 import { buildToolRegistry } from "./git.js";
@@ -208,10 +209,18 @@ export interface ScanFactoryDeps {
 
 type PiModel = NonNullable<NonNullable<Parameters<typeof createPiTransportForFile>[0]>["model"]>;
 
+/**
+ * Resolved model selection through Pi's public model runtime. `model` is
+ * undefined when neither `--provider` nor `--model` was given: the caller then
+ * passes only the augmented runtime to the transport, so Pi's own fallback
+ * (first credential-configured provider) applies — now including
+ * extension-registered providers. Pi's saved default model is deliberately
+ * not consumed here; the transport's in-memory settings never read it.
+ */
 export interface PiModelSelection {
-  readonly model: PiModel;
   readonly modelRuntime: ModelRuntime;
-  readonly identity: PiModelIdentity;
+  readonly model?: PiModel;
+  readonly identity?: PiModelIdentity;
   readonly thinkingLevel?: NonNullable<Parameters<typeof createPiTransportForFile>[0]>["thinkingLevel"];
 }
 
@@ -221,8 +230,12 @@ export async function resolvePiModelSelection(
   provider: string,
   selector: string,
   onWarning?: (message: string) => void,
-): Promise<PiModelSelection | null> {
-  if (provider === "" && selector === "") return null;
+): Promise<PiModelSelection> {
+  // Approved exception to the "no extensions near reviews" rule: this is
+  // host-side, user-scope-only harvesting at model-resolution time (never in a
+  // review session). Warn-and-continue: a broken extension costs its provider
+  // only; a total failure degrades to built-in providers plus a warning.
+  const harvest = await harvestExtensionProviders(agentDir, onWarning);
   const runtime = await ModelRuntime.create({
     authPath: path.join(agentDir, "auth.json"),
     modelsPath: path.join(agentDir, "models.json"),
@@ -234,6 +247,24 @@ export async function resolvePiModelSelection(
     // never a network fetch.
     allowModelNetwork: false,
   });
+  for (const { name, config } of harvest.registrations) {
+    try {
+      runtime.registerProvider(name, config);
+    } catch (error) {
+      onWarning?.(`extension provider "${name}" failed to register: ${shortErrorReason(error)}`);
+    }
+  }
+  for (const { provider: nativeProvider } of harvest.nativeRegistrations) {
+    try {
+      runtime.registerNativeProvider(nativeProvider);
+    } catch (error) {
+      onWarning?.(`extension provider "${nativeProvider.id}" failed to register: ${shortErrorReason(error)}`);
+    }
+  }
+  // registerProvider fires its own background refresh; await one explicit
+  // no-network refresh so locally cached extension catalogs (models-store.json)
+  // are restored before selector resolution reads models.
+  await runtime.refresh({ allowNetwork: false });
   if (selector !== "") {
     const resolved = resolveCliModel({
       cliProvider: provider === "" ? undefined : provider,
@@ -241,33 +272,33 @@ export async function resolvePiModelSelection(
       modelRuntime: runtime,
     });
     if (resolved.error !== undefined) throw new Error(resolved.error);
-    if (resolved.model === undefined) throw new Error(`unknown model "${selector}" in Pi configuration`);
+    const model = resolved.model;
+    if (model === undefined) throw new Error(`unknown model "${selector}" in Pi configuration`);
     // Pi synthesizes a default-spec model when the id is unknown under a
     // known provider (custom-model-id feature). That changes token
     // budgeting assumptions, so never let it happen silently.
     if (resolved.warning !== undefined && onWarning !== undefined) onWarning(resolved.warning);
     return {
-      model: resolved.model,
+      model,
       modelRuntime: runtime,
-      identity: { provider: resolved.model.provider, model: resolved.model.id },
+      identity: { provider: model.provider, model: model.id },
       ...(resolved.thinkingLevel === undefined ? {} : { thinkingLevel: resolved.thinkingLevel }),
     };
   }
 
-  const selectedProvider = provider;
-  const selectedModel = selector;
-  let model: PiModel | undefined;
-  if (selectedProvider !== "") {
-    const matches = runtime.getModels(selectedProvider);
-    if (matches.length !== 1) {
-      throw new Error(`--provider "${selectedProvider}" is ambiguous; specify --model ${selectedProvider}/model`);
+  if (provider !== "") {
+    const matches = runtime.getModels(provider);
+    const model = matches.length === 1 ? matches[0] : undefined;
+    if (model === undefined) {
+      throw new Error(`--provider "${provider}" is ambiguous; specify --model ${provider}/model`);
     }
-    model = matches[0];
+    return { model, modelRuntime: runtime, identity: { provider: model.provider, model: model.id } };
   }
-  if (model === undefined) {
-    throw new Error(`unknown model "${selectedProvider}/${selectedModel}" in Pi configuration`);
-  }
-  return { model, modelRuntime: runtime, identity: { provider: model.provider, model: model.id } };
+
+  // No flags: pi-reviewer has no default of its own. Only the augmented
+  // runtime crosses the boundary; the transport session applies Pi's fallback
+  // with pi's saved defaultModel unread (decision: keep our fallback chain).
+  return { modelRuntime: runtime };
 }
 
 function transportModelIdentity(transport: unknown): PiModelIdentity | undefined {
@@ -389,13 +420,13 @@ export function createReviewRunnerFactory(
       tools: mainToolDefs,
       supplementalTools: REVIEW_FILTER_TOOLS,
       retryCollector,
-      model: selection?.model,
-      modelRuntime: selection?.modelRuntime,
-      thinkingLevel: selection?.thinkingLevel,
+      model: selection.model,
+      modelRuntime: selection.modelRuntime,
+      thinkingLevel: selection.thinkingLevel,
     });
     let deferredRunError: Error | null = null;
     return await withOwnedTransport(transport, async () => {
-    const identity = transportModelIdentity(transport) ?? selection?.identity ?? {
+    const identity = transportModelIdentity(transport) ?? selection.identity ?? {
       provider: opts.provider,
       model: opts.model !== "" ? opts.model : "test-model",
     };
@@ -624,12 +655,12 @@ export function createScanRunnerFactory(
       cwd,
       agentDir,
       tools: mainToolDefs,
-      model: selection?.model,
-      modelRuntime: selection?.modelRuntime,
-      thinkingLevel: selection?.thinkingLevel,
+      model: selection.model,
+      modelRuntime: selection.modelRuntime,
+      thinkingLevel: selection.thinkingLevel,
     });
     return await withOwnedTransport(transport, async () => {
-    const modelIdentity = transportModelIdentity(transport) ?? selection?.identity ?? {
+    const modelIdentity = transportModelIdentity(transport) ?? selection.identity ?? {
       provider: opts.provider,
       model: modelIdFromModel(opts.model),
     };

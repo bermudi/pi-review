@@ -26,7 +26,7 @@ test("resolves explicit provider/model through public Pi ModelRuntime", async ()
       },
     }));
     const selected = await resolvePiModelSelection(dir, "", "test-provider/test-model");
-    if (selected === null) throw new Error("model selection unexpectedly empty");
+    if (selected?.model === undefined) throw new Error("model selection unexpectedly empty");
     expect(selected.identity).toEqual({ provider: "test-provider", model: "test-model" });
     expect(selected.model.id).toBe("test-model");
     const thinking = await resolvePiModelSelection(dir, "", "test-provider/test-model:high");
@@ -49,8 +49,25 @@ test("resolves explicit provider/model through public Pi ModelRuntime", async ()
   }
 });
 
-test("leaves Pi default selection untouched without flags", async () => {
-  expect(await resolvePiModelSelection("/does/not/matter", "", "")).toBeNull();
+test("no flags: returns the augmented runtime without picking a model", async () => {
+  const dir = mkdtempSync(join(tmpdir(), "ocr-model-noflag-"));
+  try {
+    // Pi's saved default is deliberately not consumed (decision 3): with no
+    // flags the selection carries no model even when settings name one; the
+    // transport's fallback chain (first credential-configured provider, over
+    // the augmented runtime) decides instead.
+    writeFileSync(join(dir, "settings.json"), JSON.stringify({
+      defaultModel: "settings-default/never-picked",
+    }));
+    const selection = await resolvePiModelSelection(dir, "", "");
+    expect(selection.model).toBeUndefined();
+    expect(selection.identity).toBeUndefined();
+    expect(selection.thinkingLevel).toBeUndefined();
+    // The runtime itself is always created and functional.
+    expect(Array.isArray(selection.modelRuntime.getModels())).toBe(true);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
 });
 
 test("resolves models recorded only in Pi's local catalog cache", async () => {
@@ -84,7 +101,7 @@ test("resolves models recorded only in Pi's local catalog cache", async () => {
       },
     }));
     const selected = await resolvePiModelSelection(dir, "", "openrouter/cache-only/test-model");
-    if (selected === null) throw new Error("model selection unexpectedly empty");
+    if (selected?.model === undefined) throw new Error("model selection unexpectedly empty");
     expect(selected.identity).toEqual({ provider: "openrouter", model: "cache-only/test-model" });
     // The cache's spec is used verbatim — a synthesized fallback would carry
     // Pi's default context window instead.

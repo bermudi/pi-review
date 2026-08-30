@@ -180,7 +180,7 @@ There is no login flow in `pi-reviewer`. By default, Pi uses `~/.pi/agent`:
 
 Set `PI_CODING_AGENT_DIR` or pass `--agent-dir` via the library `ReviewOptions.agentDir` for another directory. Set `PI_REVIEW_MODEL` is not used; pass `--model` explicitly.
 
-Model references follow `pi --model` resolution through `~/.pi/agent/models.json`. Repository `AGENTS.md`, skills, extensions, and settings are never loaded into review sessions; repository material is untrusted evidence.
+Model references follow `pi --model` resolution through `~/.pi/agent/models.json`. User-level pi extensions that register providers (proxies, aggregators) are harvested at model-resolution time, so `--model` accepts their providers too; a broken extension only costs its own provider and produces a warning. Only user-scope extensions under your agent directory run, solely to collect provider registrations, and never inside review sessions. Repository `AGENTS.md`, skills, extensions, and settings are never loaded into review sessions; repository material is untrusted evidence.
 
 ## Library usage
 
