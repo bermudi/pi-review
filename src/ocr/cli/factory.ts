@@ -230,8 +230,9 @@ export async function resolvePiModelSelection(
     // catalog (models-store.json) so selectors resolve against current
     // catalog data — newer models and corrected specs — rather than only
     // this build's frozen static catalog plus custom models.json entries.
-    // allowNetwork is left unset, so this is a local cache read — never a
-    // network fetch.
+    // Network access is explicitly disabled: this is a local cache read,
+    // never a network fetch.
+    allowModelNetwork: false,
   });
   if (selector !== "") {
     const resolved = resolveCliModel({
