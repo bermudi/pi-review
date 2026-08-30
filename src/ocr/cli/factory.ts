@@ -220,16 +220,18 @@ export async function resolvePiModelSelection(
   agentDir: string,
   provider: string,
   selector: string,
+  onWarning?: (message: string) => void,
 ): Promise<PiModelSelection | null> {
   if (provider === "" && selector === "") return null;
   const runtime = await ModelRuntime.create({
     authPath: path.join(agentDir, "auth.json"),
     modelsPath: path.join(agentDir, "models.json"),
     // Default create-time refresh: restores the locally cached provider
-    // catalog (models-store.json) so selectors can resolve providers that
-    // ship in Pi's catalog rather than only built-ins plus custom
-    // models.json entries. allowNetwork is left unset, so this is a
-    // local cache read — never a network fetch.
+    // catalog (models-store.json) so selectors resolve against current
+    // catalog data — newer models and corrected specs — rather than only
+    // this build's frozen static catalog plus custom models.json entries.
+    // allowNetwork is left unset, so this is a local cache read — never a
+    // network fetch.
   });
   if (selector !== "") {
     const resolved = resolveCliModel({
@@ -239,6 +241,10 @@ export async function resolvePiModelSelection(
     });
     if (resolved.error !== undefined) throw new Error(resolved.error);
     if (resolved.model === undefined) throw new Error(`unknown model "${selector}" in Pi configuration`);
+    // Pi synthesizes a default-spec model when the id is unknown under a
+    // known provider (custom-model-id feature). That changes token
+    // budgeting assumptions, so never let it happen silently.
+    if (resolved.warning !== undefined && onWarning !== undefined) onWarning(resolved.warning);
     return {
       model: resolved.model,
       modelRuntime: runtime,
@@ -373,7 +379,8 @@ export function createReviewRunnerFactory(
     const agentDir = agentDirEnv !== undefined && agentDirEnv !== "" ? agentDirEnv : `${process.env["HOME"] ?? "/tmp"}/.pi/agent`;
 
     const retryCollector = new RetryCollector();
-    const selection = await resolvePiModelSelection(agentDir, opts.provider, opts.model);
+    const selection = await resolvePiModelSelection(agentDir, opts.provider, opts.model, (message) =>
+      progress?.emit({ kind: "progress", message: `[pi-review] ${message}` }));
     const createTransport = deps.createTransport ?? createPiTransportForFile;
     const transport = await createFileScopedTransportPool(createTransport, {
       cwd,
@@ -609,7 +616,8 @@ export function createScanRunnerFactory(
     }
     const mainToolDefs = allMainToolDefs.filter((t) => t.function.name !== "file_read_diff");
 
-    const selection = await resolvePiModelSelection(agentDir, opts.provider, opts.model);
+    const selection = await resolvePiModelSelection(agentDir, opts.provider, opts.model, (message) =>
+      progress?.emit({ kind: "progress", message: `[pi-review] ${message}` }));
     const createTransport = deps.createTransport ?? createPiTransportForFile;
     const transport = await createFileScopedTransportPool(createTransport, {
       cwd,
