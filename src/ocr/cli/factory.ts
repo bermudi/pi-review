@@ -225,7 +225,11 @@ export async function resolvePiModelSelection(
   const runtime = await ModelRuntime.create({
     authPath: path.join(agentDir, "auth.json"),
     modelsPath: path.join(agentDir, "models.json"),
-    refreshOnCreate: false,
+    // Default create-time refresh: restores the locally cached provider
+    // catalog (models-store.json) so selectors can resolve providers that
+    // ship in Pi's catalog rather than only built-ins plus custom
+    // models.json entries. allowNetwork is left unset, so this is a
+    // local cache read — never a network fetch.
   });
   if (selector !== "") {
     const resolved = resolveCliModel({
