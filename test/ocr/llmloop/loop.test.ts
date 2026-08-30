@@ -697,6 +697,160 @@ describe("ocr llmloop Runner (ported)", () => {
     expect(runner.totalOutputTokens()).toBe(30);
   });
 
+  // ---------------------------------------------------------------------------
+  // pi-reviewer extension: mid-loop budget notices. OCR v1.9.9 announces the
+  // round budget only through the terminal grace round; pi-reviewer also
+  // tells the model what remains every 5 rounds once half is spent.
+  // ---------------------------------------------------------------------------
+
+  function fileReadRounds(count: number, startId = 1): ScriptedResponse[] {
+    return Array.from({ length: count }, (_, i) => ({
+      toolCalls: [{ id: `call_${startId + i}`, name: "file_read", arguments: JSON.stringify({ path: "main.go" }) }],
+      usage: { PromptTokens: 10, CompletionTokens: 5, CacheReadTokens: 0, CacheWriteTokens: 0 },
+    }));
+  }
+
+  function budgetNotices(req: { messages: readonly Message[] } | undefined): string[] {
+    return (req?.messages ?? [])
+      .filter((m) => m.role === "user" && typeof m.content === "string" && m.content.includes("Budget notice"))
+      .map((m) => m.content as string);
+  }
+
+  test("budget notices fire every 5 rounds once half the budget is spent", async () => {
+    const { runner, transport } = makeRunner({
+      toolRegistry: fileReadRegistry("package main\n"),
+      template: { MaxTokens: 100000, MaxToolRequestTimes: 20, MaxCompletionTokens: 1000 } as unknown as Record<string, unknown>,
+      responses: [
+        ...fileReadRounds(20),
+        {
+          toolCalls: [{ id: "call_grace", name: "task_done", arguments: "{}" }],
+          usage: { PromptTokens: 10, CompletionTokens: 5, CacheReadTokens: 0, CacheWriteTokens: 0 },
+        },
+      ],
+    });
+
+    const result = await runner.RunPerFile(new AbortController().signal, [newTextMessage("user", "review")], "main.go");
+
+    expect(result.completed).toBe(false);
+    expect(result.stop).toBe(MainLoopStop.StopMaxRounds);
+    expect(transport.requests).toHaveLength(21); // 20 rounds + grace
+
+    // First half of the budget: silent.
+    for (let i = 0; i < 9; i++) {
+      expect(budgetNotices(transport.requests[i])).toEqual([]);
+    }
+    // Round 11's request (10 remaining) and round 16's request (5 remaining).
+    // Notices accumulate: a later request carries every earlier notice too.
+    expect(budgetNotices(transport.requests[9])).toEqual([
+      "[pi-review] Budget notice: 10 of 20 tool-call rounds remaining. If you have enough evidence, submit findings with code_comment and finish with task_done.",
+    ]);
+    expect(budgetNotices(transport.requests[14])).toEqual([
+      "[pi-review] Budget notice: 10 of 20 tool-call rounds remaining. If you have enough evidence, submit findings with code_comment and finish with task_done.",
+      "[pi-review] Budget notice: 5 of 20 tool-call rounds remaining. If you have enough evidence, submit findings with code_comment and finish with task_done.",
+    ]);
+    // Between notices: no new notice appears (requests still carry the
+    // earlier one — messages accumulate).
+    for (let i = 10; i < 14; i++) {
+      expect(budgetNotices(transport.requests[i])).toEqual([
+        "[pi-review] Budget notice: 10 of 20 tool-call rounds remaining. If you have enough evidence, submit findings with code_comment and finish with task_done.",
+      ]);
+    }
+    // The grace round still announces exhaustion after the last round.
+    const graceTexts = (transport.requests[20]?.messages ?? [])
+      .filter((m) => typeof m.content === "string")
+      .map((m) => m.content as string);
+    expect(graceTexts.some((t) => t.includes("tool-call budget is exhausted"))).toBe(true);
+  });
+
+  test("no budget notices when the model finishes early", async () => {
+    const { runner, transport } = makeRunner({
+      toolRegistry: fileReadRegistry("package main\n"),
+      responses: [
+        ...fileReadRounds(3),
+        {
+          toolCalls: [{ id: "call_done", name: "task_done", arguments: "{}" }],
+          usage: { PromptTokens: 10, CompletionTokens: 5, CacheReadTokens: 0, CacheWriteTokens: 0 },
+        },
+      ],
+    });
+
+    const result = await runner.RunPerFile(new AbortController().signal, [newTextMessage("user", "review")], "main.go");
+
+    expect(result.completed).toBe(true);
+    expect(transport.requests).toHaveLength(4);
+    for (const req of transport.requests) {
+      expect(budgetNotices(req)).toEqual([]);
+    }
+  });
+
+  test("odd budgets snap notices to the 5-round grid past halfway", async () => {
+    const { runner, transport } = makeRunner({
+      toolRegistry: fileReadRegistry("package main\n"),
+      template: { MaxTokens: 100000, MaxToolRequestTimes: 37, MaxCompletionTokens: 1000 } as unknown as Record<string, unknown>,
+      responses: [
+        ...fileReadRounds(37),
+        {
+          toolCalls: [{ id: "call_grace", name: "task_done", arguments: "{}" }],
+          usage: { PromptTokens: 10, CompletionTokens: 5, CacheReadTokens: 0, CacheWriteTokens: 0 },
+        },
+      ],
+    });
+
+    const result = await runner.RunPerFile(new AbortController().signal, [newTextMessage("user", "review")], "main.go");
+
+    expect(result.stop).toBe(MainLoopStop.StopMaxRounds);
+    expect(transport.requests).toHaveLength(38); // 37 rounds + grace
+    // Half of 37 is 18.5; the first grid point at or below it is 15, not 18.
+    expect(budgetNotices(transport.requests[21])).toEqual([
+      "[pi-review] Budget notice: 15 of 37 tool-call rounds remaining. If you have enough evidence, submit findings with code_comment and finish with task_done.",
+    ]);
+    expect(budgetNotices(transport.requests[26])).toEqual([
+      "[pi-review] Budget notice: 15 of 37 tool-call rounds remaining. If you have enough evidence, submit findings with code_comment and finish with task_done.",
+      "[pi-review] Budget notice: 10 of 37 tool-call rounds remaining. If you have enough evidence, submit findings with code_comment and finish with task_done.",
+    ]);
+    expect(budgetNotices(transport.requests[31])).toEqual([
+      "[pi-review] Budget notice: 15 of 37 tool-call rounds remaining. If you have enough evidence, submit findings with code_comment and finish with task_done.",
+      "[pi-review] Budget notice: 10 of 37 tool-call rounds remaining. If you have enough evidence, submit findings with code_comment and finish with task_done.",
+      "[pi-review] Budget notice: 5 of 37 tool-call rounds remaining. If you have enough evidence, submit findings with code_comment and finish with task_done.",
+    ]);
+    expect(transport.requests.some((r) => budgetNotices(r).some((t) => t.includes(" of 37") && !t.includes("15 of 37") && !t.includes("10 of 37") && !t.includes("5 of 37")))).toBe(false);
+  });
+
+  test("notice skipped when the previous round ended on a retry nudge", async () => {
+    // Budget 20. Round 9 returns no tool calls, so the loop appends the
+    // "no tools called" retry nudge. Round 10 would carry the 10-remaining
+    // notice, but a notice right after that user message would produce
+    // back-to-back user messages, so it is skipped; the 5-remaining notice
+    // still fires later.
+    const { runner, transport } = makeRunner({
+      toolRegistry: fileReadRegistry("package main\n"),
+      template: { MaxTokens: 100000, MaxToolRequestTimes: 20, MaxCompletionTokens: 1000 } as unknown as Record<string, unknown>,
+      responses: [
+        ...fileReadRounds(8),
+        { content: "", usage: { PromptTokens: 10, CompletionTokens: 5, CacheReadTokens: 0, CacheWriteTokens: 0 } },
+        ...fileReadRounds(10, 9),
+        {
+          toolCalls: [{ id: "call_done", name: "task_done", arguments: "{}" }],
+          usage: { PromptTokens: 10, CompletionTokens: 5, CacheReadTokens: 0, CacheWriteTokens: 0 },
+        },
+      ],
+    });
+
+    const result = await runner.RunPerFile(new AbortController().signal, [newTextMessage("user", "review")], "main.go");
+
+    expect(result.completed).toBe(true);
+    expect(transport.requests).toHaveLength(20);
+    // Round 10's request carries the nudge but no notice.
+    const round10 = transport.requests[9];
+    const texts = (round10?.messages ?? []).map((m) => (typeof m.content === "string" ? m.content : ""));
+    expect(texts.some((t) => t.includes("You did not successfully call any tools"))).toBe(true);
+    expect(budgetNotices(round10)).toEqual([]);
+    // The 5-remaining notice still fires on round 16's request.
+    expect(budgetNotices(transport.requests[14])).toEqual([
+      "[pi-review] Budget notice: 5 of 20 tool-call rounds remaining. If you have enough evidence, submit findings with code_comment and finish with task_done.",
+    ]);
+  });
+
   // OCR v1.9.3: TestRunPerFile_GraceRoundSkippedWhenContextCancelled
   test("abort prevents grace call", async () => {
     const controller = new AbortController();

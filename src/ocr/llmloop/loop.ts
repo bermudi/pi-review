@@ -342,6 +342,7 @@ export class Runner {
     filePath: string,
   ): Promise<{ completed: boolean; stop: MainLoopStop; error?: Error }> {
     let toolReqCount = getMaxToolRequestTimes(this.deps.template);
+    const initialToolReqCount = toolReqCount;
     const maxConsecutiveEmptyRounds = 3;
     let consecutiveEmptyRounds = 0;
     const sess = this.getSession();
@@ -365,6 +366,27 @@ export class Runner {
         }
 
         toolReqCount--;
+
+        // pi-reviewer extension (deliberate divergence from OCR v1.9.9, which
+        // only announces the budget through the terminal grace round): once
+        // half the round budget is spent, tell the model what remains every
+        // 5 rounds so it can pace itself and finish inside the budget. Skipped
+        // when the previous round already ended on a user message (the
+        // no-tool-calls retry nudge) to avoid back-to-back user messages.
+        if (
+          toolReqCount > 0 &&
+          toolReqCount % 5 === 0 &&
+          toolReqCount * 2 <= initialToolReqCount &&
+          messages[messages.length - 1]?.role !== "user"
+        ) {
+          messages.push(
+            newTextMessage(
+              "user",
+              `[pi-review] Budget notice: ${toolReqCount} of ${initialToolReqCount} tool-call rounds remaining. ` +
+                `If you have enough evidence, submit findings with code_comment and finish with task_done.`,
+            ),
+          );
+        }
 
         // Mirror Go: create TaskRecord before request so RequestNo exists for identity.
         let rec: TaskRecord | undefined;

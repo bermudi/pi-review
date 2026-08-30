@@ -226,6 +226,12 @@ packed-install testing, not optional style preferences.
   calls. Do not substitute a tool-start budget.
 - The review path uses OCR's incremental `code_comment` collector,
   `task_done`, post-processing, review filter, and restricted grace round.
+- Budget notices are a deliberate pi-reviewer extension, not OCR behavior:
+  once half the per-file round budget is spent, the loop injects a user
+  message stating the remaining rounds every 5 rounds so the model can pace
+  itself (OCR announces the budget only via the terminal grace round). Do
+  not remove these notices to restore OCR parity; their contract is pinned in
+  `test/ocr/llmloop/loop.test.ts`.
 - The removed atomic `submit_review`, deterministic change map, and mandatory
   citation verifier are not part of the maintained review path and must not be
   reintroduced as defaults.
