@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- `--model` and the no-flag fallback now see providers registered by
+  user-level pi extensions (proxies, aggregators such as kilo). Only
+  user-scope extensions under the agent directory run, solely to collect
+  provider registrations, in a neutral working directory and offline; a
+  broken extension costs its provider only and produces a warning.
+  Repository extensions are still never loaded or executed.
 - `file_find` now supports subpath and cross-platform queries: queries
   containing `/` or `\\` fall back to full repository-relative path matching
   when basename matching finds nothing, and backslash separators are
