@@ -17,10 +17,11 @@
 
 import type { CliIo, CliIoOverrides } from "./shared.js";
 import { CliUsageError, makeIo, defaultReviewOptions, defaultScanOptions } from "./shared.js";
-import type { ReviewOptions, ScanOptions } from "./shared.js";
-import { validateReviewOptions, validateScanOptions } from "./shared.js";
+import type { ReviewOptions, ScanOptions, FindingsOptions } from "./shared.js";
+import { validateReviewOptions, validateScanOptions, validateFindingsOptions, defaultFindingsOptions } from "./shared.js";
 import { runReviewContext } from "./review.js";
 import { runScanContext } from "./scan.js";
+import { runFindingsContext } from "./findings.js";
 import type { ReviewRunner, PreviewFactory } from "./review.js";
 import type { ScanRunner, ScanPreviewFactory } from "./scan.js";
 import type { Preview } from "../model/preview.js";
@@ -80,6 +81,7 @@ configurable LLM service, and generates review comments.
 Usage:
   pi-review review [flags]
   pi-review scan [flags]
+  pi-review findings [flags]
   pi-review version
 
 Review flags:
@@ -130,7 +132,15 @@ Scan flags:
   --resume ID                 resume from a previous scan session id
   --tools PATH                path to JSON tools config file (default: embedded)
 
+Findings flags (replay findings from a previous local review or scan):
+  --repo PATH                 repository whose sessions to read (default: current dir)
+  --session ID                replay a specific session (default: most recent for the repository)
+  -f, --format FORMAT         output format: text, json, or sarif (default: text)
+
 Exit status: 0 complete, partial, or skipped; 1 failed or invalid usage.
+findings exits 0 when it displays a session (even one with no findings) and
+1 when there is no session to show, the session id is unknown, or usage is
+invalid.
 `;
 
 // ---------------------------------------------------------------------------
@@ -214,6 +224,14 @@ const SCAN_FLAGS: readonly FlagSpec[] = [
   { name: "provider", takesValue: true },
   { name: "model", takesValue: true },
   { name: "resume", takesValue: true },
+  { name: "help", short: "h", takesValue: false },
+];
+
+const FINDINGS_FLAGS: readonly FlagSpec[] = [
+  { name: "color", takesValue: true },
+  { name: "repo", takesValue: true },
+  { name: "session", takesValue: true },
+  { name: "format", short: "f", takesValue: true },
   { name: "help", short: "h", takesValue: false },
 ];
 
@@ -367,6 +385,15 @@ export function parseScanFlags(argv: readonly string[]): ScanOptions {
   return opts;
 }
 
+export function parseFindingsFlags(argv: readonly string[]): FindingsOptions {
+  const map = parseFlags(argv, FINDINGS_FLAGS);
+  if (map.get("help") === true) return buildFindingsOptions(map);
+  const opts = buildFindingsOptions(map);
+  if (!validateColorMode(opts.color)) throw new CliUsageError(colorModeError(opts.color).message);
+  validateFindingsOptions(opts);
+  return opts;
+}
+
 function buildReviewOptions(map: Map<string, string | boolean>): ReviewOptions {
   const base = defaultReviewOptions();
   const out: ReviewOptions = {
@@ -433,6 +460,16 @@ function buildScanOptions(map: Map<string, string | boolean>): ScanOptions {
     (out as unknown as Record<string, unknown>)["maxTools"] = 10;
   }
   return out;
+}
+
+function buildFindingsOptions(map: Map<string, string | boolean>): FindingsOptions {
+  const base = defaultFindingsOptions();
+  return {
+    repoDir: flagVal(map, "repo") ?? base.repoDir,
+    sessionId: flagVal(map, "session") ?? base.sessionId,
+    outputFormat: (flagVal(map, "format") as FindingsOptions["outputFormat"]) ?? base.outputFormat,
+    color: (flagVal(map, "color") as FindingsOptions["color"]) ?? base.color,
+  };
 }
 
 // ---------------------------------------------------------------------------
@@ -706,7 +743,36 @@ export async function runCli(
     }
   }
 
-  io.stderr(`Error: unknown command "${cmd}"; expected review or scan\n\n${HELP_TEXT}`);
+  if (cmd === "findings") {
+    let map: Map<string, string | boolean>;
+    try {
+      map = parseFlags(rest, FINDINGS_FLAGS);
+    } catch (err) {
+      if (err instanceof CliUsageError) io.stderr(`Error: ${err.message}\n\n${HELP_TEXT}`);
+      else io.stderr("Error: Unable to parse command-line arguments.\n");
+      return 1;
+    }
+    let opts: FindingsOptions;
+    try {
+      opts = buildFindingsOptions(map);
+      if (persistentColor !== undefined) opts = { ...opts, color: persistentColor };
+      if (!validateColorMode(opts.color)) throw new CliUsageError(colorModeError(opts.color).message);
+      validateFindingsOptions(opts);
+    } catch (err) {
+      if (err instanceof CliUsageError) io.stderr(`Error: ${err.message}\n\n${HELP_TEXT}`);
+      else io.stderr(`Error: ${String((err as Error).message)}\n`);
+      return 1;
+    }
+
+    try {
+      return runFindingsContext({ io, opts, version: deps.version ?? VERSION });
+    } catch (err) {
+      io.stderr(`Error: ${String((err as Error).message)}\n`);
+      return 1;
+    }
+  }
+
+  io.stderr(`Error: unknown command "${cmd}"; expected review, scan, or findings\n\n${HELP_TEXT}`);
   return 1;
 }
 

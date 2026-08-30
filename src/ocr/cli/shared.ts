@@ -173,6 +173,18 @@ export interface ScanOptions {
   readonly resume: string;
 }
 
+/**
+ * Options for the read-only `findings` command, which replays a previously
+ * recorded session without running a model. Independent pi-reviewer
+ * surface — not an OCR command.
+ */
+export interface FindingsOptions {
+  readonly repoDir: string;
+  readonly sessionId: string;
+  readonly outputFormat: OutputFormat;
+  readonly color: ColorMode;
+}
+
 // ---------------------------------------------------------------------------
 // Defaults
 // ---------------------------------------------------------------------------
@@ -230,6 +242,15 @@ export function defaultScanOptions(): ScanOptions {
     provider: "",
     model: "",
     resume: "",
+  };
+}
+
+export function defaultFindingsOptions(): FindingsOptions {
+  return {
+    repoDir: "",
+    sessionId: "",
+    outputFormat: "text",
+    color: "auto",
   };
 }
 
@@ -303,6 +324,10 @@ export function validateScanOptions(opts: ScanOptions): void {
   if (opts.batch !== "" && opts.batch !== "none" && opts.batch !== "by-language" && opts.batch !== "by-directory") {
     throw new CliUsageError(`invalid --batch value "${opts.batch}": must be 'none', 'by-language' or 'by-directory'`);
   }
+}
+
+export function validateFindingsOptions(opts: FindingsOptions): void {
+  if (!isValidFormat(opts.outputFormat)) throw new CliUsageError(`invalid --format value "${opts.outputFormat}": must be 'text', 'json' or 'sarif'`);
 }
 
 // ---------------------------------------------------------------------------

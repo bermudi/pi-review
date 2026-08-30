@@ -53,8 +53,8 @@ When the package is installed, use its binary as `pi-review`.
 
 ## CLI
 
-`pi-review` exposes `review` and `scan` subcommands. Both use
-`pi-review review|scan [flags]`; there is no `--engine` switch.
+`pi-review` exposes `review`, `scan`, and `findings` subcommands. Reviews and
+scans use `pi-review review|scan [flags]`; there is no `--engine` switch.
 
 ```bash
 # Review the current workspace (unstaged changes vs HEAD)
@@ -75,6 +75,11 @@ pi-review scan --repo . --path src --model provider/model --format json
 
 # Preview which files would be reviewed without calling the model
 pi-review review --repo . --preview --format json
+
+# Re-show findings from the most recent local review or scan (no model call)
+pi-review findings
+pi-review findings --format json
+pi-review findings --session <session-id>
 ```
 
 **Review flags** (see `pi-review review --help` for exact help):
@@ -101,6 +106,29 @@ pi-review review --repo . --preview --format json
 - `--no-filter` — keep all raw comments without LLM post-filtering
 
 **Scan flags** are analogous with `--path`, `--no-plan`, `--no-dedup`, `--no-summary`, and `--batch`. See `pi-review scan --help`.
+
+**Findings** replays the findings recorded by a previous local review or
+scan without re-running it. Every run persists its final (post-filter)
+comments as a session file under `~/.opencodereview/sessions/` — the same
+store `--resume` uses — and `findings` reads the most recent session for the
+repository (or a named one via `--session ID`) and re-renders it. It is a
+pure local read: no model call, no Git access, no repository mutation.
+
+- `--repo PATH` — repository whose sessions to read (default: current dir;
+  keyed exactly like `--resume`, so run it from the same place as the review)
+- `--session ID` — replay a specific session instead of the most recent
+- `-f, --format FORMAT` — `text` (default), `json`, or `sarif`
+
+The text output starts with a short header (session id, mode, range, start
+time, status, coverage) followed by the same comment rendering the review
+itself used. The JSON envelope is
+`{status, session_id, review_mode, range, started_at, ended_at, message, comments}`
+with `comments` in the same snake_case shape as `review --format json`.
+Aborted or partial runs are still shown — their recorded findings are real —
+but always labeled with their status so stale output is never mistaken for
+a clean review. `findings` exits 0 when it displays a session (even one
+with no findings) and 1 when there is no session to show or the session id
+is unknown.
 
 Output goes to stdout (`text`/`json`/`sarif`); diagnostics and progress go to stderr, so `--format json` remains machine-readable.
 
