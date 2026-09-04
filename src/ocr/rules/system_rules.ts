@@ -43,6 +43,7 @@ import * as os from "node:os";
 import * as crypto from "node:crypto";
 
 import { minimatch } from "minimatch";
+import { withinBase, canonicalPathSync } from "../pathutil.js";
 
 // ---------------------------------------------------------------------------
 // Frozen hashes — mixed v1.9.3/v1.9.5/v1.9.6 assets; per-file provenance is
@@ -432,13 +433,19 @@ export function looksLikeFilePath(s: string): boolean {
   return ALLOWED_RULE_EXTS.has(ext);
 }
 
-export function readRuleFileSafe(filePath: string): string {
+export function readRuleFileSafe(filePath: string, confineRoot = ""): string {
   const maxSize = 512 * 1024;
   let resolved: string;
   try {
     resolved = fs.realpathSync(filePath);
   } catch (e) {
     throw e as Error;
+  }
+  // Isolated adoption from OCR 124bfc3: untrusted project layer must stay
+  // inside the canonical repo root even after symlink resolution (including
+  // absolute paths). Trusted layers pass "" (no confinement).
+  if (confineRoot !== "" && !withinBase(confineRoot, resolved)) {
+    throw new Error(`rule file path ${JSON.stringify(resolved)} escapes repo dir ${JSON.stringify(confineRoot)}`);
   }
   const ext = path.extname(resolved).toLowerCase();
   if (!ALLOWED_RULE_EXTS.has(ext)) {
@@ -457,7 +464,7 @@ export function readRuleFileSafe(filePath: string): string {
   return trimTrailingCRLF(content);
 }
 
-export function tryReadRuleFile(rule: string, repoDir: string): string | null {
+export function tryReadRuleFile(rule: string, repoDir: string, confineRoot = ""): string | null {
   if (repoDir === "") {
     if (!path.isAbsolute(rule)) {
       console.error(`[pi-review] WARNING: cannot resolve relative rule path ${JSON.stringify(rule)} without a repo dir`);
@@ -466,7 +473,7 @@ export function tryReadRuleFile(rule: string, repoDir: string): string | null {
   }
   if (path.isAbsolute(rule)) {
     try {
-      return readRuleFileSafe(rule);
+      return readRuleFileSafe(rule, confineRoot);
     } catch (e) {
       const err = e as NodeJS.ErrnoException;
       if (err.code === "ENOENT") console.error(`[pi-review] WARNING: rule file not found: ${rule}`);
@@ -482,7 +489,7 @@ export function tryReadRuleFile(rule: string, repoDir: string): string | null {
     return null;
   }
   try {
-    return readRuleFileSafe(resolved);
+    return readRuleFileSafe(resolved, confineRoot);
   } catch (e) {
     const err = e as NodeJS.ErrnoException;
     if (err.code === "ENOENT") console.error(`[pi-review] WARNING: rule file not found: ${rule}`);
@@ -491,16 +498,16 @@ export function tryReadRuleFile(rule: string, repoDir: string): string | null {
   }
 }
 
-export function resolveRuleEntries(entries: ProjectRuleEntry[], repoDir: string): void {
+export function resolveRuleEntries(entries: ProjectRuleEntry[], repoDir: string, confineRoot = ""): void {
   for (const entry of entries) {
     if (entry.Rule.trim() === "" || !looksLikeFilePath(entry.Rule)) continue;
-    const content = tryReadRuleFile(entry.Rule, repoDir);
+    const content = tryReadRuleFile(entry.Rule, repoDir, confineRoot);
     if (content !== null) entry.Rule = content;
     else entry.Rule = "";
   }
 }
 
-function parseProjectRuleJson(data: string, repoDirForResolve: string): ProjectRule {
+function parseProjectRuleJson(data: string, repoDirForResolve: string, confineRoot = ""): ProjectRule {
   let raw: unknown;
   try {
     raw = JSON.parse(data) as unknown;
@@ -534,7 +541,7 @@ function parseProjectRuleJson(data: string, repoDirForResolve: string): ProjectR
   if (include.length > 0) pr.Include = include;
   if (exclude.length > 0) pr.Exclude = exclude;
 
-  resolveRuleEntries(pr.Rules, repoDirForResolve);
+  resolveRuleEntries(pr.Rules, repoDirForResolve, confineRoot);
   return pr;
 }
 
@@ -548,7 +555,8 @@ function loadProjectRuleFile(filePath: string): ProjectRule | null {
     throw new Error(`read project rule ${filePath}: ${String(err.message ?? err)}`);
   }
   try {
-    return parseProjectRuleJson(data, path.dirname(filePath));
+    // Trusted layer (global): no confinement.
+    return parseProjectRuleJson(data, path.dirname(filePath), "");
   } catch (e) {
     throw new Error(`unmarshal project rule: ${String((e as Error).message)}`);
   }
@@ -556,17 +564,38 @@ function loadProjectRuleFile(filePath: string): ProjectRule | null {
 
 export function loadProjectRule(repoDir: string): ProjectRule | null {
   if (repoDir === "") return null;
+  // Isolated adoption from OCR 124bfc3: confine the untrusted project layer.
+  // Resolve the repo root canonically, then ensure .opencodereview/rule.json
+  // itself (after symlink resolution) stays inside it before reading.
+  let confineRoot: string;
+  try {
+    confineRoot = canonicalPathSync(repoDir);
+  } catch (e) {
+    throw new Error(`resolve repo dir ${repoDir}: ${String((e as Error).message ?? e)}`);
+  }
   const filePath = path.join(repoDir, ".opencodereview", "rule.json");
+  let resolvedRulePath: string;
+  try {
+    resolvedRulePath = fs.realpathSync(filePath);
+  } catch (e) {
+    const err = e as NodeJS.ErrnoException;
+    if (err.code === "ENOENT") return null;
+    throw new Error(`resolve project rule ${filePath}: ${String(err.message ?? err)}`);
+  }
+  if (!withinBase(confineRoot, resolvedRulePath)) {
+    console.error(`[pi-review] WARNING: project rule file escapes repo dir: ${filePath}`);
+    return null;
+  }
   let data: string;
   try {
-    data = fs.readFileSync(filePath, "utf-8");
+    data = fs.readFileSync(resolvedRulePath, "utf-8");
   } catch (e) {
     const err = e as NodeJS.ErrnoException;
     if (err.code === "ENOENT") return null;
     throw new Error(`read project rule ${filePath}: ${String(err.message ?? err)}`);
   }
   try {
-    return parseProjectRuleJson(data, repoDir);
+    return parseProjectRuleJson(data, repoDir, confineRoot);
   } catch (e) {
     throw new Error(`unmarshal project rule: ${String((e as Error).message)}`);
   }
@@ -594,7 +623,8 @@ export function loadRuleFile(customPath: string): ProjectRule | null {
     throw new Error(`read rule file ${customPath}: ${String((e as NodeJS.ErrnoException).message ?? e)}`);
   }
   try {
-    return parseProjectRuleJson(data, path.dirname(customPath));
+    // Trusted layer (--rule): no confinement.
+    return parseProjectRuleJson(data, path.dirname(customPath), "");
   } catch (e) {
     throw new Error(`unmarshal rule file ${customPath}: ${String((e as Error).message)}`);
   }

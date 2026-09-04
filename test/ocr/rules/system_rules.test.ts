@@ -6,7 +6,7 @@
 // revalidated against OCR v1.9.9.
 
 import { describe, expect, test } from "bun:test";
-import { mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, statSync, symlinkSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, realpathSync, rmSync, statSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -983,6 +983,64 @@ test("resolveRuleEntries path traversal blocked", () => {
       expect(entries[1]?.Rule).toBe("");
     } finally {
       rmSync(outsideFile, { recursive: true, force: true });
+    }
+  });
+});
+
+// Isolated adoption from OCR 124bfc3: untrusted project layer stays inside repo.
+test("resolveRuleEntries confined blocks absolute outside and symlink escape", () => {
+  withTempDir((repoDir) => {
+    const outsideDir = mkdtempSync(join(tmpdir(), "confine-outside-"));
+    try {
+      const outside = join(outsideDir, "secret.md");
+      writeFileSync(outside, "secret\n");
+      const inside = join(repoDir, "inside.md");
+      writeFileSync(inside, "inside rule\n");
+      // Symlink inside repo pointing outside.
+      const linkInside = join(repoDir, "link.md");
+      try {
+        symlinkSync(outside, linkInside);
+      } catch {
+        // If symlinks unavailable, still verify absolute confinement below.
+      }
+      // Use real repo root as confineRoot (canonical).
+      const confineRoot = realpathSync(repoDir);
+      const entries: ProjectRuleEntry[] = [
+        { Path: "**/*.go", Rule: outside },
+        { Path: "**/*.ts", Rule: "inside.md" },
+      ];
+      resolveRuleEntries(entries, repoDir, confineRoot);
+      expect(entries[0]?.Rule).toBe("");
+      expect(entries[1]?.Rule).toBe("inside rule");
+      // Symlink escape also blocked when present.
+      if (existsSync(linkInside)) {
+        const linkEntries: ProjectRuleEntry[] = [{ Path: "**/*.go", Rule: "link.md" }];
+        resolveRuleEntries(linkEntries, repoDir, confineRoot);
+        expect(linkEntries[0]?.Rule).toBe("");
+      }
+    } finally {
+      rmSync(outsideDir, { recursive: true, force: true });
+    }
+  });
+});
+
+test("loadProjectRule ignores symlinked rule.json escaping repo", () => {
+  withTempDir((repoDir) => {
+    const outsideDir = mkdtempSync(join(tmpdir(), "rule-outside-"));
+    try {
+      const outsideRule = join(outsideDir, "rule.json");
+      writeFileSync(outsideRule, '{"rules":[{"path":"**/*.go","rule":"evil"}]}');
+      const ocrDir = join(repoDir, ".opencodereview");
+      mkdirSync(ocrDir, { recursive: true });
+      const linkPath = join(ocrDir, "rule.json");
+      try {
+        symlinkSync(outsideRule, linkPath);
+      } catch {
+        return;
+      }
+      expect(loadProjectRule(repoDir)).toBeNull();
+    } finally {
+      rmSync(outsideDir, { recursive: true, force: true });
     }
   });
 });
