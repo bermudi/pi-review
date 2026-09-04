@@ -426,6 +426,16 @@ export const IsUserIncluded = isUserIncluded;
 
 const ALLOWED_RULE_EXTS: ReadonlySet<string> = new Set([".md", ".txt", ".markdown"]);
 
+/**
+ * RuleWarnFn receives loader warnings (missing/unreadable rule files,
+ * confinement rejections). Defaults to process stderr so stdout stays a
+ * single machine document; callers with per-invocation I/O pass
+ * `(msg) => io.stderr(msg + "\n")` for routing consistency.
+ */
+export type RuleWarnFn = (message: string) => void;
+
+const defaultRuleWarn: RuleWarnFn = (message: string) => console.error(message);
+
 export function looksLikeFilePath(s: string): boolean {
   if (s.includes("\n")) return false;
   if (s.includes(" ")) return false;
@@ -464,10 +474,10 @@ export function readRuleFileSafe(filePath: string, confineRoot = ""): string {
   return trimTrailingCRLF(content);
 }
 
-export function tryReadRuleFile(rule: string, repoDir: string, confineRoot = ""): string | null {
+export function tryReadRuleFile(rule: string, repoDir: string, confineRoot = "", warn: RuleWarnFn = defaultRuleWarn): string | null {
   if (repoDir === "") {
     if (!path.isAbsolute(rule)) {
-      console.error(`[pi-review] WARNING: cannot resolve relative rule path ${JSON.stringify(rule)} without a repo dir`);
+      warn(`[pi-review] WARNING: cannot resolve relative rule path ${JSON.stringify(rule)} without a repo dir`);
       return null;
     }
   }
@@ -476,8 +486,8 @@ export function tryReadRuleFile(rule: string, repoDir: string, confineRoot = "")
       return readRuleFileSafe(rule, confineRoot);
     } catch (e) {
       const err = e as NodeJS.ErrnoException;
-      if (err.code === "ENOENT") console.error(`[pi-review] WARNING: rule file not found: ${rule}`);
-      else console.error(`[pi-review] WARNING: cannot read rule file ${rule}: ${String(err.message ?? err)}`);
+      if (err.code === "ENOENT") warn(`[pi-review] WARNING: rule file not found: ${rule}`);
+      else warn(`[pi-review] WARNING: cannot read rule file ${rule}: ${String(err.message ?? err)}`);
       return null;
     }
   }
@@ -485,29 +495,29 @@ export function tryReadRuleFile(rule: string, repoDir: string, confineRoot = "")
   const cleanRepo = path.resolve(repoDir);
   const sep = path.sep;
   if (resolved !== cleanRepo && !resolved.startsWith(cleanRepo + sep)) {
-    console.error(`[pi-review] WARNING: rule file path escapes repo dir: ${rule}`);
+    warn(`[pi-review] WARNING: rule file path escapes repo dir: ${rule}`);
     return null;
   }
   try {
     return readRuleFileSafe(resolved, confineRoot);
   } catch (e) {
     const err = e as NodeJS.ErrnoException;
-    if (err.code === "ENOENT") console.error(`[pi-review] WARNING: rule file not found: ${rule}`);
-    else console.error(`[pi-review] WARNING: cannot read rule file ${resolved}: ${String(err.message ?? err)}`);
+    if (err.code === "ENOENT") warn(`[pi-review] WARNING: rule file not found: ${rule}`);
+    else warn(`[pi-review] WARNING: cannot read rule file ${resolved}: ${String(err.message ?? err)}`);
     return null;
   }
 }
 
-export function resolveRuleEntries(entries: ProjectRuleEntry[], repoDir: string, confineRoot = ""): void {
+export function resolveRuleEntries(entries: ProjectRuleEntry[], repoDir: string, confineRoot = "", warn: RuleWarnFn = defaultRuleWarn): void {
   for (const entry of entries) {
     if (entry.Rule.trim() === "" || !looksLikeFilePath(entry.Rule)) continue;
-    const content = tryReadRuleFile(entry.Rule, repoDir, confineRoot);
+    const content = tryReadRuleFile(entry.Rule, repoDir, confineRoot, warn);
     if (content !== null) entry.Rule = content;
     else entry.Rule = "";
   }
 }
 
-function parseProjectRuleJson(data: string, repoDirForResolve: string, confineRoot = ""): ProjectRule {
+function parseProjectRuleJson(data: string, repoDirForResolve: string, confineRoot = "", warn: RuleWarnFn = defaultRuleWarn): ProjectRule {
   let raw: unknown;
   try {
     raw = JSON.parse(data) as unknown;
@@ -541,11 +551,11 @@ function parseProjectRuleJson(data: string, repoDirForResolve: string, confineRo
   if (include.length > 0) pr.Include = include;
   if (exclude.length > 0) pr.Exclude = exclude;
 
-  resolveRuleEntries(pr.Rules, repoDirForResolve, confineRoot);
+  resolveRuleEntries(pr.Rules, repoDirForResolve, confineRoot, warn);
   return pr;
 }
 
-function loadProjectRuleFile(filePath: string): ProjectRule | null {
+function loadProjectRuleFile(filePath: string, warn: RuleWarnFn = defaultRuleWarn): ProjectRule | null {
   let data: string;
   try {
     data = fs.readFileSync(filePath, "utf-8");
@@ -556,13 +566,13 @@ function loadProjectRuleFile(filePath: string): ProjectRule | null {
   }
   try {
     // Trusted layer (global): no confinement.
-    return parseProjectRuleJson(data, path.dirname(filePath), "");
+    return parseProjectRuleJson(data, path.dirname(filePath), "", warn);
   } catch (e) {
     throw new Error(`unmarshal project rule: ${String((e as Error).message)}`);
   }
 }
 
-export function loadProjectRule(repoDir: string): ProjectRule | null {
+export function loadProjectRule(repoDir: string, warn: RuleWarnFn = defaultRuleWarn): ProjectRule | null {
   if (repoDir === "") return null;
   // Isolated adoption from OCR 124bfc3: confine the untrusted project layer.
   // Resolve the repo root canonically, then ensure .opencodereview/rule.json
@@ -583,7 +593,7 @@ export function loadProjectRule(repoDir: string): ProjectRule | null {
     throw new Error(`resolve project rule ${filePath}: ${String(err.message ?? err)}`);
   }
   if (!withinBase(confineRoot, resolvedRulePath)) {
-    console.error(`[pi-review] WARNING: project rule file escapes repo dir: ${filePath}`);
+    warn(`[pi-review] WARNING: project rule file escapes repo dir: ${filePath}`);
     return null;
   }
   let data: string;
@@ -595,13 +605,13 @@ export function loadProjectRule(repoDir: string): ProjectRule | null {
     throw new Error(`read project rule ${filePath}: ${String(err.message ?? err)}`);
   }
   try {
-    return parseProjectRuleJson(data, repoDir, confineRoot);
+    return parseProjectRuleJson(data, repoDir, confineRoot, warn);
   } catch (e) {
     throw new Error(`unmarshal project rule: ${String((e as Error).message)}`);
   }
 }
 
-export function loadGlobalRule(): ProjectRule | null {
+export function loadGlobalRule(warn: RuleWarnFn = defaultRuleWarn): ProjectRule | null {
   let home: string;
   try {
     const envHome = process.env.HOME ?? process.env.USERPROFILE ?? "";
@@ -611,10 +621,10 @@ export function loadGlobalRule(): ProjectRule | null {
   }
   if (home === "") return null;
   const filePath = path.join(home, ".opencodereview", "rule.json");
-  return loadProjectRuleFile(filePath);
+  return loadProjectRuleFile(filePath, warn);
 }
 
-export function loadRuleFile(customPath: string): ProjectRule | null {
+export function loadRuleFile(customPath: string, warn: RuleWarnFn = defaultRuleWarn): ProjectRule | null {
   if (customPath === "") return null;
   let data: string;
   try {
@@ -624,7 +634,7 @@ export function loadRuleFile(customPath: string): ProjectRule | null {
   }
   try {
     // Trusted layer (--rule): no confinement.
-    return parseProjectRuleJson(data, path.dirname(customPath), "");
+    return parseProjectRuleJson(data, path.dirname(customPath), "", warn);
   } catch (e) {
     throw new Error(`unmarshal rule file ${customPath}: ${String((e as Error).message)}`);
   }
@@ -728,19 +738,19 @@ export class ComposedResolver implements DetailResolver {
   }
 }
 
-export function newResolver(repoDir: string, customRulePath: string): { resolver: Resolver & DetailResolver; filter: FileFilter | null } {
+export function newResolver(repoDir: string, customRulePath: string, warn: RuleWarnFn = defaultRuleWarn): { resolver: Resolver & DetailResolver; filter: FileFilter | null } {
   const system = loadDefaultSystemRule();
   let customRule: ProjectRule | null = null;
   if (customRulePath !== "") {
-    const cr = loadRuleFile(customRulePath);
+    const cr = loadRuleFile(customRulePath, warn);
     if (cr !== null) customRule = cr;
   }
   let projectRule: ProjectRule | null = null;
   if (repoDir !== "") {
-    const pr = loadProjectRule(repoDir);
+    const pr = loadProjectRule(repoDir, warn);
     if (pr !== null) projectRule = pr;
   }
-  const globalRule = loadGlobalRule();
+  const globalRule = loadGlobalRule(warn);
   const filter = buildFileFilter(customRule, projectRule, globalRule);
   const resolver = new ComposedResolver(customRule, projectRule, globalRule, system);
   return { resolver, filter };

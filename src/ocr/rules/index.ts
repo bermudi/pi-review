@@ -69,4 +69,4 @@ export {
   LoadDefaultResolver,
 } from "./system_rules.js";
 export { sha256Hex as sha256HexSystem } from "./system_rules.js";
-export type { LoadOptions } from "./system_rules.js";
+export type { LoadOptions, RuleWarnFn } from "./system_rules.js";

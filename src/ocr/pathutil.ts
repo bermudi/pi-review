@@ -26,11 +26,7 @@ export async function canonicalPath(p: string): Promise<string> {
  * Sync variant, mirrors canonicalPath but uses sync APIs.
  */
 export function canonicalPathSync(p: string): string {
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
-  const fsSync = require("node:fs") as typeof import("node:fs");
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
-  const pathSync = require("node:path") as typeof import("node:path");
-  const abs = pathSync.resolve(p);
+  const abs = path.resolve(p);
   return fsSync.realpathSync(abs);
 }
 

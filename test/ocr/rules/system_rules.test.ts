@@ -1045,6 +1045,26 @@ test("loadProjectRule ignores symlinked rule.json escaping repo", () => {
   });
 });
 
+test("rule loaders route warnings through injectable sink", () => {
+  withTempDir((repoDir) => {
+    const seen: string[] = [];
+    const warn = (msg: string): void => {
+      seen.push(msg);
+    };
+    // Missing file warns through the sink (no console.error).
+    const entries: ProjectRuleEntry[] = [{ Path: "**/*.go", Rule: "missing.md" }];
+    resolveRuleEntries(entries, repoDir, "", warn);
+    expect(entries[0]?.Rule).toBe("");
+    expect(seen.some((m) => m.includes("rule file not found"))).toBe(true);
+    // Traversal rejection also routes through the sink.
+    seen.length = 0;
+    const bad: ProjectRuleEntry[] = [{ Path: "**/*.go", Rule: "../outside.md" }];
+    resolveRuleEntries(bad, repoDir, "", warn);
+    expect(bad[0]?.Rule).toBe("");
+    expect(seen.some((m) => m.includes("escapes repo dir"))).toBe(true);
+  });
+});
+
 // OCR v1.9.3: TestResolveRuleEntries_EmptyRepoDirRelative
 test("resolveRuleEntries empty repoDir relative rejected", () => {
   const entries: ProjectRuleEntry[] = [{ Path: "**/*.go", Rule: "rules.md" }];

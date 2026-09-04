@@ -296,8 +296,15 @@ export class Runner {
     this._toolFailures.push({ toolCallNumber, toolName, filePath, error: errMsg, args: rawArgs });
     try {
       rec?.AddToolFailure(toolName, rawArgs, errMsg, durationMs);
-    } catch {
-      // Persistence must not mask the tool failure itself.
+    } catch (e) {
+      // Persistence must not mask the tool failure itself, but the delivery
+      // failure must still surface — same warning channel as all run warnings
+      // (consistent with success-path AddToolResult, which propagates).
+      this.recordWarning(
+        "tool_persist_failed",
+        filePath,
+        `tool ${toolName} failure persisted incompletely: ${e instanceof Error ? e.message : String(e)}`,
+      );
     }
   }
 

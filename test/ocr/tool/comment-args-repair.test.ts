@@ -5,8 +5,9 @@
 // Modifications are distributed as part of pi-reviewer under GPL-3.0-or-later.
 
 import { test, expect } from "bun:test";
-import { ParseComments, ParseCommentsWithPath } from "../../../src/ocr/tool/code-comment.js";
+import { CodeCommentProvider, ParseComments, ParseCommentsWithPath } from "../../../src/ocr/tool/code-comment.js";
 import { parseRepairedComments, repairSerializedComments } from "../../../src/ocr/tool/comment-args-repair.js";
+import { CommentCollector } from "../../../src/ocr/tool/collector.js";
 
 test("native array needs no repair", () => {
   const res = ParseComments({ comments: [{ content: "hi" }], path: "a.ts" });
@@ -109,7 +110,6 @@ test("loop records warning on repair and succeeds", async () => {
     allDiffs: () => [],
   };
   const runner = new Runner(deps as never);
-  const raw = `[{\"content\": \"use the \\\"foo\\\" helper\"}]`;
   // Build serialized args the way a model sends them: comments as string with dropped escaping.
   const serialized = `[{"content": "use the "foo" helper"}]`;
   const res = await runner.executeToolCall(
@@ -123,5 +123,25 @@ test("loop records warning on repair and succeeds", async () => {
   expect(collected).toHaveLength(1);
   const warns = runner.warnings();
   expect(warns.some((w) => w.type === "comment_args_repaired")).toBe(true);
-  void raw;
+});
+
+test("provider warns on repair through injectable sink (no silent repairs)", async () => {
+  const collector = new CommentCollector();
+  const seen: string[] = [];
+  const provider = new CodeCommentProvider(collector, (msg: string) => seen.push(msg));
+  const serialized = `[{"content": "use the "foo" helper"}]`;
+  const out = await provider.Execute({ comments: serialized, path: "a.ts" });
+  expect(out).toBe("Successfully commented.");
+  expect(collector.comments()).toHaveLength(1);
+  expect(seen).toHaveLength(1);
+  expect(seen[0]).toContain("comment_args_repaired");
+});
+
+test("provider stays silent when no repair was needed", async () => {
+  const collector = new CommentCollector();
+  const seen: string[] = [];
+  const provider = new CodeCommentProvider(collector, (msg: string) => seen.push(msg));
+  const out = await provider.Execute({ comments: [{ content: "hi" }], path: "a.ts" });
+  expect(out).toBe("Successfully commented.");
+  expect(seen).toHaveLength(0);
 });

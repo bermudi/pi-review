@@ -200,8 +200,25 @@ export const parseCommentsWithPath = ParseCommentsWithPath;
 // CodeCommentProvider — mirrors Go `type CodeCommentProvider struct { Collector }`
 // ---------------------------------------------------------------------------
 
+/**
+ * Warning sink for repaired batches. Defaults to process stderr so stdout
+ * stays a single machine document; callers with per-invocation I/O pass
+ * `(msg) => io.stderr(msg + "\n")`, callers with a run warning list pass a
+ * recorder (the production loop records `comment_args_repaired` instead).
+ */
+export type CommentWarnFn = (message: string) => void;
+
+const defaultCommentWarn: CommentWarnFn = (message: string) => console.error(message);
+
 export class CodeCommentProvider {
-  constructor(public readonly Collector: CommentCollector | null = null) {}
+  private readonly onWarning: CommentWarnFn;
+
+  constructor(
+    public readonly Collector: CommentCollector | null = null,
+    onWarning: CommentWarnFn = defaultCommentWarn,
+  ) {
+    this.onWarning = onWarning;
+  }
 
   Tool(): import("./types.js").Tool {
     return CodeComment;
@@ -219,8 +236,11 @@ export class CodeCommentProvider {
     if (this.Collector === null || this.Collector === undefined) {
       return "Error: comment collector is not configured";
     }
-    const { comments, errorMsg } = ParseComments(args);
+    // Use WithPath (default "") so serialized-string repairs are visible:
+    // same parse as ParseComments plus a repair channel — no silent repairs.
+    const { comments, errorMsg, repair } = ParseCommentsWithPath(args, "");
     if (errorMsg !== "") return errorMsg;
+    if (repair) this.onWarning(`[pi-review] WARNING: comment_args_repaired ${repair.message()}`);
     for (const cm of comments) {
       this.Collector.Add(cm);
     }
@@ -232,8 +252,9 @@ export class CodeCommentProvider {
     if (this.Collector === null || this.Collector === undefined) {
       return "Error: comment collector is not configured";
     }
-    const { comments, errorMsg } = ParseComments(args);
+    const { comments, errorMsg, repair } = ParseCommentsWithPath(args, "");
     if (errorMsg !== "") return errorMsg;
+    if (repair) this.onWarning(`[pi-review] WARNING: comment_args_repaired ${repair.message()}`);
     for (const cm of comments) {
       this.Collector.Add(cm);
     }

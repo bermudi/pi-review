@@ -65,6 +65,7 @@ export {
   CODE_COMMENT_SEVERITY_MEDIUM,
   CODE_COMMENT_SEVERITY_LOW,
 } from "./code-comment.js";
+export type { CommentWarnFn } from "./code-comment.js";
 export type { CommentRepair } from "./comment-args-repair.js";
 export { parseRepairedComments, repairSerializedComments } from "./comment-args-repair.js";
 

@@ -22,7 +22,6 @@ test("Runner records tool failure with args and persists ok=false", async () => 
   const sh = new SessionHistory("/tmp/repo", "main", "model", {});
   const fs = sh.GetOrCreateFileSession("a.ts");
   const rec = fs.AppendTaskRecord("main_task", []);
-  const runner = new Runner(minimalDeps({ session: sh }) as never);
   const failingRegistry = {
     get: (name: string) => {
       if (name === "boom") {
@@ -51,7 +50,6 @@ test("Runner records tool failure with args and persists ok=false", async () => 
   expect(failures[0]!.args).toBe(`{"x":1}`);
   expect(failures[0]!.filePath).toBe("a.ts");
   expect(rec.toolResults[rec.toolResults.length - 1]!.ok).toBe(false);
-  void runner;
 });
 
 test("newJsonToolCalls includes stable failure fields", () => {
@@ -79,4 +77,43 @@ test("emitFailureUsageText adds failed suffix and JSON details", () => {
   expect(parsed.tool_calls.failure_details[0]!.arguments).toBe(`{"x":1}`);
   const noFail = emitFailureUsageText(1, 10, 5, 15, { boom: 1 }, 1000, false, "", null, "text", undefined, []);
   expect(noFail.stderr).not.toContain("failed");
+});
+
+test("persist delivery failure on tool failure warns instead of vanishing", async () => {
+  const sh = new SessionHistory("/tmp/repo", "main", "model", {});
+  const fs = sh.GetOrCreateFileSession("a.ts");
+  const rec = fs.AppendTaskRecord("main_task", []);
+  // Break persistence delivery: writeToolCall throws.
+  const sess = (rec as unknown as { fileSession: { session: { persist: unknown } } }).fileSession.session;
+  (sess as Record<string, unknown>)["persist"] = {
+    writeToolCall: () => {
+      throw new Error("disk full");
+    },
+  };
+  const failingRegistry = {
+    get: (name: string) => {
+      if (name === "boom") {
+        return {
+          execute: async () => {
+            throw new Error("kaput");
+          },
+        };
+      }
+      return undefined;
+    },
+  };
+  const runner = new Runner(minimalDeps({ session: sh, toolRegistry: failingRegistry }) as never);
+  const res = await runner.executeToolCall(
+    new AbortController().signal,
+    "a.ts",
+    { id: "1", function: { name: "boom", arguments: `{"x":1}` } } as never,
+    "",
+    rec,
+  );
+  // Tool failure itself still surfaces to the model...
+  expect(res.data).toContain("Error executing tool boom");
+  // ...in-memory failure tracked...
+  expect(runner.toolFailures()).toHaveLength(1);
+  // ...and the persist delivery failure warns instead of vanishing.
+  expect(runner.warnings().some((w) => w.type === "tool_persist_failed")).toBe(true);
 });
