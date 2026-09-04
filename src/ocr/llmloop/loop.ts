@@ -37,6 +37,7 @@ import type { LlmComment } from "../model/types.js";
 import type { Diff } from "../model/diff.js";
 import { relocateAcrossFiles, resolveComment } from "../diff/resolver.js";
 import type { SessionHistory, TaskRecord, TaskType } from "../session/history.js";
+import { ParseCommentsWithPath } from "../tool/code-comment.js";
 
 // Re-export for external consumers
 export { MainLoopStop } from "./types.js";
@@ -124,54 +125,14 @@ function normalizeSeverity(severity: string): string {
   return "low";
 }
 
-function parseComments(args: Record<string, unknown>): { comments: LlmComment[]; errorMsg: string } {
-  let rawComments: unknown[] | undefined;
-  const raw = args["comments"];
-  if (Array.isArray(raw) && raw.length > 0) {
-    rawComments = raw;
-  } else if (typeof raw === "string" && raw !== "") {
-    try {
-      const parsed: unknown = JSON.parse(raw);
-      if (Array.isArray(parsed)) rawComments = parsed;
-    } catch (e) {
-      const msg = e instanceof Error ? e.message : String(e);
-      return { comments: [], errorMsg: `Error: failed to parse 'comments' JSON string: ${msg}` };
-    }
+function parseComments(args: Record<string, unknown>): { comments: LlmComment[]; errorMsg: string; repair?: import("../tool/code-comment.js").CommentRepair | null } {
+  // Unified with tool/code-comment.ts (isolated adoption from OCR 41917e2).
+  // Preserve thinking:"" zero-value default from pre-unification loop behavior.
+  const res = ParseCommentsWithPath(args, "");
+  for (const cm of res.comments) {
+    if (cm.thinking === undefined) cm.thinking = "";
   }
-  if (!rawComments || rawComments.length === 0) {
-    const rawJson = JSON.stringify(args);
-    return { comments: [], errorMsg: `Error: 'comments' array is required. Got args: ${rawJson}` };
-  }
-
-  const comments: LlmComment[] = [];
-  for (const entry of rawComments) {
-    if (typeof entry !== "object" || entry === null || Array.isArray(entry)) continue;
-    const obj = entry as Record<string, unknown>;
-    const content = typeof obj["content"] === "string" ? (obj["content"] as string) : "";
-    const pathFromArgs = typeof args["path"] === "string" ? (args["path"] as string) : "";
-    if (pathFromArgs === "" || content === "") continue;
-
-    const cm: LlmComment = {
-      path: pathFromArgs,
-      content,
-      // Go's LlmComment.Thinking is a string zero value, not an absent field.
-      thinking: "",
-    };
-    if (typeof obj["suggestion_code"] === "string") cm.suggestionCode = obj["suggestion_code"] as string;
-    if (typeof obj["existing_code"] === "string") cm.existingCode = obj["existing_code"] as string;
-    if (typeof obj["thinking"] === "string") cm.thinking = obj["thinking"] as string;
-    if (typeof obj["category"] === "string") cm.category = normalizeCategory(obj["category"] as string);
-    if (typeof obj["severity"] === "string") cm.severity = normalizeSeverity(obj["severity"] as string);
-
-    // startLine/endLine optional numeric
-    if (typeof obj["start_line"] === "number") cm.startLine = obj["start_line"] as number;
-    else if (typeof obj["startLine"] === "number") cm.startLine = obj["startLine"] as number;
-    if (typeof obj["end_line"] === "number") cm.endLine = obj["end_line"] as number;
-    else if (typeof obj["endLine"] === "number") cm.endLine = obj["endLine"] as number;
-
-    comments.push(cm);
-  }
-  return { comments, errorMsg: "" };
+  return res;
 }
 
 // ---------------------------------------------------------------------------
@@ -687,10 +648,15 @@ export class Runner {
         args["path"] = filePath;
       }
 
-      const { comments, errorMsg } = parseComments(args);
+      const { comments, errorMsg, repair } = parseComments(args);
       if (errorMsg !== "") {
         this.recordToolFailure(toolCallNumber, name, filePath, errorMsg, rec, rawArgs, Date.now() - callStarted);
         return { data: errorMsg, completed: false, failed: false };
+      }
+      // Isolated adoption from OCR 41917e2: model sees success; warning is the
+      // only trace that a schema violation was repaired.
+      if (repair) {
+        this.recordWarning("comment_args_repaired", filePath, repair.message());
       }
 
       if (thinking !== "") {

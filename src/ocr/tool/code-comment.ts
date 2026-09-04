@@ -9,6 +9,8 @@
 import type { LlmComment } from "../model/types.js";
 import { CodeComment, CommentSucceed } from "./types.js";
 import type { CommentCollector } from "./collector.js";
+import { parseRepairedComments, type CommentRepair } from "./comment-args-repair.js";
+export type { CommentRepair } from "./comment-args-repair.js";
 
 export { CommentSucceed };
 
@@ -81,6 +83,8 @@ export const normalizeSeverity = normalizeCodeCommentSeverity;
 export interface ParseCommentsResult {
   comments: LlmComment[];
   errorMsg: string;
+  /** Non-null when serialized string args parsed only after deterministic repair. */
+  repair?: CommentRepair | null;
 }
 
 /**
@@ -97,7 +101,24 @@ export interface ParseCommentsResult {
  * - `category` / `severity` are normalized via the helpers above.
  */
 export function ParseComments(args: Record<string, unknown>): ParseCommentsResult {
+  const { comments, errorMsg, repair } = parseCommentsInner(args, "");
+  return { comments, errorMsg, repair };
+}
+
+/**
+ * ParseCommentsWithPath uses defaultPath when per-comment path is omitted.
+ * Mirrors Go `ParseCommentsWithPath` (repair channel preserved for warnings).
+ */
+export function ParseCommentsWithPath(
+  args: Record<string, unknown>,
+  defaultPath: string,
+): ParseCommentsResult {
+  return parseCommentsInner(args, defaultPath);
+}
+
+function parseCommentsInner(args: Record<string, unknown>, defaultPath: string): ParseCommentsResult {
   let rawComments: unknown[] | undefined;
+  let repair: CommentRepair | null = null;
 
   const raw = args["comments"];
   if (Array.isArray(raw) && raw.length > 0) {
@@ -113,14 +134,22 @@ export function ParseComments(args: Record<string, unknown>): ParseCommentsResul
         rawComments = undefined;
       }
     } catch (e) {
-      const msg = e instanceof Error ? e.message : String(e);
-      return { comments: [], errorMsg: `Error: failed to parse 'comments' JSON string: ${msg}` };
+      // Isolated adoption from OCR 41917e2: try deterministic repair before
+      // losing the batch. On failure keep the original error verbatim — its
+      // wording makes the model regenerate the batch.
+      const attempted = parseRepairedComments(raw);
+      if (attempted === null) {
+        const msg = e instanceof Error ? e.message : String(e);
+        return { comments: [], errorMsg: `Error: failed to parse 'comments' JSON string: ${msg}`, repair: null };
+      }
+      rawComments = attempted.entries as unknown[];
+      repair = attempted.repair;
     }
   }
 
   if (!rawComments || rawComments.length === 0) {
     const rawJson = JSON.stringify(args);
-    return { comments: [], errorMsg: `Error: 'comments' array is required. Got args: ${rawJson}` };
+    return { comments: [], errorMsg: `Error: 'comments' array is required. Got args: ${rawJson}`, repair: null };
   }
 
   const pathFromArgs = typeof args["path"] === "string" ? (args["path"] as string) : "";
@@ -131,10 +160,14 @@ export function ParseComments(args: Record<string, unknown>): ParseCommentsResul
     const obj = entry as Record<string, unknown>;
 
     const content = typeof obj["content"] === "string" ? (obj["content"] as string) : "";
-    if (pathFromArgs === "" || content === "") continue;
+    // Per-comment path wins; else top-level args path; else defaultPath fallback
+    // (mirrors Go ParseCommentsWithPath for multi-file batches).
+    const perCommentPath = typeof obj["path"] === "string" ? (obj["path"] as string) : "";
+    const resolvedPath = perCommentPath !== "" ? perCommentPath : pathFromArgs !== "" ? pathFromArgs : defaultPath;
+    if (resolvedPath === "" || content === "") continue;
 
     const cm: LlmComment = {
-      path: pathFromArgs,
+      path: resolvedPath,
       content,
     };
 
@@ -156,11 +189,12 @@ export function ParseComments(args: Record<string, unknown>): ParseCommentsResul
   // Note: Go appends even if some entries were skipped; we return whatever was collected.
   // If all entries were skipped, Go would return empty slice with no error — caller would then
   // add zero comments and still return success. We preserve that.
-  return { comments, errorMsg: "" };
+  return { comments, errorMsg: "", repair };
 }
 
 /** Lowercase alias for JS callers. */
 export const parseComments = ParseComments;
+export const parseCommentsWithPath = ParseCommentsWithPath;
 
 // ---------------------------------------------------------------------------
 // CodeCommentProvider — mirrors Go `type CodeCommentProvider struct { Collector }`

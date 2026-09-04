@@ -41,10 +41,13 @@ export {
 } from "./collector.js";
 
 // Code comment — from code_comment.go
+// Repair unit surgically adopted from OCR 41917e2 (isolated adoption).
 export {
   CodeCommentProvider,
   ParseComments,
+  ParseCommentsWithPath,
   parseComments,
+  parseCommentsWithPath,
   normalizeCodeCommentCategory,
   normalizeCodeCommentSeverity,
   normalizeCategory,
@@ -62,6 +65,8 @@ export {
   CODE_COMMENT_SEVERITY_MEDIUM,
   CODE_COMMENT_SEVERITY_LOW,
 } from "./code-comment.js";
+export type { CommentRepair } from "./comment-args-repair.js";
+export { parseRepairedComments, repairSerializedComments } from "./comment-args-repair.js";
 
 // Provider / Registry / Checkpoint / Stub — from definitions.go + response_message.go + stub.go
 export {
