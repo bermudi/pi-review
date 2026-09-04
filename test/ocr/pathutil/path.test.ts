@@ -32,6 +32,28 @@ test("TestWithinBase", () => {
   fs.rmSync(base, { recursive: true, force: true });
 });
 
+// Isolated adoption from OCR 124bfc3: aliased base still confines via inode walk.
+test("withinBase allows symlink-aliased base", () => {
+  const realDir = fs.mkdtempSync(path.join(os.tmpdir(), "pi-real-"));
+  const linkParent = fs.mkdtempSync(path.join(os.tmpdir(), "pi-linkparent-"));
+  const linkPath = path.join(linkParent, "repo-link");
+  try {
+    fs.symlinkSync(realDir, linkPath);
+  } catch {
+    fs.rmSync(realDir, { recursive: true, force: true });
+    fs.rmSync(linkParent, { recursive: true, force: true });
+    return;
+  }
+  try {
+    const target = path.join(fs.realpathSync(realDir), "sub", "file.md");
+    expect(withinBase(linkPath, target)).toBe(true);
+    expect(withinBase(linkPath, path.join(os.tmpdir(), "outside.md"))).toBe(false);
+  } finally {
+    fs.rmSync(realDir, { recursive: true, force: true });
+    fs.rmSync(linkParent, { recursive: true, force: true });
+  }
+});
+
 // OCR v1.9.3: TestCanonicalPathResolvesSymlink
 test("TestCanonicalPathResolvesSymlink", async () => {
   const realDir = fs.mkdtempSync(path.join(os.tmpdir(), "pi-real-"));
