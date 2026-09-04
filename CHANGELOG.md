@@ -2,6 +2,28 @@
 
 ## Unreleased
 
+- Failed tool uses now show up in results with details instead of
+  vanishing: output carries how many failed, which tool, and the arguments
+  that were passed. Adopted surgically from OCR v1.11.4 (`0524d21`) and
+  v1.11.3 (`b3704b8`).
+- Mangled review notes from the model are now repaired instead of dropping
+  the whole batch, with a warning left behind. Batches that can't be
+  repaired safely keep the original error so the model retries. Adopted
+  surgically from OCR v1.11.4 (`41917e2`).
+- Git failures now surface git's own message instead of empty results, and
+  untracked-file listing errors stop the review instead of reviewing
+  half-blind. Adopted surgically from OCR v1.10.0 (`0c44f10`) and v1.11.3
+  (`4cecf1e`).
+- Project rule files are now confined to the repository: a symlinked or
+  escaping `rule.json`, or a rule file reference pointing outside the repo,
+  is rejected with a warning. Adopted surgically from OCR v1.11.1
+  (`124bfc3`).
+- JavaScript module files (`.mjs`/`.cjs`) get JavaScript review rules and
+  `.cxx`/`.hxx` files get C++ rules instead of generic ones. Adopted
+  surgically from OCR v1.11.2 (`b1ad13a`, `14fab72`).
+- All warnings now go through one channel: rule-loader warnings accept an
+  injectable sink (default stderr), repaired batches always warn, and tool
+  persistence delivery failures warn instead of vanishing.
 - `--model` and the no-flag fallback now see providers registered by
   user-level pi extensions (proxies, aggregators such as kilo). Only
   user-scope extensions under the agent directory run, solely to collect
