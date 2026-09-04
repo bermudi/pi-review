@@ -175,6 +175,21 @@ function parseComments(args: Record<string, unknown>): { comments: LlmComment[];
 }
 
 // ---------------------------------------------------------------------------
+// Tool failure details — isolated adoption from OCR b3704b8 + 0524d21.
+// Tracks failed registered-tool invocations with raw LLM arguments so
+// failures surface in output instead of hiding as model-visible strings.
+// ---------------------------------------------------------------------------
+
+export interface ToolFailureDetail {
+  toolCallNumber: number;
+  toolName: string;
+  filePath: string;
+  error: string;
+  /** Raw tool-call argument string from the model (may be ""). */
+  args: string;
+}
+
+// ---------------------------------------------------------------------------
 // Runner
 // ---------------------------------------------------------------------------
 
@@ -185,6 +200,8 @@ export class Runner {
   private _totalCacheWriteTokens = 0;
   private _warnings: AgentWarning[] = [];
   private _toolCalls: Map<string, number> = new Map();
+  private _toolCallSeq = 0;
+  private _toolFailures: ToolFailureDetail[] = [];
   private _bg: Set<Promise<void>> = new Set();
 
   constructor(private readonly deps: RunnerDeps) {}
@@ -295,9 +312,40 @@ export class Runner {
     this.recordUsage(u);
   }
 
-  private recordToolCall(name: string): void {
+  private recordToolCall(name: string): number {
     const cur = this._toolCalls.get(name) ?? 0;
     this._toolCalls.set(name, cur + 1);
+    this._toolCallSeq += 1;
+    return this._toolCallSeq;
+  }
+
+  /**
+   * recordToolFailure appends a failure detail and persists ok=false.
+   * Mirrors Go `recordToolFailure` (mutex omitted: JS single-threaded).
+   */
+  private recordToolFailure(
+    toolCallNumber: number,
+    toolName: string,
+    filePath: string,
+    errMsg: string,
+    rec: TaskRecord | null | undefined,
+    rawArgs: string,
+    durationMs: number,
+  ): void {
+    this._toolFailures.push({ toolCallNumber, toolName, filePath, error: errMsg, args: rawArgs });
+    try {
+      rec?.AddToolFailure(toolName, rawArgs, errMsg, durationMs);
+    } catch {
+      // Persistence must not mask the tool failure itself.
+    }
+  }
+
+  /** Sorted copy of failures by call number. Mirrors Go `ToolFailures`. */
+  toolFailures(): ToolFailureDetail[] {
+    return [...this._toolFailures].sort((a, b) => a.toolCallNumber - b.toolCallNumber);
+  }
+  ToolFailures(): ToolFailureDetail[] {
+    return this.toolFailures();
   }
 
   async collectPendingComments(): Promise<LlmComment[]> {
@@ -623,13 +671,17 @@ export class Runner {
     // code_comment — incremental collector, async via pool if available
     // Mirrors Go executeToolCall code_comment path: ParseComments -> thinking backfill -> resolveAndCollect via DiffLookup + ReLocationTask -> collector.Add (async or sync)
     if (name === "code_comment") {
-      this.recordToolCall(name);
+      const toolCallNumber = this.recordToolCall(name);
+      const callStarted = Date.now();
+      const rawArgs = toolCall.function.arguments;
       let args: Record<string, unknown>;
       try {
-        args = parseToolArgs(toolCall.function.arguments);
+        args = parseToolArgs(rawArgs);
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);
-        return { data: `Error parsing tool arguments for ${name}: ${msg}`, completed: false, failed: false };
+        const errMsg = `Error parsing tool arguments for ${name}: ${msg}`;
+        this.recordToolFailure(toolCallNumber, name, filePath, errMsg, rec, rawArgs, Date.now() - callStarted);
+        return { data: errMsg, completed: false, failed: false };
       }
       if (filePath !== "") {
         args["path"] = filePath;
@@ -637,6 +689,7 @@ export class Runner {
 
       const { comments, errorMsg } = parseComments(args);
       if (errorMsg !== "") {
+        this.recordToolFailure(toolCallNumber, name, filePath, errorMsg, rec, rawArgs, Date.now() - callStarted);
         return { data: errorMsg, completed: false, failed: false };
       }
 
@@ -648,7 +701,9 @@ export class Runner {
 
       const collector = this.deps.commentCollector;
       if (!collector) {
-        return { data: "Error: comment collector is not configured", completed: false, failed: false };
+        const errMsg = "Error: comment collector is not configured";
+        this.recordToolFailure(toolCallNumber, name, filePath, errMsg, rec, rawArgs, Date.now() - callStarted);
+        return { data: errMsg, completed: false, failed: false };
       }
 
       // Helpers for relocation — capture deps before async boundary
@@ -876,7 +931,9 @@ export class Runner {
         await processAll(comments, signal);
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);
-        return { data: `Error: ${msg}`, completed: false, failed: false };
+        const errMsg = `Error: ${msg}`;
+        this.recordToolFailure(toolCallNumber, name, filePath, errMsg, rec, rawArgs, Date.now() - callStarted);
+        return { data: errMsg, completed: false, failed: false };
       }
       if (rec) rec.AddToolResult(name, toolCall.function.arguments, "Successfully commented.");
       return { data: "Successfully commented.", completed: false, failed: false };
@@ -893,14 +950,18 @@ export class Runner {
       };
     }
 
-    this.recordToolCall(name);
+    const dynCallNumber = this.recordToolCall(name);
+    const dynStarted = Date.now();
+    const dynRawArgs = toolCall.function.arguments;
 
     let dynArgs: Record<string, unknown>;
     try {
-      dynArgs = parseToolArgs(toolCall.function.arguments);
+      dynArgs = parseToolArgs(dynRawArgs);
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
-      return { data: `Error parsing tool arguments for ${name}: ${msg}`, completed: false, failed: false };
+      const errMsg = `Error parsing tool arguments for ${name}: ${msg}`;
+      this.recordToolFailure(dynCallNumber, name, filePath, errMsg, rec, dynRawArgs, Date.now() - dynStarted);
+      return { data: errMsg, completed: false, failed: false };
     }
 
     try {
@@ -909,7 +970,9 @@ export class Runner {
       return { data: result, completed: false, failed: false };
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
-      return { data: `Error executing tool ${name}: ${msg}`, completed: false, failed: false };
+      const errMsg = `Error executing tool ${name}: ${msg}`;
+      this.recordToolFailure(dynCallNumber, name, filePath, msg, rec, dynRawArgs, Date.now() - dynStarted);
+      return { data: errMsg, completed: false, failed: false };
     }
   }
 

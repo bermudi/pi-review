@@ -367,9 +367,57 @@ export interface JsonSummary {
   budget_exceeded?: boolean;
 }
 
+export interface JsonToolFailureDetail {
+  tool_call_number: number;
+  tool_name: string;
+  file_path?: string;
+  arguments: string;
+  error: string;
+}
+
 export interface JsonToolCalls {
   total: number;
   by_tool: Record<string, number>;
+  // Isolated adoption from OCR b3704b8 + 0524d21: failure breakout (stable empty values).
+  failure: number;
+  failure_by_tool: Record<string, number>;
+  failure_details: JsonToolFailureDetail[];
+}
+
+export interface ToolFailureForOutput {
+  toolCallNumber: number;
+  toolName: string;
+  filePath: string;
+  args: string;
+  error: string;
+}
+
+/**
+ * newJsonToolCalls builds stable JSON tool tallies.
+ * Mirrors Go `newJSONToolCalls` (nil→empty map/slice).
+ */
+export function newJsonToolCalls(
+  calls: Record<string, number>,
+  failures: readonly ToolFailureForOutput[] = [],
+): JsonToolCalls {
+  const byTool: Record<string, number> = { ...(calls ?? {}) };
+  let total = 0;
+  for (const v of Object.values(byTool)) total += v;
+  const failureByTool: Record<string, number> = {};
+  const details: JsonToolFailureDetail[] = [];
+  for (const f of failures ?? []) {
+    failureByTool[f.toolName] = (failureByTool[f.toolName] ?? 0) + 1;
+    const d: JsonToolFailureDetail = {
+      tool_call_number: f.toolCallNumber,
+      tool_name: f.toolName,
+      arguments: f.args,
+      error: f.error,
+    };
+    if (f.filePath !== "") d.file_path = f.filePath;
+    details.push(d);
+  }
+  details.sort((a, b) => a.tool_call_number - b.tool_call_number);
+  return { total, by_tool: byTool, failure: details.length, failure_by_tool: failureByTool, failure_details: details };
 }
 
 export interface JsonLlmIdentity {
@@ -409,7 +457,7 @@ export function outputJsonNoFiles(traceId: string, llmIdentity: JsonLlmIdentity 
     trace_id: traceId,
     message: "No supported files changed.",
     comments: [],
-    tool_calls: { total: 0, by_tool: {} },
+    tool_calls: { total: 0, by_tool: {}, failure: 0, failure_by_tool: {}, failure_details: [] },
   };
   return `${JSON.stringify(out, null, 2)}\n`;
 }
@@ -426,6 +474,7 @@ export function outputJsonWithWarnings(opts: {
   durationMs: number;
   projectSummary: string;
   toolCalls: Record<string, number>;
+  toolFailures?: readonly ToolFailureForOutput[];
   traceId: string;
   resumeInfo: unknown;
   sessionId: string;
@@ -451,9 +500,7 @@ export function outputJsonWithWarnings(opts: {
   if (summary.cache_write_tokens === 0) delete (summary as unknown as Record<string, unknown>)["cache_write_tokens"];
   if (!summary.budget_exceeded) delete (summary as unknown as Record<string, unknown>)["budget_exceeded"];
 
-  const byTool = opts.toolCalls ?? {};
-  let total = 0;
-  for (const v of Object.values(byTool)) total += v;
+  const toolCallsJson = newJsonToolCalls(opts.toolCalls ?? {}, opts.toolFailures ?? []);
 
   const jsonComments = opts.comments.map(llmCommentToJson);
   const serializedRetry = serializeRetryReport(opts.retryReport);
@@ -468,7 +515,7 @@ export function outputJsonWithWarnings(opts: {
     session_id: opts.sessionId !== "" ? opts.sessionId : undefined,
     manifest: opts.manifest ?? undefined,
     retry_report: serializedRetry,
-    tool_calls: { total, by_tool: byTool },
+    tool_calls: toolCallsJson,
   };
 
   if (opts.manifest) {
@@ -553,10 +600,10 @@ export function emitFailureUsageText(
   retryReport: DomainRetryReport | null | undefined,
   outputFormat: string,
   llmIdentity: JsonLlmIdentity | undefined,
+  toolFailures: readonly ToolFailureForOutput[] = [],
 ): { stdout: string; stderr: string } {
   if (outputFormat === "json") {
-    let total = 0;
-    for (const v of Object.values(toolCalls)) total += v;
+    const toolCallsJson = newJsonToolCalls(toolCalls, toolFailures);
     const summary: JsonSummary = {
       files_reviewed: filesReviewed,
       comments: 0,
@@ -572,7 +619,7 @@ export function emitFailureUsageText(
       status: "failed",
       llm: llmIdentity,
       summary,
-      tool_calls: { total, by_tool: toolCalls },
+      tool_calls: toolCallsJson,
       comments: [],
       session_id: sessionId !== "" ? sessionId : undefined,
       retry_report: serializedRetry,
@@ -581,7 +628,11 @@ export function emitFailureUsageText(
     if (!out.retry_report) delete out.retry_report;
     return { stdout: "", stderr: `${JSON.stringify(out, null, 2)}\n` };
   }
-  let line = `[pi-review] usage on failure: ${String(filesReviewed)} file(s), ${String(inputTokens)} input + ${String(outputTokens)} output = ${String(totalTokens)} total tokens, ${String(Object.values(toolCalls).reduce((a, b) => a + b, 0))} tool calls, elapsed ${formatDurationMs(elapsedMs)}, budget_exceeded=${String(budgetExceeded)}`;
+  const totalCalls = Object.values(toolCalls).reduce((a, b) => a + b, 0);
+  let line = `[pi-review] usage on failure: ${String(filesReviewed)} file(s), ${String(inputTokens)} input + ${String(outputTokens)} output = ${String(totalTokens)} total tokens, ${String(totalCalls)} tool calls`;
+  // Isolated adoption from OCR b3704b8: text adds `, N failed` only when >0.
+  if (toolFailures.length > 0) line += `, ${String(toolFailures.length)} failed`;
+  line += `, elapsed ${formatDurationMs(elapsedMs)}, budget_exceeded=${String(budgetExceeded)}`;
   if (sessionId !== "") line += `, session ${sessionId}`;
   let stderr = `${line}\n`;
   stderr += outputRetryReportText(retryReport);

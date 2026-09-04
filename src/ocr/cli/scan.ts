@@ -40,6 +40,7 @@ export interface ScanRunner {
   cacheReadTokens: number;
   cacheWriteTokens: number;
   toolCalls: Record<string, number>;
+  toolFailures?: Array<{ toolCallNumber: number; toolName: string; filePath: string; args: string; error: string }>;
   sessionId: string;
   budgetExceeded: boolean;
   projectSummary: string;
@@ -119,6 +120,7 @@ function emitScanResult(
 
   if (outputFormat === "json") {
     const resumeInfo = typeof provider.ResumeInfo === "function" ? (provider.ResumeInfo() as unknown) : undefined;
+    const toolFailures = typeof provider.ToolFailures === "function" ? (provider.ToolFailures() ?? []) : [];
     io.stdout(
       outputJsonWithWarnings({
         comments,
@@ -132,6 +134,7 @@ function emitScanResult(
         durationMs,
         projectSummary: provider.ProjectSummary(),
         toolCalls: provider.ToolCalls(),
+        toolFailures,
         traceId,
         resumeInfo,
         sessionId: provider.SessionID(),
@@ -229,6 +232,7 @@ export async function runScanContext(ctx: ScanContext): Promise<number> {
       Warnings: () => runner!.warnings,
       ProjectSummary: () => runner!.projectSummary,
       ToolCalls: () => runner!.toolCalls,
+      ToolFailures: () => runner!.toolFailures ?? [],
       SessionID: () => runner!.sessionId,
       BudgetExceeded: () => runner!.budgetExceeded,
       RunManifest: () => runner!.manifest,

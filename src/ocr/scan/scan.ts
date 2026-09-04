@@ -176,6 +176,9 @@ export class Agent {
   TotalCacheWriteTokens(): number { return this.runner.TotalCacheWriteTokens(); }
   Warnings(): AgentWarning[] { return this.runner.Warnings(); }
   ToolCalls(): Record<string, number> { return this.runner.toolCallsObject(); }
+  ToolFailures(): Array<{ toolCallNumber: number; toolName: string; filePath: string; args: string; error: string }> {
+    return this.runner.toolFailures();
+  }
   BudgetExceeded(): boolean { return this.budgetExceeded; }
   ResumeInfo(): { resumedFrom: string; reusedFiles: number; rerunFiles: number; previousModel?: string; currentModel?: string } | null {
     if (!this || this.resumeInfo === null) return this.resumeInfo;

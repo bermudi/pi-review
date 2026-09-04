@@ -561,6 +561,9 @@ export class Agent {
   ToolCalls(): Record<string, number> {
     return this.toolCalls();
   }
+  ToolFailures(): Array<{ toolCallNumber: number; toolName: string; filePath: string; args: string; error: string }> {
+    return this.toolFailures();
+  }
   TotalTokensUsed(): number { return this.totalTokensUsed(); }
   TotalInputTokens(): number { return this.totalInputTokens(); }
   TotalOutputTokens(): number { return this.totalOutputTokens(); }
@@ -957,6 +960,11 @@ export class Agent {
 
   toolCalls(): Record<string, number> {
     return this.runner.toolCallsObject();
+  }
+
+  /** Isolated adoption from OCR b3704b8: expose failed tool calls for output. */
+  toolFailures(): Array<{ toolCallNumber: number; toolName: string; filePath: string; args: string; error: string }> {
+    return this.runner.toolFailures();
   }
 
   completedPaths(): readonly string[] {

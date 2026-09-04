@@ -69,6 +69,9 @@ export interface ToolResultRecord {
   toolName: string;
   arguments: string;
   result: string;
+  // Isolated adoption from OCR b3704b8: persist success vs failure.
+  ok: boolean;
+  durationMs: number;
 }
 
 export interface Message {
@@ -357,9 +360,18 @@ export class TaskRecord {
   }
 
   AddToolResult(toolName: string, args: string, result: string): void {
-    this.toolResults.push({ toolName, arguments: args, result });
+    this.addToolResult(toolName, args, result, true, 0);
+  }
+
+  // Isolated adoption from OCR b3704b8: failed tool calls persist ok=false.
+  AddToolFailure(toolName: string, args: string, result: string, durationMs: number): void {
+    this.addToolResult(toolName, args, result, false, durationMs);
+  }
+
+  private addToolResult(toolName: string, args: string, result: string, ok: boolean, durationMs: number): void {
+    this.toolResults.push({ toolName, arguments: args, result, ok, durationMs });
     const sess3 = this.fileSession?.session as unknown as { persist: PersistHandle | null } | undefined;
-    sess3?.persist?.writeToolCall(this.fileSession.filePath, this.type, toolName, args, result, true, 0);
+    sess3?.persist?.writeToolCall(this.fileSession.filePath, this.type, toolName, args, result, ok, durationMs);
   }
 }
 

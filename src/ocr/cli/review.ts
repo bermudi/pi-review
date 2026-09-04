@@ -21,6 +21,7 @@ import {
   outputJsonNoFiles,
   outputPreview,
   outputRetryReportText,
+  newJsonToolCalls,
   traceSummaryText,
   type AgentWarning,
   type JsonLlmIdentity,
@@ -44,6 +45,7 @@ export interface ResultProvider {
   Warnings(): AgentWarning[];
   ProjectSummary(): string;
   ToolCalls(): Record<string, number>;
+  ToolFailures?(): Array<{ toolCallNumber: number; toolName: string; filePath: string; args: string; error: string }>;
   SessionID(): string;
   BudgetExceeded(): boolean;
   RunManifest(): RunManifest | null | undefined;
@@ -71,6 +73,7 @@ export interface ReviewRunner {
   cacheReadTokens: number;
   cacheWriteTokens: number;
   toolCalls: Record<string, number>;
+  toolFailures?: Array<{ toolCallNumber: number; toolName: string; filePath: string; args: string; error: string }>;
   sessionId: string;
   budgetExceeded: boolean;
   projectSummary: string;
@@ -131,6 +134,7 @@ export function emitRunResult(
 
   if (outputFormat === "json") {
     const resumeInfo = typeof provider.ResumeInfo === "function" ? provider.ResumeInfo() as unknown : undefined;
+    const toolFailures = typeof provider.ToolFailures === "function" ? (provider.ToolFailures() ?? []) : [];
     const json = outputJsonWithWarnings({
       comments,
       warnings: provider.Warnings(),
@@ -143,6 +147,7 @@ export function emitRunResult(
       durationMs,
       projectSummary: provider.ProjectSummary(),
       toolCalls: provider.ToolCalls(),
+      toolFailures,
       traceId,
       resumeInfo,
       sessionId: provider.SessionID(),
@@ -343,6 +348,7 @@ export async function runReviewContext(ctx: ReviewContext): Promise<number> {
       Warnings: () => runner!.warnings,
       ProjectSummary: () => runner!.projectSummary,
       ToolCalls: () => runner!.toolCalls,
+      ToolFailures: () => (runner as unknown as { toolFailures?: Array<{ toolCallNumber: number; toolName: string; filePath: string; args: string; error: string }> }).toolFailures ?? [],
       SessionID: () => runner!.sessionId,
       BudgetExceeded: () => runner!.budgetExceeded,
       RunManifest: () => runner!.manifest,
@@ -380,6 +386,7 @@ export async function runReviewContext(ctx: ReviewContext): Promise<number> {
       Warnings: () => runner.warnings,
       ProjectSummary: () => runner.projectSummary,
       ToolCalls: () => runner.toolCalls,
+      ToolFailures: () => (runner as unknown as { toolFailures?: Array<{ toolCallNumber: number; toolName: string; filePath: string; args: string; error: string }> }).toolFailures ?? [],
       SessionID: () => runner.sessionId,
       BudgetExceeded: () => runner.budgetExceeded,
       RunManifest: () => runner.manifest,
@@ -387,9 +394,10 @@ export async function runReviewContext(ctx: ReviewContext): Promise<number> {
     };
     // Emit failure usage only if manifest not already published with retry report
     const failureReport = emitted ? null : effectiveRetryReport;
+    const failedToolFailures = (runner as unknown as { toolFailures?: Array<{ toolCallNumber: number; toolName: string; filePath: string; args: string; error: string }> }).toolFailures ?? [];
     // Text vs JSON handling is inside shared retry helper; here we do best-effort
     if (opts.outputFormat === "json") {
-      const total = Object.values(failedProvider.ToolCalls()).reduce((a, b) => a + b, 0);
+      const toolCallsJson = newJsonToolCalls(failedProvider.ToolCalls(), failedToolFailures);
       const serializedFailureReport = serializeRetryReport(failureReport);
       io.stderr(
         `${JSON.stringify(
@@ -404,7 +412,7 @@ export async function runReviewContext(ctx: ReviewContext): Promise<number> {
               elapsed: `${String(Math.round(durationMs / 1000))}s`,
               budget_exceeded: failedProvider.BudgetExceeded() ? true : undefined,
             },
-            tool_calls: { total, by_tool: failedProvider.ToolCalls() },
+            tool_calls: toolCallsJson,
             session_id: failedProvider.SessionID() || undefined,
             retry_report: serializedFailureReport,
           },
@@ -413,8 +421,10 @@ export async function runReviewContext(ctx: ReviewContext): Promise<number> {
         )}\n`,
       );
     } else {
+      const failedTotal = Object.values(failedProvider.ToolCalls()).reduce((a, b) => a + b, 0);
+      const failedSuffix = failedToolFailures.length > 0 ? `, ${String(failedToolFailures.length)} failed` : "";
       io.stderr(
-        `[pi-review] usage on failure: ${String(failedProvider.FilesReviewed())} file(s), ${String(failedProvider.TotalInputTokens())} input + ${String(failedProvider.TotalOutputTokens())} output = ${String(failedProvider.TotalTokensUsed())} total tokens, ${String(Object.values(failedProvider.ToolCalls()).reduce((a, b) => a + b, 0))} tool calls, elapsed ${String(Math.round(durationMs / 1000))}s, budget_exceeded=${String(failedProvider.BudgetExceeded())}` +
+        `[pi-review] usage on failure: ${String(failedProvider.FilesReviewed())} file(s), ${String(failedProvider.TotalInputTokens())} input + ${String(failedProvider.TotalOutputTokens())} output = ${String(failedProvider.TotalTokensUsed())} total tokens, ${String(failedTotal)} tool calls${failedSuffix}, elapsed ${String(Math.round(durationMs / 1000))}s, budget_exceeded=${String(failedProvider.BudgetExceeded())}` +
           (failedProvider.SessionID() ? `, session ${failedProvider.SessionID()}` : "") +
           "\n",
       );
