@@ -220,6 +220,9 @@ export class Runner {
   /**
    * RunSplit executes `git <args>` and returns stdout and stderr separately.
    * Mirrors Go `Runner.RunSplit`.
+   * On non-zero exit, throws with `stderr` preserved on the error object so
+   * callers can build gitFailure diagnostics without leaking stdout content.
+   * Isolated adoption from OCR 0c44f10/4cecf1e: stderr-only diagnostics.
    */
   async runSplit(
     repoDir: string,
@@ -229,12 +232,18 @@ export class Runner {
     await this.acquire(signal);
     try {
       const res = await execGit(repoDir, args, signal);
+      const stdout = res.stdout.toString("utf-8");
+      const stderr = res.stderr.toString("utf-8");
       if (res.status !== 0) {
-        const err = new Error(`git ${args.join(" ")} failed with exit ${res.status}`) as Error & { status: number | null };
+        const err = new Error(`git ${args.join(" ")} failed with exit ${res.status}`) as Error & {
+          status: number | null;
+          stderr: string;
+        };
         (err as unknown as Record<string, unknown>)["status"] = res.status;
+        (err as unknown as Record<string, unknown>)["stderr"] = stderr;
         throw err;
       }
-      return { stdout: res.stdout.toString("utf-8"), stderr: res.stderr.toString("utf-8") };
+      return { stdout, stderr };
     } finally {
       this.release();
     }

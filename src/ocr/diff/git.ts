@@ -33,6 +33,45 @@ import type { Diff } from "../model/diff.js";
 export const DiffContextLines = 3;
 
 // ---------------------------------------------------------------------------
+// Failure diagnostics — isolated adoption from OCR 0c44f10 + 4cecf1e.
+// Use stderr only (never combined stdout) so a mid-write kill tail cannot leak
+// diff/source content via error telemetry. Keep the tail (die() fatal is last),
+// capped rune-safely.
+// ---------------------------------------------------------------------------
+
+export const GIT_DIAG_LIMIT = 2000;
+
+/**
+ * gitFailure builds an error carrying git's own stderr tail plus the original
+ * failure. Returns an Error with `cause` set to the original error.
+ * Mirrors Go `gitFailure(op, stderr, err)`.
+ */
+export function gitFailure(op: string, stderr: string, err: unknown): Error {
+  const orig = err instanceof Error ? err : new Error(String(err ?? "error"));
+  // Cancellation guard is handled by callers (signal.aborted rethrow); here we
+  // only format diagnostics.
+  const diag = stderr.trim();
+  if (diag === "") return new Error(`${op} failed: ${orig.message}`, { cause: orig });
+  // Rune-safe tail via code-point spread (locale-safe, no split surrogate).
+  const points = [...diag];
+  const tail = points.length > GIT_DIAG_LIMIT ? `...${points.slice(-GIT_DIAG_LIMIT).join("")}` : diag;
+  return new Error(`${op} failed: ${orig.message}: ${tail}`, { cause: orig });
+}
+
+export const GitFailure = gitFailure;
+
+/**
+ * splitStderr extracts stderr preserved on split-runner errors.
+ * Returns "" when unavailable (e.g. spawn failure), letting gitFailure fall
+ * back to `op failed: <message>`.
+ */
+export function splitStderr(err: unknown): string {
+  if (typeof err !== "object" || err === null) return "";
+  const v = (err as Record<string, unknown>)["stderr"];
+  return typeof v === "string" ? v : "";
+}
+
+// ---------------------------------------------------------------------------
 // Mode — mirrors Go `Mode`
 // ---------------------------------------------------------------------------
 
@@ -179,48 +218,59 @@ export class Provider {
       case ModeRange: {
         const base = await this.mergeBase(signal);
         if (base === "") throw new Error(`cannot find merge-base between ${this.from} and ${this.to}`);
-        const out = await this.runGit(
-          [
-            "-c",
-            "core.quotepath=false",
-            "diff",
-            "--no-ext-diff",
-            "--no-textconv",
-            "--find-renames",
-            "--src-prefix=a/",
-            "--dst-prefix=b/",
-            "--no-color",
-            `-U${DiffContextLines}`,
-            "--end-of-options",
-            base,
-            this.to,
-            "--",
-          ],
-          signal,
-        );
-        combined += out;
+        // Isolated adoption from OCR 0c44f10: surface git's own stderr tail.
+        try {
+          const { stdout } = await this.runGitSplit(
+            [
+              "-c",
+              "core.quotepath=false",
+              "diff",
+              "--no-ext-diff",
+              "--no-textconv",
+              "--find-renames",
+              "--src-prefix=a/",
+              "--dst-prefix=b/",
+              "--no-color",
+              `-U${DiffContextLines}`,
+              "--end-of-options",
+              base,
+              this.to,
+              "--",
+            ],
+            signal,
+          );
+          combined += stdout;
+        } catch (e) {
+          if (signal?.aborted) throw e;
+          throw gitFailure("git diff", splitStderr(e), e);
+        }
         break;
       }
       case ModeCommit: {
-        const out = await this.runGit(
-          [
-            "-c",
-            "core.quotepath=false",
-            "show",
-            "--no-ext-diff",
-            "--no-textconv",
-            "--find-renames",
-            "--src-prefix=a/",
-            "--dst-prefix=b/",
-            "--no-color",
-            "--diff-merges=first-parent",
-            `-U${DiffContextLines}`,
-            "--end-of-options",
-            this.commit,
-          ],
-          signal,
-        );
-        combined += out;
+        try {
+          const { stdout } = await this.runGitSplit(
+            [
+              "-c",
+              "core.quotepath=false",
+              "show",
+              "--no-ext-diff",
+              "--no-textconv",
+              "--find-renames",
+              "--src-prefix=a/",
+              "--dst-prefix=b/",
+              "--no-color",
+              "--diff-merges=first-parent",
+              `-U${DiffContextLines}`,
+              "--end-of-options",
+              this.commit,
+            ],
+            signal,
+          );
+          combined += stdout;
+        } catch (e) {
+          if (signal?.aborted) throw e;
+          throw gitFailure("git show", splitStderr(e), e);
+        }
         break;
       }
       case ModeWorkspace: {
@@ -317,11 +367,12 @@ export class Provider {
       "--",
     ];
     try {
-      const out = await this.runGit(argsHead, signal);
-      if (out !== "") return out;
+      const { stdout } = await this.runGitSplit(argsHead, signal);
+      if (stdout !== "") return stdout;
     } catch (e) {
       if (signal?.aborted) throw e;
-      // fall through to staged fallback
+      // Discard first HEAD stderr: expected "bad revision 'HEAD'" on unborn repo.
+      // Fall through to staged fallback.
     }
     // Fallback for repo with no HEAD (unborn) — diff staged vs empty tree.
     const argsStaged = [
@@ -339,9 +390,12 @@ export class Provider {
       "--",
     ];
     try {
-      return await this.runGit(argsStaged, signal);
-    } catch {
-      return "";
+      const { stdout } = await this.runGitSplit(argsStaged, signal);
+      return stdout;
+    } catch (e) {
+      if (signal?.aborted) throw e;
+      // Isolated adoption from OCR 0c44f10: only the fallback stderr is diagnostic.
+      throw gitFailure("workspace tracked diff", splitStderr(e), e);
     }
   }
 
@@ -387,11 +441,15 @@ export class Provider {
   }
 
   private async untrackedFilesList(signal?: AbortSignal): Promise<string[]> {
-    let out = "";
+    // Isolated adoption from OCR 4cecf1e: propagate listing errors instead of
+    // returning [] and reviewing half-blind.
+    let out: string;
     try {
-      out = await this.runGit(["-c", "core.quotepath=false", "ls-files", "--others", "--exclude-standard"], signal);
-    } catch {
-      return [];
+      const res = await this.runGitSplit(["-c", "core.quotepath=false", "ls-files", "--others", "--exclude-standard"], signal);
+      out = res.stdout;
+    } catch (e) {
+      if (signal?.aborted) throw e;
+      throw gitFailure("git ls-files", splitStderr(e), e);
     }
     if (out.trim() === "") return [];
     const patterns = loadGitignorePatterns(this.repoDir);
@@ -402,6 +460,62 @@ export class Provider {
       if (!isPathExcluded(line, patterns)) files.push(line);
     }
     return files;
+  }
+
+  // Low-level split runner — mirrors Go `runGitSplit` (stdout/stderr apart).
+  // Cancellation guard: signal abort rethrows the abort reason so callers can
+  // classify timeout/cancel vs failure.
+  private async runGitSplit(args: string[], signal?: AbortSignal): Promise<{ stdout: string; stderr: string }> {
+    if (this.runner !== null) {
+      try {
+        return await this.runner.runSplit(this.repoDir, args, signal);
+      } catch (e) {
+        if (signal?.aborted) throw signal.reason instanceof Error ? signal.reason : new Error(String(signal.reason ?? "aborted"));
+        throw e;
+      }
+    }
+    // Direct fallback without runner.
+    return await new Promise<{ stdout: string; stderr: string }>((resolve, reject) => {
+      if (signal?.aborted) {
+        const reason = signal!.reason;
+        reject(reason instanceof Error ? reason : new Error(String(reason ?? "aborted")));
+        return;
+      }
+      const child = spawn("git", args, { cwd: this.repoDir, stdio: ["ignore", "pipe", "pipe"], shell: false });
+      const outChunks: Buffer[] = [];
+      const errChunks: Buffer[] = [];
+      child.stdout.on("data", (c: Buffer) => outChunks.push(c));
+      child.stderr.on("data", (c: Buffer) => errChunks.push(c));
+      const onAbort = (): void => {
+        try {
+          child.kill("SIGTERM");
+        } catch {
+          // ignore
+        }
+        reject(signal?.reason instanceof Error ? signal?.reason : new Error(String(signal?.reason ?? "aborted")));
+      };
+      if (signal) signal.addEventListener("abort", onAbort, { once: true });
+      child.on("error", (err) => {
+        if (signal) signal.removeEventListener("abort", onAbort);
+        reject(err);
+      });
+      child.on("close", (code) => {
+        if (signal) signal.removeEventListener("abort", onAbort);
+        const stdout = Buffer.concat(outChunks).toString("utf-8");
+        const stderr = Buffer.concat(errChunks).toString("utf-8");
+        if (code !== 0) {
+          const err = new Error(`git ${args.join(" ")} failed with exit ${code}`) as Error & {
+            status: number | null;
+            stderr: string;
+          };
+          (err as unknown as Record<string, unknown>)["status"] = code;
+          (err as unknown as Record<string, unknown>)["stderr"] = stderr;
+          reject(err);
+        } else {
+          resolve({ stdout, stderr });
+        }
+      });
+    });
   }
 
   // Low-level runner — mirrors Go `runGit`.
