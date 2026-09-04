@@ -3,6 +3,9 @@
 //
 // Ported from internal/config/rules/system_rules.go at c35ddd7223f2b5540ce03aa43c9a25ef643fca27;
 // language assets updated through OCR v1.9.6 at 24c2dd0cde63f56b19079ccf128cf88ab523cadf.
+// Routing extensions for C++ (.cxx/.hxx) and JavaScript modules (.mjs/.cjs)
+// surgically adopted from OCR v1.11.2 commits b1ad13a and 14fab72 (isolated
+// adoption; frozen v1.9.9 baseline unchanged for all other assets).
 // Modifications are distributed as part of pi-reviewer under
 // GPL-3.0-or-later;
 // see LICENSES/Apache-2.0.txt and THIRD_PARTY_NOTICES.md.
@@ -47,7 +50,7 @@ import { minimatch } from "minimatch";
 // ---------------------------------------------------------------------------
 
 export const EXPECTED_SYSTEM_RULES_HASH =
-  "444c44022016a023159fc0a4fbab81111c712b95bc46cdef2d1093b56fcbd4fb";
+  "9bfcb9336e55d70b82b8eb9880738d1e2993cc84a6a240491f440098da3e7d86";
 
 /**
  * SHA-256 of each verbatim rule-doc file as shipped in

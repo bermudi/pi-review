@@ -36,11 +36,16 @@
     {
       "dest": "src/ocr/rules/system_rules.json",
       "upstream": "internal/config/rules/system_rules.json",
-      "sha256": "444c44022016a023159fc0a4fbab81111c712b95bc46cdef2d1093b56fcbd4fb",
+      "sha256": "9bfcb9336e55d70b82b8eb9880738d1e2993cc84a6a240491f440098da3e7d86",
       "origin": {
         "tag": "v1.9.6",
         "tag_object": "5759585290c8db31be5ed2c9bd966210624f1222",
         "commit": "24c2dd0cde63f56b19079ccf128cf88ab523cadf"
+      },
+      "isolated_adoption": {
+        "note": "Routing-only update: .mjs/.cjs to JS rules and .cxx/.hxx to C++ rules; all other lines remain v1.9.6 baseline",
+        "commits": ["b1ad13ad88c17972335401efa92ee98c061204ab", "14fab72e484f2827c50b18e6b53e8bf303eb4447"],
+        "tag": "v1.11.2"
       }
     },
     {

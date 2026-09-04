@@ -122,8 +122,14 @@ const defaultRuleCases: ReadonlyArray<readonly [string, string]> = [
   ["src/pages/index.astro", "client:*"],
   ["src/components/app.tsx", "React"],
   ["lib/utils.ts", "TypeScript"],
+  // Isolated adoption from OCR v1.11.2 b1ad13a: JS module files route to JS rules.
+  ["scripts/config.mjs", "TypeScript"],
+  ["server/bootstrap.cjs", "TypeScript"],
   ["app.kt", "Null Safety"],
   ["src/main/handler.cpp", "Smart Pointer"],
+  // Isolated adoption from OCR v1.11.2 14fab72: .cxx/.hxx route to C++ rules.
+  ["src/main/handler.cxx", "Smart Pointer"],
+  ["include/handler.hxx", "Smart Pointer"],
   ["driver.c", "malloc"],
   ["pages/Index.ets", "State Decorator"],
   ["components/Button.ets", "State Decorator"],
