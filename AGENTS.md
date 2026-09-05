@@ -232,6 +232,14 @@ packed-install testing, not optional style preferences.
   itself (OCR announces the budget only via the terminal grace round). Do
   not remove these notices to restore OCR parity; their contract is pinned in
   `test/ocr/llmloop/loop.test.ts`.
+- Per-file status lines are a deliberate pi-reviewer extension on the human
+  stderr channel: milestone lines only (file start, file done with note count
+  and a run-level done counter, quiet warning), never per-response chatter,
+  message content, or stdout output. The quiet warning fires at half the
+  per-file idle timeout (user-confirmed choice) and rides the idle watchdog.
+  Emission is best-effort and agent-audience runs stay silent. Contracts are
+  pinned in `test/ocr/agent/status-lines.test.ts` and
+  `test/ocr/scan/status-lines.test.ts`.
 - Model resolution may harvest provider registrations from user-scope pi
   extensions (`src/ocr/cli/extension-providers.ts`). This is host-side,
   user-scope-only, fail-open (a broken extension costs its provider only),
