@@ -1314,12 +1314,15 @@ export class Agent {
             ? `file task timeout (no activity for ${idleMinutes} minutes)`
             : "file task timeout (no activity for timeout period)";
           const armIdle = (): void => {
+            if (finished) return;
             if (timeoutId !== null) clearTimeout(timeoutId);
             timeoutId = setTimeout(() => timeoutCtrl?.abort(new Error(idleMessage)), timeoutMs);
           };
           const resetIdle = (): void => {
+            if (finished) return;
             if (timeoutCtrl !== null && !timeoutCtrl.signal.aborted) armIdle();
           };
+          let finished = false;
           armIdle();
           // Merge: taskSignal aborts if either parent or timeout aborts
           const merged = new AbortController();
@@ -1332,7 +1335,9 @@ export class Agent {
           taskSignal = merged.signal;
           // cleanup after
           const cleanup = (): void => {
+            finished = true;
             if (timeoutId !== null) clearTimeout(timeoutId);
+            timeoutId = null;
             signal.removeEventListener("abort", onParentAbort);
             signal.removeEventListener("abort", forwardParent);
             timeoutCtrl?.signal.removeEventListener("abort", forwardTimeout);
@@ -1541,6 +1546,9 @@ export class Agent {
           await this.commentWorkerPool.AwaitKey(newPath);
         }
       } catch {}
+      // The filter is its own model call on the same per-file signal: give it
+      // a full idle window rather than the leftover time from the main loop.
+      try { onActivity?.(); } catch {}
       await this.executeReviewFilter(signal, d, newPath);
     }
 

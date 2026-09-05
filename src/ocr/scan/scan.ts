@@ -457,11 +457,14 @@ export class Agent {
           if (signal.aborted) merged.abort(signal.reason);
           if (timeoutCtrl.signal.aborted) merged.abort(timeoutCtrl.signal.reason);
           let t: ReturnType<typeof setTimeout> | null = null;
+          let finished = false;
           const armIdle = (): void => {
+            if (finished) return;
             if (t !== null) clearTimeout(t);
             t = setTimeout(() => timeoutCtrl?.abort(new Error(idleMessage)), timeoutMs);
           };
           const resetIdle = (): void => {
+            if (finished) return;
             if (timeoutCtrl !== null && !timeoutCtrl.signal.aborted) armIdle();
           };
           armIdle();
@@ -472,7 +475,9 @@ export class Agent {
           } catch (err) {
             this.handleSubtaskError(item, fp, err, completed);
           } finally {
+            finished = true;
             if (t !== null) clearTimeout(t);
+            t = null;
             signal.removeEventListener("abort", onParent);
             timeoutCtrl?.signal.removeEventListener("abort", onTimeout);
           }

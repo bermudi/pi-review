@@ -64,6 +64,94 @@ async function abortableSleep(signal: AbortSignal, ms: number): Promise<void> {
 }
 
 describe("per-file idle timeout", () => {
+  test("RunPerFile reports grace-round and compression responses as activity", async () => {
+    // Grace: 1 round budget forces a second (grace) model call.
+    const transport = new ScriptedTransport([
+      {
+        toolCalls: [{ id: "c1", name: "file_read", arguments: JSON.stringify({ path: "a.go" }) }],
+        usage: { PromptTokens: 1, CompletionTokens: 1, CacheReadTokens: 0, CacheWriteTokens: 0 },
+      },
+      {
+        toolCalls: [{ id: "g1", name: "task_done", arguments: "{}" }],
+        usage: { PromptTokens: 1, CompletionTokens: 1, CacheReadTokens: 0, CacheWriteTokens: 0 },
+      },
+    ]);
+    const adapter = {
+      complete: (signal: AbortSignal, req: unknown): Promise<unknown> =>
+        (transport as unknown as { complete: (a: unknown, b: unknown) => Promise<unknown> }).complete(req, signal),
+      CompletionsWithCtx: (signal: AbortSignal, req: unknown): Promise<unknown> =>
+        (transport as unknown as { complete: (a: unknown, b: unknown) => Promise<unknown> }).complete(req, signal),
+    };
+    const registry = new Map([
+      ["file_read", { name: "file_read", execute: (): string => "content" }],
+    ]);
+    const runner = new Runner({
+      model: "test",
+      template: { MaxTokens: 4000, MaxToolRequestTimes: 1, MaxCompletionTokens: 1000 } as unknown as Template,
+      llmClient: adapter as unknown as never,
+      mainToolDefs: [
+        { type: "function", function: { name: "code_comment" } },
+        { type: "function", function: { name: "task_done" } },
+        { type: "function", function: { name: "file_read" } },
+      ] as unknown as readonly ToolDef[],
+      toolRegistry: registry as unknown as never,
+    } as unknown as ConstructorParameters<typeof Runner>[0]);
+    let activity = 0;
+    const res = await runner.RunPerFile(new AbortController().signal, [newTextMessage("user", "hi")], "a.go", () => {
+      activity++;
+    });
+    expect(transport.requests.length).toBe(2);
+    expect(activity).toBe(2);
+    expect(res.completed).toBe(false);
+    await runner.waitBackground();
+  });
+
+  test("RunPerFile reports compression responses as activity", async () => {
+    const transport = new ScriptedTransport([
+      {
+        toolCalls: [{ id: "c1", name: "file_read", arguments: JSON.stringify({ path: "a.go" }) }],
+        usage: { PromptTokens: 5, CompletionTokens: 5, CacheReadTokens: 0, CacheWriteTokens: 0 },
+      },
+      {
+        content: "summary",
+        usage: { PromptTokens: 5, CompletionTokens: 5, CacheReadTokens: 0, CacheWriteTokens: 0 },
+      },
+    ]);
+    const adapter = {
+      complete: (signal: AbortSignal, req: unknown): Promise<unknown> =>
+        (transport as unknown as { complete: (a: unknown, b: unknown) => Promise<unknown> }).complete(req, signal),
+      CompletionsWithCtx: (signal: AbortSignal, req: unknown): Promise<unknown> =>
+        (transport as unknown as { complete: (a: unknown, b: unknown) => Promise<unknown> }).complete(req, signal),
+    };
+    const registry = new Map([
+      ["file_read", { name: "file_read", execute: (): string => "content" }],
+    ]);
+    const runner = new Runner({
+      model: "test",
+      template: {
+        MaxTokens: 20,
+        MaxToolRequestTimes: 10,
+        MaxCompletionTokens: 1000,
+        MemoryCompressionTask: { Messages: [newTextMessage("user", "Summarize: {{context}}")] },
+      } as unknown as Template,
+      llmClient: adapter as unknown as never,
+      mainToolDefs: [
+        { type: "function", function: { name: "code_comment" } },
+        { type: "function", function: { name: "task_done" } },
+        { type: "function", function: { name: "file_read" } },
+      ] as unknown as readonly ToolDef[],
+      toolRegistry: registry as unknown as never,
+    } as unknown as ConstructorParameters<typeof Runner>[0]);
+    let activity = 0;
+    const big = "word ".repeat(100);
+    await runner.RunPerFile(new AbortController().signal, [newTextMessage("user", big)], "a.go", () => {
+      activity++;
+    });
+    expect(transport.requests.length).toBe(2);
+    expect(activity).toBe(2);
+    await runner.waitBackground();
+  });
+
   test("RunPerFile reports each successful model response as activity", async () => {
     const transport = new ScriptedTransport([
       {

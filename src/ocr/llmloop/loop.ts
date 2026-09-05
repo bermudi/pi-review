@@ -466,7 +466,7 @@ export class Runner {
         const thinking = resp.reasoningContent ?? "";
 
         for (const call of calls) {
-          const cp = await this.executeToolCall(signal, filePath, call as ToolCall, thinking, rec);
+          const cp = await this.executeToolCall(signal, filePath, call as ToolCall, thinking, rec, onActivity);
           if (cp.failed) {
             return { completed: false, stop: MainLoopStop.StopNone, error: new Error(`task failed: ${cp.data}`) };
           } else if (cp.completed) {
@@ -508,7 +508,7 @@ export class Runner {
           consecutiveEmptyRounds = 0;
         }
 
-        const succeed = await this.addNextMessage(signal, content, calls as ToolCall[], results, messages, filePath, st);
+        const succeed = await this.addNextMessage(signal, content, calls as ToolCall[], results, messages, filePath, st, onActivity);
         if (!succeed) {
           if (signal.aborted) {
             // Compression failed because the file's signal was aborted (the
@@ -529,7 +529,7 @@ export class Runner {
 
       if (stop === MainLoopStop.StopMaxRounds) {
         console.log(`[pi-review] Max tool requests reached for ${filePath}.`);
-        await this.runGraceRound(signal, messages, filePath, sessionId);
+        await this.runGraceRound(signal, messages, filePath, sessionId, onActivity);
       }
 
       return { completed: false, stop };
@@ -545,6 +545,7 @@ export class Runner {
     messages: Message[],
     filePath: string,
     sessionId: string,
+    onActivity?: () => void,
   ): Promise<void> {
     const graceDefs = graceRoundToolDefs(this.deps.mainToolDefs);
     if (graceDefs.length === 0) return;
@@ -575,6 +576,8 @@ export class Runner {
     let resp: ChatResponse;
     try {
       resp = await this.callTransport(signal, req);
+      // Grace round is a model call on the per-file signal: report activity.
+      try { onActivity?.(); } catch {}
     } catch (err) {
       console.log(`[pi-review] Grace round LLM error for ${filePath}: ${String(err)}`);
       return;
@@ -596,7 +599,7 @@ export class Runner {
     const thinking = resp.reasoningContent ?? "";
     for (const call of calls) {
       // Ignore return — grace round does not affect completed flag
-      await this.executeToolCall(signal, filePath, call as ToolCall, thinking, graceRec);
+      await this.executeToolCall(signal, filePath, call as ToolCall, thinking, graceRec, onActivity);
     }
   }
 
@@ -608,6 +611,7 @@ export class Runner {
     toolCall: ToolCall,
     thinking: string,
     rec?: TaskRecord | null,
+    onActivity?: () => void,
   ): Promise<TaskCheckpoint> {
     const name = toolCall.function.name;
 
@@ -843,6 +847,9 @@ export class Runner {
                 };
                 try {
                   const resp = await this.callTransport(sig, req);
+                  // Re-location is a model call on the per-file signal: report
+                  // activity so the idle watchdog does not kill an active file.
+                  try { onActivity?.(); } catch {}
                   if (rlRec) {
                     rlRec.SetResponse(
                       { content: resp.content ?? "", toolCalls: (resp.toolCalls ?? []).map((tc) => ({ id: tc.id, function: { name: tc.function.name, arguments: tc.function.arguments } })), model: this.deps.model, usage: resp.usage ? { promptTokens: resp.usage.PromptTokens, completionTokens: resp.usage.CompletionTokens, cacheReadTokens: resp.usage.CacheReadTokens, cacheWriteTokens: resp.usage.CacheWriteTokens } : undefined },
@@ -967,6 +974,7 @@ export class Runner {
     signal: AbortSignal,
     msgs: Message[],
     _filePath: string,
+    onActivity?: () => void,
   ): Promise<Message[]> {
     const tmpl = this.deps.template as unknown as {
       readonly MaxTokens: number;
@@ -1030,6 +1038,9 @@ export class Runner {
     let resp: ChatResponse;
     try {
       resp = await this.callTransport(signal, req);
+      // Compression is a model call on the per-file signal: report activity
+      // so the idle watchdog does not kill an active file.
+      try { onActivity?.(); } catch {}
     } catch (err) {
       if (compRec) compRec.SetError(err instanceof Error ? err : new Error(String(err)), Date.now() - compStart);
       throw err;
@@ -1065,6 +1076,7 @@ export class Runner {
     messages: Message[],
     filePath: string,
     st: CompressionState,
+    onActivity?: () => void,
   ): Promise<boolean> {
     const maxAllowed = this.deps.template.MaxTokens;
     const softLimit = Math.trunc(maxAllowed * 0.6);
@@ -1076,7 +1088,7 @@ export class Runner {
     if (CountMessagesTokens(messages) > warnLimit) {
       st.cancelPendingCompression();
       try {
-        const rebuilt = await this.runCompression(signal, [...messages], filePath);
+        const rebuilt = await this.runCompression(signal, [...messages], filePath, onActivity);
         // Only replace if rebuilt length differs or content changed; stub keeps same
         if (rebuilt.length !== messages.length || rebuilt.some((m, i) => m !== messages[i])) {
           messages.splice(0, messages.length, ...rebuilt);
@@ -1110,7 +1122,7 @@ export class Runner {
     if (finalCount > warnLimit) {
       st.cancelPendingCompression();
       try {
-        const rebuilt = await this.runCompression(signal, [...messages], filePath);
+        const rebuilt = await this.runCompression(signal, [...messages], filePath, onActivity);
         if (rebuilt.length !== messages.length || rebuilt.some((m, i) => m !== messages[i])) {
           messages.splice(0, messages.length, ...rebuilt);
         }
@@ -1122,15 +1134,15 @@ export class Runner {
 
     if (finalCount > softLimit && finalCount < warnLimit) {
       // Trigger async compression for next round — mirror Go triggerAsyncCompression
-      this.triggerAsyncCompression(st, messages, filePath);
+      this.triggerAsyncCompression(st, messages, filePath, onActivity);
     }
 
     return finalCount < warnLimit;
   }
 
-  private triggerAsyncCompression(st: CompressionState, messages: readonly Message[], filePath: string): void {
+  private triggerAsyncCompression(st: CompressionState, messages: readonly Message[], filePath: string, onActivity?: () => void): void {
     const worker = st.triggerAsyncCompression(messages, filePath, async (snapshot, fp, sig) => {
-      return this.runCompression(sig, [...snapshot], fp);
+      return this.runCompression(sig, [...snapshot], fp, onActivity);
     });
     if (worker === null) return;
     this._bg.add(worker);
