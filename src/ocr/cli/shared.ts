@@ -189,6 +189,23 @@ export interface FindingsOptions {
 // Defaults
 // ---------------------------------------------------------------------------
 
+/**
+ * Single source of truth for the per-file idle timeout (minutes without
+ * model progress before a file task is aborted). CLI defaults, scan
+ * defaults, factory fallbacks, and the public library adapter must all
+ * resolve through this constant so entry points cannot drift apart.
+ */
+export const DEFAULT_PER_FILE_TIMEOUT_MINUTES = 5;
+
+/**
+ * Resolve an explicit per-file timeout to an effective value. Positive
+ * values pass through; zero/negative ("use default") resolves to the
+ * centralized default.
+ */
+export function resolvePerFileTimeoutMinutes(perFileTimeout: number): number {
+  return perFileTimeout > 0 ? perFileTimeout : DEFAULT_PER_FILE_TIMEOUT_MINUTES;
+}
+
 export function defaultReviewOptions(): ReviewOptions {
   return {
     toolConfigPath: "",
@@ -207,7 +224,7 @@ export function defaultReviewOptions(): ReviewOptions {
     provider: "",
     model: "",
     concurrency: 8,
-    perFileTimeout: 5,
+    perFileTimeout: DEFAULT_PER_FILE_TIMEOUT_MINUTES,
     maxTools: 0,
     maxGitProcs: 16,
     maxTokens: 0,
@@ -229,7 +246,7 @@ export function defaultScanOptions(): ScanOptions {
     audience: "human",
     background: "",
     concurrency: 8,
-    perFileTimeout: 5,
+    perFileTimeout: DEFAULT_PER_FILE_TIMEOUT_MINUTES,
     maxTools: 0,
     maxGitProcs: 16,
     maxTokens: 0,

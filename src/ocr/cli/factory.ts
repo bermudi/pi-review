@@ -10,6 +10,7 @@ import { spawnSync } from "node:child_process";
 import { ModelRuntime, resolveCliModel } from "@earendil-works/pi-coding-agent";
 
 import type { ReviewOptions, ScanOptions } from "./shared.js";
+import { resolvePerFileTimeoutMinutes } from "./shared.js";
 import type { ProgressSink } from "../progress.js";
 import type { ReviewRunner } from "./review.js";
 import type { ScanRunner } from "./scan.js";
@@ -478,7 +479,7 @@ export function createReviewRunnerFactory(
     }
 
     const maxConcurrency = opts.concurrency > 0 ? opts.concurrency : 8;
-    const concurrentTaskTimeoutMinutes = opts.perFileTimeout > 0 ? opts.perFileTimeout : 5;
+    const concurrentTaskTimeoutMinutes = resolvePerFileTimeoutMinutes(opts.perFileTimeout);
 
     const agent = newAgent({
       repoDir,
@@ -692,7 +693,7 @@ export function createScanRunnerFactory(
       commentCollector: collector,
       commentWorkerPool: workerPool,
       maxConcurrency: opts.concurrency > 0 ? opts.concurrency : 8,
-      concurrentTaskTimeoutMinutes: opts.perFileTimeout > 0 ? opts.perFileTimeout : 5,
+      concurrentTaskTimeoutMinutes: resolvePerFileTimeoutMinutes(opts.perFileTimeout),
       model: modelIdentity.model,
       background: opts.background,
       maxFileSizeBytes: template.MaxFileSizeBytes,

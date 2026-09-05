@@ -29,6 +29,7 @@ import { createReviewRunnerFactory } from "./cli/factory.js";
 import type { ReviewRunner } from "./cli/review.js";
 import { manifestMessage } from "./cli/output.js";
 import type { ReviewOptions as OcrReviewOptions } from "./cli/shared.js";
+import { DEFAULT_PER_FILE_TIMEOUT_MINUTES } from "./cli/shared.js";
 import type { LlmComment } from "./model/review.js";
 import type { CoverageItem, RunManifest } from "./session/manifest.js";
 
@@ -82,7 +83,7 @@ function modelSpecWithThinking(model: string, thinking: ReviewOptions["thinking"
 	return `${base}:${thinking}`;
 }
 
-function buildOcrReviewOptions(
+export function buildOcrReviewOptions(
 	input: ReviewInput,
 	options: ReviewOptions,
 	rulePath: string,
@@ -109,7 +110,7 @@ function buildOcrReviewOptions(
 		provider: "",
 		model: modelSpecWithThinking(options.model, options.thinking),
 		concurrency: options.concurrency ?? 8,
-		perFileTimeout: 10,
+		perFileTimeout: DEFAULT_PER_FILE_TIMEOUT_MINUTES,
 		maxTools: options.maxToolRounds ?? 0,
 		maxGitProcs: 16,
 		maxTokens: 0,
