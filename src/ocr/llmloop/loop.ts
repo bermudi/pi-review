@@ -356,6 +356,7 @@ export class Runner {
     signal: AbortSignal,
     messages: Message[],
     filePath: string,
+    onActivity?: () => void,
   ): Promise<{ completed: boolean; stop: MainLoopStop; error?: Error }> {
     let toolReqCount = getMaxToolRequestTimes(this.deps.template);
     const initialToolReqCount = toolReqCount;
@@ -438,6 +439,10 @@ export class Runner {
           );
         }
         if (resp.usage) this.recordUsage(resp.usage);
+        // Idle watchdog: every successful model response counts as activity.
+        // The per-file timer is reset by the caller, so an actively
+        // responding model is never killed for taking a long time overall.
+        try { onActivity?.(); } catch {}
 
         const content = resp.content ?? "";
         const calls = (resp.toolCalls ?? []) as readonly ToolCall[];

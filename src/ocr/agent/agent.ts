@@ -388,8 +388,9 @@ export const errDeadlineExceeded = new Error("context deadline exceeded");
 export const errCanceled = new Error("context canceled");
 export const ErrDeadlineExceeded = errDeadlineExceeded;
 export const ErrCanceled = errCanceled;
-// pi-reviewer per-file deadline: each file task's merged signal aborts with
-// this reason when concurrentTaskTimeoutMinutes elapses (see run()). It must
+// pi-reviewer per-file idle timeout: each file task's merged signal aborts with
+// this reason when concurrentTaskTimeoutMinutes elapses without model activity
+// (see run()). It must
 // classify as timeout, mirroring the Go context.DeadlineExceeded handling.
 export const errFileTaskTimeout = new Error("file task timeout");
 export const ErrFileTaskTimeout = errFileTaskTimeout;
@@ -1301,7 +1302,25 @@ export class Agent {
           timeoutCtrl = new AbortController();
           const onParentAbort = (): void => timeoutCtrl?.abort(signal.reason);
           signal.addEventListener("abort", onParentAbort, { once: true });
-          timeoutId = setTimeout(() => timeoutCtrl?.abort(new Error("file task timeout")), timeoutMs);
+          // Idle watchdog: the timer measures time since last model activity,
+          // not total wall-clock time. Each successful model response resets
+          // it, so an actively working file is never killed for being slow.
+          // A file that goes quiet for the full timeout is aborted so one
+          // hung request cannot hold a concurrency slot forever. The message
+          // keeps the "file task timeout" substring so failure classification
+          // still reports it as a timeout.
+          const idleMinutes = this.args.concurrentTaskTimeoutMinutes ?? 0;
+          const idleMessage = idleMinutes > 0
+            ? `file task timeout (no activity for ${idleMinutes} minutes)`
+            : "file task timeout (no activity for timeout period)";
+          const armIdle = (): void => {
+            if (timeoutId !== null) clearTimeout(timeoutId);
+            timeoutId = setTimeout(() => timeoutCtrl?.abort(new Error(idleMessage)), timeoutMs);
+          };
+          const resetIdle = (): void => {
+            if (timeoutCtrl !== null && !timeoutCtrl.signal.aborted) armIdle();
+          };
+          armIdle();
           // Merge: taskSignal aborts if either parent or timeout aborts
           const merged = new AbortController();
           const forwardParent = (): void => merged.abort(signal.reason);
@@ -1319,7 +1338,7 @@ export class Agent {
             timeoutCtrl?.signal.removeEventListener("abort", forwardTimeout);
           };
           try {
-            const result = await this.executeSubtask(taskSignal, diff);
+            const result = await this.executeSubtask(taskSignal, diff, resetIdle);
             const stopStr = result.stop !== undefined ? (typeof result.stop === "string" ? result.stop : (result.stop as { class: string }).class) : undefined;
             this.subtaskOutcomes.set(diff.newPath, { completed: result.completed, stop: stopStr, error: result.error?.message });
             if (result.completed) this.markCompleted(diff);
@@ -1423,6 +1442,7 @@ export class Agent {
   private async executeSubtask(
     signal: AbortSignal,
     dRaw: Diff | unknown,
+    onActivity?: () => void,
   ): Promise<{ completed: boolean; stop?: { class: FailureClass; reason: string; checkpoint: string; reportAsError?: boolean }; error: Error | null }> {
     const d = normalizeDiff(dRaw);
     if (signal.aborted) {
@@ -1451,6 +1471,8 @@ export class Agent {
     } else if (hasPlan) {
       try {
         planResult = await this.executePlanPhase(signal, newPath, d.diff, changeFilesExcludingCurrent, rule);
+        // A finished plan response is activity — reset the idle watchdog.
+        try { onActivity?.(); } catch {}
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);
         this.progress(`[pi-review] Plan phase failed for ${newPath}: ${msg} (continuing without plan)`);
@@ -1499,7 +1521,7 @@ export class Agent {
     let completed = false;
     let stop: { class: FailureClass; reason: string; checkpoint: string; reportAsError?: boolean } | undefined;
     try {
-      const res = await this.runner.RunPerFile(signal, runnerMessages, newPath);
+      const res = await this.runner.RunPerFile(signal, runnerMessages, newPath, onActivity);
       completed = res.completed;
       if (res.error !== undefined) {
         return { completed: false, error: res.error };

@@ -95,7 +95,7 @@ Review flags:
   -f, --format FORMAT         output format: text, json, or sarif (default: text)
   --audience AUDIENCE         output audience: human or agent (default: human)
   --concurrency N             max concurrent file reviews (default: 8)
-  --timeout N                 concurrent task timeout in minutes (default: 10)
+  --timeout N                 idle timeout per file in minutes without model progress (default: 5)
   --max-tools N               max tool call rounds per file (0 = template default; min 10)
   --max-git-procs N           max concurrent git subprocesses (default: 16)
   --max-tokens N              per-file prompt token ceiling (0 = configured or template default)
@@ -116,7 +116,7 @@ Scan flags:
   -f, --format FORMAT         output format: text, json, or sarif (default: text)
   --audience AUDIENCE         output audience: human or agent (default: human)
   --concurrency N             max concurrent file scans (default: 8)
-  --timeout N                 concurrent task timeout in minutes (default: 10)
+  --timeout N                 idle timeout per file in minutes without model progress (default: 5)
   --max-tools N               max tool call rounds per file
   --max-git-procs N           max concurrent git subprocesses (default: 16)
   --max-tokens N              per-file prompt token ceiling (0 = configured or template default)

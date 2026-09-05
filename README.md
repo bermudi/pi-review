@@ -93,7 +93,7 @@ pi-review findings --session <session-id>
 - `-f, --format FORMAT` — `text` (default), `json`, or `sarif`
 - `--audience AUDIENCE` — `human` (default) or `agent`
 - `--concurrency N` — max concurrent file reviews (default 8)
-- `--timeout N` — per-file timeout in minutes (default 10)
+- `--timeout N` — idle timeout per file in minutes without model progress (default 5)
 - `--max-tools N` — max tool rounds per file (0 = template default, min 10)
 - `--max-git-procs N` — max concurrent Git subprocesses (default 16)
 - `--max-tokens N` — per-file prompt token ceiling (0 = default)

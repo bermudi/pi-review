@@ -444,21 +444,35 @@ export class Agent {
         if (timeoutMs > 0) {
           timeoutCtrl = new AbortController();
           const merged = new AbortController();
+          // Idle watchdog: reset on every successful model response so active
+          // files are never killed for being slow overall. Quiet files abort.
+          const idleMinutes = this.args.concurrentTaskTimeoutMinutes ?? 0;
+          const idleMessage = idleMinutes > 0
+            ? `file task timeout (no activity for ${idleMinutes} minutes)`
+            : "file task timeout (no activity for timeout period)";
           const onParent = (): void => merged.abort(signal.reason);
-          const onTimeout = (): void => merged.abort(new Error("file task timeout"));
+          const onTimeout = (): void => merged.abort(timeoutCtrl?.signal.reason ?? new Error(idleMessage));
           signal.addEventListener("abort", onParent, { once: true });
           timeoutCtrl.signal.addEventListener("abort", onTimeout, { once: true });
           if (signal.aborted) merged.abort(signal.reason);
           if (timeoutCtrl.signal.aborted) merged.abort(timeoutCtrl.signal.reason);
-          const t = setTimeout(() => timeoutCtrl?.abort(), timeoutMs);
+          let t: ReturnType<typeof setTimeout> | null = null;
+          const armIdle = (): void => {
+            if (t !== null) clearTimeout(t);
+            t = setTimeout(() => timeoutCtrl?.abort(new Error(idleMessage)), timeoutMs);
+          };
+          const resetIdle = (): void => {
+            if (timeoutCtrl !== null && !timeoutCtrl.signal.aborted) armIdle();
+          };
+          armIdle();
           taskSignal = merged.signal;
           try {
-            const result = await this.executeSubtask(taskSignal, item);
+            const result = await this.executeSubtask(taskSignal, item, resetIdle);
             this.handleSubtaskResult(item, fp, result, completed);
           } catch (err) {
             this.handleSubtaskError(item, fp, err, completed);
           } finally {
-            clearTimeout(t);
+            if (t !== null) clearTimeout(t);
             signal.removeEventListener("abort", onParent);
             timeoutCtrl?.signal.removeEventListener("abort", onTimeout);
           }
@@ -507,11 +521,12 @@ export class Agent {
     this.runner.RecordWarning("scan_subtask_error", it.path, msg);
   }
 
-  private async executeSubtask(signal: AbortSignal, it: ScanItem): Promise<{ completed: boolean; stop?: MainLoopStop | "token_threshold_exceeded"; error: Error | null }> {
+  private async executeSubtask(signal: AbortSignal, it: ScanItem, onActivity?: () => void): Promise<{ completed: boolean; stop?: MainLoopStop | "token_threshold_exceeded"; error: Error | null }> {
     if (signal.aborted) return { completed: false, error: new Error(String((signal as AbortSignal & { reason?: unknown }).reason ?? "aborted")) };
 
     const rule = this.args.systemRule ? this.args.systemRule(it.path.toLowerCase()) : "";
     const planGuidance = await this.maybeRunPlan(signal, it, rule);
+    try { onActivity?.(); } catch {}
     const messages = this.renderMessages(it, rule, planGuidance);
 
     const tokenCount = CountMessagesTokens(messages as { role: string; content: string }[]);
@@ -525,7 +540,7 @@ export class Agent {
     }
 
     try {
-      const res = await this.runner.RunPerFile(signal, messages as { role: string; content: string }[], it.path);
+      const res = await this.runner.RunPerFile(signal, messages as { role: string; content: string }[], it.path, onActivity);
       if (!res.completed) {
         return { completed: false, stop: res.stop as MainLoopStop, error: null };
       }

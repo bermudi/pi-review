@@ -478,7 +478,7 @@ export function createReviewRunnerFactory(
     }
 
     const maxConcurrency = opts.concurrency > 0 ? opts.concurrency : 8;
-    const concurrentTaskTimeoutMinutes = opts.perFileTimeout > 0 ? opts.perFileTimeout : 10;
+    const concurrentTaskTimeoutMinutes = opts.perFileTimeout > 0 ? opts.perFileTimeout : 5;
 
     const agent = newAgent({
       repoDir,
@@ -692,7 +692,7 @@ export function createScanRunnerFactory(
       commentCollector: collector,
       commentWorkerPool: workerPool,
       maxConcurrency: opts.concurrency > 0 ? opts.concurrency : 8,
-      concurrentTaskTimeoutMinutes: opts.perFileTimeout > 0 ? opts.perFileTimeout : 10,
+      concurrentTaskTimeoutMinutes: opts.perFileTimeout > 0 ? opts.perFileTimeout : 5,
       model: modelIdentity.model,
       background: opts.background,
       maxFileSizeBytes: template.MaxFileSizeBytes,
