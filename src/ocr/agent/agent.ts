@@ -47,7 +47,7 @@ import {
 import { SessionHistory } from "../session/history.js";
 import type { FailureClass } from "../session/manifest.js";
 import { MainLoopStop, mainLoopStopReason } from "../llmloop/types.js";
-import type { ProgressSink } from "../progress.js";
+import { FileStatusLines, quietWaitMinutes, type ProgressSink } from "../progress.js";
 
 // ---------------------------------------------------------------------------
 // RuntimeConfig — mirrors Go RuntimeConfig
@@ -1223,6 +1223,11 @@ export class Agent {
     return out;
   }
 
+  /** Current note count for one file, for the per-file done status line. */
+  private perFileNoteCount(diff: Diff): number {
+    return this.args.commentCollector?.commentsForPath?.(effectivePath(diff))?.length ?? 0;
+  }
+
   async dispatchSubtasks(signal: AbortSignal): Promise<LlmComment[]> {
     // Pre-filter large diffs
     this.diffs = this.filterLargeDiffs(this.diffs);
@@ -1243,6 +1248,12 @@ export class Agent {
     }
 
     const toDispatch = this.applyResume(this.diffs);
+
+    let totalFiles = 0;
+    for (const dRaw of toDispatch) {
+      if (!normalizeDiff(dRaw).isDeleted) totalFiles++;
+    }
+    const status = new FileStatusLines((m) => this.progress(m), totalFiles);
 
     let concurrency = this.args.maxConcurrency ?? 8;
     if (concurrency <= 0) concurrency = 8;
@@ -1295,6 +1306,7 @@ export class Agent {
       dispatched++;
 
       const task = (async (diff: Diff): Promise<void> => {
+        status.start(diff.newPath);
         let timeoutCtrl: AbortController | null = null;
         let taskSignal: AbortSignal = signal;
         let timeoutId: ReturnType<typeof setTimeout> | null = null;
@@ -1317,12 +1329,20 @@ export class Agent {
             if (finished) return;
             if (timeoutId !== null) clearTimeout(timeoutId);
             timeoutId = setTimeout(() => timeoutCtrl?.abort(new Error(idleMessage)), timeoutMs);
+            // Quiet warning at half the idle window: tells a human the file
+            // looks stalled while leaving the full window before the abort.
+            if (warnId !== null) clearTimeout(warnId);
+            warnId = setTimeout(() => {
+              warnId = null;
+              status.quiet(diff.newPath, quietWaitMinutes(timeoutMs));
+            }, timeoutMs / 2);
           };
           const resetIdle = (): void => {
             if (finished) return;
             if (timeoutCtrl !== null && !timeoutCtrl.signal.aborted) armIdle();
           };
           let finished = false;
+          let warnId: ReturnType<typeof setTimeout> | null = null;
           armIdle();
           // Merge: taskSignal aborts if either parent or timeout aborts
           const merged = new AbortController();
@@ -1338,6 +1358,8 @@ export class Agent {
             finished = true;
             if (timeoutId !== null) clearTimeout(timeoutId);
             timeoutId = null;
+            if (warnId !== null) clearTimeout(warnId);
+            warnId = null;
             signal.removeEventListener("abort", onParentAbort);
             signal.removeEventListener("abort", forwardParent);
             timeoutCtrl?.signal.removeEventListener("abort", forwardTimeout);
@@ -1355,6 +1377,11 @@ export class Agent {
               this.markFailed(diff, cls, reason);
             }
             cleanup();
+            if (result.completed) {
+              status.done(effectivePath(diff), this.perFileNoteCount(diff));
+            } else {
+              status.countFinished();
+            }
             if (!result.completed && result.error !== null && result.error !== undefined) {
               failed++;
               this.warnings.push({ type: "subtask_error", file: diff.newPath, message: result.error.message });
@@ -1374,6 +1401,7 @@ export class Agent {
           } catch (err) {
             cleanup();
             failed++;
+            status.countFinished();
             const msg = err instanceof Error ? err.message : String(err);
             this.subtaskOutcomes.set(diff.newPath, { completed: false, error: msg });
             this.warnings.push({ type: "subtask_error", file: diff.newPath, message: msg });
@@ -1396,6 +1424,11 @@ export class Agent {
             const st = result.stop as unknown as { class: FailureClass; reason: string; checkpoint: string; reportAsError?: boolean };
             this.markFailed(diff, st.class ?? FailureBudget, st.reason ?? "budget");
           }
+          if (result.completed) {
+            status.done(effectivePath(diff), this.perFileNoteCount(diff));
+          } else {
+            status.countFinished();
+          }
           if (!result.completed && result.error !== null && result.error !== undefined) {
             failed++;
             this.warnings.push({ type: "subtask_error", file: diff.newPath, message: result.error.message });
@@ -1411,6 +1444,7 @@ export class Agent {
           }
         } catch (err) {
           failed++;
+          status.countFinished();
           const msg = err instanceof Error ? err.message : String(err);
           this.subtaskOutcomes.set(diff.newPath, { completed: false, error: msg });
           this.warnings.push({ type: "subtask_error", file: diff.newPath, message: msg });

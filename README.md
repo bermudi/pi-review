@@ -130,7 +130,7 @@ a clean review. `findings` exits 0 when it displays a session (even one
 with no findings) and 1 when there is no session to show or the session id
 is unknown.
 
-Output goes to stdout (`text`/`json`/`sarif`); diagnostics and progress go to stderr, so `--format json` remains machine-readable.
+Output goes to stdout (`text`/`json`/`sarif`); diagnostics and progress go to stderr, so `--format json` remains machine-readable. During review and scan, each file logs its lifecycle to stderr: a line when the file starts, a line when it finishes with its finding count and a done counter (`3/6 files done`), and a `still waiting` warning if a file sits quiet for half the idle timeout — so a stalled run is visible long before the timeout fires.
 
 ### Repository and model selection
 

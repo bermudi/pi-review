@@ -42,7 +42,7 @@ import { CommentCollector } from "../tool/collector.js";
 import { CommentWorkerPool } from "../llmloop/pool.js";
 import { CountMessagesTokens, PromptTokenLimit, StripMarkdownFences, countTokens } from "../llmloop/compression.js";
 import { isAllowedExt, isExcludedPath } from "../rules/allowed_ext.js";
-import type { ProgressSink } from "../progress.js";
+import { FileStatusLines, quietWaitMinutes, type ProgressSink } from "../progress.js";
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -364,12 +364,13 @@ export class Agent {
     const batchList = batches ?? [this.items];
     this.progress(`[pi-review] scan dispatch: ${batchList.length} batch(es) by ${strategy} strategy`);
 
+    const status = new FileStatusLines((m) => this.progress(m), this.items.length);
     for (let bi = 0; bi < batchList.length; bi++) {
       if (signal.aborted) return this.commentCollector.comments();
       const batch = batchList[bi]!;
       const batchStart = this.commentCollector.snapshot();
 
-      const [n, budgetHit] = await this.dispatchBatch(signal, bi, batch);
+      const [n, budgetHit] = await this.dispatchBatch(signal, bi, batch, status);
       void n;
 
       if (this.commentWorkerPool) {
@@ -392,7 +393,7 @@ export class Agent {
     return this.commentCollector.comments();
   }
 
-  private async dispatchBatch(signal: AbortSignal, batchIdx: number, batch: ScanItem[]): Promise<[number, boolean]> {
+  private async dispatchBatch(signal: AbortSignal, batchIdx: number, batch: ScanItem[], status: FileStatusLines): Promise<[number, boolean]> {
     const concurrency = this.args.maxConcurrency && this.args.maxConcurrency > 0 ? this.args.maxConcurrency : 8;
     const timeoutMs = (this.args.concurrentTaskTimeoutMinutes ?? 0) > 0 ? (this.args.concurrentTaskTimeoutMinutes ?? 0) * 60 * 1000 : 0;
     const sem = new Semaphore(concurrency);
@@ -419,6 +420,7 @@ export class Agent {
           this.commentCollector.add(cm);
         }
         this.args.session?.RecordReviewItemReused(it.path, it.path, it.path, fingerprint, this.args.resume?.sessionId ?? "", resumeItem.comments);
+        status.countFinished();
         continue;
       }
 
@@ -439,6 +441,7 @@ export class Agent {
 
       dispatched++;
       const task = (async (item: ScanItem, fp: string) => {
+        status.start(item.path);
         let taskSignal = signal;
         let timeoutCtrl: AbortController | null = null;
         if (timeoutMs > 0) {
@@ -457,11 +460,19 @@ export class Agent {
           if (signal.aborted) merged.abort(signal.reason);
           if (timeoutCtrl.signal.aborted) merged.abort(timeoutCtrl.signal.reason);
           let t: ReturnType<typeof setTimeout> | null = null;
+          let warnId: ReturnType<typeof setTimeout> | null = null;
           let finished = false;
           const armIdle = (): void => {
             if (finished) return;
             if (t !== null) clearTimeout(t);
             t = setTimeout(() => timeoutCtrl?.abort(new Error(idleMessage)), timeoutMs);
+            // Quiet warning at half the idle window: tells a human the file
+            // looks stalled while leaving the full window before the abort.
+            if (warnId !== null) clearTimeout(warnId);
+            warnId = setTimeout(() => {
+              warnId = null;
+              status.quiet(item.path, quietWaitMinutes(timeoutMs));
+            }, timeoutMs / 2);
           };
           const resetIdle = (): void => {
             if (finished) return;
@@ -472,12 +483,20 @@ export class Agent {
           try {
             const result = await this.executeSubtask(taskSignal, item, resetIdle);
             this.handleSubtaskResult(item, fp, result, completed);
+            if (result.completed) {
+              status.done(item.path, this.commentCollector.commentsForPath(item.path).length);
+            } else {
+              status.countFinished();
+            }
           } catch (err) {
             this.handleSubtaskError(item, fp, err, completed);
+            status.countFinished();
           } finally {
             finished = true;
             if (t !== null) clearTimeout(t);
             t = null;
+            if (warnId !== null) clearTimeout(warnId);
+            warnId = null;
             signal.removeEventListener("abort", onParent);
             timeoutCtrl?.signal.removeEventListener("abort", onTimeout);
           }
@@ -485,8 +504,14 @@ export class Agent {
           try {
             const result = await this.executeSubtask(taskSignal, item);
             this.handleSubtaskResult(item, fp, result, completed);
+            if (result.completed) {
+              status.done(item.path, this.commentCollector.commentsForPath(item.path).length);
+            } else {
+              status.countFinished();
+            }
           } catch (err) {
             this.handleSubtaskError(item, fp, err, completed);
+            status.countFinished();
           }
         }
         sem.release();
