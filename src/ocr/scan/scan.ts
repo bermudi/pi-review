@@ -530,7 +530,7 @@ export class Agent {
     if (signal.aborted) return { completed: false, error: new Error(String((signal as AbortSignal & { reason?: unknown }).reason ?? "aborted")) };
 
     const rule = this.args.systemRule ? this.args.systemRule(it.path.toLowerCase()) : "";
-    const planGuidance = await this.maybeRunPlan(signal, it, rule);
+    const planGuidance = await this.maybeRunPlan(signal, it, rule, onActivity);
     try { onActivity?.(); } catch {}
     const messages = this.renderMessages(it, rule, planGuidance);
 
@@ -556,7 +556,7 @@ export class Agent {
     }
   }
 
-  private async maybeRunPlan(signal: AbortSignal, it: ScanItem, rule: string): Promise<string> {
+  private async maybeRunPlan(signal: AbortSignal, it: ScanItem, rule: string, onActivity?: () => void): Promise<string> {
     const noPlan = "(no pre-scan plan; review the entire file as usual)";
     if (!this.planEnabled()) return noPlan;
 
@@ -576,6 +576,7 @@ export class Agent {
       model: this.args.model ?? "",
       messages: messages as unknown as import("../llmloop/compression.js").Message[],
       maxTokens: this.args.template.MaxCompletionTokens && this.args.template.MaxCompletionTokens > 0 ? this.args.template.MaxCompletionTokens : this.args.template.MaxTokens,
+      ...(onActivity ? { onProgress: onActivity } : {}),
     };
 
     try {
@@ -590,6 +591,7 @@ export class Agent {
         throw new Error("llmClient must provide complete or CompletionsWithCtx");
       }
       if (resp.usage) this.runner.RecordUsage(resp.usage as never);
+      try { onActivity?.(); } catch {}
       const guidance = formatPlanGuidance(resp.content ?? "");
       return guidance === "" ? noPlan : guidance;
     } catch (err) {

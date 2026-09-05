@@ -1475,7 +1475,7 @@ export class Agent {
       this.progress(`[pi-review] Skipping plan phase for ${newPath} (${changeLines} lines < threshold ${threshold})`);
     } else if (hasPlan) {
       try {
-        planResult = await this.executePlanPhase(signal, newPath, d.diff, changeFilesExcludingCurrent, rule);
+        planResult = await this.executePlanPhase(signal, newPath, d.diff, changeFilesExcludingCurrent, rule, onActivity);
         // A finished plan response is activity — reset the idle watchdog.
         try { onActivity?.(); } catch {}
       } catch (err) {
@@ -1549,7 +1549,7 @@ export class Agent {
       // The filter is its own model call on the same per-file signal: give it
       // a full idle window rather than the leftover time from the main loop.
       try { onActivity?.(); } catch {}
-      await this.executeReviewFilter(signal, d, newPath);
+      await this.executeReviewFilter(signal, d, newPath, onActivity);
     }
 
     if (!completed && stop === undefined) {
@@ -1568,6 +1568,7 @@ export class Agent {
     rawDiff: string,
     changeFiles: string,
     rule: string,
+    onActivity?: () => void,
   ): Promise<string> {
     const pt = this.args.template.PlanTask;
     if (pt === undefined || pt === null) return "";
@@ -1604,6 +1605,7 @@ export class Agent {
       maxTokens: this.args.template.MaxCompletionTokens ?? this.args.template.MaxTokens,
       sessionId,
       ...(meta ? { requestMeta: meta } : {}),
+      ...(onActivity ? { onProgress: onActivity } : {}),
     };
 
     let resp: unknown;
@@ -1670,7 +1672,7 @@ export class Agent {
    * matching Go's behavior (filter failure keeps comments).
    * Mirrors Go Agent.executeReviewFilter.
    */
-  private async executeReviewFilter(signal: AbortSignal, d: Diff, newPath: string): Promise<void> {
+  private async executeReviewFilter(signal: AbortSignal, d: Diff, newPath: string, onActivity?: () => void): Promise<void> {
     const ft = this.args.template.ReviewFilterTask;
     if (!ft || ft.messages.length === 0) return;
     if (this.args.skipFilter) {
@@ -1712,6 +1714,7 @@ export class Agent {
       maxTokens: this.args.template.MaxCompletionTokens ?? this.args.template.MaxTokens,
       sessionId: sessionIdF,
       ...(metaF ? { requestMeta: metaF } : {}),
+      ...(onActivity ? { onProgress: onActivity } : {}),
     };
 
     let resp: unknown = null;

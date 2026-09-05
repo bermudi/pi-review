@@ -726,8 +726,31 @@ export class PiTransport implements TranscriptLlmTransport {
         }
       };
 
+      const reportProgress = (): void => {
+        try {
+          req.onProgress?.();
+        } catch {
+          // Progress is best-effort; never break the transport.
+        }
+      };
+
       const unsubscribe = (sessAny.subscribe as (l: (e: unknown) => void) => () => void)((event: unknown) => {
         const e = event as Record<string, unknown>;
+        const t = e["type"];
+        // Streaming liveness: long thinking runs emit chunks for minutes
+        // before any final response. Each chunk proves the model is still
+        // working and must keep the per-file idle watchdog alive.
+        if (
+          t === "message_update" ||
+          t === "message_start" ||
+          t === "message_end" ||
+          t === "turn_start" ||
+          t === "tool_execution_start" ||
+          t === "tool_execution_update" ||
+          t === "tool_execution_end"
+        ) {
+          reportProgress();
+        }
         if (e["type"] === "turn_end") {
           if (turnEnded) {
             // SDK may emit a second turn_end after an aborted recovery turn;

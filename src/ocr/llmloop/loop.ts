@@ -421,6 +421,7 @@ export class Runner {
           maxTokens: getCompletionTokenLimit(this.deps.template),
           sessionId,
           ...(requestMeta ? { requestMeta } : {}),
+          ...(onActivity ? { onProgress: onActivity } : {}),
         };
 
         let resp: ChatResponse;
@@ -571,6 +572,7 @@ export class Runner {
       tools: graceDefs,
       maxTokens: getCompletionTokenLimit(this.deps.template),
       sessionId,
+      ...(onActivity ? { onProgress: onActivity } : {}),
     };
 
     let resp: ChatResponse;
@@ -844,6 +846,7 @@ export class Runner {
                     ? { sessionId: sessionTaskKey(baseSessionIdRel, "re_location_task", cm.path) }
                     : {}),
                   ...(requestMetaRel ? { requestMeta: requestMetaRel } : {}),
+                  ...(onActivity ? { onProgress: onActivity } : {}),
                 };
                 try {
                   const resp = await this.callTransport(sig, req);
@@ -1033,6 +1036,7 @@ export class Runner {
         ? { sessionId: sessionTaskKey(baseSessionIdComp, "memory_compression_task", _filePath) }
         : {}),
       ...(compMeta ? { requestMeta: compMeta } : {}),
+      ...(onActivity ? { onProgress: onActivity } : {}),
     };
 
     let resp: ChatResponse;
@@ -1141,8 +1145,14 @@ export class Runner {
   }
 
   private triggerAsyncCompression(st: CompressionState, messages: readonly Message[], filePath: string, onActivity?: () => void): void {
-    const worker = st.triggerAsyncCompression(messages, filePath, async (snapshot, fp, sig) => {
-      return this.runCompression(sig, [...snapshot], fp, onActivity);
+    const worker = st.triggerAsyncCompression(messages, filePath, async (snapshot, fp, sig, reportJobProgress) => {
+      // Streaming progress must keep both timers alive: the compression
+      // job's own idle timer and the per-file watchdog.
+      const combinedProgress = (): void => {
+        try { reportJobProgress?.(); } catch {}
+        try { onActivity?.(); } catch {}
+      };
+      return this.runCompression(sig, [...snapshot], fp, combinedProgress);
     });
     if (worker === null) return;
     this._bg.add(worker);

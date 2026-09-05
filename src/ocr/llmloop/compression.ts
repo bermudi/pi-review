@@ -331,6 +331,7 @@ interface InternalJob {
   doneResolved: boolean;
   readonly abortController: AbortController;
   readonly cancel: () => void;
+  readonly resetTimeout: () => void;
 }
 
 function createJob(snapshotLen: number, timeoutMs: number): InternalJob {
@@ -341,9 +342,19 @@ function createJob(snapshotLen: number, timeoutMs: number): InternalJob {
   });
   // Abort with an explicit reason so the failure log distinguishes the
   // compression deadline from other aborts (a bare abort logs as "Aborted").
-  const timeout = setTimeout(() => abortController.abort(new Error("memory compression task timed out")), timeoutMs);
+  // The timer measures idle time without compressor progress, not total
+  // wall-clock time, so long streaming compressions survive via resetTimeout.
+  let timeout: ReturnType<typeof setTimeout> | null = setTimeout(() => abortController.abort(new Error("memory compression task timed out")), timeoutMs);
+  const resetTimeout = (): void => {
+    if (abortController.signal.aborted) return;
+    if (timeout !== null) clearTimeout(timeout);
+    timeout = setTimeout(() => abortController.abort(new Error("memory compression task timed out")), timeoutMs);
+  };
   const wrappedResolve = (): void => {
-    clearTimeout(timeout);
+    if (timeout !== null) {
+      clearTimeout(timeout);
+      timeout = null;
+    }
     resolveDone();
   };
   return {
@@ -354,9 +365,13 @@ function createJob(snapshotLen: number, timeoutMs: number): InternalJob {
     doneResolved: false,
     abortController,
     cancel: () => {
-      clearTimeout(timeout);
+      if (timeout !== null) {
+        clearTimeout(timeout);
+        timeout = null;
+      }
       abortController.abort();
     },
+    resetTimeout,
   };
 }
 
@@ -399,7 +414,7 @@ export class CompressionState {
   triggerAsyncCompression(
     messages: readonly Message[],
     filePath: string,
-    compressor: (snapshot: readonly Message[], filePath: string, signal: AbortSignal) => Promise<Message[]>,
+    compressor: (snapshot: readonly Message[], filePath: string, signal: AbortSignal, onProgress?: () => void) => Promise<Message[]>,
     timeoutMs: number = COMPRESSION_JOB_TIMEOUT_MS,
   ): Promise<void> | null {
     if (this.pendingJob !== null) return null;
@@ -408,11 +423,19 @@ export class CompressionState {
     const job = createJob(messages.length, timeoutMs);
     this.pendingJob = job;
 
+    const reportJobProgress = (): void => {
+      try {
+        job.resetTimeout();
+      } catch {
+        // Best-effort; never break compression.
+      }
+    };
+
     const worker = (async () => {
       let rebuilt: Message[] | null = null;
       let err: unknown = null;
       try {
-        rebuilt = await compressor(snapshot, filePath, job.abortController.signal);
+        rebuilt = await compressor(snapshot, filePath, job.abortController.signal, reportJobProgress);
       } catch (e) {
         err = e;
       }

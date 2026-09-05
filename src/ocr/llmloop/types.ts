@@ -109,6 +109,13 @@ export interface ChatRequest {
   readonly maxTokens?: number;
   readonly sessionId?: string;
   readonly requestMeta?: RequestMeta;
+  /**
+   * Host-side streaming progress hook. Invoked on intermediate model
+   * activity (token/reasoning chunks, tool execution updates) while a
+   * single request is still in flight. Never sent to the provider; used
+   * to keep the per-file idle watchdog alive during long thinking runs.
+   */
+  readonly onProgress?: () => void;
 }
 
 export interface ChatResponse {
