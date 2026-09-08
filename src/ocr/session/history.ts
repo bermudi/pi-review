@@ -224,10 +224,11 @@ export class SessionHistory {
     newPath: string,
     fingerprint: string,
     errorMsg: string,
+    comments: LlmComment[] = [],
   ): void {
     if (filePath === "") filePath = newPath;
     if (filePath !== "") this.GetOrCreateFileSession(filePath);
-    this.persist?.writeReviewItemFailed(filePath, oldPath, newPath, fingerprint, errorMsg);
+    this.persist?.writeReviewItemFailed(filePath, oldPath, newPath, fingerprint, errorMsg, comments);
   }
 
   LLMFailures(): number { return this.llmFailures; }
@@ -262,7 +263,7 @@ export class SessionHistory {
 export type PersistHandle = {
   writeReviewItemDone(filePath: string, oldPath: string, newPath: string, fingerprint: string, comments: LlmComment[]): void;
   writeReviewItemReused(filePath: string, oldPath: string, newPath: string, fingerprint: string, sourceSessionId: string, comments: LlmComment[]): void;
-  writeReviewItemFailed(filePath: string, oldPath: string, newPath: string, fingerprint: string, errorMsg: string): void;
+  writeReviewItemFailed(filePath: string, oldPath: string, newPath: string, fingerprint: string, errorMsg: string, comments?: LlmComment[]): void;
   writeResumeLineage(l: import("./resume.js").ResumeLineage): void;
   writeSessionEnd(durationMs: number, filesReviewed: string[], llmFailures: number, manifest: RunManifest | null): Error | null;
   writeLLMRequest(filePath: string, taskType: TaskType, requestNo: number, messages: unknown): void;

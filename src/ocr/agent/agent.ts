@@ -864,12 +864,17 @@ export class Agent {
     const err = b.MarkFailed(manifestItemID(this.reviewModeForManifest(), d), cls, reason);
     if (err) this.recordWarning("manifest_error", d.newPath, err.message);
     if (err === null) {
+      // Preserve partial findings: a budget/timeout stop may still have
+      // emitted code_comment calls (e.g. via the grace round). Without this
+      // the CLI shows findings the saved record claims do not exist.
+      const partial = this.args.commentCollector?.commentsForPath?.(effectivePath(d)) ?? [];
       this.sessionHistory?.RecordReviewItemFailed(
         effectivePath(d),
         d.oldPath,
         d.newPath,
         reviewItemFingerprint(this.reviewModeForManifest(), d),
         reason,
+        partial,
       );
     }
   }
@@ -1584,6 +1589,21 @@ export class Agent {
       // a full idle window rather than the leftover time from the main loop.
       try { onActivity?.(); } catch {}
       await this.executeReviewFilter(signal, d, newPath, onActivity);
+    } else {
+      // Budget/timeout stops may still have emitted findings via the grace
+      // round. Drain pending comment work so markFailed can persist them,
+      // then filter them like completed findings. Filter is a no-op without
+      // comments, so this costs no model call for empty failures.
+      try {
+        if (this.commentWorkerPool) {
+          await this.commentWorkerPool.AwaitKey(newPath);
+        }
+      } catch {}
+      const partialCount = this.args.commentCollector?.commentsForPath?.(newPath)?.length ?? 0;
+      if (partialCount > 0) {
+        try { onActivity?.(); } catch {}
+        await this.executeReviewFilter(signal, d, newPath, onActivity);
+      }
     }
 
     if (!completed && stop === undefined) {

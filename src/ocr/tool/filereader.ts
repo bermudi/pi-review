@@ -453,7 +453,14 @@ export class FileReadProvider {
       lines = res.lines;
       totalLines = res.total;
     } catch (e) {
-      throw new Error(`file ${JSON.stringify(filePath)} not found: ${String(e)}`);
+      // pi-reviewer extension: guide the model to discovery instead of
+      // guessing nearby paths (the review that motivated this retried
+      // skill-cmd/model-cmd and a wrong spec path). file_find is cheap;
+      // another blind file_read is not.
+      throw new Error(
+        `file ${JSON.stringify(filePath)} not found: ${String(e)}. ` +
+          `Use file_find with filename keywords to discover the correct repository-relative path before retrying file_read.`,
+      );
     }
 
     if (totalLines > 0 && Math.trunc(startLine) - 1 >= totalLines) {

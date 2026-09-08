@@ -225,8 +225,8 @@ export class JsonlWriter {
     return this.writeReviewItemRecord("review_item_reused", filePath, oldPath, newPath, fingerprint, sourceSessionId, "", comments);
   }
 
-  WriteReviewItemFailed(filePath: string, oldPath: string, newPath: string, fingerprint: string, errorMsg: string): string {
-    return this.writeReviewItemRecord("review_item_failed", filePath, oldPath, newPath, fingerprint, "", errorMsg, []);
+  WriteReviewItemFailed(filePath: string, oldPath: string, newPath: string, fingerprint: string, errorMsg: string, comments: LlmComment[] = []): string {
+    return this.writeReviewItemRecord("review_item_failed", filePath, oldPath, newPath, fingerprint, "", errorMsg, comments);
   }
 
   WriteLLMRequest(filePath: string, taskType: TaskType, requestNo: number, messages: unknown): string {

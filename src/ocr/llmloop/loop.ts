@@ -101,6 +101,20 @@ export function graceRoundToolDefs(defs: readonly ToolDef[]): ToolDef[] {
   return out;
 }
 
+/**
+ * pi-reviewer extension: normalize file_read args to an exact-range key for
+ * duplicate detection. Defaults match FileReadProvider (start 1, end 0=open).
+ */
+export function fileReadRangeKey(args: Record<string, unknown>): string | null {
+  const fp = args["file_path"];
+  if (typeof fp !== "string" || fp === "") return null;
+  const rawStart = args["start_line"];
+  const rawEnd = args["end_line"];
+  const start = typeof rawStart === "number" && rawStart > 0 ? Math.trunc(rawStart) : 1;
+  const end = typeof rawEnd === "number" && rawEnd > 0 ? Math.trunc(rawEnd) : 0;
+  return `${fp}\0${start}\0${end}`;
+}
+
 // Valid categories / severities — mirrors Go code_comment.go
 const validCategories = new Set([
   "bug",
@@ -164,6 +178,14 @@ export class Runner {
   private _toolCallSeq = 0;
   private _toolFailures: ToolFailureDetail[] = [];
   private _bg: Set<Promise<void>> = new Set();
+  // pi-reviewer extension: per-file duplicate file_read guard. Tracks exact
+  // (path, start, end) ranges already returned in this RunPerFile so repeated
+  // crawls get a short reminder instead of another 8k token dump. Cleared at
+  // the start of each RunPerFile; compression keeps it (the summary should
+  // retain the evidence, and a genuinely needed re-read can use a narrower
+  // range to bypass the exact-match guard).
+  private _seenFileReads = new Set<string>();
+  private _lastToolWasDuplicateRead = false;
 
   constructor(private readonly deps: RunnerDeps) {}
 
@@ -362,6 +384,14 @@ export class Runner {
     const initialToolReqCount = toolReqCount;
     const maxConsecutiveEmptyRounds = 3;
     let consecutiveEmptyRounds = 0;
+    // pi-reviewer extension: stop when the model loops on already-seen
+    // evidence. A round counts as no-progress when every call was a duplicate
+    // file_read (short reminder, no new bytes) and no code_comment/task_done.
+    // 8 matches the "8-10 rounds with no new evidence" review finding.
+    const maxConsecutiveNoProgressRounds = 8;
+    let consecutiveNoProgressRounds = 0;
+    this._seenFileReads.clear();
+    this._lastToolWasDuplicateRead = false;
     const sess = this.getSession();
     const baseSessionId = sess?.sessionId
       ?? (this.deps.sessionId !== undefined && this.deps.sessionId !== ""
@@ -465,9 +495,20 @@ export class Runner {
         let taskCompleted = false;
         let hasValidResult = false;
         const thinking = resp.reasoningContent ?? "";
+        // pi-reviewer no-progress tracking: true until a call proves new work.
+        let roundAllDuplicateReads = calls.length > 0;
+        let roundHasCommentOrDone = false;
 
         for (const call of calls) {
+          this._lastToolWasDuplicateRead = false;
           const cp = await this.executeToolCall(signal, filePath, call as ToolCall, thinking, rec, onActivity);
+          const callName = (call as ToolCall).function.name;
+          if (callName === "code_comment" || callName === "task_done") {
+            roundHasCommentOrDone = true;
+            roundAllDuplicateReads = false;
+          } else if (!(callName === "file_read" && this._lastToolWasDuplicateRead)) {
+            roundAllDuplicateReads = false;
+          }
           if (cp.failed) {
             return { completed: false, stop: MainLoopStop.StopNone, error: new Error(`task failed: ${cp.data}`) };
           } else if (cp.completed) {
@@ -507,6 +548,21 @@ export class Runner {
           console.log(`[pi-review] No valid tool results for ${filePath}, retrying...`);
         } else {
           consecutiveEmptyRounds = 0;
+        }
+
+        // pi-reviewer extension: duplicate-only rounds carry no new evidence.
+        // Stop early instead of crawling to MaxToolRequestTimes (the 50-minute
+        // registry loop was 8 compressions of re-reads). code_comment resets
+        // the counter via roundHasCommentOrDone above.
+        if (!taskCompleted && hasValidResult && roundAllDuplicateReads && !roundHasCommentOrDone) {
+          consecutiveNoProgressRounds++;
+          if (consecutiveNoProgressRounds >= maxConsecutiveNoProgressRounds) {
+            console.log(`[pi-review] No new evidence for ${filePath} after ${consecutiveNoProgressRounds} rounds, stopping early. Submit findings with code_comment or finish with task_done.`);
+            stop = MainLoopStop.StopEmptyRounds;
+            break;
+          }
+        } else {
+          consecutiveNoProgressRounds = 0;
         }
 
         const succeed = await this.addNextMessage(signal, content, calls as ToolCall[], results, messages, filePath, st, onActivity);
@@ -951,6 +1007,29 @@ export class Runner {
       this.recordToolFailure(dynCallNumber, name, filePath, errMsg, rec, dynRawArgs, Date.now() - dynStarted);
       return { data: errMsg, completed: false, failed: false };
     }
+
+    // pi-reviewer extension: exact-duplicate file_read guard. The model
+    // crawls the same 200-line windows repeatedly (registry read intake.ts
+    // 18x). Returning the full 8k dump again costs tokens without evidence.
+    // Return a short reminder pointing at the earlier result instead.
+    if (name === "file_read") {
+      const key = fileReadRangeKey(dynArgs);
+      if (key !== null) {
+        if (this._seenFileReads.has(key)) {
+          this._lastToolWasDuplicateRead = true;
+          const fp = String(dynArgs["file_path"] ?? "");
+          const dupMsg =
+            `Note: you already read ${fp} with this exact range earlier in this file review. ` +
+            `Use that earlier result instead of re-reading. ` +
+            `If you need different lines, request a narrower, non-overlapping range; ` +
+            `if you have enough evidence, submit findings with code_comment and finish with task_done.`;
+          try { rec?.AddToolResult(name, toolCall.function.arguments, dupMsg); } catch {}
+          return { data: dupMsg, completed: false, failed: false };
+        }
+        this._seenFileReads.add(key);
+      }
+    }
+    this._lastToolWasDuplicateRead = false;
 
     try {
       const result = await provider.execute(dynArgs, signal);
