@@ -2,6 +2,22 @@
 
 ## Unreleased
 
+- Cut review crawl cost: exact-duplicate `file_read` calls now get a short
+  reminder instead of another full dump, and 8 duplicate-only rounds with
+  no new evidence stop the file early instead of running to the round cap.
+- Failed review items now keep the findings they already emitted (grace-round
+  notes included), run the review filter over them, and persist them on the
+  failure record — what the CLI shows and what the session stores agree.
+- A missing `file_read` path now points the model at `file_find` first
+  instead of guessing nearby paths.
+- Live per-file status lines on stderr: file start, file done with note
+  count and a run-level done counter, plus a quiet warning at half the
+  per-file idle timeout. Agent-audience runs stay silent.
+- The per-file timeout is now idle-based: each model response resets the
+  window, so a slow-but-working file is never killed; a quiet file is
+  aborted and classified as a timeout. Streaming progress keeps both the
+  compression job timer and the per-file watchdog alive.
+
 - Failed tool uses now show up in results with details instead of
   vanishing: output carries how many failed, which tool, and the arguments
   that were passed. Adopted surgically from OCR v1.11.4 (`0524d21`) and
