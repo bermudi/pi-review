@@ -41,6 +41,32 @@ function isSyntaxError(err: unknown): boolean {
   return err instanceof SyntaxError;
 }
 
+/**
+ * Extract a bounded HTTP status code from an error, walking its cause chain.
+ *
+ * Sources, in order: a structured `httpStatus` property (set by this codebase
+ * when distilling a Pi provider failure), then the SDK-style numeric
+ * `status` / `statusCode` fields pi-ai provider errors carry. Only values in
+ * [100, 599] count; anything else is ignored so non-HTTP statuses never
+ * misclassify. Never reads or returns error text.
+ */
+export function httpStatusFromError(err: unknown): number | undefined {
+  let cur: unknown = err;
+  for (let i = 0; i < 5 && cur !== null && cur !== undefined; i++) {
+    if (typeof cur === "object") {
+      const e = cur as Record<string, unknown>;
+      for (const key of ["httpStatus", "status", "statusCode"] as const) {
+        const v = e[key];
+        if (typeof v === "number" && Number.isInteger(v) && v >= 100 && v <= 599) {
+          return v;
+        }
+      }
+    }
+    cur = (cur as Record<string, unknown>)?.["cause"];
+  }
+  return undefined;
+}
+
 function isUnmarshalTypeError(err: unknown): boolean {
   // In JS, type errors are TypeError; we treat as unmarshal type error if message contains
   return err instanceof TypeError;

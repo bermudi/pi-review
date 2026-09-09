@@ -31,7 +31,7 @@ import { stripThinkTags } from "./strip-think-tags.js";
 import type { RetryCollector } from "../retry/collector.js";
 import { isValidRequestMeta } from "../retry/meta.js";
 import { classifyAttempt, isAbortError, ErrorClassProvider, FailurePhaseResponseStatus } from "../retry/types.js";
-import { classifyBoundaryError } from "../retry/boundary.js";
+import { classifyBoundaryError, httpStatusFromError } from "../retry/boundary.js";
 
 // ---------------------------------------------------------------------------
 // Pi session type — derived from public factory return without deep import.
@@ -285,6 +285,12 @@ interface PiAssistantObservation {
   readonly toolBlocks: number;
   readonly invalidToolBlocks: number;
   readonly stopReason: string;
+  /**
+   * Pi's `AssistantMessage.errorMessage` for failed/aborted turns, captured
+   * only to distill the leading HTTP status (see `httpStatusFromPiErrorMessage`).
+   * Provider error text may carry secrets and is never surfaced or logged.
+   */
+  readonly errorMessage: string;
 }
 
 function safeStopReason(value: unknown): string {
@@ -301,9 +307,24 @@ function safeStopReason(value: unknown): string {
 }
 
 /**
+ * Distill the HTTP status from Pi's formatted provider error strings without
+ * exposing any provider text. Pi's error-body util composes either
+ * `"<status>: <body>"` or `"<prefix> (<status>): <message>"`; only the leading
+ * three-digit code is kept, and only when it looks like an HTTP status.
+ */
+function httpStatusFromPiErrorMessage(message: string): number | undefined {
+  const match = /^\s*(\d{3})\s*:/.exec(message) ?? /\(\s*(\d{3})\s*\)\s*:/.exec(message);
+  if (match === null) return undefined;
+  const code = Number.parseInt(match[1]!, 10);
+  return Number.isInteger(code) && code >= 100 && code <= 599 ? code : undefined;
+}
+
+/**
  * Inspect only the structural assistant fields needed by the OCR adapter.
  * Diagnostics deliberately expose counts and booleans, never model text,
- * reasoning, tool names/arguments, prompts, errors, or provider payloads.
+ * reasoning, tool names/arguments, prompts, or provider payloads. The one
+ * exception is `errorMessage`, which is captured structurally so its leading
+ * HTTP status can be distilled; the provider text itself stays unexposed.
  */
 function inspectPiAssistant(msg: unknown): PiAssistantObservation {
   const m = msg as { content?: unknown; reasoningContent?: unknown; reasoning?: unknown };
@@ -360,6 +381,7 @@ function inspectPiAssistant(msg: unknown): PiAssistantObservation {
     toolBlocks,
     invalidToolBlocks,
     stopReason: safeStopReason((msg as Record<string, unknown>)["stopReason"]),
+    errorMessage: typeof (msg as Record<string, unknown>)["errorMessage"] === "string" ? ((msg as Record<string, unknown>)["errorMessage"] as string) : "",
   };
 }
 
@@ -510,7 +532,10 @@ export class PiTransport implements TranscriptLlmTransport {
           let ec: string = errorClass as unknown as string;
           let fp: string = failurePhase as unknown as string;
           if (!recognized || ec === "" ) {
-            const c = classifyAttempt({ statusCode: 0, err });
+            // A distilled HTTP status (stop-reason errors, prompt rejections)
+            // classifies via the same status table as real HTTP attempts, so a
+            // 429 lands as rate_limited instead of the network catch-all.
+            const c = classifyAttempt({ statusCode: httpStatusFromError(err) ?? 0, err });
             ec = c.errorClass as string;
             fp = c.failurePhase as string;
           }
@@ -866,7 +891,18 @@ export class PiTransport implements TranscriptLlmTransport {
           );
         }
         if (assistantObservation?.stopReason === "error" || assistantObservation?.stopReason === "aborted") {
-          throw new Error(`Pi assistant turn ended with stop reason ${assistantObservation.stopReason}`);
+          // Real request failure: expose a bounded stage/stop diagnostic. Only
+          // the distilled HTTP status joins the message; provider error text
+          // may carry secrets and is never surfaced. The structured
+          // `httpStatus` property lets the retry classifier map 429/5xx/401
+          // instead of defaulting everything to `network`.
+          const httpStatus = httpStatusFromPiErrorMessage(assistantObservation.errorMessage);
+          const suffix = httpStatus === undefined ? "" : ` (HTTP ${httpStatus})`;
+          const stopError = new Error(`Pi assistant turn ended with stop reason ${assistantObservation.stopReason}${suffix}`);
+          if (httpStatus !== undefined) {
+            Object.assign(stopError, { httpStatus });
+          }
+          throw stopError;
         }
 
         if (expectsToolCall && capturedToolCalls.length === 0) {

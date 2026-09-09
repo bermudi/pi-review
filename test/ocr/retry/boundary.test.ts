@@ -8,6 +8,7 @@ import {
   StreamIntegrityError,
   StreamError,
   errRequestPanicked,
+  httpStatusFromError,
   reviseAttempt,
   finalizeRequest,
 } from "../../../src/ocr/retry/boundary.js";
@@ -220,4 +221,33 @@ test("deadline exceeded is failed not cancelled", () => {
   c.finalize(m, Object.assign(new Error("deadline"), { name: "TimeoutError" }), false);
   const { report } = c.freeze("test-run-id");
   expect(report!.requests[0]!.outcome).toBe("failed");
+});
+
+// httpStatusFromError — bounded status extraction from error chains
+test("httpStatusFromError reads the structured httpStatus property", () => {
+  const err = Object.assign(new Error("Pi assistant turn ended with stop reason error (HTTP 429)"), { httpStatus: 429 });
+  expect(httpStatusFromError(err)).toBe(429);
+});
+
+test("httpStatusFromError reads SDK status fields through the cause chain", () => {
+  const sdk = Object.assign(new Error("request failed"), { status: 503 });
+  const wrapped = new Error("Pi session prompt failed before an assistant response", { cause: sdk });
+  expect(httpStatusFromError(wrapped)).toBe(503);
+});
+
+test("httpStatusFromError prefers httpStatus over generic status fields", () => {
+  const err = Object.assign(new Error("x"), { httpStatus: 429, status: 500 });
+  expect(httpStatusFromError(err)).toBe(429);
+});
+
+test("httpStatusFromError rejects non-HTTP numbers", () => {
+  expect(httpStatusFromError(Object.assign(new Error("x"), { status: 42 }))).toBeUndefined();
+  expect(httpStatusFromError(Object.assign(new Error("x"), { statusCode: 600 }))).toBeUndefined();
+  expect(httpStatusFromError(Object.assign(new Error("x"), { status: "429" }))).toBeUndefined();
+});
+
+test("httpStatusFromError returns undefined without any status", () => {
+  expect(httpStatusFromError(new Error("plain"))).toBeUndefined();
+  expect(httpStatusFromError(null)).toBeUndefined();
+  expect(httpStatusFromError(undefined)).toBeUndefined();
 });

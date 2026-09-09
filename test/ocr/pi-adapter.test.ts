@@ -208,10 +208,81 @@ describe("ocr pi-adapter", () => {
       expect((thrown as Error).message).toBe("Pi assistant turn ended with stop reason error");
       expect((thrown as Error).message).not.toContain("SECRET_PROVIDER_ERROR");
       expect((thrown as Error).message).not.toContain("SECRET_ERROR_DETAIL");
+      expect((thrown as { httpStatus?: number }).httpStatus).toBeUndefined();
       expect(warning).not.toHaveBeenCalled();
     } finally {
       warning.mockRestore();
     }
+  });
+
+  it("distills the HTTP status from a provider error without leaking provider text", async () => {
+    const warning = spyOn(console, "warn").mockImplementation(() => undefined);
+    try {
+      const session = eventSession({
+        role: "assistant",
+        content: [],
+        stopReason: "error",
+        errorMessage: "429: SECRET_QUOTA_EXPLANATION",
+      });
+      const transport = transportFor(session);
+
+      let thrown: unknown;
+      try {
+        await transport.complete(toolRequest(), AbortSignal.timeout(1000));
+      } catch (error) {
+        thrown = error;
+      }
+      expect(thrown).toBeInstanceOf(Error);
+      expect((thrown as Error).message).toBe("Pi assistant turn ended with stop reason error (HTTP 429)");
+      expect((thrown as Error).message).not.toContain("SECRET_QUOTA_EXPLANATION");
+      expect((thrown as { httpStatus?: number }).httpStatus).toBe(429);
+    } finally {
+      warning.mockRestore();
+    }
+  });
+
+  it("distills the HTTP status from a prefixed provider error", async () => {
+    const warning = spyOn(console, "warn").mockImplementation(() => undefined);
+    try {
+      const session = eventSession({
+        role: "assistant",
+        content: [],
+        stopReason: "error",
+        errorMessage: "zai (503): SECRET_OVERLOADED_DETAIL",
+      });
+      const transport = transportFor(session);
+
+      let thrown: unknown;
+      try {
+        await transport.complete(toolRequest(), AbortSignal.timeout(1000));
+      } catch (error) {
+        thrown = error;
+      }
+      expect((thrown as Error).message).toBe("Pi assistant turn ended with stop reason error (HTTP 503)");
+      expect((thrown as Error).message).not.toContain("SECRET_OVERLOADED_DETAIL");
+      expect((thrown as { httpStatus?: number }).httpStatus).toBe(503);
+    } finally {
+      warning.mockRestore();
+    }
+  });
+
+  it("ignores numbers that are not HTTP statuses", async () => {
+    const session = eventSession({
+      role: "assistant",
+      content: [],
+      stopReason: "error",
+      errorMessage: "600: SECRET_NOT_HTTP",
+    });
+    const transport = transportFor(session);
+
+    let thrown: unknown;
+    try {
+      await transport.complete(toolRequest(), AbortSignal.timeout(1000));
+    } catch (error) {
+      thrown = error;
+    }
+    expect((thrown as Error).message).toBe("Pi assistant turn ended with stop reason error");
+    expect((thrown as { httpStatus?: number }).httpStatus).toBeUndefined();
   });
 
   it("does not emit an empty-tool diagnostic for a valid tool call", async () => {

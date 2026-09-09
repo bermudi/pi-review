@@ -119,3 +119,51 @@ test("Freeze error surfaces and suppresses report", async () => {
   expect(error).not.toBeNull();
   expect(error).toContain("non-2xx attempt recorded without a classification");
 });
+
+// Stop-reason errors with a distilled HTTP status classify by status, not the
+// network catch-all; statusless errors keep the legacy network classification.
+test("PiTransport classifies a 429 stop-reason error as rate_limited", async () => {
+  const collector = new RetryCollector();
+  const session = fakeSessionWithMessage({
+    role: "assistant",
+    content: [],
+    stopReason: "error",
+    errorMessage: "429: provider quota body",
+  });
+  const transport = new PiTransport(session as never, undefined, undefined, collector);
+  const m: RequestMeta = { ...meta(), filePath: "rate.go", requestNo: 1 };
+  try {
+    await transport.complete(reqWithMeta(m, [{ type: "function", function: { name: "task_done", description: "d" } }]), AbortSignal.timeout(1000));
+    expect.unreachable();
+  } catch (err) {
+    expect((err as Error).message).toContain("(HTTP 429)");
+  }
+  const attempts = collector.getAttempts(m);
+  expect(attempts.length).toBe(1);
+  expect(attempts[0]!.errorClass).toBe("rate_limited");
+  expect(attempts[0]!.failurePhase).toBe("http");
+  const { report } = collector.freeze("run-429");
+  expect(report!.failedRequests).toBe(1);
+});
+
+test("PiTransport classifies a statusless stop-reason error as network", async () => {
+  const collector = new RetryCollector();
+  const session = fakeSessionWithMessage({
+    role: "assistant",
+    content: [],
+    stopReason: "error",
+    errorMessage: "opaque provider failure",
+  });
+  const transport = new PiTransport(session as never, undefined, undefined, collector);
+  const m: RequestMeta = { ...meta(), filePath: "opaque.go", requestNo: 1 };
+  try {
+    await transport.complete(reqWithMeta(m, [{ type: "function", function: { name: "task_done", description: "d" } }]), AbortSignal.timeout(1000));
+    expect.unreachable();
+  } catch {
+    // expected
+  }
+  const attempts = collector.getAttempts(m);
+  expect(attempts.length).toBe(1);
+  expect(attempts[0]!.errorClass).toBe("network");
+  expect(attempts[0]!.failurePhase).toBe("transport");
+});
