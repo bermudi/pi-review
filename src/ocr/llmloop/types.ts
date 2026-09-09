@@ -249,6 +249,19 @@ export interface RunnerDeps {
   readonly newRequestMeta?: (filePath: string, taskType: TaskType, requestNo: number) => RequestMeta;
   /** Legacy alias (Go field name). */
   readonly NewRequestMeta?: (filePath: string, taskType: TaskType, requestNo: number) => RequestMeta;
+  /**
+   * pi-reviewer extension: backoff schedule (ms) before retrying a model
+   * round that failed as rate_limited/overloaded. Default
+   * `[5000, 15000, 45000]`; an empty array disables retries.
+   */
+  readonly rateLimitBackoffMs?: readonly number[];
+  /** Injectable abort-aware sleep so backoff tests stay deterministic. */
+  readonly backoffSleep?: (ms: number, signal: AbortSignal) => Promise<void>;
+  /**
+   * Optional human-channel notice emitted before each backoff wait
+   * (milestone-rare by construction: at most once per retry).
+   */
+  readonly emitBackoffNotice?: (line: string) => void;
 }
 
 // ---------------------------------------------------------------------------

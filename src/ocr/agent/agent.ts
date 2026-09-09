@@ -47,6 +47,7 @@ import {
 import { SessionHistory } from "../session/history.js";
 import type { FailureClass } from "../session/manifest.js";
 import { MainLoopStop, mainLoopStopReason } from "../llmloop/types.js";
+import { completeWithProviderBackoff, DEFAULT_RATE_LIMIT_BACKOFF_MS } from "../llmloop/backoff.js";
 import { FileStatusLines, quietWaitMinutes, type ProgressSink } from "../progress.js";
 
 // ---------------------------------------------------------------------------
@@ -102,6 +103,13 @@ export interface Args {
   readonly commit?: string;
   readonly reviewMode?: string;
   readonly template: Template;
+  /**
+   * pi-reviewer extension: backoff schedule (ms) for rate-limited/overloaded
+   * model rounds, including the plan phase. Default [5000, 15000, 45000].
+   */
+  readonly rateLimitBackoffMs?: readonly number[];
+  /** Injectable abort-aware sleep for deterministic backoff tests. */
+  readonly backoffSleep?: (ms: number, signal: AbortSignal) => Promise<void>;
   readonly systemRule?: SystemRuleResolver | null;
   readonly fileFilter?: FileFilter | null;
   readonly llmClient: AnyLlmClient;
@@ -450,6 +458,8 @@ export class Agent {
       gitRunner: args.gitRunner ?? rawArgs["GitRunner"],
       sealedInput: args.sealedInput ?? (rawArgs["SealedInput"] as InputResolution | null | undefined) ?? null,
       maxTokensBudget: args.maxTokensBudget ?? (rawArgs["MaxTokensBudget"] as number | undefined),
+      rateLimitBackoffMs: args.rateLimitBackoffMs ?? (rawArgs["RateLimitBackoffMs"] as readonly number[] | undefined),
+      backoffSleep: args.backoffSleep ?? (rawArgs["BackoffSleep"] as ((ms: number, signal: AbortSignal) => Promise<void>) | undefined),
       skipFilter: args.skipFilter ?? (rawArgs["SkipFilter"] as boolean | undefined) ?? false,
       runtimeConfig: args.runtimeConfig ?? (rawArgs["RuntimeConfig"] as RuntimeConfig | null | undefined) ?? null,
       resume: args.resume ?? null,
@@ -524,6 +534,11 @@ export class Agent {
       commentWorkerPool: this.commentWorkerPool as unknown as never,
       session: this.sessionHistory as unknown as never,
       newRequestMeta: this.newRequestMeta.bind(this) as unknown as never,
+      rateLimitBackoffMs: resolvedArgs.rateLimitBackoffMs,
+      backoffSleep: resolvedArgs.backoffSleep,
+      emitBackoffNotice: (line: string): void => {
+        this.progress(`[pi-review] ${line}`);
+      },
     } as unknown as import("../llmloop/types.js").RunnerDeps);
   }
 
@@ -1679,7 +1694,18 @@ export class Agent {
       throw new Error("llmClient must provide complete(signal, req) or CompletionsWithCtx(signal, req)");
     };
     try {
-      resp = await callWithMeta(signal, req);
+      // pi-reviewer extension: a rate-limited plan request backs off and
+      // retries like a main round instead of silently dropping the plan.
+      const schedule = this.args.rateLimitBackoffMs ?? DEFAULT_RATE_LIMIT_BACKOFF_MS;
+      resp = await completeWithProviderBackoff((sig: AbortSignal) => callWithMeta(sig, req) as Promise<unknown>, signal, {
+        schedule,
+        sleep: this.args.backoffSleep,
+        onRetry: ({ attempt, delayMs, error }): void => {
+          try { onActivity?.(); } catch {}
+          const reason = error instanceof Error ? error.message : String(error);
+          this.progress(`[pi-review] Rate limited on ${newPath}: ${reason} — retrying in ${Math.round(delayMs / 1000)}s (retry ${attempt}/${schedule.length})`);
+        },
+      });
     } catch (e) {
       if (rec) rec.SetError(e instanceof Error ? e : new Error(String(e)), Date.now() - start);
       throw e;

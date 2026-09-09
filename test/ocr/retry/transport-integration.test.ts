@@ -167,3 +167,49 @@ test("PiTransport classifies a statusless stop-reason error as network", async (
   expect(attempts[0]!.errorClass).toBe("network");
   expect(attempts[0]!.failurePhase).toBe("transport");
 });
+
+// Retried logical requests reopen their collector entry so per-attempt
+// evidence and the recovered outcome stay honest.
+test("retry collector reopens finalized entries for retried requests", async () => {
+  const collector = new RetryCollector();
+  const tools = [{ type: "function", function: { name: "task_done", description: "d" } }];
+  const m: RequestMeta = { ...meta(), filePath: "retry.go", requestNo: 1 };
+
+  // Attempt 1 on the logical request: rate-limited stop error.
+  const failTransport = new PiTransport(
+    fakeSessionWithMessage({ role: "assistant", content: [], stopReason: "error", errorMessage: "429: slow down" }) as never,
+    undefined,
+    undefined,
+    collector,
+  );
+  try {
+    await failTransport.complete(reqWithMeta(m, tools), AbortSignal.timeout(1000));
+  } catch {}
+
+  // Attempt 2 on the same logical request: successful tool-call turn.
+  const okTransport = new PiTransport(
+    fakeSessionWithMessage({
+      role: "assistant",
+      content: [{ type: "toolCall", id: "c1", name: "task_done", arguments: { state: "DONE" } }],
+      stopReason: "toolUse",
+    }) as never,
+    undefined,
+    undefined,
+    collector,
+  );
+  const res = await okTransport.complete(reqWithMeta(m, tools), AbortSignal.timeout(1000));
+  expect(res.toolCalls.length).toBe(1);
+
+  const { report, error } = collector.freeze("run-retry");
+  expect(error).toBeNull();
+  expect(report!.requests.length).toBe(1);
+  const entry = report!.requests[0]!;
+  expect(entry.attempts.length).toBe(2);
+  expect(entry.attempts[0]!.errorClass).toBe("rate_limited");
+  expect(entry.attempts[1]!.outcome).toBe("success");
+  expect(entry.outcome).toBe("recovered");
+  expect(report!.retriedRequests).toBe(1);
+  expect(report!.totalRetries).toBe(1);
+  expect(report!.recoveredRequests).toBe(1);
+  expect(report!.failedRequests).toBe(0);
+});

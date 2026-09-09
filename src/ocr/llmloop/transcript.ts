@@ -56,6 +56,8 @@ export type ScriptedResponse = {
   readonly reasoningContent?: string;
   readonly usage?: ChatResponse["usage"];
   readonly error?: string;
+  /** Optional HTTP status attached to the thrown error (rate-limit tests). */
+  readonly errorHttpStatus?: number;
 };
 
 // ---------------------------------------------------------------------------
@@ -150,7 +152,11 @@ export class ScriptedTransport implements LlmTransport {
     });
 
     if (src !== undefined && src.error !== undefined && src.error !== "") {
-      throw new Error(src.error);
+      const err = new Error(src.error);
+      if (src.errorHttpStatus !== undefined) {
+        Object.assign(err, { httpStatus: src.errorHttpStatus });
+      }
+      throw err;
     }
 
     const toolCalls: ToolCall[] = (src?.toolCalls ?? []).map((tc) => ({

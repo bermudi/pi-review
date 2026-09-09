@@ -19,6 +19,7 @@ import {
   rebuildWithSummary,
 } from "./compression.js";
 import { CommentWorkerPool } from "./pool.js";
+import { completeWithProviderBackoff, DEFAULT_RATE_LIMIT_BACKOFF_MS } from "./backoff.js";
 import {
   MainLoopStop,
   type AgentWarning,
@@ -356,20 +357,42 @@ export class Runner {
 
   // -- transport adapter --------------------------------------------------
 
-  private async callTransport(signal: AbortSignal, req: ChatRequest): Promise<ChatResponse> {
+  private async callTransport(signal: AbortSignal, req: ChatRequest, filePath?: string, onActivity?: () => void): Promise<ChatResponse> {
     const client = this.deps.llmClient as unknown as Record<string, unknown>;
     // Prefer Go-style CompletionsWithCtx if present
     const goFn = client["CompletionsWithCtx"];
-    if (typeof goFn === "function") {
-      const fn = goFn as (sig: AbortSignal, r: ChatRequest) => Promise<ChatResponse>;
-      return fn.call(client, signal, req);
+    const rawCall = (sig: AbortSignal): Promise<ChatResponse> => {
+      if (typeof goFn === "function") {
+        const fn = goFn as (sig: AbortSignal, r: ChatRequest) => Promise<ChatResponse>;
+        return fn.call(client, sig, req);
+      }
+      const completeFn = client["complete"];
+      if (typeof completeFn === "function") {
+        const fn = completeFn as (sig: AbortSignal, r: ChatRequest) => Promise<ChatResponse>;
+        return fn.call(client, sig, req);
+      }
+      return Promise.reject(new Error("Runner: llmClient must provide complete(signal, req) or CompletionsWithCtx(signal, req)"));
+    };
+    if (goFn === undefined && typeof client["complete"] !== "function") {
+      throw new Error("Runner: llmClient must provide complete(signal, req) or CompletionsWithCtx(signal, req)");
     }
-    const completeFn = client["complete"];
-    if (typeof completeFn === "function") {
-      const fn = completeFn as (sig: AbortSignal, r: ChatRequest) => Promise<ChatResponse>;
-      return fn.call(client, signal, req);
-    }
-    throw new Error("Runner: llmClient must provide complete(signal, req) or CompletionsWithCtx(signal, req)");
+    // pi-reviewer extension: retry rate-limited/overloaded rounds after a
+    // growing backoff instead of failing the file. Each wait pokes the idle
+    // watchdog (a deliberate pause, not a hung file) and emits one
+    // milestone-rare human-channel notice.
+    const schedule = this.deps.rateLimitBackoffMs ?? DEFAULT_RATE_LIMIT_BACKOFF_MS;
+    return completeWithProviderBackoff(rawCall, signal, {
+      schedule,
+      sleep: this.deps.backoffSleep,
+      onRetry: ({ attempt, delayMs, error }) => {
+        try { onActivity?.(); } catch {}
+        const file = filePath ?? "";
+        const reason = error instanceof Error ? error.message : String(error);
+        this.deps.emitBackoffNotice?.(
+          `Rate limited${file !== "" ? ` on ${file}` : ""}: ${reason} — retrying in ${Math.round(delayMs / 1000)}s (retry ${attempt}/${schedule.length})`,
+        );
+      },
+    });
   }
 
   // -- main loop ----------------------------------------------------------
@@ -456,7 +479,7 @@ export class Runner {
 
         let resp: ChatResponse;
         try {
-          resp = await this.callTransport(signal, req);
+          resp = await this.callTransport(signal, req, filePath, onActivity);
         } catch (err) {
           const e = err instanceof Error ? err : new Error(String(err));
           if (rec) rec.SetError(e, Date.now() - startTime);
@@ -633,7 +656,7 @@ export class Runner {
 
     let resp: ChatResponse;
     try {
-      resp = await this.callTransport(signal, req);
+      resp = await this.callTransport(signal, req, filePath, onActivity);
       // Grace round is a model call on the per-file signal: report activity.
       try { onActivity?.(); } catch {}
     } catch (err) {
@@ -905,7 +928,7 @@ export class Runner {
                   ...(onActivity ? { onProgress: onActivity } : {}),
                 };
                 try {
-                  const resp = await this.callTransport(sig, req);
+                  const resp = await this.callTransport(sig, req, cm.path, onActivity);
                   // Re-location is a model call on the per-file signal: report
                   // activity so the idle watchdog does not kill an active file.
                   try { onActivity?.(); } catch {}
@@ -1120,7 +1143,7 @@ export class Runner {
 
     let resp: ChatResponse;
     try {
-      resp = await this.callTransport(signal, req);
+      resp = await this.callTransport(signal, req, _filePath, onActivity);
       // Compression is a model call on the per-file signal: report activity
       // so the idle watchdog does not kill an active file.
       try { onActivity?.(); } catch {}

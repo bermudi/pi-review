@@ -226,6 +226,16 @@ packed-install testing, not optional style preferences.
   calls. Do not substitute a tool-start budget.
 - The review path uses OCR's incremental `code_comment` collector,
   `task_done`, post-processing, review filter, and restricted grace round.
+- Rate-limit backoff is a deliberate pi-reviewer extension, not OCR
+  behavior: a model round (main, plan, grace, relocation, or compression)
+  that fails as rate_limited (429) or overloaded (529) is re-issued unchanged
+  after a fixed backoff schedule (default 5s/15s/45s, injectable via
+  `rateLimitBackoffMs`; empty disables). Only those two classes retry;
+  auth/cancel/context failures surface immediately. Waits are abort-aware
+  (cancellation keeps its semantics), poke the idle watchdog, and the retry
+  collector reopens finalized entries so retried requests report
+  retried/recovered honestly. Contracts are pinned in
+  `test/ocr/llmloop/backoff.test.ts` and `test/ocr/agent/plan-backoff.test.ts`.
 - Budget notices are a deliberate pi-reviewer extension, not OCR behavior:
   once half the per-file round budget is spent, the loop injects a user
   message stating the remaining rounds every 5 rounds so the model can pace
@@ -234,12 +244,12 @@ packed-install testing, not optional style preferences.
   `test/ocr/llmloop/loop.test.ts`.
 - Per-file status lines are a deliberate pi-reviewer extension on the human
   stderr channel: milestone lines only (file start, file done with note count
-  and a run-level done counter, quiet warning), never per-response chatter,
-  message content, or stdout output. The quiet warning fires at half the
-  per-file idle timeout (user-confirmed choice) and rides the idle watchdog.
-  Emission is best-effort and agent-audience runs stay silent. Contracts are
-  pinned in `test/ocr/agent/status-lines.test.ts` and
-  `test/ocr/scan/status-lines.test.ts`.
+  and a run-level done counter, quiet warning, rate-limit backoff notices),
+  never per-response chatter, message content, or stdout output. The quiet
+  warning fires at half the per-file idle timeout (user-confirmed choice) and
+  rides the idle watchdog. Emission is best-effort and agent-audience runs
+  stay silent. Contracts are pinned in `test/ocr/agent/status-lines.test.ts`
+  and `test/ocr/scan/status-lines.test.ts`.
 - Model resolution may harvest provider registrations from user-scope pi
   extensions (`src/ocr/cli/extension-providers.ts`). This is host-side,
   user-scope-only, fail-open (a broken extension costs its provider only),
