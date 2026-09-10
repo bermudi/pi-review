@@ -250,6 +250,12 @@ packed-install testing, not optional style preferences.
   rides the idle watchdog. Emission is best-effort and agent-audience runs
   stay silent. Contracts are pinned in `test/ocr/agent/status-lines.test.ts`
   and `test/ocr/scan/status-lines.test.ts`.
+- Adaptive concurrency (AIMD-style ramp/collapse across the file pool) was
+  considered and deliberately not built: backoff already guarantees
+  correctness, the flag covers the known provider, and per-provider traffic
+  shaping is poor fit for a general engine. Revisit only with evidence that a
+  static `--concurrency` fails real usage — a second provider throttling
+  static bursts, or library consumers that cannot pass the flag.
 - Model resolution may harvest provider registrations from user-scope pi
   extensions (`src/ocr/cli/extension-providers.ts`). This is host-side,
   user-scope-only, fail-open (a broken extension costs its provider only),
