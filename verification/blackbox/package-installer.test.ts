@@ -32,7 +32,7 @@ test(
     expect(cache.status, cache.stderr || cache.stdout).toBe(0);
     const container = join(
       dirname(realpathSync(cache.stdout.trim())),
-      "pi-reviewer-blackbox",
+      "pi-review-blackbox",
     );
     mkdirSync(container, { recursive: true, mode: 0o700 });
     const abandoned = mkdtempSync(join(container, "run-"));

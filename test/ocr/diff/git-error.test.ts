@@ -3,7 +3,7 @@
 //
 // Isolated adoption from OCR 0c44f10 + 4cecf1e: git failures surface git's own
 // message (stderr tail) instead of empty results.
-// Modifications are distributed as part of pi-reviewer under GPL-3.0-or-later.
+// Modifications are distributed as part of pi-review under GPL-3.0-or-later.
 
 import { test, expect } from "bun:test";
 import * as fs from "node:fs";

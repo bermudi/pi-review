@@ -1,6 +1,6 @@
-// pi-reviewer extension tests: duplicate file_read guard + no-progress early stop.
+// pi-review extension tests: duplicate file_read guard + no-progress early stop.
 // Motivated by a 60-minute review where one file re-read the same windows
-// 18x and cycled through 8 compressions. These are owned pi-reviewer
+// 18x and cycled through 8 compressions. These are owned pi-review
 // contracts, not OCR parity.
 
 import { describe, test, expect } from "bun:test";

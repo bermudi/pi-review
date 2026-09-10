@@ -1,4 +1,4 @@
-// pi-reviewer extension: missing file_read guides to file_find.
+// pi-review extension: missing file_read guides to file_find.
 // The model guessed non-existent paths (skill-cmd, model-cmd, wrong spec).
 import { describe, test, expect } from "bun:test";
 import { FileReader, FileReadProvider, ReviewMode } from "../../../src/ocr/tool/filereader.ts";

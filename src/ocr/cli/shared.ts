@@ -3,7 +3,7 @@
 //
 // Ported from cmd/opencodereview/shared.go, shared_flags.go at c35ddd7223f2b5540ce03aa43c9a25ef643fca27;
 // stdout TTY color policy follows OCR v1.9.8 commit 756203c.
-// Modifications are distributed as part of pi-reviewer under
+// Modifications are distributed as part of pi-review under
 // GPL-3.0-or-later;
 // see LICENSES/Apache-2.0.txt and THIRD_PARTY_NOTICES.md.
 
@@ -175,7 +175,7 @@ export interface ScanOptions {
 
 /**
  * Options for the read-only `findings` command, which replays a previously
- * recorded session without running a model. Independent pi-reviewer
+ * recorded session without running a model. Independent pi-review
  * surface — not an OCR command.
  */
 export interface FindingsOptions {

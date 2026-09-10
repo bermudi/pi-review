@@ -3,7 +3,7 @@
 //
 // Ported from cmd/opencodereview/background_file.go and review_cmd.go at
 // OCR v1.9.9 commit 4b6874bd23106b5c68bea6d230bb60303b9f0961.
-// Modifications are distributed as part of pi-reviewer under
+// Modifications are distributed as part of pi-review under
 // GPL-3.0-or-later; see LICENSES/Apache-2.0.txt and THIRD_PARTY_NOTICES.md.
 
 import * as fs from "node:fs";

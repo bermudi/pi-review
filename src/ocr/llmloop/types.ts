@@ -3,7 +3,7 @@
 // Ported from internal/llmloop/loop.go at c35ddd7223f2b5540ce03aa43c9a25ef643fca27;
 // named stop diagnostics updated from OCR v1.9.9 commit
 // 4b6874bd23106b5c68bea6d230bb60303b9f0961.
-// Modifications are distributed as part of pi-reviewer under
+// Modifications are distributed as part of pi-review under
 // GPL-3.0-or-later;
 // see LICENSES/Apache-2.0.txt and THIRD_PARTY_NOTICES.md.
 
@@ -250,7 +250,7 @@ export interface RunnerDeps {
   /** Legacy alias (Go field name). */
   readonly NewRequestMeta?: (filePath: string, taskType: TaskType, requestNo: number) => RequestMeta;
   /**
-   * pi-reviewer extension: backoff schedule (ms) before retrying a model
+   * pi-review extension: backoff schedule (ms) before retrying a model
    * round that failed as rate_limited/overloaded. Default
    * `[5000, 15000, 45000]`; an empty array disables retries.
    */

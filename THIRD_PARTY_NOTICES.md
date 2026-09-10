@@ -2,7 +2,7 @@
 
 ## Open Code Review
 
-`pi-reviewer` is a TypeScript port of Open Code Review v1.9.9:
+`pi-review` is a TypeScript port of Open Code Review v1.9.9:
 
 - project: <https://github.com/alibaba/open-code-review>
 - release: <https://github.com/alibaba/open-code-review/releases/tag/v1.9.9>
@@ -19,7 +19,7 @@ License, Version 2.0. A copy is included at
 `LICENSES/Apache-2.0.txt`.
 
 Ported files must retain their upstream provenance and applicable copyright
-notices. Modifications and the combined `pi-reviewer` distribution are
+notices. Modifications and the combined `pi-review` distribution are
 licensed under GPL-3.0-or-later as described in the repository `LICENSE`.
 
 Open Code Review and Alibaba are not affiliated with or responsible for this

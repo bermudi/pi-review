@@ -4,7 +4,7 @@
 // Ported from internal/tool/filereader.go, internal/tool/file_read.go,
 // internal/tool/file_read_diff.go, internal/tool/code_search.go,
 // and internal/tool/file_find.go at c35ddd7223f2b5540ce03aa43c9a25ef643fca27.
-// Modifications are distributed as part of pi-reviewer under
+// Modifications are distributed as part of pi-review under
 // GPL-3.0-or-later;
 // see LICENSES/Apache-2.0.txt and THIRD_PARTY_NOTICES.md.
 
@@ -453,7 +453,7 @@ export class FileReadProvider {
       lines = res.lines;
       totalLines = res.total;
     } catch (e) {
-      // pi-reviewer extension: guide the model to discovery instead of
+      // pi-review extension: guide the model to discovery instead of
       // guessing nearby paths (the review that motivated this retried
       // skill-cmd/model-cmd and a wrong spec path). file_find is cheap;
       // another blind file_read is not.

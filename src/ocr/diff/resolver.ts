@@ -4,7 +4,7 @@
 // Ported from internal/diff/resolver.go at c35ddd7223f2b5540ce03aa43c9a25ef643fca27;
 // cross-file relocation added from OCR v1.9.5 commit
 // 9a371c9b3610fb4e9892bd50b72941e26201c2c1.
-// Modifications are distributed as part of pi-reviewer under
+// Modifications are distributed as part of pi-review under
 // GPL-3.0-or-later;
 // see LICENSES/Apache-2.0.txt and THIRD_PARTY_NOTICES.md.
 

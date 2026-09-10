@@ -2,7 +2,7 @@
   "release-type": "node",
   "packages": {
     ".": {
-      "package-name": "pi-reviewer",
+      "package-name": "pi-review",
       "changelog-path": "CHANGELOG.md",
       "include-component-in-tag": false
     }

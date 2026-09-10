@@ -1,5 +1,5 @@
 {
-  "name": "pi-reviewer",
+  "name": "pi-review",
   "module": "dist/index.js",
   "dependencies": {
     "@earendil-works/pi-coding-agent": "0.84.2",
@@ -36,13 +36,13 @@
   "description": "Independent code review engine for the Pi SDK, derived from Open Code Review v1.9.9",
   "license": "GPL-3.0-or-later",
   "author": "bermudi",
-  "homepage": "https://github.com/bermudi/pi-reviewer#readme",
+  "homepage": "https://github.com/bermudi/pi-review#readme",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/bermudi/pi-reviewer.git"
+    "url": "git+https://github.com/bermudi/pi-review.git"
   },
   "bugs": {
-    "url": "https://github.com/bermudi/pi-reviewer/issues"
+    "url": "https://github.com/bermudi/pi-review/issues"
   },
   "keywords": [
     "code-review",

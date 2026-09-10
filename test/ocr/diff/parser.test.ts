@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright 2026 alibaba/open-code-review Contributors
 // Ported from internal/diff/parser_test.go at c35ddd7223f2b5540ce03aa43c9a25ef643fca27.
-// Modifications are distributed as part of pi-reviewer under GPL-3.0-or-later;
+// Modifications are distributed as part of pi-review under GPL-3.0-or-later;
 // see LICENSES/Apache-2.0.txt and THIRD_PARTY_NOTICES.md.
 
 import { expect, test } from "bun:test";
@@ -11,7 +11,7 @@ import { tmpdir } from "node:os";
 import { parseDiffText } from "../../../src/ocr/diff/parser.js";
 
 async function parse(diffText: string, files: Record<string, string> = {}) {
-  const repoDir = await mkdtemp(join(tmpdir(), "pi-reviewer-parser-"));
+  const repoDir = await mkdtemp(join(tmpdir(), "pi-review-parser-"));
   try {
     await Promise.all(Object.entries(files).map(async ([path, content]) => {
       const filePath = join(repoDir, path);

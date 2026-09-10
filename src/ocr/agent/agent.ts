@@ -5,7 +5,7 @@
 // named main-loop stop classification updated from OCR v1.9.9 commit
 // 4b6874bd23106b5c68bea6d230bb60303b9f0961; cancellation checkpoint
 // preservation follows OCR v1.9.4 commit 31db10f.
-// Modifications are distributed as part of pi-reviewer under
+// Modifications are distributed as part of pi-review under
 // GPL-3.0-or-later;
 // see LICENSES/Apache-2.0.txt and THIRD_PARTY_NOTICES.md.
 
@@ -104,7 +104,7 @@ export interface Args {
   readonly reviewMode?: string;
   readonly template: Template;
   /**
-   * pi-reviewer extension: backoff schedule (ms) for rate-limited/overloaded
+   * pi-review extension: backoff schedule (ms) for rate-limited/overloaded
    * model rounds, including the plan phase. Default [5000, 15000, 45000].
    */
   readonly rateLimitBackoffMs?: readonly number[];
@@ -303,7 +303,7 @@ export function classifyItemError(err: unknown): [FailureClass, string] {
   if (isWrappedError(err, errDeadlineExceeded) || errorContains(err, "deadline exceeded") || errorContains(err, "DeadlineExceeded")) {
     return [FailureTimeout, "file review exceeded its time limit"];
   }
-  // Per-file task deadline (pi-reviewer's "file task timeout" abort reason),
+  // Per-file task deadline (pi-review's "file task timeout" abort reason),
   // including transport/loop wrappers that carry the reason in their message.
   if (isWrappedError(err, errFileTaskTimeout) || errorContains(err, "file task timeout")) {
     return [FailureTimeout, "file review exceeded its time limit"];
@@ -396,7 +396,7 @@ export const errDeadlineExceeded = new Error("context deadline exceeded");
 export const errCanceled = new Error("context canceled");
 export const ErrDeadlineExceeded = errDeadlineExceeded;
 export const ErrCanceled = errCanceled;
-// pi-reviewer per-file idle timeout: each file task's merged signal aborts with
+// pi-review per-file idle timeout: each file task's merged signal aborts with
 // this reason when concurrentTaskTimeoutMinutes elapses without model activity
 // (see run()). It must
 // classify as timeout, mirroring the Go context.DeadlineExceeded handling.
@@ -1694,7 +1694,7 @@ export class Agent {
       throw new Error("llmClient must provide complete(signal, req) or CompletionsWithCtx(signal, req)");
     };
     try {
-      // pi-reviewer extension: a rate-limited plan request backs off and
+      // pi-review extension: a rate-limited plan request backs off and
       // retries like a main round instead of silently dropping the plan.
       const schedule = this.args.rateLimitBackoffMs ?? DEFAULT_RATE_LIMIT_BACKOFF_MS;
       resp = await completeWithProviderBackoff((sig: AbortSignal) => callWithMeta(sig, req) as Promise<unknown>, signal, {

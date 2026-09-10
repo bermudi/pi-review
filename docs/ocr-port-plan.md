@@ -3,7 +3,7 @@
 > **Frozen evidence:** this migration is complete. It is not the active
 > development or release process. Normal releases use `bun run verify:release`;
 > the tooling that produced this evidence is preserved at tag `v0.4.0`. Future
-> OCR releases are not automatic pi-reviewer upgrade targets.
+> OCR releases are not automatic pi-review upgrade targets.
 
 ## Decision and current status
 

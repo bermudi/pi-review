@@ -1,6 +1,6 @@
-# Architecture — pi-reviewer engine
+# Architecture — pi-review engine
 
-`pi-reviewer` is an independently maintained review engine built on the Pi
+`pi-review` is an independently maintained review engine built on the Pi
 SDK. It was derived from Open Code Review v1.9.9; the frozen fork reference is
 tag object `c95d3907d5448354d3f8a33f2ae5e4f23fdf1c94`, commit
 `4b6874bd23106b5c68bea6d230bb60303b9f0961`. The legacy precision-oriented
@@ -11,7 +11,7 @@ provenance, not an ongoing obligation to track OCR releases.
 The public library seam is:
 
 ```ts
-import { review, createReviewer, Reviewer } from "pi-reviewer";
+import { review, createReviewer, Reviewer } from "pi-review";
 // review(input, options): Promise<ReviewResult>
 ```
 

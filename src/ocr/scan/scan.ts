@@ -5,7 +5,7 @@
 // named main-loop stop diagnostics updated from OCR v1.9.9 commit
 // 4b6874bd23106b5c68bea6d230bb60303b9f0961; aggregate scan budget
 // reporting follows OCR v1.9.5 commit 75cb3d0c45cb322495133a688de5620258a30849.
-// Modifications are distributed as part of pi-reviewer under
+// Modifications are distributed as part of pi-review under
 // GPL-3.0-or-later;
 // see LICENSES/Apache-2.0.txt and THIRD_PARTY_NOTICES.md.
 

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright 2026 alibaba/open-code-review Contributors
 // Ported from internal/diff/gitignore_test.go at c35ddd7223f2b5540ce03aa43c9a25ef643fca27.
-// Modifications are distributed as part of pi-reviewer under GPL-3.0-or-later;
+// Modifications are distributed as part of pi-review under GPL-3.0-or-later;
 // see LICENSES/Apache-2.0.txt and THIRD_PARTY_NOTICES.md.
 
 import { expect, test } from "bun:test";
@@ -29,8 +29,8 @@ test("TestExcludedDirs", () => {
 
 // OCR v1.9.3: TestLoadGitignorePatterns
 test("TestLoadGitignorePatterns", () => {
-  const validDir = mkdtempSync(join(tmpdir(), "pi-reviewer-gitignore-valid-"));
-  const missingDir = mkdtempSync(join(tmpdir(), "pi-reviewer-gitignore-missing-"));
+  const validDir = mkdtempSync(join(tmpdir(), "pi-review-gitignore-valid-"));
+  const missingDir = mkdtempSync(join(tmpdir(), "pi-review-gitignore-missing-"));
   try {
     const content = "*.log\n# comment\n\nnode_modules/\n*.tmp\n";
     writeFileSync(join(validDir, ".gitignore"), content, { mode: 0o644 });

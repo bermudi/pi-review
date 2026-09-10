@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
-// Copyright 2026 pi-reviewer Contributors
+// Copyright 2026 pi-review Contributors
 //
-// pi-reviewer extension (not OCR behavior): provider rate-limit backoff.
+// pi-review extension (not OCR behavior): provider rate-limit backoff.
 //
 // OCR v1.9.9 fails a file the moment its model round errors. Providers under
 // load answer 429 (rate_limited) or 529 (overloaded) long before the account

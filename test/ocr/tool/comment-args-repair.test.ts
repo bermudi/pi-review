@@ -2,7 +2,7 @@
 // Copyright 2026 alibaba/open-code-review Contributors
 //
 // Isolated adoption from OCR 41917e2: repair serialized code_comment args.
-// Modifications are distributed as part of pi-reviewer under GPL-3.0-or-later.
+// Modifications are distributed as part of pi-review under GPL-3.0-or-later.
 
 import { test, expect } from "bun:test";
 import { CodeCommentProvider, ParseComments, ParseCommentsWithPath } from "../../../src/ocr/tool/code-comment.js";

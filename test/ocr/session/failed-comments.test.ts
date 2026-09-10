@@ -1,4 +1,4 @@
-// pi-reviewer extension tests: failed review items preserve partial findings.
+// pi-review extension tests: failed review items preserve partial findings.
 // Motivated by a review where the failed file showed 4 findings in the CLI
 // but saved 0 in the session record. Owned contract, not OCR parity.
 

@@ -2,7 +2,7 @@
 // Copyright 2026 alibaba/open-code-review Contributors
 //
 // Ported from cmd/opencodereview/root.go, version.go, shared.go at c35ddd7223f2b5540ce03aa43c9a25ef643fca27.
-// Modifications are distributed as part of pi-reviewer under
+// Modifications are distributed as part of pi-review under
 // GPL-3.0-or-later;
 // see LICENSES/Apache-2.0.txt and THIRD_PARTY_NOTICES.md.
 
@@ -58,7 +58,7 @@ export function formatVersion(info: BuildInfo): string {
   s += ` ${info.platform}/${info.arch}\n`;
   s += `OCR compatibility: ${info.ocrVersion}\n`;
   if (info.date !== "") s += `built at: ${info.date}\n`;
-  s += "https://github.com/bermudi/pi-reviewer\n";
+  s += "https://github.com/bermudi/pi-review\n";
   return s;
 }
 

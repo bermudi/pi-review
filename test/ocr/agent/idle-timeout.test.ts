@@ -1,5 +1,5 @@
 // Idle watchdog: active files survive, quiet files time out.
-// pi-reviewer independent behavior (not OCR parity): the per-file timer
+// pi-review independent behavior (not OCR parity): the per-file timer
 // measures time since last model activity, not total wall-clock time.
 
 import { describe, test, expect } from "bun:test";

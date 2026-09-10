@@ -1,6 +1,6 @@
-# pi-reviewer
+# pi-review
 
-`pi-reviewer` is an independently maintained TypeScript review engine and
+`pi-review` is an independently maintained TypeScript review engine and
 `pi-review` CLI built on the Pi SDK.
 
 > **Status:** the legacy precision-oriented engine has been removed by explicit
@@ -8,7 +8,7 @@
 > Code Review v1.9.9, which is the frozen fork point (`v1.9.9` /
 > `c95d3907d5448354d3f8a33f2ae5e4f23fdf1c94` / `4b6874bd23106b5c68bea6d230bb60303b9f0961`).
 > The inventory is complete: 1,997 cases, with 1,015 covered, 112 equivalent,
-> 388 not applicable, and 482 out of scope. Future pi-reviewer releases follow
+> 388 not applicable, and 482 out of scope. Future pi-review releases follow
 > this project's own contracts and SemVer rather than tracking OCR releases.
 > The
 > `config`/`provider`/`login`/`MCP`/`telemetry`/`test-connection` command
@@ -173,7 +173,7 @@ Independent files never share mutable model history.
 
 The runtime dependency is the released Pi SDK package **`@earendil-works/pi-coding-agent` `0.84.2`**, pinned exactly in `package.json`. `../pi-mono` was the implementation reference, not a runtime path dependency.
 
-There is no login flow in `pi-reviewer`. By default, Pi uses `~/.pi/agent`:
+There is no login flow in `pi-review`. By default, Pi uses `~/.pi/agent`:
 
 - `~/.pi/agent/auth.json` for provider authentication
 - `~/.pi/agent/models.json` for model definitions
@@ -185,7 +185,7 @@ Model references follow `pi --model` resolution through `~/.pi/agent/models.json
 ## Library usage
 
 ```ts
-import { review } from "pi-reviewer";
+import { review } from "pi-review";
 
 const result = await review(
   { repository: process.cwd(), mode: { kind: "workspace" } },
@@ -261,7 +261,7 @@ preserve fork provenance; they do not imply ongoing upstream synchronization.
 
 ## License and upstream attribution
 
-`pi-reviewer` is licensed under [GPL-3.0-or-later](LICENSE). It contains
+`pi-review` is licensed under [GPL-3.0-or-later](LICENSE). It contains
 material derived from Open Code Review v1.9.9 (Apache-2.0)—see
 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) and
 [LICENSES/Apache-2.0.txt](LICENSES/Apache-2.0.txt).

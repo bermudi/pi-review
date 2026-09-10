@@ -300,7 +300,7 @@ describe("ocr llmloop pending upstream runner tests", () => {
     expect(state.hasPendingJob()).toBe(false);
   });
 
-  // pi-reviewer: the background compression job deadline must abort with an
+  // pi-review: the background compression job deadline must abort with an
   // explicit reason so the failure log distinguishes it from other aborts.
   test("background compression job timeout aborts with an explicit reason", async () => {
     const state = new CompressionState();

@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 // Ported from internal/llm/protocol.go at c35ddd7223f2b5540ce03aa43c9a25ef643fca27
-// Modifications are distributed as part of pi-reviewer under GPL-3.0-or-later.
+// Modifications are distributed as part of pi-review under GPL-3.0-or-later.
 
 /**
  * Canonical protocol identifiers understood by the LLM client factory and

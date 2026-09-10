@@ -3,7 +3,7 @@
 //
 // Ported from internal/tool/definitions.go, internal/tool/response_message.go,
 // and internal/tool/stub.go at c35ddd7223f2b5540ce03aa43c9a25ef643fca27.
-// Modifications are distributed as part of pi-reviewer under
+// Modifications are distributed as part of pi-review under
 // GPL-3.0-or-later;
 // see LICENSES/Apache-2.0.txt and THIRD_PARTY_NOTICES.md.
 

@@ -549,7 +549,7 @@ describe("packed CLI boundary", () => {
     const homeDir = mkdtempSync(join(tmpdir(), "retry-e2e-home-"));
 
     const runPi = async (format: string): Promise<{ stdout: string; stderr: string; exitCode: number | null }> => {
-      const consumerCli = join(pack.consumerDir, "node_modules", "pi-reviewer", "dist", "cli.js");
+      const consumerCli = join(pack.consumerDir, "node_modules", "pi-review", "dist", "cli.js");
       const binExists = existsSync(consumerCli);
       const useBun = binExists;
       const args = format === "json"

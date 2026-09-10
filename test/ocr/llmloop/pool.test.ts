@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright 2026 alibaba/open-code-review Contributors
 // Ported from internal/llmloop/pool_test.go at c35ddd7223f2b5540ce03aa43c9a25ef643fca27
-// Modifications are distributed as part of pi-reviewer under GPL-3.0-or-later;
+// Modifications are distributed as part of pi-review under GPL-3.0-or-later;
 
 import { describe, test, expect } from "bun:test";
 import { CommentWorkerPool } from "../../../src/ocr/llmloop/pool.js";

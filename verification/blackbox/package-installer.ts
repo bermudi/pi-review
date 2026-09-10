@@ -19,7 +19,7 @@ import {
 import { dirname, isAbsolute, join } from "node:path";
 import { createHash } from "node:crypto";
 
-const WORKSPACE_CONTAINER_NAME = "pi-reviewer-blackbox";
+const WORKSPACE_CONTAINER_NAME = "pi-review-blackbox";
 const TEMP_WORKSPACE_PREFIX = "run-";
 const OWNER_MARKER = ".owner";
 const activeTempWorkspaces = new Set<string>();
@@ -303,7 +303,7 @@ export async function runPackedInstallSmoke(): Promise<PackResult> {
       const pkgBin = join(
         consumerDir,
         "node_modules",
-        "pi-reviewer",
+        "pi-review",
         "dist",
         "cli.js",
       );

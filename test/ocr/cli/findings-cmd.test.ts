@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// Independent pi-reviewer tests for the `findings` command — not ported
+// Independent pi-review tests for the `findings` command — not ported
 // from Open Code Review. The command is a pure local read of recorded
 // session JSONL, so every test runs without a model, network, or (for the
 // repository itself) even Git.

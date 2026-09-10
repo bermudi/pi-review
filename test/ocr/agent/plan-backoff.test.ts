@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-// Copyright 2026 pi-reviewer Contributors
+// Copyright 2026 pi-review Contributors
 //
 // Plan-phase contract for the rate-limit backoff extension: a rate-limited
 // plan request retries on the schedule (with a human-channel notice) instead

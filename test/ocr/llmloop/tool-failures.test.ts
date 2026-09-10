@@ -2,7 +2,7 @@
 // Copyright 2026 alibaba/open-code-review Contributors
 //
 // Isolated adoption from OCR b3704b8 + 0524d21: tool failures surface with args.
-// Modifications are distributed as part of pi-reviewer under GPL-3.0-or-later.
+// Modifications are distributed as part of pi-review under GPL-3.0-or-later.
 
 import { test, expect } from "bun:test";
 import { Runner } from "../../../src/ocr/llmloop/loop.js";

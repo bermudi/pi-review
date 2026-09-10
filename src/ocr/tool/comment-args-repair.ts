@@ -3,7 +3,7 @@
 //
 // Surgically adopted from OCR internal/tool/comment_args_repair.go at 41917e2
 // (isolated adoption; frozen v1.9.9 baseline unchanged otherwise).
-// Modifications are distributed as part of pi-reviewer under GPL-3.0-or-later;
+// Modifications are distributed as part of pi-review under GPL-3.0-or-later;
 // see LICENSES/Apache-2.0.txt and THIRD_PARTY_NOTICES.md.
 
 /**
@@ -33,7 +33,7 @@
 
 const CONTENT_FIELD_PATTERN = /"content"\s*:/g;
 
-// Known fields mirror upstream plus pi-reviewer line extensions (start/end
+// Known fields mirror upstream plus pi-review line extensions (start/end
 // line variants carried by LlmComment). Batches using only these may repair;
 // anything else means prose was re-read as structure.
 const KNOWN_COMMENT_FIELDS: ReadonlySet<string> = new Set([
@@ -44,7 +44,7 @@ const KNOWN_COMMENT_FIELDS: ReadonlySet<string> = new Set([
   "severity",
   "path",
   "thinking",
-  // pi-reviewer extensions (loop.ts carries these, not in upstream schema).
+  // pi-review extensions (loop.ts carries these, not in upstream schema).
   "start_line",
   "end_line",
   "startLine",

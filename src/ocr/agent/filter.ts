@@ -4,7 +4,7 @@
 // Ported from internal/agent/agent.go at c35ddd7223f2b5540ce03aa43c9a25ef643fca27;
 // review-filter tool contract updated from OCR v1.9.5
 // c8b6a390b8ad447faf46d4764347167edff0ada2.
-// Modifications are distributed as part of pi-reviewer under
+// Modifications are distributed as part of pi-review under
 // GPL-3.0-or-later;
 // see LICENSES/Apache-2.0.txt and THIRD_PARTY_NOTICES.md.
 

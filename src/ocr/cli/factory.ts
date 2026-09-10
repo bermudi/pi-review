@@ -296,7 +296,7 @@ export async function resolvePiModelSelection(
     return { model, modelRuntime: runtime, identity: { provider: model.provider, model: model.id } };
   }
 
-  // No flags: pi-reviewer has no default of its own. Only the augmented
+  // No flags: pi-review has no default of its own. Only the augmented
   // runtime crosses the boundary; the transport session applies Pi's fallback
   // with pi's saved defaultModel unread (decision: keep our fallback chain).
   return { modelRuntime: runtime };

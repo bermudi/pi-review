@@ -6,7 +6,7 @@
 // Routing extensions for C++ (.cxx/.hxx) and JavaScript modules (.mjs/.cjs)
 // surgically adopted from OCR v1.11.2 commits b1ad13a and 14fab72 (isolated
 // adoption; frozen v1.9.9 baseline unchanged for all other assets).
-// Modifications are distributed as part of pi-reviewer under
+// Modifications are distributed as part of pi-review under
 // GPL-3.0-or-later;
 // see LICENSES/Apache-2.0.txt and THIRD_PARTY_NOTICES.md.
 

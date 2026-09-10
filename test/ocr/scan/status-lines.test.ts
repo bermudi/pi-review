@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 // Live status lines for scan dispatch: start line and done line with note
-// count and done counter on the human stderr channel. pi-reviewer
+// count and done counter on the human stderr channel. pi-review
 // independent behavior, not OCR parity.
 
 import { describe, it, expect } from "bun:test";
@@ -24,7 +24,7 @@ async function makeRepo(files: Record<string, string>): Promise<{ dir: string; c
     await rm(dir, { recursive: true, force: true }).catch(() => {});
   };
   spawnSync("git", ["init", "-q"], { cwd: dir });
-  spawnSync("git", ["config", "user.email", "harness@pi-reviewer.test"], { cwd: dir });
+  spawnSync("git", ["config", "user.email", "harness@pi-review.test"], { cwd: dir });
   spawnSync("git", ["config", "user.name", "harness"], { cwd: dir });
   for (const [name, content] of Object.entries(files)) {
     const p = join(dir, name);

@@ -26,12 +26,12 @@ jobs:
       - name: Create tarball
         run: |
           tag="${GITHUB_REF_NAME}"
-          tar -czf "pi-reviewer-${tag}.tar.gz" -C dist .
-          sha256sum "pi-reviewer-${tag}.tar.gz" > "checksums-sha256.txt"
+          tar -czf "pi-review-${tag}.tar.gz" -C dist .
+          sha256sum "pi-review-${tag}.tar.gz" > "checksums-sha256.txt"
 
       - name: Attach to release
         uses: softprops/action-gh-release@v2
         with:
           files: |
-            pi-reviewer-*.tar.gz
+            pi-review-*.tar.gz
             checksums-sha256.txt

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright 2026 alibaba/open-code-review Contributors
 // Ported from internal/llmloop/loop.go at c35ddd7223f2b5540ce03aa43c9a25ef643fca27
-// Modifications are distributed as part of pi-reviewer under
+// Modifications are distributed as part of pi-review under
 // GPL-3.0-or-later;
 // see LICENSES/Apache-2.0.txt and THIRD_PARTY_NOTICES.md.
 
@@ -103,7 +103,7 @@ export function graceRoundToolDefs(defs: readonly ToolDef[]): ToolDef[] {
 }
 
 /**
- * pi-reviewer extension: normalize file_read args to an exact-range key for
+ * pi-review extension: normalize file_read args to an exact-range key for
  * duplicate detection. Defaults match FileReadProvider (start 1, end 0=open).
  */
 export function fileReadRangeKey(args: Record<string, unknown>): string | null {
@@ -179,7 +179,7 @@ export class Runner {
   private _toolCallSeq = 0;
   private _toolFailures: ToolFailureDetail[] = [];
   private _bg: Set<Promise<void>> = new Set();
-  // pi-reviewer extension: per-file duplicate file_read guard. Tracks exact
+  // pi-review extension: per-file duplicate file_read guard. Tracks exact
   // (path, start, end) ranges already returned in this RunPerFile so repeated
   // crawls get a short reminder instead of another 8k token dump. Cleared at
   // the start of each RunPerFile; compression keeps it (the summary should
@@ -376,7 +376,7 @@ export class Runner {
     if (goFn === undefined && typeof client["complete"] !== "function") {
       throw new Error("Runner: llmClient must provide complete(signal, req) or CompletionsWithCtx(signal, req)");
     }
-    // pi-reviewer extension: retry rate-limited/overloaded rounds after a
+    // pi-review extension: retry rate-limited/overloaded rounds after a
     // growing backoff instead of failing the file. Each wait pokes the idle
     // watchdog (a deliberate pause, not a hung file) and emits one
     // milestone-rare human-channel notice.
@@ -407,7 +407,7 @@ export class Runner {
     const initialToolReqCount = toolReqCount;
     const maxConsecutiveEmptyRounds = 3;
     let consecutiveEmptyRounds = 0;
-    // pi-reviewer extension: stop when the model loops on already-seen
+    // pi-review extension: stop when the model loops on already-seen
     // evidence. A round counts as no-progress when every call was a duplicate
     // file_read (short reminder, no new bytes) and no code_comment/task_done.
     // 8 matches the "8-10 rounds with no new evidence" review finding.
@@ -437,7 +437,7 @@ export class Runner {
 
         toolReqCount--;
 
-        // pi-reviewer extension (deliberate divergence from OCR v1.9.9, which
+        // pi-review extension (deliberate divergence from OCR v1.9.9, which
         // only announces the budget through the terminal grace round): once
         // half the round budget is spent, tell the model what remains every
         // 5 rounds so it can pace itself and finish inside the budget. Skipped
@@ -518,7 +518,7 @@ export class Runner {
         let taskCompleted = false;
         let hasValidResult = false;
         const thinking = resp.reasoningContent ?? "";
-        // pi-reviewer no-progress tracking: true until a call proves new work.
+        // pi-review no-progress tracking: true until a call proves new work.
         let roundAllDuplicateReads = calls.length > 0;
         let roundHasCommentOrDone = false;
 
@@ -573,7 +573,7 @@ export class Runner {
           consecutiveEmptyRounds = 0;
         }
 
-        // pi-reviewer extension: duplicate-only rounds carry no new evidence.
+        // pi-review extension: duplicate-only rounds carry no new evidence.
         // Stop early instead of crawling to MaxToolRequestTimes (the 50-minute
         // registry loop was 8 compressions of re-reads). code_comment resets
         // the counter via roundHasCommentOrDone above.
@@ -1031,7 +1031,7 @@ export class Runner {
       return { data: errMsg, completed: false, failed: false };
     }
 
-    // pi-reviewer extension: exact-duplicate file_read guard. The model
+    // pi-review extension: exact-duplicate file_read guard. The model
     // crawls the same 200-line windows repeatedly (registry read intake.ts
     // 18x). Returning the full 8k dump again costs tokens without evidence.
     // Return a short reminder pointing at the earlier result instead.

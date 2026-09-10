@@ -3,7 +3,7 @@
 //
 // Ported from internal/session/history.go at c35ddd7223f2b5540ce03aa43c9a25ef643fca27;
 // writer-creation finalization errors revalidated against OCR v1.9.9.
-// Modifications are distributed as part of pi-reviewer under
+// Modifications are distributed as part of pi-review under
 // GPL-3.0-or-later;
 // see LICENSES/Apache-2.0.txt and THIRD_PARTY_NOTICES.md.
 

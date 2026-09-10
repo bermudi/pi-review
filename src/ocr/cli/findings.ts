@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// Independent pi-reviewer command — not ported from Open Code Review.
+// Independent pi-review command — not ported from Open Code Review.
 //
 // `pi-review findings` replays the findings recorded by a previous local
 // review or scan without any model or Git activity. Every run persists its

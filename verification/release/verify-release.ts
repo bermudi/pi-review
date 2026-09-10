@@ -1,5 +1,5 @@
 #!/usr/bin/env bun
-// Independent pi-reviewer release gate. No OCR checkout or differential
+// Independent pi-review release gate. No OCR checkout or differential
 // reference is required; the frozen OCR baseline has its own optional gate.
 
 import { execFileSync, spawnSync } from "node:child_process";
@@ -150,7 +150,7 @@ async function main(): Promise<void> {
     const smokeScript = join(pack.consumerDir, "library-smoke.mjs");
     writeFileSync(
       smokeScript,
-      'import * as api from "pi-reviewer";\n' +
+      'import * as api from "pi-review";\n' +
       'console.log(JSON.stringify({review:typeof api.review,createReviewer:typeof api.createReviewer,runOcrCli:typeof api.runOcrCli}));\n',
     );
     const library = spawnSync("bun", [smokeScript], { cwd: pack.consumerDir, encoding: "utf8", timeout: 15_000 });

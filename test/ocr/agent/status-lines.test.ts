@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // Live status lines: per-file lifecycle progress on the human stderr channel
 // via the injected ProgressSink. Milestones only (start / done / quiet
-// warning / done counter) — never model message content. pi-reviewer
+// warning / done counter) — never model message content. pi-review
 // independent behavior, not OCR parity.
 
 import { describe, test, expect } from "bun:test";

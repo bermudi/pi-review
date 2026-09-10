@@ -58,7 +58,7 @@ export class RetryCollector {
     }
     const e = holder.entry;
     if (e.finalized) {
-      // pi-reviewer extension: a new attempt arriving for an already
+      // pi-review extension: a new attempt arriving for an already
       // finalized entry means the caller retried the logical request
       // (rate-limit backoff). Reopen so per-attempt evidence and the
       // retried/recovered outcome stay honest instead of tripping the
@@ -102,7 +102,7 @@ export class RetryCollector {
   }
 
   /**
-   * pi-reviewer extension: reopen a finalized entry because the caller is
+   * pi-review extension: reopen a finalized entry because the caller is
    * retrying the logical request. Prior attempts are preserved; the outcome
    * is recomputed by the next `finalize` (errors followed by success report
    * as `recovered`). No-op for entries that are not finalized.

@@ -5,7 +5,7 @@
 // Confinement hardening (same-file parent walk for case-insensitive / alias
 // paths) surgically adopted from OCR 124bfc3 (isolated adoption; frozen
 // v1.9.9 baseline unchanged otherwise).
-// Modifications are distributed as part of pi-reviewer under GPL-3.0-or-later;
+// Modifications are distributed as part of pi-review under GPL-3.0-or-later;
 // see LICENSES/Apache-2.0.txt and THIRD_PARTY_NOTICES.md.
 
 import * as fs from "node:fs/promises";

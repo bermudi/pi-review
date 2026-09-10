@@ -698,8 +698,8 @@ describe("ocr llmloop Runner (ported)", () => {
   });
 
   // ---------------------------------------------------------------------------
-  // pi-reviewer extension: mid-loop budget notices. OCR v1.9.9 announces the
-  // round budget only through the terminal grace round; pi-reviewer also
+  // pi-review extension: mid-loop budget notices. OCR v1.9.9 announces the
+  // round budget only through the terminal grace round; pi-review also
   // tells the model what remains every 5 rounds once half is spent.
   // ---------------------------------------------------------------------------
 
@@ -958,7 +958,7 @@ describe("ocr llmloop Runner (ported)", () => {
     await runner.waitBackground();
   });
 
-  // pi-reviewer regression: a file-signal abort during the compression request
+  // pi-review regression: a file-signal abort during the compression request
   // (e.g. the per-file deadline) must surface the abort reason as the subtask
   // error instead of masking it as StopCompression ("main_task did not
   // complete before stopping").

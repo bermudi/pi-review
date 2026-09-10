@@ -26,14 +26,14 @@
       "scope": {
         "kind": "in_scope",
         "area": "cmd/opencodereview",
-        "reason": "OCR provider-field mutation is intentionally omitted; pi-reviewer does not edit externally managed Pi provider configuration"
+        "reason": "OCR provider-field mutation is intentionally omitted; pi-review does not edit externally managed Pi provider configuration"
       },
       "tests": [
         {
           "name": "TestApplyProviderField",
           "delta": "changed_body",
           "disposition": "not_applicable",
-          "reason": "OCR v1.9.9 applyProviderField configuration persistence is not applicable: Pi owns provider and credential configuration through public APIs, and pi-reviewer deliberately omits this OCR command mutation."
+          "reason": "OCR v1.9.9 applyProviderField configuration persistence is not applicable: Pi owns provider and credential configuration through public APIs, and pi-review deliberately omits this OCR command mutation."
         }
       ]
     },
@@ -368,55 +368,55 @@
           "name": "TestAWSSettingsRejectedWhenEntryOverridesProtocol",
           "delta": "added",
           "disposition": "not_applicable",
-          "reason": "OCR v1.9.9 Bedrock configuration persistence and provider-TUI flow are not applicable: Pi owns provider/model/auth runtime through public APIs, and pi-reviewer deliberately omits those OCR shells."
+          "reason": "OCR v1.9.9 Bedrock configuration persistence and provider-TUI flow are not applicable: Pi owns provider/model/auth runtime through public APIs, and pi-review deliberately omits those OCR shells."
         },
         {
           "name": "TestCheckAPIKeyRequirement",
           "delta": "added",
           "disposition": "not_applicable",
-          "reason": "OCR v1.9.9 Bedrock configuration persistence and provider-TUI flow are not applicable: Pi owns provider/model/auth runtime through public APIs, and pi-reviewer deliberately omits those OCR shells."
+          "reason": "OCR v1.9.9 Bedrock configuration persistence and provider-TUI flow are not applicable: Pi owns provider/model/auth runtime through public APIs, and pi-review deliberately omits those OCR shells."
         },
         {
           "name": "TestConfigRoundTripKeepsAWSSettings",
           "delta": "added",
           "disposition": "not_applicable",
-          "reason": "OCR v1.9.9 Bedrock configuration persistence and provider-TUI flow are not applicable: Pi owns provider/model/auth runtime through public APIs, and pi-reviewer deliberately omits those OCR shells."
+          "reason": "OCR v1.9.9 Bedrock configuration persistence and provider-TUI flow are not applicable: Pi owns provider/model/auth runtime through public APIs, and pi-review deliberately omits those OCR shells."
         },
         {
           "name": "TestProviderTUIAmbientProviderSkipsAPIKeyStep",
           "delta": "added",
           "disposition": "not_applicable",
-          "reason": "OCR v1.9.9 Bedrock configuration persistence and provider-TUI flow are not applicable: Pi owns provider/model/auth runtime through public APIs, and pi-reviewer deliberately omits those OCR shells."
+          "reason": "OCR v1.9.9 Bedrock configuration persistence and provider-TUI flow are not applicable: Pi owns provider/model/auth runtime through public APIs, and pi-review deliberately omits those OCR shells."
         },
         {
           "name": "TestSetCustomProviderAWSSettingsFollowProtocol",
           "delta": "added",
           "disposition": "not_applicable",
-          "reason": "OCR v1.9.9 Bedrock configuration persistence and provider-TUI flow are not applicable: Pi owns provider/model/auth runtime through public APIs, and pi-reviewer deliberately omits those OCR shells."
+          "reason": "OCR v1.9.9 Bedrock configuration persistence and provider-TUI flow are not applicable: Pi owns provider/model/auth runtime through public APIs, and pi-review deliberately omits those OCR shells."
         },
         {
           "name": "TestSetLlmProtocolRejectsBedrock",
           "delta": "added",
           "disposition": "not_applicable",
-          "reason": "OCR v1.9.9 Bedrock configuration persistence and provider-TUI flow are not applicable: Pi owns provider/model/auth runtime through public APIs, and pi-reviewer deliberately omits those OCR shells."
+          "reason": "OCR v1.9.9 Bedrock configuration persistence and provider-TUI flow are not applicable: Pi owns provider/model/auth runtime through public APIs, and pi-review deliberately omits those OCR shells."
         },
         {
           "name": "TestSetProtocolClearsStaleAWSSettings",
           "delta": "added",
           "disposition": "not_applicable",
-          "reason": "OCR v1.9.9 Bedrock configuration persistence and provider-TUI flow are not applicable: Pi owns provider/model/auth runtime through public APIs, and pi-reviewer deliberately omits those OCR shells."
+          "reason": "OCR v1.9.9 Bedrock configuration persistence and provider-TUI flow are not applicable: Pi owns provider/model/auth runtime through public APIs, and pi-review deliberately omits those OCR shells."
         },
         {
           "name": "TestSetProtocolLeavesAWSSettingsWhenNoneSet",
           "delta": "added",
           "disposition": "not_applicable",
-          "reason": "OCR v1.9.9 Bedrock configuration persistence and provider-TUI flow are not applicable: Pi owns provider/model/auth runtime through public APIs, and pi-reviewer deliberately omits those OCR shells."
+          "reason": "OCR v1.9.9 Bedrock configuration persistence and provider-TUI flow are not applicable: Pi owns provider/model/auth runtime through public APIs, and pi-review deliberately omits those OCR shells."
         },
         {
           "name": "TestSetProviderValueAWSSettings",
           "delta": "added",
           "disposition": "not_applicable",
-          "reason": "OCR v1.9.9 Bedrock configuration persistence and provider-TUI flow are not applicable: Pi owns provider/model/auth runtime through public APIs, and pi-reviewer deliberately omits those OCR shells."
+          "reason": "OCR v1.9.9 Bedrock configuration persistence and provider-TUI flow are not applicable: Pi owns provider/model/auth runtime through public APIs, and pi-review deliberately omits those OCR shells."
         }
       ]
     },
@@ -613,254 +613,254 @@
       "scope": {
         "kind": "in_scope",
         "area": "cmd/opencodereview",
-        "reason": "OCR config provider/model/MCP/telemetry command dispatch and persistence are intentionally omitted; pi-reviewer only resolves externally managed Pi configuration at runtime, with per-test not-applicable reasons recorded below"
+        "reason": "OCR config provider/model/MCP/telemetry command dispatch and persistence are intentionally omitted; pi-review only resolves externally managed Pi configuration at runtime, with per-test not-applicable reasons recorded below"
       },
       "tests": [
         {
           "name": "TestActiveModelForProvider",
           "delta": "byte_identical",
           "disposition": "not_applicable",
-          "reason": "OCR activeModelForProvider helper that prefers entry Model over cfg Model when provider matches is omitted; pi-reviewer does not expose provider/model config lookup via cfg and does not mutate Pi config; users specify --provider/--model, runtime loads via public Pi APIs; not applicable"
+          "reason": "OCR activeModelForProvider helper that prefers entry Model over cfg Model when provider matches is omitted; pi-review does not expose provider/model config lookup via cfg and does not mutate Pi config; users specify --provider/--model, runtime loads via public Pi APIs; not applicable"
         },
         {
           "name": "TestConfigRoundTripPreservesTimeoutSec",
           "delta": "byte_identical",
           "disposition": "not_applicable",
-          "reason": "OCR saveConfig/loadOrCreateConfig round-trip preserving providers.*.timeout_sec/custom_providers.*.timeout_sec/llm.timeout_sec is omitted; runtime per-file timeout exists via review --timeout flag, but config persistence of timeout_sec is not exposed and Pi config is not mutated by pi-reviewer; file round-trip not applicable"
+          "reason": "OCR saveConfig/loadOrCreateConfig round-trip preserving providers.*.timeout_sec/custom_providers.*.timeout_sec/llm.timeout_sec is omitted; runtime per-file timeout exists via review --timeout flag, but config persistence of timeout_sec is not exposed and Pi config is not mutated by pi-review; file round-trip not applicable"
         },
         {
           "name": "TestDeleteCustomProvider_NotFound",
           "delta": "byte_identical",
           "disposition": "not_applicable",
-          "reason": "OCR deleteCustomProvider nil map vs missing entry error via CustomProviders is omitted; pi-reviewer does not expose provider deletion and does not implement custom provider delete error path; Pi config deletion is managed externally; not applicable"
+          "reason": "OCR deleteCustomProvider nil map vs missing entry error via CustomProviders is omitted; pi-review does not expose provider deletion and does not implement custom provider delete error path; Pi config deletion is managed externally; not applicable"
         },
         {
           "name": "TestEnsureModelInList",
           "delta": "byte_identical",
           "disposition": "not_applicable",
-          "reason": "OCR ensureModelInList that appends new-model without reordering is omitted; pi-reviewer does not implement model-list ensure for Pi config and does not write Pi config; model availability is managed externally; not applicable"
+          "reason": "OCR ensureModelInList that appends new-model without reordering is omitted; pi-review does not implement model-list ensure for Pi config and does not write Pi config; model availability is managed externally; not applicable"
         },
         {
           "name": "TestEnsureTelemetry",
           "delta": "byte_identical",
           "disposition": "not_applicable",
-          "reason": "OCR ensureTelemetry nil->non-nil init for Telemetry is explicitly deferred; Pi telemetry export is not ported and pi-reviewer does not mutate Pi config; not applicable"
+          "reason": "OCR ensureTelemetry nil->non-nil init for Telemetry is explicitly deferred; Pi telemetry export is not ported and pi-review does not mutate Pi config; not applicable"
         },
         {
           "name": "TestLegacyLLMShadowWarning",
           "delta": "byte_identical",
           "disposition": "not_applicable",
-          "reason": "OCR legacyLLMShadowWarning for active provider shadowing llm.* is omitted; pi-reviewer has no llm.* legacy config and does not expose config warning flow; not applicable"
+          "reason": "OCR legacyLLMShadowWarning for active provider shadowing llm.* is omitted; pi-review has no llm.* legacy config and does not expose config warning flow; not applicable"
         },
         {
           "name": "TestLoadAppConfig_InvalidJSON",
           "delta": "byte_identical",
           "disposition": "not_applicable",
-          "reason": "OCR LoadAppConfig invalid JSON error via os.WriteFile {invalid} is omitted; pi-reviewer does not expose LoadAppConfig file parsing and does not write Pi config; runtime loads external Pi config via public APIs; file error path not applicable"
+          "reason": "OCR LoadAppConfig invalid JSON error via os.WriteFile {invalid} is omitted; pi-review does not expose LoadAppConfig file parsing and does not write Pi config; runtime loads external Pi config via public APIs; file error path not applicable"
         },
         {
           "name": "TestLoadAppConfig_NotExist",
           "delta": "byte_identical",
           "disposition": "not_applicable",
-          "reason": "OCR LoadAppConfig nil for nonexistent file is omitted; pi-reviewer does not implement LoadAppConfig; Pi configuration defaults come from public Pi APIs reading ~/.pi/agent managed externally; not applicable"
+          "reason": "OCR LoadAppConfig nil for nonexistent file is omitted; pi-review does not implement LoadAppConfig; Pi configuration defaults come from public Pi APIs reading ~/.pi/agent managed externally; not applicable"
         },
         {
           "name": "TestLoadOrCreateConfig_InvalidJSON",
           "delta": "byte_identical",
           "disposition": "not_applicable",
-          "reason": "OCR loadOrCreateConfig invalid JSON error propagation is omitted; pi-reviewer does not expose file config loading and does not write Pi config; omitted boundary, not applicable"
+          "reason": "OCR loadOrCreateConfig invalid JSON error propagation is omitted; pi-review does not expose file config loading and does not write Pi config; omitted boundary, not applicable"
         },
         {
           "name": "TestLoadOrCreateConfig_NewFile",
           "delta": "byte_identical",
           "disposition": "not_applicable",
-          "reason": "OCR loadOrCreateConfig new-file non-nil Config creation is omitted; pi-reviewer does not create Pi config files and does not mutate Pi config; external Pi tooling manages files; not applicable"
+          "reason": "OCR loadOrCreateConfig new-file non-nil Config creation is omitted; pi-review does not create Pi config files and does not mutate Pi config; external Pi tooling manages files; not applicable"
         },
         {
           "name": "TestMaxTokensConfigRoundTrip",
           "delta": "byte_identical",
           "disposition": "not_applicable",
-          "reason": "OCR saveConfig/LoadAppConfig round-trip for MaxTokens 200000 is omitted; runtime max-tokens exists via review --max-tokens/Budget, but config persistence via Go file is not exposed and Pi config is not written by pi-reviewer; not applicable"
+          "reason": "OCR saveConfig/LoadAppConfig round-trip for MaxTokens 200000 is omitted; runtime max-tokens exists via review --max-tokens/Budget, but config persistence via Go file is not exposed and Pi config is not written by pi-review; not applicable"
         },
         {
           "name": "TestMergeModelLists",
           "delta": "byte_identical",
           "disposition": "not_applicable",
-          "reason": "OCR mergeModelLists dedup/empty-string filter merging of [][]string is omitted; pi-reviewer does not implement model-list dedup for config persistence and does not mutate Pi config; model lists are managed externally via Pi files, runtime only consumes --model; helper not applicable"
+          "reason": "OCR mergeModelLists dedup/empty-string filter merging of [][]string is omitted; pi-review does not implement model-list dedup for config persistence and does not mutate Pi config; model lists are managed externally via Pi files, runtime only consumes --model; helper not applicable"
         },
         {
           "name": "TestNormalizeModelList",
           "delta": "byte_identical",
           "disposition": "not_applicable",
-          "reason": "OCR normalizeModelList trim+dedup+empty filter is omitted; pi-reviewer does not implement model-list normalization for config write and does not mutate Pi config; external Pi tooling manages lists; not applicable"
+          "reason": "OCR normalizeModelList trim+dedup+empty filter is omitted; pi-review does not implement model-list normalization for config write and does not mutate Pi config; external Pi tooling manages lists; not applicable"
         },
         {
           "name": "TestParseModelListValue",
           "delta": "byte_identical",
           "disposition": "not_applicable",
-          "reason": "OCR parseModelListValue (JSON array / comma / [a,b] unquoted) is omitted; pi-reviewer does not parse model lists for config persistence and does not mutate Pi config; users configure via external Pi files, runtime uses --model; not applicable"
+          "reason": "OCR parseModelListValue (JSON array / comma / [a,b] unquoted) is omitted; pi-review does not parse model lists for config persistence and does not mutate Pi config; users configure via external Pi files, runtime uses --model; not applicable"
         },
         {
           "name": "TestResolveConfigPath_Default",
           "delta": "byte_identical",
           "disposition": "not_applicable",
-          "reason": "OCR resolveConfigPath default ~/.config/open-code-review/config.json via OCR_CONFIG_PATH is omitted; pi-reviewer uses Pi's external auth/model location ~/.pi/agent via SettingsManager/DefaultResourceLoader and does not implement OCR's config path resolution; not applicable"
+          "reason": "OCR resolveConfigPath default ~/.config/open-code-review/config.json via OCR_CONFIG_PATH is omitted; pi-review uses Pi's external auth/model location ~/.pi/agent via SettingsManager/DefaultResourceLoader and does not implement OCR's config path resolution; not applicable"
         },
         {
           "name": "TestResolveConfigPath_Env",
           "delta": "byte_identical",
           "disposition": "not_applicable",
-          "reason": "OCR resolveConfigPath OCR_CONFIG_PATH=/tmp/test-config.json env override is omitted; pi-reviewer resolves Pi agent dir via PI_CODING_AGENT_DIR/--agent-dir and does not mutate Pi config; not applicable"
+          "reason": "OCR resolveConfigPath OCR_CONFIG_PATH=/tmp/test-config.json env override is omitted; pi-review resolves Pi agent dir via PI_CODING_AGENT_DIR/--agent-dir and does not mutate Pi config; not applicable"
         },
         {
           "name": "TestRunConfig_EmptyArgs",
           "delta": "byte_identical",
           "disposition": "not_applicable",
-          "reason": "OCR runConfig nil args prints usage is omitted; pi-reviewer has no config subcommand, review/scan are only surface; not applicable"
+          "reason": "OCR runConfig nil args prints usage is omitted; pi-review has no config subcommand, review/scan are only surface; not applicable"
         },
         {
           "name": "TestRunConfig_ModelWithArgs",
           "delta": "byte_identical",
           "disposition": "not_applicable",
-          "reason": "OCR runConfig `model extra` arg error is omitted; pi-reviewer does not expose config model subcommand, model is --model flag; not applicable"
+          "reason": "OCR runConfig `model extra` arg error is omitted; pi-review does not expose config model subcommand, model is --model flag; not applicable"
         },
         {
           "name": "TestRunConfig_ProviderWithArgs",
           "delta": "byte_identical",
           "disposition": "not_applicable",
-          "reason": "OCR runConfig `provider extra` arg count error is omitted; pi-reviewer does not expose config provider subcommand, provider selection is --provider flag; not applicable"
+          "reason": "OCR runConfig `provider extra` arg count error is omitted; pi-review does not expose config provider subcommand, provider selection is --provider flag; not applicable"
         },
         {
           "name": "TestRunConfigSetWarnsWhenActiveProviderShadowsLegacyLLMConfig",
           "delta": "byte_identical",
           "disposition": "not_applicable",
-          "reason": "OCR runConfigSet warning when active provider shadows legacy llm.url via captureConfigStderr is omitted; pi-reviewer has no llm.* precedence and does not expose config set; not applicable"
+          "reason": "OCR runConfigSet warning when active provider shadows legacy llm.url via captureConfigStderr is omitted; pi-review has no llm.* precedence and does not expose config set; not applicable"
         },
         {
           "name": "TestRunConfigUnset_InvalidKey",
           "delta": "byte_identical",
           "disposition": "not_applicable",
-          "reason": "OCR runConfigUnset custom_providers. empty name error is omitted; pi-reviewer has no config unset; not applicable"
+          "reason": "OCR runConfigUnset custom_providers. empty name error is omitted; pi-review has no config unset; not applicable"
         },
         {
           "name": "TestRunConfigUnset_UnknownPrefix",
           "delta": "byte_identical",
           "disposition": "not_applicable",
-          "reason": "OCR runConfigUnset providers.anthropic unsupported prefix error is omitted; pi-reviewer does not expose config unset and does not validate provider config keys for mutation; not applicable"
+          "reason": "OCR runConfigUnset providers.anthropic unsupported prefix error is omitted; pi-review does not expose config unset and does not validate provider config keys for mutation; not applicable"
         },
         {
           "name": "TestRunConfigUnsetProviderClearsSelectionAndKeepsProviderEntries",
           "delta": "byte_identical",
           "disposition": "not_applicable",
-          "reason": "OCR runConfigUnset `provider` that clears Provider/Model but keeps Providers[\"dashscope\"].APIKey via saveConfig/loadOrCreateConfig is omitted; pi-reviewer does not expose config unset and does not clear secrets via saveConfig; users manage via external Pi files, runtime only loads; not applicable"
+          "reason": "OCR runConfigUnset `provider` that clears Provider/Model but keeps Providers[\"dashscope\"].APIKey via saveConfig/loadOrCreateConfig is omitted; pi-review does not expose config unset and does not clear secrets via saveConfig; users manage via external Pi files, runtime only loads; not applicable"
         },
         {
           "name": "TestSetConfigValueAuthHeaderNormalizesKnownValues",
           "delta": "byte_identical",
           "disposition": "not_applicable",
-          "reason": "OCR setConfigValue `llm.auth_header` bearer -> authorization normalization via AuthHeader field is omitted; pi-reviewer does not expose llm.auth_header mutation and does not write Pi config; auth header is handled at runtime via Pi SessionManager from external files; not applicable"
+          "reason": "OCR setConfigValue `llm.auth_header` bearer -> authorization normalization via AuthHeader field is omitted; pi-review does not expose llm.auth_header mutation and does not write Pi config; auth header is handled at runtime via Pi SessionManager from external files; not applicable"
         },
         {
           "name": "TestSetConfigValueAuthHeaderRejectsCustomHeader",
           "delta": "byte_identical",
           "disposition": "not_applicable",
-          "reason": "OCR auth_header X-Custom-Auth rejection via setConfigValue is omitted; pi-reviewer does not expose config key validation for auth_header and does not mutate Pi config; allowed headers are enforced at runtime via Pi SDK; not applicable"
+          "reason": "OCR auth_header X-Custom-Auth rejection via setConfigValue is omitted; pi-review does not expose config key validation for auth_header and does not mutate Pi config; allowed headers are enforced at runtime via Pi SDK; not applicable"
         },
         {
           "name": "TestSetConfigValueCustomProviderExtraHeaders",
           "delta": "byte_identical",
           "disposition": "not_applicable",
-          "reason": "OCR custom_providers.my-gateway.extra_headers via ProviderEntry is omitted; pi-reviewer does not persist extra_headers via config; not applicable"
+          "reason": "OCR custom_providers.my-gateway.extra_headers via ProviderEntry is omitted; pi-review does not persist extra_headers via config; not applicable"
         },
         {
           "name": "TestSetConfigValueKeyCmdFields",
           "delta": "added",
           "disposition": "not_applicable",
-          "reason": "OCR v1.9.9 config-command mutation and credential masking persistence are not applicable: Pi owns external configuration through public APIs, and pi-reviewer does not mutate OCR config."
+          "reason": "OCR v1.9.9 config-command mutation and credential masking persistence are not applicable: Pi owns external configuration through public APIs, and pi-review does not mutate OCR config."
         },
         {
           "name": "TestSetConfigValueLanguage",
           "delta": "byte_identical",
           "disposition": "not_applicable",
-          "reason": "OCR setConfigValue `language` English via cfg.Language is omitted; runtime language exists via template applyLanguage and review --language handling, but config persistence of language is not exposed and Pi config is not mutated by pi-reviewer; Go config path not applicable"
+          "reason": "OCR setConfigValue `language` English via cfg.Language is omitted; runtime language exists via template applyLanguage and review --language handling, but config persistence of language is not exposed and Pi config is not mutated by pi-review; Go config path not applicable"
         },
         {
           "name": "TestSetConfigValueLlmAuthToken",
           "delta": "byte_identical",
           "disposition": "not_applicable",
-          "reason": "OCR setConfigValue `llm.auth_token` via Llm.AuthToken is omitted; pi-reviewer does not expose llm.* legacy config and does not write Pi secrets; legacy llm.* not applicable"
+          "reason": "OCR setConfigValue `llm.auth_token` via Llm.AuthToken is omitted; pi-review does not expose llm.* legacy config and does not write Pi secrets; legacy llm.* not applicable"
         },
         {
           "name": "TestSetConfigValueLlmExtraBody",
           "delta": "byte_identical",
           "disposition": "not_applicable",
-          "reason": "OCR setConfigValue `llm.extra_body` JSON via Llm.ExtraBody is omitted; pi-reviewer does not expose llm.extra_body config mutation; extra body is managed via external Pi models.json and consumed at runtime; not applicable via public Pi APIs"
+          "reason": "OCR setConfigValue `llm.extra_body` JSON via Llm.ExtraBody is omitted; pi-review does not expose llm.extra_body config mutation; extra body is managed via external Pi models.json and consumed at runtime; not applicable via public Pi APIs"
         },
         {
           "name": "TestSetConfigValueLlmExtraBodyInvalid",
           "delta": "byte_identical",
           "disposition": "not_applicable",
-          "reason": "OCR llm.extra_body not-json rejection via setConfigValue is omitted; pi-reviewer does not expose config validation for llm.extra_body and does not mutate Pi config; not applicable"
+          "reason": "OCR llm.extra_body not-json rejection via setConfigValue is omitted; pi-review does not expose config validation for llm.extra_body and does not mutate Pi config; not applicable"
         },
         {
           "name": "TestSetConfigValueLlmExtraHeaders",
           "delta": "byte_identical",
           "disposition": "not_applicable",
-          "reason": "OCR setConfigValue `llm.extra_headers` parsing is omitted; pi-reviewer does not expose llm.extra_headers config mutation; headers are managed externally and consumed via Pi APIs; not applicable"
+          "reason": "OCR setConfigValue `llm.extra_headers` parsing is omitted; pi-review does not expose llm.extra_headers config mutation; headers are managed externally and consumed via Pi APIs; not applicable"
         },
         {
           "name": "TestSetConfigValueLlmExtraHeadersInvalid",
           "delta": "byte_identical",
           "disposition": "not_applicable",
-          "reason": "OCR llm.extra_headers no-equals rejection is omitted; pi-reviewer does not expose config key validation for headers and does not write Pi config; not applicable"
+          "reason": "OCR llm.extra_headers no-equals rejection is omitted; pi-review does not expose config key validation for headers and does not write Pi config; not applicable"
         },
         {
           "name": "TestSetConfigValueLlmExtraHeadersReservedRejected",
           "delta": "byte_identical",
           "disposition": "not_applicable",
-          "reason": "OCR llm.extra_headers Authorization=bad reserved rejection is omitted; pi-reviewer does not expose config validation and does not mutate Pi config; reserved header guard is at runtime via Pi SDK; not applicable"
+          "reason": "OCR llm.extra_headers Authorization=bad reserved rejection is omitted; pi-review does not expose config validation and does not mutate Pi config; reserved header guard is at runtime via Pi SDK; not applicable"
         },
         {
           "name": "TestSetConfigValueLlmModel",
           "delta": "byte_identical",
           "disposition": "not_applicable",
-          "reason": "OCR setConfigValue `llm.model` via Llm.Model is omitted; pi-reviewer does not expose llm.* legacy config; runtime model is via --model flag; not applicable"
+          "reason": "OCR setConfigValue `llm.model` via Llm.Model is omitted; pi-review does not expose llm.* legacy config; runtime model is via --model flag; not applicable"
         },
         {
           "name": "TestSetConfigValueLlmProtocol",
           "delta": "byte_identical",
           "disposition": "not_applicable",
-          "reason": "OCR setConfigValue `llm.protocol` mirroring UseAnthropic is omitted; pi-reviewer does not expose llm.protocol mutation; protocol is resolved at runtime via ModelRuntime createAgentSession from external Pi config; not applicable"
+          "reason": "OCR setConfigValue `llm.protocol` mirroring UseAnthropic is omitted; pi-review does not expose llm.protocol mutation; protocol is resolved at runtime via ModelRuntime createAgentSession from external Pi config; not applicable"
         },
         {
           "name": "TestSetConfigValueLlmRetryCodesNoWarningForValidCodes",
           "delta": "byte_identical",
           "disposition": "not_applicable",
-          "reason": "OCR llm.retry_codes 403,400 no-warning path via setConfigValue is omitted; pi-reviewer disables retry via SettingsManager.inMemory({retry:{enabled:false}}) and does not expose retry_codes config persistence; not applicable"
+          "reason": "OCR llm.retry_codes 403,400 no-warning path via setConfigValue is omitted; pi-review disables retry via SettingsManager.inMemory({retry:{enabled:false}}) and does not expose retry_codes config persistence; not applicable"
         },
         {
           "name": "TestSetConfigValueLlmRetryCodesRedundantWarning",
           "delta": "byte_identical",
           "disposition": "not_applicable",
-          "reason": "OCR llm.retry_codes 429,403 redundant 429 warning via captureConfigStderr is omitted; pi-reviewer does not expose retry_codes config and filters via retry disabled; not applicable"
+          "reason": "OCR llm.retry_codes 429,403 redundant 429 warning via captureConfigStderr is omitted; pi-review does not expose retry_codes config and filters via retry disabled; not applicable"
         },
         {
           "name": "TestSetConfigValueLlmURL",
           "delta": "byte_identical",
           "disposition": "not_applicable",
-          "reason": "OCR setConfigValue `llm.url` via Llm.URL is omitted; pi-reviewer does not expose llm.url mutation; baseUrl comes from external Pi models.json via agentDir; not applicable"
+          "reason": "OCR setConfigValue `llm.url` via Llm.URL is omitted; pi-review does not expose llm.url mutation; baseUrl comes from external Pi models.json via agentDir; not applicable"
         },
         {
           "name": "TestSetConfigValueLlmUseAnthropic",
           "delta": "byte_identical",
           "disposition": "not_applicable",
-          "reason": "OCR setConfigValue `llm.use_anthropic` mirroring Protocol is omitted; pi-reviewer does not expose llm.use_anthropic; not applicable via ModelRuntime"
+          "reason": "OCR setConfigValue `llm.use_anthropic` mirroring Protocol is omitted; pi-review does not expose llm.use_anthropic; not applicable via ModelRuntime"
         },
         {
           "name": "TestSetConfigValueLlmUseAnthropicInvalid",
           "delta": "byte_identical",
           "disposition": "not_applicable",
-          "reason": "OCR llm.use_anthropic notbool rejection is omitted; pi-reviewer does not expose config validation for this key and does not write Pi config; not applicable"
+          "reason": "OCR llm.use_anthropic notbool rejection is omitted; pi-review does not expose config validation for this key and does not write Pi config; not applicable"
         },
         {
           "name": "TestSetConfigValueMaxTokens",
@@ -884,115 +884,115 @@
           "name": "TestSetConfigValueModel",
           "delta": "byte_identical",
           "disposition": "not_applicable",
-          "reason": "OCR setConfigValue `model` via cfg.Model is omitted; pi-reviewer does not persist model via config command and does not write Pi config; runtime model is via --model flag and external Pi files; not applicable"
+          "reason": "OCR setConfigValue `model` via cfg.Model is omitted; pi-review does not persist model via config command and does not write Pi config; runtime model is via --model flag and external Pi files; not applicable"
         },
         {
           "name": "TestSetConfigValueModelWithCustomProvider",
           "delta": "byte_identical",
           "disposition": "not_applicable",
-          "reason": "OCR setConfigValue `model` when Provider=my-gateway writes to CustomProviders[my-gateway].Model is omitted; pi-reviewer does not mutate Pi config; model is resolved at runtime via --model/external files; not applicable"
+          "reason": "OCR setConfigValue `model` when Provider=my-gateway writes to CustomProviders[my-gateway].Model is omitted; pi-review does not mutate Pi config; model is resolved at runtime via --model/external files; not applicable"
         },
         {
           "name": "TestSetConfigValueModelWithProvider",
           "delta": "byte_identical",
           "disposition": "not_applicable",
-          "reason": "OCR setConfigValue `model` when Provider=anthropic writes to Providers[anthropic].Model is omitted; pi-reviewer does not write Pi config; runtime only loads; not applicable"
+          "reason": "OCR setConfigValue `model` when Provider=anthropic writes to Providers[anthropic].Model is omitted; pi-review does not write Pi config; runtime only loads; not applicable"
         },
         {
           "name": "TestSetConfigValueProvider",
           "delta": "byte_identical",
           "disposition": "not_applicable",
-          "reason": "OCR setConfigValue `provider` via cfg.Provider is omitted; pi-reviewer does not persist provider via config command; provider is via --provider flag and external Pi files; not applicable"
+          "reason": "OCR setConfigValue `provider` via cfg.Provider is omitted; pi-review does not persist provider via config command; provider is via --provider flag and external Pi files; not applicable"
         },
         {
           "name": "TestSetConfigValueProviderClearsModel",
           "delta": "byte_identical",
           "disposition": "not_applicable",
-          "reason": "OCR setConfigValue `provider` clears Model on provider change is omitted; pi-reviewer does not implement provider switch clearing via saveConfig and does not mutate Pi config; not applicable"
+          "reason": "OCR setConfigValue `provider` clears Model on provider change is omitted; pi-review does not implement provider switch clearing via saveConfig and does not mutate Pi config; not applicable"
         },
         {
           "name": "TestSetConfigValueProviderEntry",
           "delta": "byte_identical",
           "disposition": "not_applicable",
-          "reason": "OCR setConfigValue `providers.anthropic.api_key/model` via ProviderEntry is omitted; pi-reviewer does not expose provider entry mutation and does not write Pi config; external files manage entries, runtime only loads; not applicable"
+          "reason": "OCR setConfigValue `providers.anthropic.api_key/model` via ProviderEntry is omitted; pi-review does not expose provider entry mutation and does not write Pi config; external files manage entries, runtime only loads; not applicable"
         },
         {
           "name": "TestSetConfigValueProviderEntryExtraBody",
           "delta": "byte_identical",
           "disposition": "not_applicable",
-          "reason": "OCR providers.anthropic.extra_body JSON via ProviderEntry.ExtraBody is omitted; pi-reviewer does not persist extra_body via config and does not write Pi config; handled via external models.json at runtime; not applicable"
+          "reason": "OCR providers.anthropic.extra_body JSON via ProviderEntry.ExtraBody is omitted; pi-review does not persist extra_body via config and does not write Pi config; handled via external models.json at runtime; not applicable"
         },
         {
           "name": "TestSetConfigValueProviderEntryInvalidKey",
           "delta": "byte_identical",
           "disposition": "not_applicable",
-          "reason": "OCR providers.anthropic.unknown_field rejection via applyProviderField is omitted; pi-reviewer does not validate/expose config key persistence for provider entry and does not mutate Pi config; not applicable"
+          "reason": "OCR providers.anthropic.unknown_field rejection via applyProviderField is omitted; pi-review does not validate/expose config key persistence for provider entry and does not mutate Pi config; not applicable"
         },
         {
           "name": "TestSetConfigValueProviderEntryInvalidPath",
           "delta": "byte_identical",
           "disposition": "not_applicable",
-          "reason": "OCR providers.anthropic incomplete path (no field) rejection is omitted; pi-reviewer does not expose config path validation for mutation and does not write Pi config; not applicable"
+          "reason": "OCR providers.anthropic incomplete path (no field) rejection is omitted; pi-review does not expose config path validation for mutation and does not write Pi config; not applicable"
         },
         {
           "name": "TestSetConfigValueProviderEntryModelsCommaSeparated",
           "delta": "byte_identical",
           "disposition": "not_applicable",
-          "reason": "OCR custom_providers.my-gateway.models comma parsing via parseModelListValue is omitted; pi-reviewer does not parse/persist model lists via config command and does not mutate Pi config; external files manage lists; not applicable"
+          "reason": "OCR custom_providers.my-gateway.models comma parsing via parseModelListValue is omitted; pi-review does not parse/persist model lists via config command and does not mutate Pi config; external files manage lists; not applicable"
         },
         {
           "name": "TestSetConfigValueProviderEntryModelsJSON",
           "delta": "byte_identical",
           "disposition": "not_applicable",
-          "reason": "OCR custom_providers.my-gateway.models JSON dedup via parseModelListValue is omitted; pi-reviewer does not implement dedup for config persistence and does not write Pi config; not applicable"
+          "reason": "OCR custom_providers.my-gateway.models JSON dedup via parseModelListValue is omitted; pi-review does not implement dedup for config persistence and does not write Pi config; not applicable"
         },
         {
           "name": "TestSetConfigValueProviderEntryModelsUnquotedBracketList",
           "delta": "byte_identical",
           "disposition": "not_applicable",
-          "reason": "OCR custom_providers models [llama-3-70b,llama-3-8b] unquoted bracket parsing is omitted; pi-reviewer does not parse model lists for config write; not applicable"
+          "reason": "OCR custom_providers models [llama-3-70b,llama-3-8b] unquoted bracket parsing is omitted; pi-review does not parse model lists for config write; not applicable"
         },
         {
           "name": "TestSetConfigValueProviderEntryNonPresetWritesCustomProvider",
           "delta": "byte_identical",
           "disposition": "not_applicable",
-          "reason": "OCR providers.my-gateway.url non-preset writes to CustomProviders[my-gateway].URL via setConfigValue is omitted; pi-reviewer does not route non-preset providers to CustomProviders and does not mutate Pi config; not applicable"
+          "reason": "OCR providers.my-gateway.url non-preset writes to CustomProviders[my-gateway].URL via setConfigValue is omitted; pi-review does not route non-preset providers to CustomProviders and does not mutate Pi config; not applicable"
         },
         {
           "name": "TestSetConfigValueProviderEntryProtocol",
           "delta": "byte_identical",
           "disposition": "not_applicable",
-          "reason": "OCR custom_providers.custom.protocol openai alias validation is omitted; pi-reviewer does not validate protocol via config mutation; runtime resolves via ModelRuntime from external files; not applicable"
+          "reason": "OCR custom_providers.custom.protocol openai alias validation is omitted; pi-review does not validate protocol via config mutation; runtime resolves via ModelRuntime from external files; not applicable"
         },
         {
           "name": "TestSetConfigValueProviderExtraHeaders",
           "delta": "byte_identical",
           "disposition": "not_applicable",
-          "reason": "OCR providers.anthropic.extra_headers parsing via ProviderEntry.ExtraHeaders is omitted; pi-reviewer does not persist extra_headers via config and does not write Pi config; handled externally at runtime; not applicable"
+          "reason": "OCR providers.anthropic.extra_headers parsing via ProviderEntry.ExtraHeaders is omitted; pi-review does not persist extra_headers via config and does not write Pi config; handled externally at runtime; not applicable"
         },
         {
           "name": "TestSetConfigValueProviderExtraHeadersInvalid",
           "delta": "byte_identical",
           "disposition": "not_applicable",
-          "reason": "OCR providers.anthropic.extra_headers =missing-key rejection is omitted; pi-reviewer does not validate extra_headers config persistence and does not mutate Pi config; not applicable"
+          "reason": "OCR providers.anthropic.extra_headers =missing-key rejection is omitted; pi-review does not validate extra_headers config persistence and does not mutate Pi config; not applicable"
         },
         {
           "name": "TestSetConfigValueProviderRetryCodesRedundantWarning",
           "delta": "byte_identical",
           "disposition": "not_applicable",
-          "reason": "OCR custom_providers.test.retry_codes redundant warning via captureConfigStderr is omitted; pi-reviewer disables retry and does not expose retry_codes config persistence; not applicable"
+          "reason": "OCR custom_providers.test.retry_codes redundant warning via captureConfigStderr is omitted; pi-review disables retry and does not expose retry_codes config persistence; not applicable"
         },
         {
           "name": "TestSetConfigValueProviderURLTrimsAndValidates",
           "delta": "added",
           "disposition": "not_applicable",
-          "reason": "OCR v1.9.9 config-command mutation and credential masking persistence are not applicable: Pi owns external configuration through public APIs, and pi-reviewer does not mutate OCR config."
+          "reason": "OCR v1.9.9 config-command mutation and credential masking persistence are not applicable: Pi owns external configuration through public APIs, and pi-review does not mutate OCR config."
         },
         {
           "name": "TestSetConfigValueTelemetryContentLogging",
           "delta": "byte_identical",
           "disposition": "not_applicable",
-          "reason": "OCR telemetry.content_logging bool is deferred; pi-reviewer does not port content logging config; not applicable"
+          "reason": "OCR telemetry.content_logging bool is deferred; pi-review does not port content logging config; not applicable"
         },
         {
           "name": "TestSetConfigValueTelemetryContentLoggingInvalid",
@@ -1004,19 +1004,19 @@
           "name": "TestSetConfigValueTelemetryEnabled",
           "delta": "byte_identical",
           "disposition": "not_applicable",
-          "reason": "OCR setConfigValue `telemetry.enabled` true bool via ensureTelemetry is deferred; pi-reviewer does not expose telemetry config mutation and does not write Pi config; not applicable"
+          "reason": "OCR setConfigValue `telemetry.enabled` true bool via ensureTelemetry is deferred; pi-review does not expose telemetry config mutation and does not write Pi config; not applicable"
         },
         {
           "name": "TestSetConfigValueTelemetryEnabledInvalid",
           "delta": "byte_identical",
           "disposition": "not_applicable",
-          "reason": "OCR telemetry.enabled notbool rejection is deferred; pi-reviewer does not expose telemetry config command and does not validate config keys; not applicable"
+          "reason": "OCR telemetry.enabled notbool rejection is deferred; pi-review does not expose telemetry config command and does not validate config keys; not applicable"
         },
         {
           "name": "TestSetConfigValueTelemetryExporter",
           "delta": "byte_identical",
           "disposition": "not_applicable",
-          "reason": "OCR telemetry.exporter otlp string is deferred; pi-reviewer does not port telemetry config; not applicable"
+          "reason": "OCR telemetry.exporter otlp string is deferred; pi-review does not port telemetry config; not applicable"
         },
         {
           "name": "TestSetConfigValueTelemetryOTLPEndpoint",
@@ -1028,13 +1028,13 @@
           "name": "TestSetConfigValueUnknownKey",
           "delta": "byte_identical",
           "disposition": "not_applicable",
-          "reason": "OCR setConfigValue unknown.key rejection via supportedConfigKeys is omitted; pi-reviewer does not expose config key validation for persistence and does not write Pi config; users configure via external Pi files, runtime only loads; not applicable"
+          "reason": "OCR setConfigValue unknown.key rejection via supportedConfigKeys is omitted; pi-review does not expose config key validation for persistence and does not write Pi config; users configure via external Pi files, runtime only loads; not applicable"
         },
         {
           "name": "TestSetConfigValueUnknownKeyMessage",
           "delta": "changed_body",
           "disposition": "not_applicable",
-          "reason": "OCR v1.9.9 config-command mutation and credential masking persistence are not applicable: Pi owns external configuration through public APIs, and pi-reviewer does not mutate OCR config."
+          "reason": "OCR v1.9.9 config-command mutation and credential masking persistence are not applicable: Pi owns external configuration through public APIs, and pi-review does not mutate OCR config."
         },
         {
           "name": "TestSetMCPServerValue_Args",
@@ -1190,25 +1190,25 @@
           "name": "TestShouldMaskConfigValue",
           "delta": "added",
           "disposition": "not_applicable",
-          "reason": "OCR v1.9.9 config-command mutation and credential masking persistence are not applicable: Pi owns external configuration through public APIs, and pi-reviewer does not mutate OCR config."
+          "reason": "OCR v1.9.9 config-command mutation and credential masking persistence are not applicable: Pi owns external configuration through public APIs, and pi-review does not mutate OCR config."
         },
         {
           "name": "TestUnsetActiveCustomProvider",
           "delta": "byte_identical",
           "disposition": "not_applicable",
-          "reason": "OCR unsetCustomProvider when Provider=my-gateway active clears Provider/Model and keeps other-gateway via saveConfig is omitted; pi-reviewer does not expose unset and does not mutate Pi config; Pi files managed externally; not applicable"
+          "reason": "OCR unsetCustomProvider when Provider=my-gateway active clears Provider/Model and keeps other-gateway via saveConfig is omitted; pi-review does not expose unset and does not mutate Pi config; Pi files managed externally; not applicable"
         },
         {
           "name": "TestUnsetCustomProvider",
           "delta": "byte_identical",
           "disposition": "not_applicable",
-          "reason": "OCR unsetCustomProvider that deletes CustomProviders[my-gateway] via saveConfig is omitted; pi-reviewer does not expose unset and does not delete via saveConfig; external Pi files manage deletions; not applicable"
+          "reason": "OCR unsetCustomProvider that deletes CustomProviders[my-gateway] via saveConfig is omitted; pi-review does not expose unset and does not delete via saveConfig; external Pi files manage deletions; not applicable"
         },
         {
           "name": "TestUnsetInvalidKey",
           "delta": "byte_identical",
           "disposition": "not_applicable",
-          "reason": "OCR unsetCustomProvider my-gateway ok vs nonexistent error via CustomProviders map is omitted; pi-reviewer does not expose unset error path and does not mutate Pi config; not applicable"
+          "reason": "OCR unsetCustomProvider my-gateway ok vs nonexistent error via CustomProviders map is omitted; pi-review does not expose unset error path and does not mutate Pi config; not applicable"
         },
         {
           "name": "TestUnsetMaxTokens",
@@ -1242,26 +1242,26 @@
       "scope": {
         "kind": "in_scope",
         "area": "cmd/opencodereview",
-        "reason": "OCR config command dispatch is intentionally omitted; pi-reviewer has no config command subtree"
+        "reason": "OCR config command dispatch is intentionally omitted; pi-review has no config command subtree"
       },
       "tests": [
         {
           "name": "TestRunConfig_InvalidSetMissingValue",
           "delta": "byte_identical",
           "disposition": "not_applicable",
-          "reason": "OCR runConfig `config set` missing value arg validation via Cobra is omitted; pi-reviewer does not expose config set and does not mutate Pi config; users configure through external Pi tooling/files, runtime only resolves via public Pi APIs; config-command persistence is omitted, not applicable via review/scan --provider/--model"
+          "reason": "OCR runConfig `config set` missing value arg validation via Cobra is omitted; pi-review does not expose config set and does not mutate Pi config; users configure through external Pi tooling/files, runtime only resolves via public Pi APIs; config-command persistence is omitted, not applicable via review/scan --provider/--model"
         },
         {
           "name": "TestRunConfig_InvalidUnsetMissingKey",
           "delta": "byte_identical",
           "disposition": "not_applicable",
-          "reason": "OCR runConfig `config unset` missing key validation via Cobra is omitted; pi-reviewer does not expose config unset and does not mutate Pi config; users configure via external Pi tooling/files, runtime only loads via public Pi APIs; config unset is omitted, not applicable"
+          "reason": "OCR runConfig `config unset` missing key validation via Cobra is omitted; pi-review does not expose config unset and does not mutate Pi config; users configure via external Pi tooling/files, runtime only loads via public Pi APIs; config unset is omitted, not applicable"
         },
         {
           "name": "TestRunConfig_UnknownSubcommand",
           "delta": "byte_identical",
           "disposition": "not_applicable",
-          "reason": "OCR runConfig dispatch unknown subcommand via Cobra is omitted; pi-reviewer does not expose a config command tree and routes only review/scan/version; users configure auth/models through external Pi tooling/files, runtime only resolves/loads via public Pi APIs; config subtree is an omitted boundary, not applicable"
+          "reason": "OCR runConfig dispatch unknown subcommand via Cobra is omitted; pi-review does not expose a config command tree and routes only review/scan/version; users configure auth/models through external Pi tooling/files, runtime only resolves/loads via public Pi APIs; config subtree is an omitted boundary, not applicable"
         }
       ]
     },
@@ -1271,20 +1271,20 @@
       "scope": {
         "kind": "in_scope",
         "area": "cmd/opencodereview",
-        "reason": "OCR config set/unset persistence and display masking are intentionally omitted; pi-reviewer does not mutate or display externally managed Pi configuration"
+        "reason": "OCR config set/unset persistence and display masking are intentionally omitted; pi-review does not mutate or display externally managed Pi configuration"
       },
       "tests": [
         {
           "name": "TestRunConfigSetPersists",
           "delta": "byte_identical",
           "disposition": "not_applicable",
-          "reason": "OCR runConfigSet persistence via setConfigValue + saveConfig 0600 with maskKey redaction is omitted; pi-reviewer does not expose config set, does not write Pi config files and does not implement maskKey; users configure via external Pi tooling/files, runtime only loads via public Pi APIs; config saving/masking is omitted boundary, not applicable"
+          "reason": "OCR runConfigSet persistence via setConfigValue + saveConfig 0600 with maskKey redaction is omitted; pi-review does not expose config set, does not write Pi config files and does not implement maskKey; users configure via external Pi tooling/files, runtime only loads via public Pi APIs; config saving/masking is omitted boundary, not applicable"
         },
         {
           "name": "TestRunConfigUnsetPaths",
           "delta": "byte_identical",
           "disposition": "not_applicable",
-          "reason": "OCR runConfigUnset dispatch for `provider`/`custom_providers.<name>`/`mcp_servers.<name>` with captureStdout is omitted; pi-reviewer does not expose config unset and does not mutate Pi config; users configure via external Pi tooling/files; omitted boundary, not applicable via Cobra"
+          "reason": "OCR runConfigUnset dispatch for `provider`/`custom_providers.<name>`/`mcp_servers.<name>` with captureStdout is omitted; pi-review does not expose config unset and does not mutate Pi config; users configure via external Pi tooling/files; omitted boundary, not applicable via Cobra"
         }
       ]
     },
@@ -1294,14 +1294,14 @@
       "scope": {
         "kind": "in_scope",
         "area": "cmd/opencodereview",
-        "reason": "OCR config-unset mutation and its config-file error paths are intentionally omitted; pi-reviewer does not expose config unset"
+        "reason": "OCR config-unset mutation and its config-file error paths are intentionally omitted; pi-review does not expose config unset"
       },
       "tests": [
         {
           "name": "TestUnset_LoadErrors",
           "delta": "byte_identical",
           "disposition": "not_applicable",
-          "reason": "OCR unset* load-error branches (unsetActiveProvider/unsetCustomProvider/unsetMCPServer wrapping loadOrCreateConfig invalid JSON) are omitted; pi-reviewer does not expose config unset and does not implement loadOrCreateConfig file parsing; runtime only loads external Pi config via public Pi APIs; omitted boundary, not applicable"
+          "reason": "OCR unset* load-error branches (unsetActiveProvider/unsetCustomProvider/unsetMCPServer wrapping loadOrCreateConfig invalid JSON) are omitted; pi-review does not expose config unset and does not implement loadOrCreateConfig file parsing; runtime only loads external Pi config via public Pi APIs; omitted boundary, not applicable"
         }
       ]
     },
@@ -3031,122 +3031,122 @@
       "scope": {
         "kind": "in_scope",
         "area": "cmd/opencodereview",
-        "reason": "OCR provider mutation, API-key display, and TUI wizard behavior are intentionally omitted; pi-reviewer does not mutate or display externally managed Pi configuration"
+        "reason": "OCR provider mutation, API-key display, and TUI wizard behavior are intentionally omitted; pi-review does not mutate or display externally managed Pi configuration"
       },
       "tests": [
         {
           "name": "TestApplyCustomProviderConfig_EmptyKeyClearsSavedAPIKey",
           "delta": "changed_body",
           "disposition": "not_applicable",
-          "reason": "OCR v1.9.9 provider-command persistence and credential mutation are not applicable: Pi owns provider/model/auth runtime through public APIs, and pi-reviewer deliberately omits this command."
+          "reason": "OCR v1.9.9 provider-command persistence and credential mutation are not applicable: Pi owns provider/model/auth runtime through public APIs, and pi-review deliberately omits this command."
         },
         {
           "name": "TestApplyCustomProviderConfig_MissingModel",
           "delta": "byte_identical",
           "disposition": "not_applicable",
-          "reason": "OCR applyCustomProviderConfig missing model validation is omitted; pi-reviewer does not expose custom provider config mutation; validation is at runtime via ModelRuntime, not via config save; omitted, not applicable"
+          "reason": "OCR applyCustomProviderConfig missing model validation is omitted; pi-review does not expose custom provider config mutation; validation is at runtime via ModelRuntime, not via config save; omitted, not applicable"
         },
         {
           "name": "TestApplyCustomProviderConfig_MissingProvider",
           "delta": "byte_identical",
           "disposition": "not_applicable",
-          "reason": "OCR applyCustomProviderConfig missing provider name validation is omitted; pi-reviewer does not expose custom provider creation via config command; provider name lives in external Pi files, runtime only loads; omitted, not applicable"
+          "reason": "OCR applyCustomProviderConfig missing provider name validation is omitted; pi-review does not expose custom provider creation via config command; provider name lives in external Pi files, runtime only loads; omitted, not applicable"
         },
         {
           "name": "TestApplyManualConfig_MissingModel",
           "delta": "byte_identical",
           "disposition": "not_applicable",
-          "reason": "OCR applyManualConfig missing model validation is omitted; pi-reviewer does not expose manual config mutation; model validation occurs at runtime via --model and ModelRuntime, not via saved config; omitted boundary, not applicable"
+          "reason": "OCR applyManualConfig missing model validation is omitted; pi-review does not expose manual config mutation; model validation occurs at runtime via --model and ModelRuntime, not via saved config; omitted boundary, not applicable"
         },
         {
           "name": "TestApplyManualConfig_MissingURL",
           "delta": "byte_identical",
           "disposition": "not_applicable",
-          "reason": "OCR applyManualConfig missing URL validation before network test is omitted; pi-reviewer does not expose manual config/provider wizard; manual provider URL is supplied via external Pi models.json baseUrl and resolved at review time via createAgentSession; config-command validation is omitted, not applicable"
+          "reason": "OCR applyManualConfig missing URL validation before network test is omitted; pi-review does not expose manual config/provider wizard; manual provider URL is supplied via external Pi models.json baseUrl and resolved at review time via createAgentSession; config-command validation is omitted, not applicable"
         },
         {
           "name": "TestApplyOfficialProviderConfig_APIKeyCmdSatisfiesRequirement",
           "delta": "added",
           "disposition": "not_applicable",
-          "reason": "OCR v1.9.9 provider-command persistence and credential mutation are not applicable: Pi owns provider/model/auth runtime through public APIs, and pi-reviewer deliberately omits this command."
+          "reason": "OCR v1.9.9 provider-command persistence and credential mutation are not applicable: Pi owns provider/model/auth runtime through public APIs, and pi-review deliberately omits this command."
         },
         {
           "name": "TestApplyOfficialProviderConfig_EmptyKeyClearsSavedAPIKey",
           "delta": "changed_body",
           "disposition": "not_applicable",
-          "reason": "OCR v1.9.9 provider-command persistence and credential mutation are not applicable: Pi owns provider/model/auth runtime through public APIs, and pi-reviewer deliberately omits this command."
+          "reason": "OCR v1.9.9 provider-command persistence and credential mutation are not applicable: Pi owns provider/model/auth runtime through public APIs, and pi-review deliberately omits this command."
         },
         {
           "name": "TestApplyOfficialProviderConfig_IgnoresURLFromResult",
           "delta": "added",
           "disposition": "not_applicable",
-          "reason": "OCR v1.9.9 provider-command persistence and credential mutation are not applicable: Pi owns provider/model/auth runtime through public APIs, and pi-reviewer deliberately omits this command."
+          "reason": "OCR v1.9.9 provider-command persistence and credential mutation are not applicable: Pi owns provider/model/auth runtime through public APIs, and pi-review deliberately omits this command."
         },
         {
           "name": "TestApplyOfficialProviderConfig_MissingFields",
           "delta": "byte_identical",
           "disposition": "not_applicable",
-          "reason": "OCR applyOfficialProviderConfig missing provider/model required error is omitted; pi-reviewer does not expose official provider config mutation; provider/model validation is via review/scan --provider/--model flags, not via config file; omitted, not applicable"
+          "reason": "OCR applyOfficialProviderConfig missing provider/model required error is omitted; pi-review does not expose official provider config mutation; provider/model validation is via review/scan --provider/--model flags, not via config file; omitted, not applicable"
         },
         {
           "name": "TestApplyOfficialProviderConfig_PreservesURLWhenWizardOmitsURL",
           "delta": "added",
           "disposition": "not_applicable",
-          "reason": "OCR v1.9.9 provider-command persistence and credential mutation are not applicable: Pi owns provider/model/auth runtime through public APIs, and pi-reviewer deliberately omits this command."
+          "reason": "OCR v1.9.9 provider-command persistence and credential mutation are not applicable: Pi owns provider/model/auth runtime through public APIs, and pi-review deliberately omits this command."
         },
         {
           "name": "TestApplyOfficialProviderConfig_UsesSessionModelPick",
           "delta": "changed_body",
           "disposition": "not_applicable",
-          "reason": "OCR v1.9.9 provider-command persistence and credential mutation are not applicable: Pi owns provider/model/auth runtime through public APIs, and pi-reviewer deliberately omits this command."
+          "reason": "OCR v1.9.9 provider-command persistence and credential mutation are not applicable: Pi owns provider/model/auth runtime through public APIs, and pi-review deliberately omits this command."
         },
         {
           "name": "TestApplyProviderDeletions",
           "delta": "byte_identical",
           "disposition": "not_applicable",
-          "reason": "OCR applyProviderDeletions (saveConfig + delete from CustomProviders, keep active) is omitted; pi-reviewer does not expose provider deletion and does not mutate Pi config; users manage deletions via external Pi tooling/files; omitted boundary, not applicable"
+          "reason": "OCR applyProviderDeletions (saveConfig + delete from CustomProviders, keep active) is omitted; pi-review does not expose provider deletion and does not mutate Pi config; users manage deletions via external Pi tooling/files; omitted boundary, not applicable"
         },
         {
           "name": "TestApplyProviderDeletions_ActiveCleared",
           "delta": "byte_identical",
           "disposition": "not_applicable",
-          "reason": "OCR applyProviderDeletions active-cleared path that clears Provider/Model when deleting active custom provider is omitted; pi-reviewer does not expose provider deletion and does not clear selection via saveConfig; users configure via external Pi files, runtime only loads; not applicable"
+          "reason": "OCR applyProviderDeletions active-cleared path that clears Provider/Model when deleting active custom provider is omitted; pi-review does not expose provider deletion and does not clear selection via saveConfig; users configure via external Pi files, runtime only loads; not applicable"
         },
         {
           "name": "TestApplyProviderDeletions_SkipsNotFound",
           "delta": "byte_identical",
           "disposition": "not_applicable",
-          "reason": "OCR applyProviderDeletions skip-not-found no-error path is omitted; pi-reviewer does not expose provider deletion and does not implement tolerant delete; Pi config is not mutated by pi-reviewer; omitted boundary, not applicable"
+          "reason": "OCR applyProviderDeletions skip-not-found no-error path is omitted; pi-review does not expose provider deletion and does not implement tolerant delete; Pi config is not mutated by pi-review; omitted boundary, not applicable"
         },
         {
           "name": "TestMaskKey",
           "delta": "byte_identical",
           "disposition": "not_applicable",
-          "reason": "OCR maskKey API-key redaction (\"\"->(not set), \"abcd\"/\"12345678\"->***, sk-ant-***1234) is omitted; pi-reviewer does not expose config display and does not implement Pi config secret clearing/masking; users manage secrets via external Pi tooling/files; not applicable"
+          "reason": "OCR maskKey API-key redaction (\"\"->(not set), \"abcd\"/\"12345678\"->***, sk-ant-***1234) is omitted; pi-review does not expose config display and does not implement Pi config secret clearing/masking; users manage secrets via external Pi tooling/files; not applicable"
         },
         {
           "name": "TestPrintWizardCancelled",
           "delta": "byte_identical",
           "disposition": "not_applicable",
-          "reason": "OCR printWizardCancelled wizard scope message (Configuration/Model list changes kept) via stdout pipe is omitted; pi-reviewer does not expose provider TUI wizard; not applicable"
+          "reason": "OCR printWizardCancelled wizard scope message (Configuration/Model list changes kept) via stdout pipe is omitted; pi-review does not expose provider TUI wizard; not applicable"
         },
         {
           "name": "TestProviderTUIResult_ResolvedModel",
           "delta": "byte_identical",
           "disposition": "not_applicable",
-          "reason": "OCR providerTUIResult.resolvedModel via sessionModelPick map vs model field is omitted; pi-reviewer does not expose provider TUI wizard; model selection is via CLI --model and external Pi config, runtime only resolves via public APIs; TUI result struct not applicable"
+          "reason": "OCR providerTUIResult.resolvedModel via sessionModelPick map vs model field is omitted; pi-review does not expose provider TUI wizard; model selection is via CLI --model and external Pi config, runtime only resolves via public APIs; TUI result struct not applicable"
         },
         {
           "name": "TestRemoveModels",
           "delta": "byte_identical",
           "disposition": "not_applicable",
-          "reason": "OCR removeModels helper (remove one/none/all, empty existing) is omitted; pi-reviewer does not expose model-list mutation and does not implement Pi config model deduplication/filtering for persistence; users edit Pi models externally, runtime only resolves via --model; not applicable"
+          "reason": "OCR removeModels helper (remove one/none/all, empty existing) is omitted; pi-review does not expose model-list mutation and does not implement Pi config model deduplication/filtering for persistence; users edit Pi models externally, runtime only resolves via --model; not applicable"
         },
         {
           "name": "TestSaveConfig",
           "delta": "changed_body",
           "disposition": "not_applicable",
-          "reason": "OCR v1.9.9 provider-command persistence and credential mutation are not applicable: Pi owns provider/model/auth runtime through public APIs, and pi-reviewer deliberately omits this command."
+          "reason": "OCR v1.9.9 provider-command persistence and credential mutation are not applicable: Pi owns provider/model/auth runtime through public APIs, and pi-review deliberately omits this command."
         }
       ]
     },
@@ -3156,20 +3156,20 @@
       "scope": {
         "kind": "in_scope",
         "area": "cmd/opencodereview",
-        "reason": "OCR provider-config mutation and validation commands are intentionally omitted; pi-reviewer only resolves externally managed provider/model configuration at runtime"
+        "reason": "OCR provider-config mutation and validation commands are intentionally omitted; pi-review only resolves externally managed provider/model configuration at runtime"
       },
       "tests": [
         {
           "name": "TestApplyOfficialProviderConfig_Validation",
           "delta": "byte_identical",
           "disposition": "not_applicable",
-          "reason": "OCR applyOfficialProviderConfig validation that rejects empty provider/model or missing API key before test-connection is omitted; pi-reviewer does not expose the provider TUI/config apply flow; provider/model are supplied via review/scan --provider/--model and validated at runtime via Pi ModelRuntime createAgentSession; config-command validation is omitted, not applicable via Go file"
+          "reason": "OCR applyOfficialProviderConfig validation that rejects empty provider/model or missing API key before test-connection is omitted; pi-review does not expose the provider TUI/config apply flow; provider/model are supplied via review/scan --provider/--model and validated at runtime via Pi ModelRuntime createAgentSession; config-command validation is omitted, not applicable via Go file"
         },
         {
           "name": "TestSetCustomProviderValue",
           "delta": "byte_identical",
           "disposition": "not_applicable",
-          "reason": "OCR setCustomProviderValue for `custom_providers.<name>.<field>` malformed-key handling and custom provider materialization is omitted; pi-reviewer does not expose custom_providers config mutation and does not write Pi config; users define providers via external Pi files, runtime only loads via public Pi APIs; not applicable"
+          "reason": "OCR setCustomProviderValue for `custom_providers.<name>.<field>` malformed-key handling and custom provider materialization is omitted; pi-review does not expose custom_providers config mutation and does not write Pi config; users define providers via external Pi files, runtime only loads via public Pi APIs; not applicable"
         }
       ]
     },
@@ -6490,7 +6490,7 @@
           "name": "TestLoadLLMRuntime_BadAppConfig",
           "delta": "changed_body",
           "disposition": "not_applicable",
-          "reason": "Pi owns settings, model, and provider configuration through its public runtime APIs; pi-reviewer does not parse OCR ~/.opencodereview/config.json. Injected transport/session setup failures surface at the CLI command boundary as nonzero stderr errors, so an OCR app-config parser failure is not applicable."
+          "reason": "Pi owns settings, model, and provider configuration through its public runtime APIs; pi-review does not parse OCR ~/.opencodereview/config.json. Injected transport/session setup failures surface at the CLI command boundary as nonzero stderr errors, so an OCR app-config parser failure is not applicable."
         },
         {
           "name": "TestLoadLLMRuntime_BadToolConfig",
@@ -6783,7 +6783,7 @@
           "name": "TestViewerCmd_DefaultAddr",
           "delta": "byte_identical",
           "disposition": "not_applicable",
-          "reason": "Pi replaces OCR's viewer HTTP server shell with a deferred browser session viewer; default addr localhost:5483 is not applicable via pi-reviewer which has no viewer command."
+          "reason": "Pi replaces OCR's viewer HTTP server shell with a deferred browser session viewer; default addr localhost:5483 is not applicable via pi-review which has no viewer command."
         }
       ]
     },
@@ -9507,7 +9507,7 @@
           "name": "TestLoadDefault",
           "delta": "byte_identical",
           "disposition": "not_applicable",
-          "reason": "OCR LoadDefault conversation fixture (Timeout>0, system+user messages) for HTTP test-connection is omitted; pi-reviewer does not expose a test-connection command and does not use that fixture; users verify connectivity via external Pi tooling, runtime uses review/scan --provider/--model via ModelRuntime createAgentSession; fixture not applicable (language behavior covered separately via template applyLanguage)"
+          "reason": "OCR LoadDefault conversation fixture (Timeout>0, system+user messages) for HTTP test-connection is omitted; pi-review does not expose a test-connection command and does not use that fixture; users verify connectivity via external Pi tooling, runtime uses review/scan --provider/--model via ModelRuntime createAgentSession; fixture not applicable (language behavior covered separately via template applyLanguage)"
         },
         {
           "name": "TestResolveLang",
@@ -11265,97 +11265,97 @@
           "name": "TestAmbientAuthFollowsTheEffectiveProtocol",
           "delta": "added",
           "disposition": "not_applicable",
-          "reason": "OCR v1.9.9 Bedrock provider catalog and credential-resolution behavior are not applicable: Pi owns provider/model/auth runtime through public APIs, and pi-reviewer deliberately omits OCR provider catalogs."
+          "reason": "OCR v1.9.9 Bedrock provider catalog and credential-resolution behavior are not applicable: Pi owns provider/model/auth runtime through public APIs, and pi-review deliberately omits OCR provider catalogs."
         },
         {
           "name": "TestBedrockClientReportsAWSFailureAsError",
           "delta": "added",
           "disposition": "not_applicable",
-          "reason": "OCR v1.9.9 Bedrock provider catalog and credential-resolution behavior are not applicable: Pi owns provider/model/auth runtime through public APIs, and pi-reviewer deliberately omits OCR provider catalogs."
+          "reason": "OCR v1.9.9 Bedrock provider catalog and credential-resolution behavior are not applicable: Pi owns provider/model/auth runtime through public APIs, and pi-review deliberately omits OCR provider catalogs."
         },
         {
           "name": "TestBedrockContextReportsResolvedRegion",
           "delta": "added",
           "disposition": "not_applicable",
-          "reason": "OCR v1.9.9 Bedrock provider catalog and credential-resolution behavior are not applicable: Pi owns provider/model/auth runtime through public APIs, and pi-reviewer deliberately omits OCR provider catalogs."
+          "reason": "OCR v1.9.9 Bedrock provider catalog and credential-resolution behavior are not applicable: Pi owns provider/model/auth runtime through public APIs, and pi-review deliberately omits OCR provider catalogs."
         },
         {
           "name": "TestBedrockDoesNotRunAPIKeyCmd",
           "delta": "added",
           "disposition": "not_applicable",
-          "reason": "OCR v1.9.9 Bedrock provider catalog and credential-resolution behavior are not applicable: Pi owns provider/model/auth runtime through public APIs, and pi-reviewer deliberately omits OCR provider catalogs."
+          "reason": "OCR v1.9.9 Bedrock provider catalog and credential-resolution behavior are not applicable: Pi owns provider/model/auth runtime through public APIs, and pi-review deliberately omits OCR provider catalogs."
         },
         {
           "name": "TestBedrockIsRejectedOnTheURLAndTokenPaths",
           "delta": "added",
           "disposition": "not_applicable",
-          "reason": "OCR v1.9.9 Bedrock provider catalog and credential-resolution behavior are not applicable: Pi owns provider/model/auth runtime through public APIs, and pi-reviewer deliberately omits OCR provider catalogs."
+          "reason": "OCR v1.9.9 Bedrock provider catalog and credential-resolution behavior are not applicable: Pi owns provider/model/auth runtime through public APIs, and pi-review deliberately omits OCR provider catalogs."
         },
         {
           "name": "TestBedrockModelOverrideIsNotGatedByThePresetList",
           "delta": "added",
           "disposition": "not_applicable",
-          "reason": "OCR v1.9.9 Bedrock provider catalog and credential-resolution behavior are not applicable: Pi owns provider/model/auth runtime through public APIs, and pi-reviewer deliberately omits OCR provider catalogs."
+          "reason": "OCR v1.9.9 Bedrock provider catalog and credential-resolution behavior are not applicable: Pi owns provider/model/auth runtime through public APIs, and pi-review deliberately omits OCR provider catalogs."
         },
         {
           "name": "TestBedrockProtocolIsRecognized",
           "delta": "added",
           "disposition": "not_applicable",
-          "reason": "OCR v1.9.9 Bedrock provider catalog and credential-resolution behavior are not applicable: Pi owns provider/model/auth runtime through public APIs, and pi-reviewer deliberately omits OCR provider catalogs."
+          "reason": "OCR v1.9.9 Bedrock provider catalog and credential-resolution behavior are not applicable: Pi owns provider/model/auth runtime through public APIs, and pi-review deliberately omits OCR provider catalogs."
         },
         {
           "name": "TestBedrockProviderIsRegistered",
           "delta": "added",
           "disposition": "not_applicable",
-          "reason": "OCR v1.9.9 Bedrock provider catalog and credential-resolution behavior are not applicable: Pi owns provider/model/auth runtime through public APIs, and pi-reviewer deliberately omits OCR provider catalogs."
+          "reason": "OCR v1.9.9 Bedrock provider catalog and credential-resolution behavior are not applicable: Pi owns provider/model/auth runtime through public APIs, and pi-review deliberately omits OCR provider catalogs."
         },
         {
           "name": "TestCustomProviderCanSelectBedrock",
           "delta": "added",
           "disposition": "not_applicable",
-          "reason": "OCR v1.9.9 Bedrock provider catalog and credential-resolution behavior are not applicable: Pi owns provider/model/auth runtime through public APIs, and pi-reviewer deliberately omits OCR provider catalogs."
+          "reason": "OCR v1.9.9 Bedrock provider catalog and credential-resolution behavior are not applicable: Pi owns provider/model/auth runtime through public APIs, and pi-review deliberately omits OCR provider catalogs."
         },
         {
           "name": "TestExplainErrorClassifiesBedrockFailures",
           "delta": "added",
           "disposition": "not_applicable",
-          "reason": "OCR v1.9.9 Bedrock provider catalog and credential-resolution behavior are not applicable: Pi owns provider/model/auth runtime through public APIs, and pi-reviewer deliberately omits OCR provider catalogs."
+          "reason": "OCR v1.9.9 Bedrock provider catalog and credential-resolution behavior are not applicable: Pi owns provider/model/auth runtime through public APIs, and pi-review deliberately omits OCR provider catalogs."
         },
         {
           "name": "TestExplainErrorLeavesNonBedrockErrorsAlone",
           "delta": "added",
           "disposition": "not_applicable",
-          "reason": "OCR v1.9.9 Bedrock provider catalog and credential-resolution behavior are not applicable: Pi owns provider/model/auth runtime through public APIs, and pi-reviewer deliberately omits OCR provider catalogs."
+          "reason": "OCR v1.9.9 Bedrock provider catalog and credential-resolution behavior are not applicable: Pi owns provider/model/auth runtime through public APIs, and pi-review deliberately omits OCR provider catalogs."
         },
         {
           "name": "TestExplainErrorNamesTheBearerTokenVariable",
           "delta": "added",
           "disposition": "not_applicable",
-          "reason": "OCR v1.9.9 Bedrock provider catalog and credential-resolution behavior are not applicable: Pi owns provider/model/auth runtime through public APIs, and pi-reviewer deliberately omits OCR provider catalogs."
+          "reason": "OCR v1.9.9 Bedrock provider catalog and credential-resolution behavior are not applicable: Pi owns provider/model/auth runtime through public APIs, and pi-review deliberately omits OCR provider catalogs."
         },
         {
           "name": "TestModelOverrideStillGatedForKeyBasedProviders",
           "delta": "added",
           "disposition": "not_applicable",
-          "reason": "OCR v1.9.9 Bedrock provider catalog and credential-resolution behavior are not applicable: Pi owns provider/model/auth runtime through public APIs, and pi-reviewer deliberately omits OCR provider catalogs."
+          "reason": "OCR v1.9.9 Bedrock provider catalog and credential-resolution behavior are not applicable: Pi owns provider/model/auth runtime through public APIs, and pi-review deliberately omits OCR provider catalogs."
         },
         {
           "name": "TestNonAmbientProviderStillRequiresAPIKey",
           "delta": "added",
           "disposition": "not_applicable",
-          "reason": "OCR v1.9.9 Bedrock provider catalog and credential-resolution behavior are not applicable: Pi owns provider/model/auth runtime through public APIs, and pi-reviewer deliberately omits OCR provider catalogs."
+          "reason": "OCR v1.9.9 Bedrock provider catalog and credential-resolution behavior are not applicable: Pi owns provider/model/auth runtime through public APIs, and pi-review deliberately omits OCR provider catalogs."
         },
         {
           "name": "TestResolveBedrockPassesAWSSettings",
           "delta": "added",
           "disposition": "not_applicable",
-          "reason": "OCR v1.9.9 Bedrock provider catalog and credential-resolution behavior are not applicable: Pi owns provider/model/auth runtime through public APIs, and pi-reviewer deliberately omits OCR provider catalogs."
+          "reason": "OCR v1.9.9 Bedrock provider catalog and credential-resolution behavior are not applicable: Pi owns provider/model/auth runtime through public APIs, and pi-review deliberately omits OCR provider catalogs."
         },
         {
           "name": "TestResolveBedrockWithoutAPIKey",
           "delta": "added",
           "disposition": "not_applicable",
-          "reason": "OCR v1.9.9 Bedrock provider catalog and credential-resolution behavior are not applicable: Pi owns provider/model/auth runtime through public APIs, and pi-reviewer deliberately omits OCR provider catalogs."
+          "reason": "OCR v1.9.9 Bedrock provider catalog and credential-resolution behavior are not applicable: Pi owns provider/model/auth runtime through public APIs, and pi-review deliberately omits OCR provider catalogs."
         }
       ]
     },
@@ -11935,31 +11935,31 @@
           "name": "TestResolveKeyCmd",
           "delta": "added",
           "disposition": "not_applicable",
-          "reason": "OCR v1.9.9 API-key command execution is not applicable: Pi owns external credential resolution through public APIs, and pi-reviewer deliberately omits OCR credential commands."
+          "reason": "OCR v1.9.9 API-key command execution is not applicable: Pi owns external credential resolution through public APIs, and pi-review deliberately omits OCR credential commands."
         },
         {
           "name": "TestResolveKeyCmd_LabelInError",
           "delta": "added",
           "disposition": "not_applicable",
-          "reason": "OCR v1.9.9 API-key command execution is not applicable: Pi owns external credential resolution through public APIs, and pi-reviewer deliberately omits OCR credential commands."
+          "reason": "OCR v1.9.9 API-key command execution is not applicable: Pi owns external credential resolution through public APIs, and pi-review deliberately omits OCR credential commands."
         },
         {
           "name": "TestResolveKeyCmd_StdinWired",
           "delta": "added",
           "disposition": "not_applicable",
-          "reason": "OCR v1.9.9 API-key command execution is not applicable: Pi owns external credential resolution through public APIs, and pi-reviewer deliberately omits OCR credential commands."
+          "reason": "OCR v1.9.9 API-key command execution is not applicable: Pi owns external credential resolution through public APIs, and pi-review deliberately omits OCR credential commands."
         },
         {
           "name": "TestResolveKeyCmd_Timeout",
           "delta": "added",
           "disposition": "not_applicable",
-          "reason": "OCR v1.9.9 API-key command execution is not applicable: Pi owns external credential resolution through public APIs, and pi-reviewer deliberately omits OCR credential commands."
+          "reason": "OCR v1.9.9 API-key command execution is not applicable: Pi owns external credential resolution through public APIs, and pi-review deliberately omits OCR credential commands."
         },
         {
           "name": "TestResolveKeyCmd_WaitDelayBoundsOrphanHoldingPipe",
           "delta": "added",
           "disposition": "not_applicable",
-          "reason": "OCR v1.9.9 API-key command execution is not applicable: Pi owns external credential resolution through public APIs, and pi-reviewer deliberately omits OCR credential commands."
+          "reason": "OCR v1.9.9 API-key command execution is not applicable: Pi owns external credential resolution through public APIs, and pi-review deliberately omits OCR credential commands."
         }
       ]
     },
@@ -11975,31 +11975,31 @@
           "name": "TestNewKeyCmd_CmdLine",
           "delta": "added",
           "disposition": "not_applicable",
-          "reason": "OCR v1.9.9 Windows API-key command execution is not applicable: Pi owns external credential resolution through public APIs, and pi-reviewer deliberately omits OCR credential commands."
+          "reason": "OCR v1.9.9 Windows API-key command execution is not applicable: Pi owns external credential resolution through public APIs, and pi-review deliberately omits OCR credential commands."
         },
         {
           "name": "TestResolveKeyCmd",
           "delta": "added",
           "disposition": "not_applicable",
-          "reason": "OCR v1.9.9 Windows API-key command execution is not applicable: Pi owns external credential resolution through public APIs, and pi-reviewer deliberately omits OCR credential commands."
+          "reason": "OCR v1.9.9 Windows API-key command execution is not applicable: Pi owns external credential resolution through public APIs, and pi-review deliberately omits OCR credential commands."
         },
         {
           "name": "TestResolveKeyCmd_LabelInError",
           "delta": "added",
           "disposition": "not_applicable",
-          "reason": "OCR v1.9.9 Windows API-key command execution is not applicable: Pi owns external credential resolution through public APIs, and pi-reviewer deliberately omits OCR credential commands."
+          "reason": "OCR v1.9.9 Windows API-key command execution is not applicable: Pi owns external credential resolution through public APIs, and pi-review deliberately omits OCR credential commands."
         },
         {
           "name": "TestResolveKeyCmd_StdinWired",
           "delta": "added",
           "disposition": "not_applicable",
-          "reason": "OCR v1.9.9 Windows API-key command execution is not applicable: Pi owns external credential resolution through public APIs, and pi-reviewer deliberately omits OCR credential commands."
+          "reason": "OCR v1.9.9 Windows API-key command execution is not applicable: Pi owns external credential resolution through public APIs, and pi-review deliberately omits OCR credential commands."
         },
         {
           "name": "TestResolveKeyCmd_Timeout",
           "delta": "added",
           "disposition": "not_applicable",
-          "reason": "OCR v1.9.9 Windows API-key command execution is not applicable: Pi owns external credential resolution through public APIs, and pi-reviewer deliberately omits OCR credential commands."
+          "reason": "OCR v1.9.9 Windows API-key command execution is not applicable: Pi owns external credential resolution through public APIs, and pi-review deliberately omits OCR credential commands."
         }
       ]
     },
@@ -12343,7 +12343,7 @@
           "name": "TestListProviders_Order",
           "delta": "changed_body",
           "disposition": "not_applicable",
-          "reason": "OCR v1.9.9 provider catalog lookup and ordering are not applicable: Pi owns provider catalogs through public APIs, and pi-reviewer deliberately omits OCR provider catalogs."
+          "reason": "OCR v1.9.9 provider catalog lookup and ordering are not applicable: Pi owns provider catalogs through public APIs, and pi-review deliberately omits OCR provider catalogs."
         },
         {
           "name": "TestListProviders_ReturnsCopy",
@@ -12421,13 +12421,13 @@
           "name": "TestLookupProvider_XAIDetails",
           "delta": "added",
           "disposition": "not_applicable",
-          "reason": "OCR v1.9.9 provider catalog lookup and ordering are not applicable: Pi owns provider catalogs through public APIs, and pi-reviewer deliberately omits OCR provider catalogs."
+          "reason": "OCR v1.9.9 provider catalog lookup and ordering are not applicable: Pi owns provider catalogs through public APIs, and pi-review deliberately omits OCR provider catalogs."
         },
         {
           "name": "TestProviders_AllProtocolsCanonical",
           "delta": "changed_body",
           "disposition": "not_applicable",
-          "reason": "OCR v1.9.9 provider catalog lookup and ordering are not applicable: Pi owns provider catalogs through public APIs, and pi-reviewer deliberately omits OCR provider catalogs."
+          "reason": "OCR v1.9.9 provider catalog lookup and ordering are not applicable: Pi owns provider catalogs through public APIs, and pi-review deliberately omits OCR provider catalogs."
         }
       ]
     },
@@ -12443,97 +12443,97 @@
           "name": "TestResolveEndpoint_APIKeyCmdFailureDoesNotFallBackToEnv",
           "delta": "added",
           "disposition": "not_applicable",
-          "reason": "OCR v1.9.9 endpoint API-key command resolution is not applicable: Pi owns external credential resolution through public APIs, and pi-reviewer deliberately omits OCR credential commands."
+          "reason": "OCR v1.9.9 endpoint API-key command resolution is not applicable: Pi owns external credential resolution through public APIs, and pi-review deliberately omits OCR credential commands."
         },
         {
           "name": "TestResolveEndpoint_APIKeyCmdRunsExactlyOnce",
           "delta": "added",
           "disposition": "not_applicable",
-          "reason": "OCR v1.9.9 endpoint API-key command resolution is not applicable: Pi owns external credential resolution through public APIs, and pi-reviewer deliberately omits OCR credential commands."
+          "reason": "OCR v1.9.9 endpoint API-key command resolution is not applicable: Pi owns external credential resolution through public APIs, and pi-review deliberately omits OCR credential commands."
         },
         {
           "name": "TestResolveEndpoint_BothSetWarnsAndUsesStaticKey",
           "delta": "added",
           "disposition": "not_applicable",
-          "reason": "OCR v1.9.9 endpoint API-key command resolution is not applicable: Pi owns external credential resolution through public APIs, and pi-reviewer deliberately omits OCR credential commands."
+          "reason": "OCR v1.9.9 endpoint API-key command resolution is not applicable: Pi owns external credential resolution through public APIs, and pi-review deliberately omits OCR credential commands."
         },
         {
           "name": "TestResolveEndpoint_CustomProviderAPIKeyCmd",
           "delta": "added",
           "disposition": "not_applicable",
-          "reason": "OCR v1.9.9 endpoint API-key command resolution is not applicable: Pi owns external credential resolution through public APIs, and pi-reviewer deliberately omits OCR credential commands."
+          "reason": "OCR v1.9.9 endpoint API-key command resolution is not applicable: Pi owns external credential resolution through public APIs, and pi-review deliberately omits OCR credential commands."
         },
         {
           "name": "TestResolveEndpoint_LegacyAuthTokenCmd",
           "delta": "added",
           "disposition": "not_applicable",
-          "reason": "OCR v1.9.9 endpoint API-key command resolution is not applicable: Pi owns external credential resolution through public APIs, and pi-reviewer deliberately omits OCR credential commands."
+          "reason": "OCR v1.9.9 endpoint API-key command resolution is not applicable: Pi owns external credential resolution through public APIs, and pi-review deliberately omits OCR credential commands."
         },
         {
           "name": "TestResolveEndpoint_LegacyAuthTokenCmdFailsHard",
           "delta": "added",
           "disposition": "not_applicable",
-          "reason": "OCR v1.9.9 endpoint API-key command resolution is not applicable: Pi owns external credential resolution through public APIs, and pi-reviewer deliberately omits OCR credential commands."
+          "reason": "OCR v1.9.9 endpoint API-key command resolution is not applicable: Pi owns external credential resolution through public APIs, and pi-review deliberately omits OCR credential commands."
         },
         {
           "name": "TestResolveEndpoint_LegacyBothSetWarnsAndUsesStaticToken",
           "delta": "added",
           "disposition": "not_applicable",
-          "reason": "OCR v1.9.9 endpoint API-key command resolution is not applicable: Pi owns external credential resolution through public APIs, and pi-reviewer deliberately omits OCR credential commands."
+          "reason": "OCR v1.9.9 endpoint API-key command resolution is not applicable: Pi owns external credential resolution through public APIs, and pi-review deliberately omits OCR credential commands."
         },
         {
           "name": "TestResolveEndpoint_LegacyIncompleteDoesNotRunCmd",
           "delta": "added",
           "disposition": "not_applicable",
-          "reason": "OCR v1.9.9 endpoint API-key command resolution is not applicable: Pi owns external credential resolution through public APIs, and pi-reviewer deliberately omits OCR credential commands."
+          "reason": "OCR v1.9.9 endpoint API-key command resolution is not applicable: Pi owns external credential resolution through public APIs, and pi-review deliberately omits OCR credential commands."
         },
         {
           "name": "TestResolveEndpoint_LegacyWhitespaceOnlyCmdIsUnset",
           "delta": "added",
           "disposition": "not_applicable",
-          "reason": "OCR v1.9.9 endpoint API-key command resolution is not applicable: Pi owns external credential resolution through public APIs, and pi-reviewer deliberately omits OCR credential commands."
+          "reason": "OCR v1.9.9 endpoint API-key command resolution is not applicable: Pi owns external credential resolution through public APIs, and pi-review deliberately omits OCR credential commands."
         },
         {
           "name": "TestResolveEndpoint_LegacyWhitespaceOnlyStaticTokenUsesCmd",
           "delta": "added",
           "disposition": "not_applicable",
-          "reason": "OCR v1.9.9 endpoint API-key command resolution is not applicable: Pi owns external credential resolution through public APIs, and pi-reviewer deliberately omits OCR credential commands."
+          "reason": "OCR v1.9.9 endpoint API-key command resolution is not applicable: Pi owns external credential resolution through public APIs, and pi-review deliberately omits OCR credential commands."
         },
         {
           "name": "TestResolveEndpoint_ProviderAPIKeyCmd",
           "delta": "added",
           "disposition": "not_applicable",
-          "reason": "OCR v1.9.9 endpoint API-key command resolution is not applicable: Pi owns external credential resolution through public APIs, and pi-reviewer deliberately omits OCR credential commands."
+          "reason": "OCR v1.9.9 endpoint API-key command resolution is not applicable: Pi owns external credential resolution through public APIs, and pi-review deliberately omits OCR credential commands."
         },
         {
           "name": "TestResolveEndpoint_ProviderAPIKeyCmdFailsHard",
           "delta": "added",
           "disposition": "not_applicable",
-          "reason": "OCR v1.9.9 endpoint API-key command resolution is not applicable: Pi owns external credential resolution through public APIs, and pi-reviewer deliberately omits OCR credential commands."
+          "reason": "OCR v1.9.9 endpoint API-key command resolution is not applicable: Pi owns external credential resolution through public APIs, and pi-review deliberately omits OCR credential commands."
         },
         {
           "name": "TestResolveEndpoint_ProviderStaticKeyWinsOverCmd",
           "delta": "added",
           "disposition": "not_applicable",
-          "reason": "OCR v1.9.9 endpoint API-key command resolution is not applicable: Pi owns external credential resolution through public APIs, and pi-reviewer deliberately omits OCR credential commands."
+          "reason": "OCR v1.9.9 endpoint API-key command resolution is not applicable: Pi owns external credential resolution through public APIs, and pi-review deliberately omits OCR credential commands."
         },
         {
           "name": "TestResolveEndpoint_WhitespaceOnlyCmdFallsBackToEnv",
           "delta": "added",
           "disposition": "not_applicable",
-          "reason": "OCR v1.9.9 endpoint API-key command resolution is not applicable: Pi owns external credential resolution through public APIs, and pi-reviewer deliberately omits OCR credential commands."
+          "reason": "OCR v1.9.9 endpoint API-key command resolution is not applicable: Pi owns external credential resolution through public APIs, and pi-review deliberately omits OCR credential commands."
         },
         {
           "name": "TestResolveEndpoint_WhitespaceOnlyEnvVarIsNotACredential",
           "delta": "added",
           "disposition": "not_applicable",
-          "reason": "OCR v1.9.9 endpoint API-key command resolution is not applicable: Pi owns external credential resolution through public APIs, and pi-reviewer deliberately omits OCR credential commands."
+          "reason": "OCR v1.9.9 endpoint API-key command resolution is not applicable: Pi owns external credential resolution through public APIs, and pi-review deliberately omits OCR credential commands."
         },
         {
           "name": "TestResolveEndpoint_WhitespaceOnlyStaticKeyUsesCmd",
           "delta": "added",
           "disposition": "not_applicable",
-          "reason": "OCR v1.9.9 endpoint API-key command resolution is not applicable: Pi owns external credential resolution through public APIs, and pi-reviewer deliberately omits OCR credential commands."
+          "reason": "OCR v1.9.9 endpoint API-key command resolution is not applicable: Pi owns external credential resolution through public APIs, and pi-review deliberately omits OCR credential commands."
         }
       ]
     },
@@ -12571,13 +12571,13 @@
           "name": "TestShellRCFiles",
           "delta": "changed_body",
           "disposition": "not_applicable",
-          "reason": "OCR v1.9.9 shell-profile credential resolution is not applicable: Pi owns external credential configuration through public APIs, and pi-reviewer deliberately omits OCR shell-profile loading."
+          "reason": "OCR v1.9.9 shell-profile credential resolution is not applicable: Pi owns external credential configuration through public APIs, and pi-review deliberately omits OCR shell-profile loading."
         },
         {
           "name": "TestTryShellRC",
           "delta": "changed_body",
           "disposition": "not_applicable",
-          "reason": "OCR v1.9.9 shell-profile credential resolution is not applicable: Pi owns external credential configuration through public APIs, and pi-reviewer deliberately omits OCR shell-profile loading."
+          "reason": "OCR v1.9.9 shell-profile credential resolution is not applicable: Pi owns external credential configuration through public APIs, and pi-review deliberately omits OCR shell-profile loading."
         }
       ]
     },
@@ -12725,7 +12725,7 @@
           "name": "TestResolveEndpoint_CustomProviderNoEnvFallback",
           "delta": "added",
           "disposition": "not_applicable",
-          "reason": "OCR v1.9.9 provider endpoint catalog and credential-resolution policy are not applicable: Pi owns provider/model/auth runtime through public APIs, and pi-reviewer deliberately omits those OCR provider mechanisms."
+          "reason": "OCR v1.9.9 provider endpoint catalog and credential-resolution policy are not applicable: Pi owns provider/model/auth runtime through public APIs, and pi-review deliberately omits those OCR provider mechanisms."
         },
         {
           "name": "TestResolveEndpoint_CustomProviderOpenAIAlias",
@@ -12815,7 +12815,7 @@
           "name": "TestResolveEndpoint_MiniMaxProviderRejectsOtherRegionEnv",
           "delta": "changed_body",
           "disposition": "not_applicable",
-          "reason": "OCR v1.9.9 provider endpoint catalog and credential-resolution policy are not applicable: Pi owns provider/model/auth runtime through public APIs, and pi-reviewer deliberately omits those OCR provider mechanisms."
+          "reason": "OCR v1.9.9 provider endpoint catalog and credential-resolution policy are not applicable: Pi owns provider/model/auth runtime through public APIs, and pi-review deliberately omits those OCR provider mechanisms."
         },
         {
           "name": "TestResolveEndpoint_NegativeConfigTimeoutSec",
@@ -12893,13 +12893,13 @@
           "name": "TestResolveEndpoint_PresetProviderURLDefaultsToPreset",
           "delta": "added",
           "disposition": "not_applicable",
-          "reason": "OCR v1.9.9 provider endpoint catalog and credential-resolution policy are not applicable: Pi owns provider/model/auth runtime through public APIs, and pi-reviewer deliberately omits those OCR provider mechanisms."
+          "reason": "OCR v1.9.9 provider endpoint catalog and credential-resolution policy are not applicable: Pi owns provider/model/auth runtime through public APIs, and pi-review deliberately omits those OCR provider mechanisms."
         },
         {
           "name": "TestResolveEndpoint_PresetProviderURLOverride",
           "delta": "added",
           "disposition": "not_applicable",
-          "reason": "OCR v1.9.9 provider endpoint catalog and credential-resolution policy are not applicable: Pi owns provider/model/auth runtime through public APIs, and pi-reviewer deliberately omits those OCR provider mechanisms."
+          "reason": "OCR v1.9.9 provider endpoint catalog and credential-resolution policy are not applicable: Pi owns provider/model/auth runtime through public APIs, and pi-review deliberately omits those OCR provider mechanisms."
         },
         {
           "name": "TestResolveEndpoint_ProviderAnthropic",
@@ -13001,7 +13001,7 @@
           "name": "TestResolveEndpointWithModelOverride_BadEnvOverrideDoesNotRunAPIKeyCmd",
           "delta": "added",
           "disposition": "not_applicable",
-          "reason": "OCR v1.9.9 provider endpoint catalog and credential-resolution policy are not applicable: Pi owns provider/model/auth runtime through public APIs, and pi-reviewer deliberately omits those OCR provider mechanisms."
+          "reason": "OCR v1.9.9 provider endpoint catalog and credential-resolution policy are not applicable: Pi owns provider/model/auth runtime through public APIs, and pi-review deliberately omits those OCR provider mechanisms."
         },
         {
           "name": "TestResolveEndpointWithModelOverride_CustomProviderWithoutConfiguredModel",
@@ -13013,7 +13013,7 @@
           "name": "TestResolveEndpointWithModelOverride_InvalidModelDoesNotRunAPIKeyCmd",
           "delta": "added",
           "disposition": "not_applicable",
-          "reason": "OCR v1.9.9 provider endpoint catalog and credential-resolution policy are not applicable: Pi owns provider/model/auth runtime through public APIs, and pi-reviewer deliberately omits those OCR provider mechanisms."
+          "reason": "OCR v1.9.9 provider endpoint catalog and credential-resolution policy are not applicable: Pi owns provider/model/auth runtime through public APIs, and pi-review deliberately omits those OCR provider mechanisms."
         },
         {
           "name": "TestResolveEndpointWithModelOverride_InvalidModelInCustomProviderList",
@@ -15841,44 +15841,44 @@
       "scope": {
         "kind": "out_of_scope",
         "area": "internal/release",
-        "reason": "Go binary release archive naming (urlPattern/checksum/Makefile/release.yml) is replaced by Bun npm package distribution; not applicable via pi-reviewer distribution"
+        "reason": "Go binary release archive naming (urlPattern/checksum/Makefile/release.yml) is replaced by Bun npm package distribution; not applicable via pi-review distribution"
       },
       "tests": [
         {
           "name": "TestChecksumFilenameNoVersion",
           "delta": "byte_identical",
           "disposition": "out_of_scope",
-          "reason": "Go binary release archive naming (urlPattern/checksum/Makefile/release.yml) is replaced by Bun npm package distribution; not applicable via pi-reviewer distribution"
+          "reason": "Go binary release archive naming (urlPattern/checksum/Makefile/release.yml) is replaced by Bun npm package distribution; not applicable via pi-review distribution"
         },
         {
           "name": "TestMakefileBuildMatchesURLPattern",
           "delta": "byte_identical",
           "disposition": "out_of_scope",
-          "reason": "Go binary release archive naming (urlPattern/checksum/Makefile/release.yml) is replaced by Bun npm package distribution; not applicable via pi-reviewer distribution"
+          "reason": "Go binary release archive naming (urlPattern/checksum/Makefile/release.yml) is replaced by Bun npm package distribution; not applicable via pi-review distribution"
         },
         {
           "name": "TestReleaseYmlMatchesURLPattern",
           "delta": "byte_identical",
           "disposition": "out_of_scope",
-          "reason": "Go binary release archive naming (urlPattern/checksum/Makefile/release.yml) is replaced by Bun npm package distribution; not applicable via pi-reviewer distribution"
+          "reason": "Go binary release archive naming (urlPattern/checksum/Makefile/release.yml) is replaced by Bun npm package distribution; not applicable via pi-review distribution"
         },
         {
           "name": "TestURLPatternFormat",
           "delta": "byte_identical",
           "disposition": "out_of_scope",
-          "reason": "Go binary release archive naming (urlPattern/checksum/Makefile/release.yml) is replaced by Bun npm package distribution; not applicable via pi-reviewer distribution"
+          "reason": "Go binary release archive naming (urlPattern/checksum/Makefile/release.yml) is replaced by Bun npm package distribution; not applicable via pi-review distribution"
         },
         {
           "name": "TestURLPatternHTTPS",
           "delta": "byte_identical",
           "disposition": "out_of_scope",
-          "reason": "Go binary release archive naming (urlPattern/checksum/Makefile/release.yml) is replaced by Bun npm package distribution; not applicable via pi-reviewer distribution"
+          "reason": "Go binary release archive naming (urlPattern/checksum/Makefile/release.yml) is replaced by Bun npm package distribution; not applicable via pi-review distribution"
         },
         {
           "name": "TestURLPatternNoVersionInFilename",
           "delta": "byte_identical",
           "disposition": "out_of_scope",
-          "reason": "Go binary release archive naming (urlPattern/checksum/Makefile/release.yml) is replaced by Bun npm package distribution; not applicable via pi-reviewer distribution"
+          "reason": "Go binary release archive naming (urlPattern/checksum/Makefile/release.yml) is replaced by Bun npm package distribution; not applicable via pi-review distribution"
         }
       ]
     },

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
-// Copyright 2026 pi-reviewer Contributors
+// Copyright 2026 pi-review Contributors
 //
-// Contracts for the pi-reviewer rate-limit backoff extension: a model round
+// Contracts for the pi-review rate-limit backoff extension: a model round
 // that fails as rate_limited (429) or overloaded (529) is retried on a fixed,
 // injectable schedule instead of failing the file. Only those two classes
 // retry; everything else (auth, context, cancellation, unknown) surfaces

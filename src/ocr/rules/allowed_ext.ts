@@ -3,7 +3,7 @@
 //
 // Ported from internal/config/allowlist/allowed_ext.go at c35ddd7223f2b5540ce03aa43c9a25ef643fca27;
 // allowlist assets updated from OCR v1.9.6 at 24c2dd0cde63f56b19079ccf128cf88ab523cadf.
-// Modifications are distributed as part of pi-reviewer under
+// Modifications are distributed as part of pi-review under
 // GPL-3.0-or-later;
 // see LICENSES/Apache-2.0.txt and THIRD_PARTY_NOTICES.md.
 

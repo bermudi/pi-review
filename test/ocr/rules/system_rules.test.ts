@@ -38,7 +38,7 @@ import {
 // ---------------------------------------------------------------------------
 
 function withTempDir<T>(run: (dir: string) => T): T {
-  const dir = mkdtempSync(join(tmpdir(), "pi-reviewer-rules-"));
+  const dir = mkdtempSync(join(tmpdir(), "pi-review-rules-"));
   try {
     return run(dir);
   } finally {

@@ -241,7 +241,7 @@ async function runParityReview(input: ReviewInput, options: ReviewOptions): Prom
 
 	try {
 		if (input.rules !== undefined && input.rules.trim() !== "") {
-			ruleDir = await mkdtemp(join(tmpdir(), "pi-reviewer-rules-"));
+			ruleDir = await mkdtemp(join(tmpdir(), "pi-review-rules-"));
 			rulePath = join(ruleDir, "rules.md");
 			await writeFile(rulePath, input.rules, "utf-8");
 		}

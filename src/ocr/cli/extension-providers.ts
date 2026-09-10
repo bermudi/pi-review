@@ -1,6 +1,6 @@
 // User-level pi extension provider harvesting for model selection.
 //
-// pi-reviewer resolves `--model` selectors and its no-flag fallback model
+// pi-review resolves `--model` selectors and its no-flag fallback model
 // through Pi's public ModelRuntime. Built-in SDK providers cover most cases,
 // but user-level pi extensions can register additional providers (proxies,
 // aggregators). To keep such selectors resolvable, this module executes ONLY
