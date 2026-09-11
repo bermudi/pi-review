@@ -1,0 +1,402 @@
+[
+  {
+    "repo": "fastify/fastify",
+    "fix_sha": "4176096a31f5b4c31512c36f578b08a596a72435",
+    "parent_sha": "83e69762aff047940b376fc2a266d143499ef727",
+    "language": "TypeScript",
+    "changed_lines": 44,
+    "defect_one_liner": "reply.callNotFound() skipped the not-found handler's preHandler when the route was registered before setNotFoundHandler() (stale context snapshot taken before preReady hooks ran)",
+    "confirmation": "PR #6965 documents the stale lifecycle-snapshot root cause and reproduction",
+    "clean": false
+  },
+  {
+    "repo": "fastify/fastify",
+    "fix_sha": "f5ef34443c5be0cfc7fbde44f84253ef5d0ec66e",
+    "parent_sha": "9a1535bcfe2a780cc6f9c6555df86e5072ca9a29",
+    "language": "TypeScript",
+    "changed_lines": 36,
+    "defect_one_liner": "A preClose hook added to a Fastify instance executed once per instance in the encapsulation subtree instead of exactly once for the declaring instance",
+    "confirmation": "PR #6940 reproduction with a hook counter firing multiple times",
+    "clean": false
+  },
+  {
+    "repo": "vitest-dev/vitest",
+    "fix_sha": "4944cf4988052950af174be8dfd688761d0e0588",
+    "parent_sha": "c119be016295b45a005e2a36367ea7d133b4f385",
+    "language": "TypeScript",
+    "changed_lines": 61,
+    "defect_one_liner": "deepMerge allowed prototype pollution through source option keys, reachable via browser-mode screenshot matcher options",
+    "confirmation": "PR #11215 body describes the pollution path and reachable sink",
+    "clean": false
+  },
+  {
+    "repo": "vitest-dev/vitest",
+    "fix_sha": "99fc5259175cf09671a0ed75ec476f06507a2605",
+    "parent_sha": "09bc9ad6b3dfce1eb647d775376cdadd7c492694",
+    "language": "TypeScript",
+    "changed_lines": 31,
+    "defect_one_liner": "Automocking traversed recursive prototype chains, breaking mocking of self-referential objects",
+    "confirmation": "PR #11195 body states 'Resolves #11168' (bug report)",
+    "clean": false
+  },
+  {
+    "repo": "axios/axios",
+    "fix_sha": "a75bf44647e5132e39b778730394b0a2b983265c",
+    "parent_sha": "712e02373f1c5ac72fdf5da16f04838338ba817e",
+    "language": "JavaScript",
+    "changed_lines": 81,
+    "defect_one_liner": "Error decoration threw on non-string dummy.stack (global Error.prepareStackTrace instrumentation), masking the original request error",
+    "confirmation": "PR #11109: 'Fixes #11108' with traced crash path",
+    "clean": false
+  },
+  {
+    "repo": "vuejs/core",
+    "fix_sha": "efa2eae202e89cb2d052c968c04511c09b314dcf",
+    "parent_sha": "e9515f1ce838a6c45a5b5d9b58fff13457359938",
+    "language": "TypeScript",
+    "changed_lines": 69,
+    "defect_one_liner": "Vapor-mode components that failed before mounting were never disposed on app.unmount (leaked instances, stale HMR registrations)",
+    "confirmation": "PR #15457 bug-fix release notes describe the unmount cleanup failure",
+    "clean": false
+  },
+  {
+    "repo": "expressjs/express",
+    "fix_sha": "abb7793ae043328f776d0a4484a72a66a4b0a8bb",
+    "parent_sha": "bdc2c973a468d83f3af7d57d862f74ca97e71322",
+    "language": "JavaScript",
+    "changed_lines": 36,
+    "defect_one_liner": "Router mis-validated trim_prefix for unanchored RegExp routes, executing middleware on wrong paths",
+    "confirmation": "PR #4205 'Closes #4204' with before/after path-alignment illustration",
+    "clean": false
+  },
+  {
+    "repo": "gin-gonic/gin",
+    "fix_sha": "472d086af2acd924cb4b9d7be0525f7d790f69bc",
+    "parent_sha": "fb2583442c4d9bccb75e6d26f1aa6e7c01950db6",
+    "language": "Go",
+    "changed_lines": 160,
+    "defect_one_liner": "Panic ('invalid node type') in findCaseInsensitivePathRec with RedirectFixedPath on unmatched request paths (wildChild mis-handled)",
+    "confirmation": "PR #4535: 'Fixes #2959' with radix-tree root-cause analysis",
+    "clean": false
+  },
+  {
+    "repo": "gin-gonic/gin",
+    "fix_sha": "293ad7edebb3ae30369288bd6416ca0d78474727",
+    "parent_sha": "2e4d4f38962a6f15ae496d59b294f307eef95429",
+    "language": "Go",
+    "changed_lines": 54,
+    "defect_one_liner": "Context.Copy() dropped the Errors and Accepted fields, losing error and content-negotiation state in the copy",
+    "confirmation": "PR #4695 documents the data-loss behavior",
+    "clean": false
+  },
+  {
+    "repo": "gin-gonic/gin",
+    "fix_sha": "d9307dbcbbe796a64d9e0ef23452da888dd7f904",
+    "parent_sha": "da1e108614ecbbadfa5736b1b297b16121d23b9b",
+    "language": "Go",
+    "changed_lines": 61,
+    "defect_one_liner": "SaveUploadedFile chmod'ed pre-existing destination directories, failing with 'chmod /tmp: operation not permitted' (v1.12.0 regression)",
+    "confirmation": "PR #4702: 'Fixes #4622' with user-reported error",
+    "clean": false
+  },
+  {
+    "repo": "go-chi/chi",
+    "fix_sha": "aba86186a27484f3cadc55b8d6448d2049af71bf",
+    "parent_sha": "735ae2b87f8c733d616e809ae86e0985c1bc3350",
+    "language": "Go",
+    "changed_lines": 45,
+    "defect_one_liner": "Mounting a router onto itself (via With/Group sharing the tree) caused an infinite loop on non-matching requests instead of 404",
+    "confirmation": "PR #1159 shows the self-mount reproduction",
+    "clean": false
+  },
+  {
+    "repo": "go-chi/chi",
+    "fix_sha": "29164f023bf9319e74d5961a21a712653bb98c83",
+    "parent_sha": "bc02284e9db220c644912320fe1db6bc9b4a087c",
+    "language": "Go",
+    "changed_lines": 180,
+    "defect_one_liner": "Handlers sharing a pattern with a Route()/Mount() call were silently dropped and invisible to Walk()/Routes()",
+    "confirmation": "PR #1148: 'Fixes #830' with reproduction",
+    "clean": false
+  },
+  {
+    "repo": "spf13/cobra",
+    "fix_sha": "746ef07158728502482cea9f880a6f4b21ef29a9",
+    "parent_sha": "f2878bab8c96afd6e36968af96343b35dbb82a82",
+    "language": "Go",
+    "changed_lines": 60,
+    "defect_one_liner": "Completion getCompletions() mutated os.Args in place by appending '--' into the shared backing array (append with spare capacity)",
+    "confirmation": "PR #2356 with regression test proving os.Args unmodified",
+    "clean": false
+  },
+  {
+    "repo": "gofiber/fiber",
+    "fix_sha": "5a4aa952cba9aaf20f8c5e96908cdff0bba2c02d",
+    "parent_sha": "0e2ce9d260b61f8e9dfa20a5a2fe39741dd7f316",
+    "language": "Go",
+    "changed_lines": 50,
+    "defect_one_liner": "extractors.FromParam double-decoded path parameters when UnescapePath:true (router had already decoded the path)",
+    "confirmation": "PR #4626 'Decode a path parameter exactly once' (fix item of issue #4604)",
+    "clean": false
+  },
+  {
+    "repo": "gofiber/fiber",
+    "fix_sha": "c8af68f73a10e309a3a3e2773cda41785dd94d9a",
+    "parent_sha": "cabda698274792b57afc2c68e577deefd881ef26",
+    "language": "Go",
+    "changed_lines": 93,
+    "defect_one_liner": "Res.Vary() compared field names case-sensitively, emitting RFC-violating 'Vary: accept, Accept'",
+    "confirmation": "PR #4642 cites RFC 9110 Section 5.1 case-insensitivity with repro",
+    "clean": false
+  },
+  {
+    "repo": "psf/requests",
+    "fix_sha": "6f205ff422bccd5e4c4fc0b64c5f3e7df5181db6",
+    "parent_sha": "661970d171d9c3e12e4c789c4768db647d8c4da0",
+    "language": "Python",
+    "changed_lines": 15,
+    "defect_one_liner": "_encode_files failed to detect file-like wrappers exposed via __getattr__ (e.g. mocks), mis-encoding request bodies",
+    "confirmation": "PR #7502 with regression test",
+    "clean": false
+  },
+  {
+    "repo": "numpy/numpy",
+    "fix_sha": "064183a8dcd44c29080e8e1adafdce74eb6911c5",
+    "parent_sha": "88ddb9806d42f6a96dca9fa0870092d679117258",
+    "language": "Python",
+    "changed_lines": 42,
+    "defect_one_liner": "ufunc.accumulate crashed on mismatched out shape and could read uninitialized memory building the error message",
+    "confirmation": "PR #32545 describes both crash paths",
+    "clean": false
+  },
+  {
+    "repo": "numpy/numpy",
+    "fix_sha": "34906621171a7a8771b0279ce9008f66c3a56962",
+    "parent_sha": "25ae084e7d75bc83a0f4371f48ba3c9589ea9607",
+    "language": "Python",
+    "changed_lines": 16,
+    "defect_one_liner": "np.median/quantile/percentile with tuple axis raised ValueError 'cannot reshape array of size 0' when a kept axis had size 0",
+    "confirmation": "PR #32536 quotes the failing _ureduce reshape",
+    "clean": false
+  },
+  {
+    "repo": "numpy/numpy",
+    "fix_sha": "25ae084e7d75bc83a0f4371f48ba3c9589ea9607",
+    "parent_sha": "d9079517ca17819bca8cbc1587ea9047f8a56ecf",
+    "language": "Python",
+    "changed_lines": 29,
+    "defect_one_liner": "np.strings.replace truncated plain-Python-string old/new to the input's fixed itemsize before replacement",
+    "confirmation": "PR #32519 with truncated-output repro",
+    "clean": false
+  },
+  {
+    "repo": "pallets/flask",
+    "fix_sha": "05e9c6bd630ecf4ec0ec884b1fc7901663737bc7",
+    "parent_sha": "514fc6b3e8402e4c646d5284e97a4f0ab50a7c4b",
+    "language": "Python",
+    "changed_lines": 28,
+    "defect_one_liner": "Routing used .partition(\":\") on potential IPv6 hosts, splitting addresses at the wrong colon",
+    "confirmation": "PR #6096: 'Fixes pallets/flask#6093'",
+    "clean": false
+  },
+  {
+    "repo": "pallets/flask",
+    "fix_sha": "12e95c93b488725f80753f34b2e0d24838ca4646",
+    "parent_sha": "d3b78fd18a8d9e224cb9ef58a23cec9b1ffc9ce9",
+    "language": "Python",
+    "changed_lines": 182,
+    "defect_one_liner": "provide_automatic_options=True could not enable automatic OPTIONS handling (only disabling was honored)",
+    "confirmation": "PR #5917 explains OPTIONS was only added when the flag was not passed",
+    "clean": false
+  },
+  {
+    "repo": "python/cpython",
+    "fix_sha": "fd569ea94120815b01baf8bcbcf21e8e09102db6",
+    "parent_sha": "f715d25a8f0f0d57ecd2ae0dfe56c2ee01752733",
+    "language": "Python",
+    "changed_lines": 105,
+    "defect_one_liner": "bytearray.take_bytes() corrupted CPython's shared single-byte singletons (mutating interned b'\\x00')",
+    "confirmation": "gh-156995 (linked in PR #157260; main-branch fix GH-156996), maintainer-merged with regression tests",
+    "clean": false
+  },
+  {
+    "repo": "tokio-rs/tokio",
+    "fix_sha": "bbb5076068a2fe19a4fb0d13e1ab0943a7c8e469",
+    "parent_sha": "855e5b88309ad7753a59c51b688a9d765f1f263d",
+    "language": "Rust",
+    "changed_lines": 137,
+    "defect_one_liner": "spawn_blocking could hang forever when the OS refused to create the first blocking-pool thread (scheduler workers miscounted as blocking threads)",
+    "confirmation": "PR #8408 motivation documents the hang and accounting error",
+    "clean": false
+  },
+  {
+    "repo": "serde-rs/serde",
+    "fix_sha": "bb58726133fb30b89ccea3e357eb91f4b2d460a0",
+    "parent_sha": "3f6925125bae7837d918da63f2dba6efabad8dec",
+    "language": "Rust",
+    "changed_lines": 4,
+    "defect_one_liner": "Generated serialize_struct code hit E0716 'temporary value dropped while borrowed' under Rust 2024 edition, breaking user builds",
+    "confirmation": "PR #2950 includes the real E0716 compiler error from a derive user",
+    "clean": false
+  },
+  {
+    "repo": "serde-rs/serde",
+    "fix_sha": "cb6eaea151b831db36457fff17f16a195702dad4",
+    "parent_sha": "b6f339ca3676584e1c26028b4040c337b0105e34",
+    "language": "Rust",
+    "changed_lines": 41,
+    "defect_one_liner": "Unit variant of a flattened externally tagged enum deserialized but could not serialize, breaking roundtrip consistency",
+    "confirmation": "PR #2786 with failing roundtrip playground repro",
+    "clean": false
+  },
+  {
+    "repo": "tokio-rs/axum",
+    "fix_sha": "b7e37889932edcf521ca54e5ed30245f01180994",
+    "parent_sha": "98aea470f9190fad1915897166ac0f149522011a",
+    "language": "Rust",
+    "changed_lines": 33,
+    "defect_one_liner": "Merging MethodRouters produced Allow headers with duplicates ('GET,HEAD,HEAD')",
+    "confirmation": "PR #3836 motivation documents the duplicate",
+    "clean": false
+  },
+  {
+    "repo": "tokio-rs/axum",
+    "fix_sha": "c9a911b7999de50e9e5023942ca072e9725ae943",
+    "parent_sha": "40ede29be6a4b5adbb76a1423463937fed6c695c",
+    "language": "Rust",
+    "changed_lines": 49,
+    "defect_one_liner": "Nested error downcast in axum-core failed to reach the inner error for nested services, so HandleError extracted the wrong type",
+    "confirmation": "PR #3858 'Fix nested error downcast'",
+    "clean": false
+  },
+  {
+    "repo": "FasterXML/jackson-databind",
+    "fix_sha": "f3c95dcf728b6b726a2c0375f07b28c6442967ea",
+    "parent_sha": "1901d6606b9b7c5aa66207d7208327fcd14a39cb",
+    "language": "Java",
+    "changed_lines": 34,
+    "defect_one_liner": "Unresolved IPv6 InetSocketAddress serialized without brackets, producing invalid '2001:db8::1:443' output",
+    "confirmation": "PR #6186: 'Fixes #6185' contrasting resolved vs unresolved branches",
+    "clean": false
+  },
+  {
+    "repo": "google/gson",
+    "fix_sha": "5e277e42786ab6441b7dd6b1a8c34d545d132307",
+    "parent_sha": "961517decce0aa907c285c19d8b93d5c746ecdcb",
+    "language": "Java",
+    "changed_lines": 68,
+    "defect_one_liner": "JsonPrimitive.hashCode violated the equals/hashCode contract across equal numbers with different Number backing types, breaking HashSet/HashMap membership",
+    "confirmation": "PR #3059: 'Fixes #992'",
+    "clean": false
+  },
+  {
+    "repo": "google/gson",
+    "fix_sha": "004e7a4949e08b430e3c8996998ee5a17ff9423a",
+    "parent_sha": "ed2397502708ebaba53643e5c3d60e0974d7045f",
+    "language": "Java",
+    "changed_lines": 16,
+    "defect_one_liner": "peekNumber's leading-zero octal check overflowed, so STRICT mode rejected valid numerals like 2^64 + '0'",
+    "confirmation": "PR #3034 explains the overflow in JsonReader.peekNumber",
+    "clean": false
+  },
+  {
+    "repo": "vitest-dev/vitest",
+    "fix_sha": "d4fe1986fe334d22940039e815ccdbcc907baa6a",
+    "parent_sha": "3f2ddc21a83f3ebf16be50a1b31982ee9060266f",
+    "language": "TypeScript",
+    "changed_lines": 27,
+    "defect_one_liner": "Feature promotion: renames experimental_clearCache to clearCache with deprecated alias",
+    "confirmation": "PR #11086 'feat: promote clearCache out of experimental' — API promotion, no defect",
+    "clean": true
+  },
+  {
+    "repo": "gin-gonic/gin",
+    "fix_sha": "96ece6a14123923d00081320486042f568adef32",
+    "parent_sha": "c79f5d466ee780c329663d5b599d40639b33cd93",
+    "language": "Go",
+    "changed_lines": 87,
+    "defect_one_liner": "New API: Context.Scheme() helper with reverse-proxy support",
+    "confirmation": "PR #4655 'feat(context): add Scheme()' — pure addition",
+    "clean": true
+  },
+  {
+    "repo": "gofiber/fiber",
+    "fix_sha": "60ecea54191a4cad3d5a96568708dad996509b17",
+    "parent_sha": "8b258c7bb28f97a5f2a856ff7ef962578fec9215",
+    "language": "Go",
+    "changed_lines": 27,
+    "defect_one_liner": "Config extension: adds text/markdown, text/csv, text/vtt to default compressible types",
+    "confirmation": "PR #1151 'feat(middleware)' — additive config, no defect",
+    "clean": true
+  },
+  {
+    "repo": "go-chi/chi",
+    "fix_sha": "15767233591fd4267ae99d05299fa3807c375cdd",
+    "parent_sha": "6adf733e0ebb79ade04909069f6abdc6f53648a8",
+    "language": "Go",
+    "changed_lines": 80,
+    "defect_one_liner": "New API: Context.Clone() detaching parentCtx",
+    "confirmation": "PR #1157 'Add Clone method to Context' — new method, no bug",
+    "clean": true
+  },
+  {
+    "repo": "psf/requests",
+    "fix_sha": "5351469472eccee7ed1a6cae53341446c520d807",
+    "parent_sha": "24630743cecd3d0e9db7bee7e47381dbadf2d789",
+    "language": "Python",
+    "changed_lines": 16,
+    "defect_one_liner": "Feature: optional brotli Accept-Encoding support and decoding",
+    "confirmation": "PR #5783 'Add support for brotli decoding' — opt-in capability",
+    "clean": true
+  },
+  {
+    "repo": "numpy/numpy",
+    "fix_sha": "ee2a62a501345a2b03ecea459d8f54938599bac4",
+    "parent_sha": "45bba08841401f422799d84da70d6686e2f70d11",
+    "language": "Python",
+    "changed_lines": 24,
+    "defect_one_liner": "Enhancement: timedelta64 support for boolean division and floor_divide",
+    "confirmation": "PR #32555 'ENH:' — NumPy enhancement tag, new functionality",
+    "clean": true
+  },
+  {
+    "repo": "tokio-rs/tokio",
+    "fix_sha": "346dd031d007ff2f83ba7b2ab8dc0e61c1dffe7c",
+    "parent_sha": "8388d34f89c61c601651d036eaaac4fb6a24a292",
+    "language": "Rust",
+    "changed_lines": 194,
+    "defect_one_liner": "New feature: Builder::max_io_events_per_busy_tick tuning knob",
+    "confirmation": "PR #8410 'rt: add ...' — additive runtime option",
+    "clean": true
+  },
+  {
+    "repo": "axios/axios",
+    "fix_sha": "a85da2918eb540928b54bb3d57692efc8f2f83f1",
+    "parent_sha": "97131238cab2e56f58f26b5bfd95e40bb5b9df14",
+    "language": "JavaScript",
+    "changed_lines": 46,
+    "defect_one_liner": "Feature: mergeConfig supports symbol keys",
+    "confirmation": "PR #11043 'feat(core)' — capability addition",
+    "clean": true
+  },
+  {
+    "repo": "fastify/fastify",
+    "fix_sha": "eaff726a68c629c1aedc99f96b3c4b95dfdb38d1",
+    "parent_sha": "3efe8748335fea67b7006773a8ea28dd4abc8724",
+    "language": "TypeScript",
+    "changed_lines": 154,
+    "defect_one_liner": "New API: Reply.prototype.mediaType getter",
+    "confirmation": "PR #6932 'feat: add Reply.prototype.mediaType' — convenience addition",
+    "clean": true
+  },
+  {
+    "repo": "vuejs/core",
+    "fix_sha": "3227d3be0351276dc58deda121f84ec18df11d3e",
+    "parent_sha": "efa2eae202e89cb2d052c968c04511c09b314dcf",
+    "language": "TypeScript",
+    "changed_lines": 51,
+    "defect_one_liner": "Performance refactor: avoids allocating hydration boundary closure on client render (no behavior change)",
+    "confirmation": "PR #15459 'perf(runtime-vapor)' — optimization, no defect fixed",
+    "clean": true
+  }
+]
