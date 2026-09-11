@@ -1,0 +1,4 @@
+# Raw artifacts stay local; summaries and manifests are committed.
+results/*/raw/
+corpus/.work/
+*.jsonl

@@ -22,6 +22,24 @@ surfaces are intentionally not ported (omitted boundary; Pi's external
 auth/model configuration is at `~/.pi/agent` and is only resolved/loaded via
 public Pi APIs).
 
+## Evolution Project (active)
+
+The engine is being re-architected away from OCR-as-spec toward a
+cchange-centered reviewer with explicit review levels. Roadmap and phases:
+`docs/evolution/README.md`. Decision log (append-only, run-ID-cited):
+`docs/evolution/decisions.md`. Eval harness and pinned run evidence:
+`eval/`.
+
+Hard rules for this project:
+
+- No paid model batch without bermudi's explicit approval of a token estimate.
+- Eval comparisons pin one model resolved through Pi's default logged-in
+  provider; never switch models mid-comparison.
+- Roadmap status flips only with cited evidence or a user decision; never
+  edit `decisions.md` history — append entries that supersede.
+- One engine tree; phases replace behavior behind flags, evaluated before
+  they become defaults.
+
 ## Independent Maintenance Policy
 
 The `v0.4.0` line is the fork-point release. From that point onward,
