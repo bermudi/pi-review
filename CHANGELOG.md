@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+- New `pi-review completions <bash|zsh|fish>` command prints a
+  self-contained shell completion script on stdout: commands and aliases,
+  all flags with short forms, enum values, directories for `--repo`, file
+  paths for other path-valued flags, and git refs for `--from`/`--to`/
+  `--commit`. Flag names, short forms, and arity are generated at runtime
+  from the same manifest the parser consumes; enum candidates come from the
+  parser's own value lists.
 - Cut review crawl cost: exact-duplicate `file_read` calls now get a short
   reminder instead of another full dump, and 8 duplicate-only rounds with
   no new evidence stop the file early instead of running to the round cap.

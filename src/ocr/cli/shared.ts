@@ -97,19 +97,27 @@ export class CliUsageError extends Error {
 // Format / audience
 // ---------------------------------------------------------------------------
 
-export type OutputFormat = "text" | "json" | "sarif";
-export type Audience = "human" | "agent";
+export const OUTPUT_FORMATS = ["text", "json", "sarif"] as const;
+export const AUDIENCES = ["human", "agent"] as const;
+export const BATCH_STRATEGIES = ["none", "by-language", "by-directory"] as const;
+
+export type OutputFormat = (typeof OUTPUT_FORMATS)[number];
+export type Audience = (typeof AUDIENCES)[number];
 
 export function isMachineReadable(format: string): boolean {
   return format === "json" || format === "sarif";
 }
 
 export function isValidFormat(v: string): v is OutputFormat {
-  return v === "text" || v === "json" || v === "sarif";
+  return (OUTPUT_FORMATS as readonly string[]).includes(v);
 }
 
 export function isValidAudience(v: string): v is Audience {
-  return v === "human" || v === "agent";
+  return (AUDIENCES as readonly string[]).includes(v);
+}
+
+export function isValidBatchStrategy(v: string): boolean {
+  return (BATCH_STRATEGIES as readonly string[]).includes(v);
 }
 
 // ---------------------------------------------------------------------------
@@ -338,7 +346,7 @@ export function validateScanOptions(opts: ScanOptions): void {
   if (opts.maxTokens < 0) throw new CliUsageError("--max-tokens must be a non-negative integer (0 means use configured or template default)");
   if (opts.preview && opts.resume !== "") throw new CliUsageError("--preview and --resume cannot be used together");
   if (opts.maxTokensBudget < 0) throw new CliUsageError("--max-tokens-budget must be a non-negative integer (0 means unlimited)");
-  if (opts.batch !== "" && opts.batch !== "none" && opts.batch !== "by-language" && opts.batch !== "by-directory") {
+  if (opts.batch !== "" && !isValidBatchStrategy(opts.batch)) {
     throw new CliUsageError(`invalid --batch value "${opts.batch}": must be 'none', 'by-language' or 'by-directory'`);
   }
 }

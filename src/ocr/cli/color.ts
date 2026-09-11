@@ -2,7 +2,8 @@
 // Ported from cmd/opencodereview/color.go at OCR v1.9.8 commit
 // 756203c; maintained through v1.9.9.
 
-export type ColorMode = "auto" | "always" | "never";
+export const COLOR_MODES = ["auto", "always", "never"] as const;
+export type ColorMode = (typeof COLOR_MODES)[number];
 
 export const ColorModeAuto: ColorMode = "auto";
 export const ColorModeAlways: ColorMode = "always";
@@ -10,7 +11,7 @@ export const ColorModeNever: ColorMode = "never";
 export const AnsiReset = "\u001b[0m";
 
 export function validateColorMode(mode: string): mode is ColorMode {
-  return mode === ColorModeAuto || mode === ColorModeAlways || mode === ColorModeNever;
+  return (COLOR_MODES as readonly string[]).includes(mode);
 }
 
 export function colorModeError(mode: string): Error {

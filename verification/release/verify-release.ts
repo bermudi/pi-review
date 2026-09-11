@@ -109,6 +109,29 @@ async function main(): Promise<void> {
     fixtures.push("installed-version");
     assertions += 2;
 
+    const completions = spawnSync(bin, ["completions", "bash"], {
+      cwd: pack.consumerDir,
+      encoding: "utf8",
+      timeout: 15_000,
+    });
+    if (
+      completions.status !== 0 ||
+      !completions.stdout.includes("complete -F _pi_review pi-review") ||
+      !completions.stdout.includes("--max-tokens-budget") ||
+      completions.stderr !== ""
+    ) {
+      fail(
+        `installed completions script is not the expected bash document: ${completions.stderr || completions.stdout.slice(0, 400)}`,
+        reportBase,
+      );
+    }
+    const bashSyntax = spawnSync("bash", ["-n"], { input: completions.stdout, encoding: "utf8" });
+    if (bashSyntax.status !== 0) {
+      fail(`generated bash completions do not parse: ${bashSyntax.stderr}`, reportBase);
+    }
+    fixtures.push("installed-completions");
+    assertions += 5;
+
     const outsideGit = spawnSync(
       bin,
       ["review", "--from", "origin/main", "--to", "main"],

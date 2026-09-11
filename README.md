@@ -53,8 +53,9 @@ When the package is installed, use its binary as `pi-review`.
 
 ## CLI
 
-`pi-review` exposes `review`, `scan`, and `findings` subcommands. Reviews and
-scans use `pi-review review|scan [flags]`; there is no `--engine` switch.
+`pi-review` exposes `review`, `scan`, `findings`, and `completions`
+subcommands. Reviews and scans use `pi-review review|scan [flags]`; there is
+no `--engine` switch.
 
 ```bash
 # Review the current workspace (unstaged changes vs HEAD)
@@ -131,6 +132,33 @@ with no findings) and 1 when there is no session to show or the session id
 is unknown.
 
 Output goes to stdout (`text`/`json`/`sarif`); diagnostics and progress go to stderr, so `--format json` remains machine-readable. During review and scan, each file logs its lifecycle to stderr: a line when the file starts, a line when it finishes with its finding count and a done counter (`3/6 files done`), and a `still waiting` warning if a file sits quiet for half the idle timeout — so a stalled run is visible long before the timeout fires.
+
+### Shell completions
+
+`pi-review completions <bash|zsh|fish>` prints a self-contained completion
+script on stdout. Scripts complete commands and aliases, all flags (shorts
+included), enum values (`--format`, `--audience`, `--color`, `--batch`), file
+paths for path-valued flags (`--repo` completes directories only), and git
+branches/tags/remotes for `--from`, `--to`, and `--commit` (computed by the
+shell in the current repository). Output is deterministic; flag names and
+arity are generated from the same manifest the parser consumes, and enum
+candidates come from the parser's own value lists.
+
+```bash
+# bash — append to ~/.bashrc
+source <(pi-review completions bash)
+
+# zsh — fpath install (add ~/.zfunc to fpath before running compinit)
+pi-review completions zsh > ~/.zfunc/_pi-review
+# or, without changing fpath — but only after compinit has run:
+source <(pi-review completions zsh)
+
+# fish
+pi-review completions fish > ~/.config/fish/completions/pi-review.fish
+```
+
+Free-form values (provider, model, numbers, `--resume`/`--session` ids)
+complete without candidates.
 
 ### Repository and model selection
 
@@ -236,7 +264,7 @@ There is no model-visible shell, edit, or write tool.
 
 ## Limitations (current)
 
-- No `rules check` or `session` CLI subcommands beyond `review`/`scan` and `version`/`help`.
+- No `rules check` or `session` CLI subcommands beyond `review`/`scan`/`findings`, `completions`, and `version`/`help`.
 - Resume is per-session (`--resume ID`); it requires the same target/options and resumes a single prior session, not cross-run coverage merging.
 - Workspace evidence is live and may change during a long review; range/commit evidence is pinned.
 - The CLI requires an explicit `review` or `scan` subcommand.

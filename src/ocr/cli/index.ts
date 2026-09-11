@@ -22,6 +22,7 @@ import { validateReviewOptions, validateScanOptions, validateFindingsOptions, de
 import { runReviewContext } from "./review.js";
 import { runScanContext } from "./scan.js";
 import { runFindingsContext } from "./findings.js";
+import { runCompletionsCommand } from "./completions.js";
 import type { ReviewRunner, PreviewFactory } from "./review.js";
 import type { ScanRunner, ScanPreviewFactory } from "./scan.js";
 import type { Preview } from "../model/preview.js";
@@ -82,6 +83,7 @@ Usage:
   pi-review review [flags]
   pi-review scan [flags]
   pi-review findings [flags]
+  pi-review completions <bash|zsh|fish>
   pi-review version
 
 Review flags:
@@ -137,10 +139,14 @@ Findings flags (replay findings from a previous local review or scan):
   --session ID                replay a specific session (default: most recent for the repository)
   -f, --format FORMAT         output format: text, json, or sarif (default: text)
 
+Completions:
+  pi-review completions SHELL  print a self-contained shell completion script
+                               (SHELL: bash, zsh, or fish) on stdout
+
 Exit status: 0 complete, partial, or skipped; 1 failed or invalid usage.
 findings exits 0 when it displays a session (even one with no findings) and
 1 when there is no session to show, the session id is unknown, or usage is
-invalid.
+invalid. completions exits 0 when it prints a script.
 `;
 
 // ---------------------------------------------------------------------------
@@ -167,7 +173,7 @@ export interface OcrCliDependencies {
 // Flag parsing — lightweight, strict, no any
 // ---------------------------------------------------------------------------
 
-type FlagSpec = {
+export type FlagSpec = {
   readonly name: string;
   readonly short?: string;
   readonly takesValue: boolean;
@@ -233,6 +239,24 @@ const FINDINGS_FLAGS: readonly FlagSpec[] = [
   { name: "session", takesValue: true },
   { name: "format", short: "f", takesValue: true },
   { name: "help", short: "h", takesValue: false },
+];
+
+/**
+ * Command manifest shared by dispatch and the completions generator, so flag
+ * names, short forms, and value arity have one source of truth. Terminal
+ * commands without flags (version, help, completions) are listed separately
+ * by the completions generator.
+ */
+export type CliCommandSpec = {
+  readonly name: string;
+  readonly aliases: readonly string[];
+  readonly flags: readonly FlagSpec[];
+};
+
+export const CLI_COMMANDS: readonly CliCommandSpec[] = [
+  { name: "review", aliases: ["r"], flags: REVIEW_FLAGS },
+  { name: "scan", aliases: ["s"], flags: SCAN_FLAGS },
+  { name: "findings", aliases: [], flags: FINDINGS_FLAGS },
 ];
 
 function buildFlagMaps(specs: readonly FlagSpec[]): {
@@ -772,7 +796,17 @@ export async function runCli(
     }
   }
 
-  io.stderr(`Error: unknown command "${cmd}"; expected review, scan, or findings\n\n${HELP_TEXT}`);
+  if (cmd === "completions") {
+    try {
+      return runCompletionsCommand(rest, io, CLI_COMMANDS);
+    } catch (err) {
+      if (err instanceof CliUsageError) io.stderr(`Error: ${err.message}\n\n${HELP_TEXT}`);
+      else io.stderr(`Error: ${String((err as Error).message)}\n`);
+      return 1;
+    }
+  }
+
+  io.stderr(`Error: unknown command "${cmd}"; expected review, scan, findings, or completions\n\n${HELP_TEXT}`);
   return 1;
 }
 
