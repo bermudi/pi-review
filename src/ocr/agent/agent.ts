@@ -49,6 +49,8 @@ import type { FailureClass } from "../session/manifest.js";
 import { MainLoopStop, mainLoopStopReason } from "../llmloop/types.js";
 import { completeWithProviderBackoff, DEFAULT_RATE_LIMIT_BACKOFF_MS } from "../llmloop/backoff.js";
 import { FileStatusLines, quietWaitMinutes, type ProgressSink } from "../progress.js";
+import { createCostCollectingClient } from "../cost/client.js";
+import type { CostCollector } from "../cost/types.js";
 
 // ---------------------------------------------------------------------------
 // RuntimeConfig — mirrors Go RuntimeConfig
@@ -130,6 +132,13 @@ export interface Args {
   readonly resume?: import("../session/resume.js").ResumeState | null;
   /** Canonical persisted review session for this Agent run. */
   readonly session?: SessionHistory | null;
+  /**
+   * pi-review extension (evolution Phase 0, default-off): when set, the
+   * review's LLM client is wrapped so every stage's model-request attempts
+   * (plan, main rounds incl. grace, compression, relocation, filter) are
+   * recorded for per-file, per-stage cost aggregation.
+   */
+  readonly costCollector?: CostCollector | null;
   readonly progress?: ProgressSink;
   // Go-compat aliases — tests may use capitalized keys
   readonly LLMClient?: AnyLlmClient;
@@ -435,6 +444,12 @@ export class Agent {
     const rawArgs = args as unknown as Record<string, unknown>;
     const rawTpl = (args.template ?? rawArgs["Template"] ?? { MaxTokens: 0, MaxToolRequestTimes: 0, MainTask: { messages: [] }, MemoryCompressionTask: { messages: [] } }) as unknown;
     const normTpl = normalizeTemplateObject(rawTpl);
+    // Stage-cost instrumentation (default-off): wrap the client once, before
+    // any stage runs, so plan, main rounds, compression, relocation, and
+    // filter requests are all observed at the single client boundary.
+    const costCollector = (args.costCollector ?? rawArgs["CostCollector"] ?? null) as CostCollector | null;
+    const rawLlmClient = (args.llmClient ?? rawArgs["LLMClient"] ?? rawArgs["llmClient"]) as AnyLlmClient;
+    const llmClient = costCollector !== null ? createCostCollectingClient(rawLlmClient, costCollector) : rawLlmClient;
     const resolvedArgs: Args = {
       repoDir: args.repoDir ?? (rawArgs["RepoDir"] as string | undefined) ?? "",
       sessionId: args.sessionId ?? (rawArgs["SessionId"] as string | undefined),
@@ -445,7 +460,8 @@ export class Agent {
       template: normTpl,
       systemRule: (args.systemRule ?? rawArgs["SystemRule"] ?? null) as SystemRuleResolver | null,
       fileFilter: (args.fileFilter ?? rawArgs["FileFilter"] ?? null) as FileFilter | null,
-      llmClient: (args.llmClient ?? rawArgs["LLMClient"] ?? rawArgs["llmClient"]) as AnyLlmClient,
+      llmClient,
+      costCollector,
       tools: (args.tools ?? rawArgs["Tools"] ?? null) as ToolRegistryLike | null,
       planToolDefs: (args.planToolDefs ?? rawArgs["PlanToolDefs"] as readonly ToolDef[] | undefined),
       mainToolDefs: (args.mainToolDefs ?? rawArgs["MainToolDefs"] as readonly ToolDef[] | undefined) ?? [],
