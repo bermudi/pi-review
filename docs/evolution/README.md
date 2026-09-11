@@ -39,8 +39,8 @@ and is cited in `decisions.md`. `blocked-user` means waiting on bermudi.
 
 | # | Phase | Done when | Status |
 |---|---|---|---|
-| 0 | Stage-cost instrumentation + eval harness skeleton | Cost report per stage exists; scoring pipeline produces a summary from a scripted (unpaid) mock run | not started |
-| 1 | Public ground-truth corpus | ≥40 maintainer-fix cases + ≥20 clean cases + planted-bug suite, all hash-pinned in a corpus manifest | not started |
+| 0 | Stage-cost instrumentation + eval harness skeleton | Cost report per stage exists; scoring pipeline produces a summary from a scripted (unpaid) mock run | **done** 2026-09-11: `test/ocr/cost`, `test/ocr/agent/cost-instrumentation.test.ts`, `test/eval/mock-run.test.ts`; commits `9644f9a7`, `d35b3fad`; full suite 1695 pass |
+| 1 | Public ground-truth corpus | ≥40 maintainer-fix cases + ≥20 clean cases + planted-bug suite, all hash-pinned in a corpus manifest | **in progress**: 40 candidates (30 defect + 10 clean) mined and API-verified in `eval/corpus/candidates.json` (`e9b0203f`); typed manifest + workspace provider pending |
 | 2 | Review contract v2 behind flag (defect-focused brief, style→focus area) | A/B eval vs baseline on corpus; decision recorded with run ID | blocked-user (spend approval for first paid batch) |
 | 3 | Loop simplification experiments (no-plan, no-filter, independently) | Each removal/keep decided by eval run | blocked-user (same approval) |
 | 4 | Change-centered grouping + integration pass for large diffs | Multi-file bug cases in corpus improve without single-file regression | not started |
