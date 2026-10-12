@@ -32,7 +32,7 @@
     "types": "./dist/index.d.ts",
     "import": "./dist/index.js"
   },
-  "version": "0.7.0",
+  "version": "0.3.0",
   "description": "Independent code review engine for the Pi SDK, derived from Open Code Review v1.9.9",
   "license": "GPL-3.0-or-later",
   "author": "bermudi",
